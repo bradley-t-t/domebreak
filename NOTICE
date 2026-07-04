@@ -1,0 +1,13 @@
+GoldenDome
+Copyright (c) 2026 Trenton Taylor
+
+This product reuses, under the MIT License, the interactive world map
+(MapLibre + PMTiles rendering and the region/country map layers) and the map
+tile assets from Open Historia:
+
+    https://github.com/Open-Historia/open-historia
+    Copyright (c) 2026 Open Historia contributors
+    Copyright (c) 2026 Nicholas Krol (map editor and supporting tooling)
+
+The MIT permission notice for those portions is retained in LICENSE. Reused
+source files carry their original copyright header.
