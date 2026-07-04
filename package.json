@@ -4,11 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "description": "GoldenDome - online multiplayer missile defense/offense game.",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "electron": "electron .",
+    "electron:build:mac": "vite build && electron-builder --mac",
+    "electron:build:win": "vite build && electron-builder --win",
+    "electron:build:all": "vite build && electron-builder -mw"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -21,6 +26,17 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "vite": "^7.3.2"
+  },
+  "build": {
+    "appId": "com.trentontaylor.goldendome",
+    "productName": "GoldenDome",
+    "directories": { "output": "release", "buildResources": "build" },
+    "files": ["dist/**", "electron/**"],
+    "mac": { "target": ["dmg"], "category": "public.app-category.games", "icon": "build/icon.png" },
+    "win": { "target": ["nsis"], "icon": "build/icon.png" },
+    "linux": { "target": ["AppImage"], "category": "Game", "icon": "build/icon.png" }
   }
 }
