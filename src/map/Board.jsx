@@ -1,9 +1,7 @@
-// Placeholder board. The reused Open Historia MapLibre/PMTiles world map lands
-// here in the next increment as the GoldenDome game board.
+// The GoldenDome game board: the reused world map. Placement + combat overlays
+// will layer on top of this in later milestones.
+import WorldMap from "./WorldMap.jsx";
+
 export default function Board() {
-  return (
-    <div className="gd-board-placeholder">
-      <p>World map board — porting in progress.</p>
-    </div>
-  );
+  return <WorldMap />;
 }
