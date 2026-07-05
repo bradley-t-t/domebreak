@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "flag-icons": "^7.5.0",
     "maplibre-gl": "^5.19.0",
     "pmtiles": "^4.4.0",
     "polygon-clipping": "^0.15.7",
