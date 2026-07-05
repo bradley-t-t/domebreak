@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useReducer, useRef } from "react";
-import { createWorld, step, buyPlace, commandAttack, commandResearch, declareWar, makePeace } from "./engine.js";
+import { step, buyPlace, commandAttack, commandResearch, declareWar, makePeace, scrapUnit } from "./engine.js";
 
-// Drives the real-time loop. The world is mutated in place every animation frame;
-// the component re-renders on a throttled tick so React work stays ~15fps while
-// projectiles still integrate smoothly per frame.
-export function useEngine(setup) {
-  const ref = useRef(null);
-  if (!ref.current) ref.current = createWorld(setup);
+// Drives a supplied world (created by App from a new setup or a loaded save).
+// Mutated in place; re-renders on a throttled tick.
+export function useEngine(world) {
+  const ref = useRef(world);
   const [, force] = useReducer((x) => x + 1, 0);
-
   useEffect(() => {
     let raf, last = performance.now(), acc = 0;
     const loop = (now) => {
@@ -22,7 +19,6 @@ export function useEngine(setup) {
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, []);
-
   const api = useMemo(() => ({
     setSpeed: (m) => { ref.current.speed = m; ref.current.paused = false; force(); },
     pause: () => { ref.current.paused = true; force(); },
@@ -32,7 +28,7 @@ export function useEngine(setup) {
     research: (id) => { const r = commandResearch(ref.current, ref.current.mySlot, id); force(); return r; },
     declareWar: (slot) => { declareWar(ref.current, ref.current.mySlot, slot); force(); },
     makePeace: (slot) => { makePeace(ref.current, ref.current.mySlot, slot); force(); },
+    scrap: (uid) => { const r = scrapUnit(ref.current, ref.current.mySlot, uid); force(); return r; },
   }), []);
-
-  return [ref.current, api];
+  return [ref.current, api, force];
 }
