@@ -719,3 +719,10 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 .gd-layerbtn-l { flex: 1; text-align: left; }
 .gd-layerdot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); box-shadow: inset 0 0 0 1px var(--line); transition: background 140ms ease, box-shadow 140ms ease; }
 .gd-layerbtn.on .gd-layerdot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+
+/* de-golded selection marker (was mistaken for a range ring) */
+.gd-city-sel { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.75); box-shadow: 0 0 6px rgba(255,255,255,0.3); animation: none; }
+/* interceptor miss = small gray puff */
+.gd-explosion.miss { width: 9px; height: 9px; }
+.gd-explosion.miss .gd-fx-fire { background: radial-gradient(circle, #d6dbe4 0%, #8a94a4 45%, rgba(120,130,150,0) 72%); }
+.gd-explosion.miss .gd-fx-fire.two, .gd-explosion.miss .gd-fx-smoke, .gd-explosion.miss .gd-fx-flash, .gd-explosion.miss .gd-ember { display: none; }
