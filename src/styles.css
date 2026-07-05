@@ -522,3 +522,24 @@ input { font-family: inherit; }
 .gd-explosion.intercept { width: 15px; height: 15px; }
 .gd-explosion.intercept .gd-boom { background: radial-gradient(circle, #ffffff 0%, #d6ffe8 20%, #8dffbf 45%, #25e084 72%, rgba(37,224,132,0) 100%); }
 .gd-explosion.intercept .gd-shock { border-color: rgba(141,255,191,0.9); }
+
+/* ---- compact fire explosion ---- */
+.gd-explosion { position: relative; width: 12px; height: 12px; pointer-events: none; --d: 10px; }
+.gd-explosion.destroy { width: 17px; height: 17px; --d: 15px; }
+.gd-explosion.intercept { width: 11px; height: 11px; --d: 9px; }
+.gd-explosion span { position: absolute; inset: 0; border-radius: 50%; }
+.gd-fx-flash { background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,255,255,0) 62%); animation: gdFxFlash 0.18s ease-out forwards; }
+.gd-fx-fire { filter: blur(0.6px); background: radial-gradient(circle at 50% 58%, #fff 0%, #ffd24a 16%, #ff7b1a 40%, #ff2e0a 66%, rgba(120,20,0,0) 82%); animation: gdFxFire 0.6s ease-out forwards; }
+.gd-fx-fire.two { mix-blend-mode: screen; animation: gdFxFire2 0.55s ease-out forwards; }
+.gd-fx-smoke { opacity: 0; background: radial-gradient(circle, rgba(90,90,90,0.9) 0%, rgba(70,70,70,0.4) 45%, rgba(60,60,60,0) 75%); animation: gdFxSmoke 0.9s ease-out 0.12s forwards; }
+.gd-ember { position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px 0 0 -1px; border-radius: 50%; inset: auto; background: #ffcf5a; box-shadow: 0 0 4px 1px #ff8a1a; animation: gdEmber 0.55s ease-out forwards; }
+.gd-explosion.destroy .gd-ember { animation-duration: 0.7s; }
+.gd-explosion.intercept .gd-fx-fire { background: radial-gradient(circle at 50% 58%, #fff 0%, #ccffe4 16%, #5cffab 40%, #12c46e 66%, rgba(0,80,40,0) 82%); }
+.gd-explosion.intercept .gd-ember { background: #9dffc0; box-shadow: 0 0 4px 1px #25e084; }
+.gd-explosion.intercept .gd-fx-smoke { background: radial-gradient(circle, rgba(60,120,90,0.7) 0%, rgba(40,90,60,0.3) 45%, rgba(40,90,60,0) 75%); }
+@keyframes gdFxFlash { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes gdFxFire { 0% { transform: scale(0.3); opacity: 1; } 35% { transform: scale(1.25) scaleY(1.15); opacity: 1; } 100% { transform: scale(2) scaleY(1.35) translateY(-2px); opacity: 0; } }
+@keyframes gdFxFire2 { 0% { transform: scale(0.5) translateY(1px); opacity: 0.9; } 45% { transform: scale(1.1) translateY(-1px); opacity: 0.85; } 100% { transform: scale(1.7) scaleY(1.5) translateY(-4px); opacity: 0; } }
+@keyframes gdFxSmoke { 0% { transform: scale(0.4); opacity: 0; } 30% { opacity: 0.32; } 100% { transform: scale(1.9) translateY(-6px); opacity: 0; } }
+@keyframes gdEmber { 0% { transform: rotate(var(--a)) translateY(0) scale(1); opacity: 1; } 100% { transform: rotate(var(--a)) translateY(calc(-1 * var(--d, 10px))) scale(0.3); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gd-fx-fire, .gd-fx-fire.two, .gd-fx-smoke, .gd-ember, .gd-fx-flash { animation-duration: 0.25s; } }
