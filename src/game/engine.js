@@ -1,8 +1,9 @@
 // GoldenDome real-time simulation engine. Pure and deterministic given its seed.
 // Mutated in place for performance; the React hook re-renders off a version tick.
+import { interpGC } from "./geo.js";
 
 export const START_POINTS = 450;
-export const MISSILE_SPEED = 140; // fallback km per game-second
+export const MISSILE_SPEED = 140;
 
 export const UNITS = {
   battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
@@ -11,6 +12,7 @@ export const UNITS = {
   launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 60,  hp: 45, upkeep: 2, glyph: "➤" },
   silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 140, hp: 60, upkeep: 4, glyph: "▲" },
 };
+export const INTERCEPTOR_SPEED = 520; // km/game-second — outruns the incoming missile
 
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
 
@@ -65,7 +67,7 @@ export function createWorld(setup) {
   }));
   return {
     time: 0, speed: 1, paused: true, mySlot: setup.mySlot, seed: setup.seed || 1, _r: (setup.seed || 1) >>> 0,
-    _id: 0, nations, cities, units: [], projectiles: [], events: [], winnerSlot: null, over: false,
+    _id: 0, nations, cities, units: [], projectiles: [], interceptors: [], events: [], winnerSlot: null, over: false,
   };
 }
 
@@ -143,9 +145,10 @@ function launch(w, unit, target) {
   const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
   w.projectiles.push({
     id: nextId(w, "p"), slot: unit.slot, type: unit.type, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1),
-    speed: UNITS[unit.type].speed ?? MISSILE_SPEED, tried: [],
+    speed: UNITS[unit.type].speed ?? MISSILE_SPEED, tried: [], doomed: false,
     fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat,
-    lng: unit.lng, lat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0,
+    lng: unit.lng, lat: unit.lat, aheadLng: unit.lng, aheadLat: unit.lat,
+    targetId: target.ref.id, dist, travelled: 0, progress: 0,
   });
 }
 function resolveHit(w, p) {
@@ -210,28 +213,53 @@ export function step(w, dt) {
     }
   }
 
-  // Move projectiles; active point-defense engages any hostile missile the
-  // moment it enters a defender's range (one attempt per defender per missile).
+  // Move missiles along their great circle; defenses launch a homing interceptor
+  // the moment a hostile missile enters range (one roll per defender per missile).
   for (const p of w.projectiles) {
     p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
     p.progress = Math.min(1, p.travelled / (p.dist || 1));
-    p.lng = p.fromLng + (p.toLng - p.fromLng) * p.progress;
-    p.lat = p.fromLat + (p.toLat - p.fromLat) * p.progress;
-    for (const d of w.units) {
-      if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
-      if (!atWar(w, d.slot, p.slot)) continue;
-      if (p.tried.includes(d.id)) continue;
-      if (haversine(d.lng, d.lat, p.lng, p.lat) <= UNITS[d.type].range) {
-        p.tried.push(d.id);
-        const dn = nationOf(w, d.slot);
-        if (rand(w) < Math.min(0.97, UNITS[d.type].intercept + (dn?.interceptAdd ?? 0))) {
-          w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", cityId: p.targetId, lng: p.lng, lat: p.lat, byLng: d.lng, byLat: d.lat, byId: d.id });
-          p._dead = true; break;
+    const pos = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, p.progress);
+    p.lng = pos[0]; p.lat = pos[1];
+    const ah = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, Math.min(1, p.progress + 0.03));
+    p.aheadLng = ah[0]; p.aheadLat = ah[1];
+    if (!p.doomed) {
+      for (const d of w.units) {
+        if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
+        if (!atWar(w, d.slot, p.slot)) continue;
+        if (p.tried.includes(d.id)) continue;
+        if (haversine(d.lng, d.lat, p.lng, p.lat) <= UNITS[d.type].range) {
+          p.tried.push(d.id);
+          const dn = nationOf(w, d.slot);
+          if (rand(w) < Math.min(0.97, UNITS[d.type].intercept + (dn?.interceptAdd ?? 0))) {
+            p.doomed = true;
+            w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, byId: d.id, targetId: p.id, speed: INTERCEPTOR_SPEED,
+              fromLng: d.lng, fromLat: d.lat, lng: d.lng, lat: d.lat, toLng: p.lng, toLat: p.lat });
+            break;
+          }
         }
       }
     }
-    if (!p._dead && p.progress >= 1) { resolveHit(w, p); p._dead = true; }
+    if (!p._dead && !p.doomed && p.progress >= 1) { resolveHit(w, p); p._dead = true; }
   }
+
+  // Homing interceptors chase their target missile and kill it on contact.
+  for (const it of w.interceptors) {
+    const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
+    if (!tgt) { it._dead = true; continue; }
+    it.toLng = tgt.lng; it.toLat = tgt.lat;
+    const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
+    const stepKm = it.speed * dt;
+    if (dist <= Math.max(50, stepKm)) {
+      tgt._dead = true; it._dead = true;
+      w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", lng: tgt.lng, lat: tgt.lat, byLng: it.fromLng, byLat: it.fromLat });
+    } else {
+      const f = stepKm / dist;
+      it.lng += (tgt.lng - it.lng) * f;
+      it.lat += (tgt.lat - it.lat) * f;
+    }
+  }
+
+  w.interceptors = w.interceptors.filter((it) => !it._dead);
   w.projectiles = w.projectiles.filter((p) => !p._dead);
   w.units = w.units.filter((u) => u.hp > 0);
   if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
