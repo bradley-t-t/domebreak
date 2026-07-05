@@ -34,7 +34,7 @@ export default function UnitsPanel({ world, api, mySlot, placing, setPlacing }) 
           );
         })}
       </div>
-      {placing && <div className="gd-place-hint">Placing <b>{unitLabel(placing, mySlot)}</b> — click inside your territory. <button className="gd-mini" onClick={() => setPlacing(null)}>Cancel</button></div>}
+      {placing && <div className="gd-place-hint">Placing <b>{unitLabel(placing, mySlot)}</b> — {UNITS[placing].domain === "sea" ? "click in your coastal waters" : "click inside your territory"}.{UNITS[placing].requires ? ` Needs a ${UNITS[UNITS[placing].requires].label}.` : ""} <button className="gd-mini" onClick={() => setPlacing(null)}>Cancel</button></div>}
 
       <div className="gd-panel-title">Munitions</div>
       <div className="gd-arsenal-hint">Offensive strikes consume warheads — produce them here over time. Defences never run out while their upkeep is paid.</div>
