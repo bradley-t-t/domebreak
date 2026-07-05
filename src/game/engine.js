@@ -12,11 +12,23 @@ export const MIN_SEP = 45;
 export const UNITS = {
   battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 320,   intercept: 0.5,  reload: 3,   fireCost: 12, hp: 50, upkeep: 1,   glyph: "◆" },
   dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 250,   intercept: 0.85, reload: 4.5, fireCost: 22, hp: 90, upkeep: 3,   glyph: "⬡" },
-  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1500,  hp: 40, upkeep: 1.5, glyph: "❉" },
+  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1500,  detect: true, hp: 40, upkeep: 1.5, glyph: "❉" },
   launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, fireCost: 22, speed: 60,  hp: 45, upkeep: 2, glyph: "➤" },
   silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, fireCost: 45, speed: 140, hp: 60, upkeep: 4, glyph: "▲" },
+  // Naval — deploy in coastal ocean inside your territory, never on land.
+  cruiser:    { label: "Aegis Cruiser",         kind: "defense", domain: "sea", cost: 300, range: 700,   intercept: 0.75, reload: 3.2, fireCost: 18, hp: 70,  upkeep: 3, glyph: "⛴" },
+  battleship: { label: "Battleship",            kind: "offense", domain: "sea", cost: 360, range: 8000,  damage: 42, reload: 4,   fireCost: 26, speed: 80,  hp: 95,  upkeep: 4, glyph: "⛴" },
+  carrier:    { label: "Aircraft Carrier",      kind: "support", domain: "sea", cost: 500, range: 2500,  detect: true, hp: 130, upkeep: 5, glyph: "⛴" },
+  // Air power — land aircraft need an Airstrip; the F/A-18 flies from a Carrier at sea.
+  airstrip:   { label: "Airstrip",              kind: "support", cost: 120, range: 60,    hp: 45, upkeep: 1, glyph: "▭" },
+  f16:        { label: "F-16 Fighting Falcon",  kind: "offense", requires: "airstrip", cost: 180, range: 3000, damage: 26, reload: 2.6, fireCost: 16, speed: 90,  hp: 40, upkeep: 2,   glyph: "✈" },
+  f35:        { label: "F-35 Lightning II",     kind: "offense", requires: "airstrip", cost: 300, range: 4500, damage: 38, reload: 3,   fireCost: 20, speed: 100, hp: 48, upkeep: 3,   glyph: "✈" },
+  f22:        { label: "F-22 Raptor",           kind: "defense", requires: "airstrip", cost: 340, range: 520,  intercept: 0.8, reload: 3.5, fireCost: 20, hp: 46, upkeep: 3, glyph: "✈" },
+  a10:        { label: "A-10 Thunderbolt II",   kind: "offense", requires: "airstrip", cost: 160, range: 1200, damage: 46, reload: 3.4, fireCost: 14, speed: 70,  hp: 55, upkeep: 2,   glyph: "✈" },
+  awacs:      { label: "E-3 Sentry (AWACS)",    kind: "support", requires: "airstrip", cost: 260, range: 2200, detect: true, hp: 35, upkeep: 3, glyph: "❉" },
+  f18:        { label: "F/A-18 Super Hornet",   kind: "offense", domain: "sea", requires: "carrier", cost: 240, range: 3500, damage: 30, reload: 2.8, fireCost: 18, speed: 95, hp: 44, upkeep: 2.5, glyph: "✈" },
 };
-export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
+export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar", cruiser: "warship", battleship: "warship", carrier: "carrier", airstrip: "airstrip", f16: "jet", f35: "jet", f22: "jet", a10: "warthog", awacs: "awacs", f18: "jet" };
 
 // Offensive munitions. Strikes consume a warhead of the loaded type; each has
 // its own production cost/time, damage multiplier, and (for effect) flame color.
@@ -110,7 +122,7 @@ export function upkeepOf(w, slot) { const n = nationOf(w, slot); let sum = 0; fo
 export function netIncomeOf(w, slot) { return incomeOf(w, slot) - upkeepOf(w, slot); }
 export function populationOf(w, slot) { let p = 0; for (const c of w.cities) if (c.slot === slot && c.alive) p += c.pop || 0; return p; }
 export function inTerritory(w, slot, lng, lat) { return w.cities.some((c) => c.slot === slot && c.alive && haversine(c.lng, c.lat, lng, lat) <= TERRITORY_RADIUS); }
-export function radarLinked(w, d) { const n = nationOf(w, d.slot); const link = UNITS.radar.range * (n?.radarMult ?? 1); return w.units.some((r) => r.type === "radar" && r.slot === d.slot && r.hp > 0 && haversine(r.lng, r.lat, d.lng, d.lat) <= link); }
+export function radarLinked(w, d) { const n = nationOf(w, d.slot); return w.units.some((r) => UNITS[r.type].detect && r.slot === d.slot && r.hp > 0 && haversine(r.lng, r.lat, d.lng, d.lat) <= UNITS[r.type].range * (n?.radarMult ?? 1)); }
 export function defenseRange(w, d) { const base = UNITS[d.type].range; if (UNITS[d.type].kind !== "defense") return base; const n = nationOf(w, d.slot); return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1) * (n?.defRangeMult ?? 1); }
 
 function findTarget(w, id) {
@@ -131,6 +143,7 @@ export function placementBlocked(w, lng, lat, ignoreUnitId) {
 export function buyPlace(w, slot, type, lng, lat, territoryOk) {
   const def = UNITS[type], n = nationOf(w, slot);
   if (!def || !n) return { error: "invalid" };
+  if (def.requires && !w.units.some((u) => u.slot === slot && u.type === def.requires && u.hp > 0)) return { error: `needs a ${UNITS[def.requires].label}` };
   if (netIncomeOf(w, slot) < 0) return { error: "cannot build while in deficit" };
   const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
   if (!okTerr) return { error: "outside your territory" };

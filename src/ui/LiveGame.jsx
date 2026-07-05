@@ -53,6 +53,18 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   const featsAt = (e) => { const m = mapRef.current; return m ? m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }) : []; };
   const onLand = (e) => featsAt(e).length > 0;
   const inMyLand = (e) => { const fs = featsAt(e); return myGid ? fs.some((f) => f.properties?.GID_0 === myGid) : (fs.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat)); };
+  const isSea = (type) => UNITS[type]?.domain === "sea";
+  // Naval goes in coastal water (no country polygon under it); everything else on your land.
+  const placeError = (type, e) => {
+    if (isSea(type)) {
+      if (onLand(e)) return "naval units deploy in the ocean";
+      if (!inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat)) return "must be within your coastal waters";
+    } else {
+      if (!onLand(e)) return "can't build in the ocean";
+      if (!inMyLand(e)) return "outside your territory";
+    }
+    return null;
+  };
 
   useEffect(() => {
     const fresh = [];
@@ -132,16 +144,18 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
     const m = mapRef.current; if (!m) return;
     const feats = m.queryRenderedFeatures(e.point, { layers: ["country-fill"] });
     const gid = feats[0]?.properties?.GID_0 || null;
-    if (placing || moving) {
+    const activeType = placing || (moving && w.units.find((u) => u.id === moving)?.type);
+    if (activeType) {
       setCursor(e.lngLat);
-      const mine = myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (feats.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat));
-      setPlaceValid(mine && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null));
+      const onLandHere = feats.length > 0, inTerr = inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
+      const terrainOk = isSea(activeType) ? (!onLandHere && inTerr) : (myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (onLandHere && inTerr));
+      setPlaceValid(terrainOk && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null));
     }
     if (gid !== hoveredGid) setHoveredGid(gid);
   };
   const onMapClick = (e) => {
-    if (moving) { if (!onLand(e)) return flash("can't relocate into the ocean"); if (!inMyLand(e)) return flash("can't relocate outside your territory"); const r = api.move(moving, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); else setMoving(null); return; }
-    if (placing) { if (!onLand(e)) return flash("can't build in the ocean"); if (!inMyLand(e)) return flash("can't build outside your territory"); const r = api.buyPlace(placing, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); return; }
+    if (moving) { const mt = w.units.find((u) => u.id === moving)?.type; const bad = mt && placeError(mt, e); if (bad) return flash(bad); const r = api.move(moving, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); else setMoving(null); return; }
+    if (placing) { const bad = placeError(placing, e); if (bad) return flash(bad); const r = api.buyPlace(placing, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); return; }
     const feat = e.features?.find((f) => f.layer.id === "live-cities");
     if (feat) return onCityClick(feat.properties.id);
     setSelUnit(null); setSelCity(null); setAttackMode(false); setMenu(null);
@@ -180,6 +194,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   };
 
   const selectedUnit = w.units.find((u) => u.id === selUnit);
+  const movingUnit = w.units.find((u) => u.id === moving);
   const selectedCity = w.cities.find((c) => c.id === selCity);
   const detailTarget = details && (details.type === "unit" ? w.units.find((u) => u.id === details.id) : w.cities.find((c) => c.id === details.id));
 
@@ -232,7 +247,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
       <LayerBar layers={layers} onToggle={toggleLayer} />
       <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))} />
 
-      {moving && <div className="gd-move-hint">Relocating — click inside your territory (on land). <button className="gd-mini" onClick={() => setMoving(null)}>Cancel</button></div>}
+      {moving && <div className="gd-move-hint">Relocating — click {isSea(movingUnit?.type) ? "in your coastal waters" : "inside your territory (on land)"}. <button className="gd-mini" onClick={() => setMoving(null)}>Cancel</button></div>}
 
       {selectedUnit && !w.over && (
         <div className="gd-selpanel">
