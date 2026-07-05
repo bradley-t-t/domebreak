@@ -53,8 +53,9 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
     const fresh = [];
     for (const e of w.events) {
       if (seen.current.has(e.id)) continue; seen.current.add(e.id);
-      if (e.type === "intercept") fresh.push({ id: e.id, lng: e.lng, lat: e.lat, kind: "intercept" });
-      else if (e.type === "hit" || e.type === "destroy") fresh.push({ id: e.id, lng: e.lng, lat: e.lat, kind: e.type });
+      if (e.type === "intercept") fresh.push({ id: e.id, lng: e.lng, lat: e.lat, kind: "intercept", alt: e.alt || 0 });
+      else if (e.type === "miss") fresh.push({ id: e.id, lng: e.lng, lat: e.lat, kind: "miss", alt: e.alt || 0 });
+      else if (e.type === "hit" || e.type === "destroy") fresh.push({ id: e.id, lng: e.lng, lat: e.lat, kind: e.type, alt: 0 });
     }
     if (seen.current.size > 500) seen.current = new Set(w.events.map((e) => e.id));
     if (!fresh.length) return;
@@ -91,11 +92,11 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
 
   const ranges = useMemo(() => {
     const f = [];
-    for (const u of w.units) {
-      if (u.slot !== mySlot) continue;
-      const def = UNITS[u.type]; let radius = null, isRadar = 0;
-      if (def.kind === "defense") radius = defenseRange(w, u); else if (def.kind === "support") { radius = def.range; isRadar = 1; }
-      if (radius && radius <= 4000) { const c = circle(u.lng, u.lat, radius); c.properties = { color: SLOT_COLOR[mySlot], sel: u.id === selUnit ? 1 : 0, radar: isRadar }; f.push(c); }
+    const sel = w.units.find((u) => u.id === selUnit && u.slot === mySlot);
+    if (sel) {
+      const def = UNITS[sel.type]; let radius = null, isRadar = 0;
+      if (def.kind === "defense") radius = defenseRange(w, sel); else if (def.kind === "support") { radius = def.range; isRadar = 1; }
+      if (radius && radius <= 4000) { const c = circle(sel.lng, sel.lat, radius); c.properties = { color: SLOT_COLOR[mySlot], sel: 1, radar: isRadar }; f.push(c); }
     }
     if (placing && cursor && UNITS[placing].kind !== "offense" && UNITS[placing].range <= 4000) { const c = circle(cursor.lng, cursor.lat, UNITS[placing].range); c.properties = { color: "#f4c02a", sel: 1, radar: UNITS[placing].kind === "support" ? 1 : 0 }; f.push(c); }
     return { type: "FeatureCollection", features: f };
@@ -199,7 +200,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
         ))}
         {w.projectiles.map((p) => <Missile key={p.id} p={p} />)}
         {w.interceptors.map((it) => <Interceptor key={it.id} it={it} />)}
-        {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center"><Explosion kind={x.kind} /></Marker>)}
+        {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center" offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind} /></Marker>)}
       </WorldMap>
 
       <div className="gd-topbtns">
