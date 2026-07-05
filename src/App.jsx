@@ -1,82 +1,78 @@
-import { useCallback, useMemo, useState } from "react";
-import WorldMap from "./map/WorldMap.jsx";
-import Hud from "./ui/Hud.jsx";
-import Home from "./ui/Home.jsx";
-import Lobby from "./ui/Lobby.jsx";
+import { useEffect, useMemo, useState } from "react";
+import StartMenu from "./ui/StartMenu.jsx";
+import NewGame from "./ui/NewGame.jsx";
 import LiveGame from "./ui/LiveGame.jsx";
-import { api } from "./lib/api.js";
-import { loadSession, saveSession, clearSession } from "./lib/session.js";
-import { useMatch } from "./game/useMatch.js";
-import { liveSetup } from "./game/liveSetup.js";
+import PauseMenu from "./ui/PauseMenu.jsx";
+import SettingsPanel from "./ui/SettingsPanel.jsx";
+import SaveLoadPanel from "./ui/SaveLoadPanel.jsx";
+import { createWorld } from "./game/engine.js";
+import { loadGameData, buildSetup } from "./game/newGame.js";
+import { loadSettings, saveSettings } from "./game/settings.js";
+import { saveGame, loadGame, listSaves, hasContinue, AUTOSAVE } from "./game/saves.js";
 
 export default function App() {
-  const [session, setSession] = useState(loadSession());
-  const player = session ? { id: session.playerId, secret: session.secret, handle: session.handle } : null;
-  const matchId = session?.matchId || null;
+  const [screen, setScreen] = useState("menu");
+  const [overlay, setOverlay] = useState(null);
+  const [saveMode, setSaveMode] = useState("save");
+  const [world, setWorld] = useState(null);
+  const [session, setSession] = useState(0);
+  const [belligerents, setBelligerents] = useState([]);
+  const [settings, setSettings] = useState(loadSettings());
+  const [globe, setGlobe] = useState(loadSettings().globe);
+  const [data, setData] = useState(null);
+  const [profile, setProfile] = useState({ name: "Commander", iso: "US" });
 
-  const { state, refetch } = useMatch(matchId, player);
-  const [globe, setGlobe] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  useEffect(() => { loadGameData().then(setData).catch(() => {}); }, []);
+  const changeSettings = (s) => { setSettings(s); saveSettings(s); setGlobe(s.globe); };
 
-  const match = state?.match;
-  const players = state?.players || [];
-  const cities = state?.cities || [];
-  const me = players.find((p) => p.player_id === player?.id);
-  const isHost = !!(match && player && match.created_by === player.id);
-  const live = !!(matchId && match?.status === "build");
-  const myCityIds = useMemo(
-    () => new Set(cities.filter((c) => c.player_id === player?.id).map((c) => c.id)),
-    [cities, player?.id],
-  );
-  const slotByPlayer = useMemo(
-    () => Object.fromEntries(players.map((p) => [p.player_id, p.slot])), [players],
-  );
-  const setup = useMemo(
-    () => (live && cities.length && player ? liveSetup(state, player.id) : null),
-    [live, cities.length, player?.id, state?.match?.id],
-  );
+  const backdrop = useMemo(() => {
+    if (!data || !belligerents.length) return [];
+    const set = new Set(belligerents), out = [];
+    for (const [iso, arr] of Object.entries(data.cities)) if (!set.has(iso)) for (const c of arr) out.push(c);
+    return out;
+  }, [data, belligerents]);
 
-  const guard = useCallback(async (fn) => {
-    setBusy(true); setError(null);
-    try { return await fn(); }
-    catch (e) { setError(String(e.message || e)); }
-    finally { setBusy(false); }
-  }, []);
+  const enterGame = (w, isos, prof) => { setWorld(w); setBelligerents(isos); setGlobe(settings.globe); if (prof) setProfile(prof); setSession((s) => s + 1); setScreen("playing"); setOverlay(null); };
 
-  const enter = (r, handle) => {
-    const s = { playerId: r.player.id, secret: r.player.secret, handle, matchId: r.match.id };
-    setSession(s); saveSession(s);
+  const onStart = (iso, name, opps) => {
+    if (!data) return;
+    const setup = buildSetup(data, iso, opps, Math.floor(Math.random() * 1e9));
+    const w = createWorld(setup);
+    w.speed = settings.speed; w.paused = false;
+    w.meta = { playerIso: iso, playerName: name, belligerents: setup.belligerents };
+    enterGame(w, setup.belligerents, { name, iso });
   };
-  const onCreate = (handle, maxSlots) => guard(async () => enter(await api.create(handle, maxSlots), handle));
-  const onJoin = (code, handle) => guard(async () => enter(await api.join(code, handle), handle));
-  const onStart = () => guard(async () => { await api.start(matchId, player); await refetch(); });
-  const onAddAi = (slot) => guard(async () => { await api.addAi(matchId, player, slot); await refetch(); });
-  const onRemove = (slot) => guard(async () => { await api.removeParticipant(matchId, player, slot); await refetch(); });
-  const onReplaceAi = (slot) => guard(async () => { await api.replaceWithAi(matchId, player, slot); await refetch(); });
-  const onSetSlots = (n) => guard(async () => { await api.setMaxSlots(matchId, player, n); await refetch(); });
-  const onNewMatch = () => { clearSession(); setSession(null); };
+  const onLoadSlot = (slot) => {
+    const s = loadGame(slot); if (!s?.world) return;
+    const w = s.world; w.paused = false;
+    enterGame(w, s.meta?.belligerents || w.meta?.belligerents || [], { name: s.meta?.playerName || "Commander", iso: s.meta?.playerIso });
+  };
+  const onContinue = () => { const list = listSaves(); if (list.length) onLoadSlot(list[0].slot); };
+  const doSave = (slot) => {
+    if (!world) return;
+    saveGame(slot, world, { at: Date.now(), playerName: profile.name, playerIso: profile.iso, gtime: Math.round(world.time), nations: world.nations.filter((n) => n.alive).length, belligerents });
+  };
+  const pause = () => { if (world) world.paused = true; setOverlay("pause"); };
+  const resume = () => { if (world) world.paused = false; setOverlay(null); };
+  const quitToMenu = () => { if (world && !world.over) doSave(AUTOSAVE); setOverlay(null); setScreen("menu"); setWorld(null); };
 
-  const phase = !matchId ? null : live ? "War room" : match?.status === "lobby" ? "Lobby" : "Match";
+  useEffect(() => {
+    if (screen !== "playing") return;
+    const t = setInterval(() => { if (world && !world.over) doSave(AUTOSAVE); }, 60000);
+    return () => clearInterval(t);
+  }, [screen, world]);
+
+  const closeOverlay = () => setOverlay(screen === "playing" ? "pause" : null);
 
   return (
     <div className="gd-app">
-      <Hud phase={phase} handle={player?.handle} globe={globe}
-        onToggleGlobe={() => setGlobe((g) => !g)} onQuit={matchId ? onNewMatch : null} />
-      <div className="gd-stage">
-        {live && setup
-          ? <LiveGame key={matchId} setup={setup} globe={globe} onQuit={onNewMatch} />
-          : (
-            <>
-              <WorldMap cities={cities} myCityIds={myCityIds} slotByPlayer={slotByPlayer} globe={globe} />
-              {!matchId && <Home onCreate={onCreate} onJoin={onJoin} busy={busy} error={error} />}
-              {matchId && match?.status === "lobby" &&
-                <Lobby match={match} players={players} isHost={isHost} meId={player?.id} onStart={onStart}
-                  onAddAi={onAddAi} onRemove={onRemove} onReplaceAi={onReplaceAi} onSetSlots={onSetSlots}
-                  busy={busy} error={error} />}
-            </>
-          )}
-      </div>
+      {screen === "menu" && <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue} onLoad={() => { setSaveMode("load"); setOverlay("saveload"); }} onSettings={() => setOverlay("settings")} />}
+      {screen === "newgame" && <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")} />}
+      {screen === "playing" && world && <LiveGame key={session} world={world} globe={globe} onToggleGlobe={() => setGlobe((g) => !g)} onPause={pause} backdrop={backdrop} />}
+
+      {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => { setSaveMode("save"); setOverlay("saveload"); }} onLoad={() => { setSaveMode("load"); setOverlay("saveload"); }} onSettings={() => setOverlay("settings")} onQuit={quitToMenu} />}
+      {overlay === "settings" && <SettingsPanel settings={settings} onChange={changeSettings} onClose={closeOverlay} />}
+      {overlay === "saveload" && <SaveLoadPanel mode={saveMode} onSave={doSave} onLoad={onLoadSlot} onClose={closeOverlay} />}
     </div>
   );
 }

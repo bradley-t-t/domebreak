@@ -64,7 +64,7 @@ export function createWorld(setup) {
     dmgMult: 1, interceptAdd: 0, incomeMult: 1, rangeMult: 1, reloadMult: 1,
   }));
   const cities = setup.cities.map((c) => ({
-    id: c.id, slot: c.slot, name: c.name, lng: c.lng, lat: c.lat, hp: 100, maxHp: 100, alive: true,
+    id: c.id, slot: c.slot, name: c.name, state: c.state || "", cap: c.cap ? 1 : 0, lng: c.lng, lat: c.lat, hp: c.cap ? 140 : 100, maxHp: c.cap ? 140 : 100, alive: true,
   }));
   return {
     time: 0, speed: 1, paused: true, mySlot: setup.mySlot, seed: setup.seed || 1, _r: (setup.seed || 1) >>> 0,
@@ -81,7 +81,7 @@ export function atWar(w, a, b) {
 export function incomeOf(w, slot) {
   const n = nationOf(w, slot);
   const cityCount = w.cities.filter((c) => c.slot === slot && c.alive).length;
-  return (10 + cityCount * 8) * (n?.incomeMult ?? 1);
+  return (8 + cityCount * 2) * (n?.incomeMult ?? 1);
 }
 export function upkeepOf(w, slot) {
   let sum = 0;
@@ -142,6 +142,16 @@ export function commandAttack(w, unitId, targetId) {
   u.targetId = targetId;
   return { ok: true };
 }
+export function scrapUnit(w, slot, unitId) {
+  const i = w.units.findIndex((u) => u.id === unitId && u.slot === slot);
+  if (i < 0) return { error: "not found" };
+  const u = w.units[i];
+  const n = w.nations.find((x) => x.slot === slot);
+  if (n) n.points += Math.floor((UNITS[u.type].cost || 0) / 2);
+  w.units.splice(i, 1);
+  return { ok: true };
+}
+
 export function commandResearch(w, slot, techId) {
   const n = nationOf(w, slot), tech = TECHS[techId];
   if (!n || !tech) return { error: "invalid" };
