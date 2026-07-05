@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import WorldMap from "../map/WorldMap.jsx";
+import WorldMap, { COUNTRY_FILL_OPACITY } from "../map/WorldMap.jsx";
 import LiveHud from "./LiveHud.jsx";
 import Console from "./Console.jsx";
 import LayerBar from "./LayerBar.jsx";
@@ -95,7 +95,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   useEffect(() => {
     const m = mapRef.current; if (!m) return;
     try {
-      m.setPaintProperty("country-fill", "fill-opacity", layers.countries ? 0.55 : 0);
+      m.setPaintProperty("country-fill", "fill-opacity", layers.countries ? COUNTRY_FILL_OPACITY : 0);
       m.setLayoutProperty("country-line", "visibility", layers.countries ? "visible" : "none");
     } catch { /* style not ready */ }
   }, [layers.countries, mapReady]);
