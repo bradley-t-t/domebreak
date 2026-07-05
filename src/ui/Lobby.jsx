@@ -16,7 +16,7 @@ export default function Lobby({ match, players, isHost, meId, onStart, onAddAi, 
           </div>
           {isHost && (
             <div className="gd-slotcount">
-              <span className="gd-label" style={{ margin: 0 }}>Seats</span>
+              <span className="gd-label">Seats</span>
               <button className="gd-ghost" disabled={busy || match.max_slots <= Math.max(2, highest + 1)}
                 onClick={() => onSetSlots(match.max_slots - 1)}>−</button>
               <span className="gd-stepper-val sm">{match.max_slots}</span>
