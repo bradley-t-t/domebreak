@@ -18,6 +18,16 @@ export const UNITS = {
 };
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
 
+// Offensive munitions. Strikes consume a warhead of the loaded type; each has
+// its own production cost/time, damage multiplier, and (for effect) flame color.
+export const WARHEADS = {
+  standard: { name: "Standard", short: "STD", dmgMult: 1.0, prodCost: 30, prodTime: 4, flame: "#ff8a1a", desc: "Conventional single warhead. Cheap and quick to build." },
+  cluster: { name: "Cluster", short: "CLU", dmgMult: 0.75, prodCost: 55, prodTime: 6, splash: 240, splashFrac: 0.5, flame: "#61e0ff", desc: "Submunitions \u2014 splashes damage onto targets near the impact." },
+  thermo: { name: "Thermonuclear", short: "THR", dmgMult: 2.4, prodCost: 130, prodTime: 11, flame: "#ff3b6b", desc: "City-killer yield. Expensive and slow to produce." },
+};
+export const WARHEAD_ORDER = ["standard", "cluster", "thermo"];
+export const AMMO_START = { standard: 6, cluster: 0, thermo: 0 };
+
 const MISSILE_NAMES = {
   0: { silo: "LGM-30 Minuteman III", launcher: "AGM-183 ARRW" }, 1: { silo: "RS-28 Sarmat", launcher: "Kh-47M2 Kinzhal" },
   2: { silo: "DF-41", launcher: "DF-17" }, 3: { silo: "Agni-V", launcher: "BrahMos-II" },
@@ -86,7 +96,7 @@ function nextId(world, p) { world._id = (world._id || 0) + 1; return p + world._
 export function createWorld(setup) {
   const nations = setup.nations.map((n) => ({
     slot: n.slot, name: n.name, iso: n.iso, isAi: !!n.isAi, points: START_POINTS, alive: true, relations: {}, _ai: 2 + n.slot * 0.3,
-    research: { queue: [], current: null, done: [] },
+    research: { queue: [], current: null, done: [] }, ammo: { ...AMMO_START }, ammoQ: [], ammoCur: null,
     dmgMult: 1, interceptAdd: 0, incomeMult: 1, rangeMult: 1, reloadMult: 1, defRangeMult: 1, radarMult: 1, interceptorSpeedMult: 1, buildCostMult: 1, upkeepMult: 1, researchSpeedMult: 1, moveCostMult: 1,
   }));
   const cities = setup.cities.map((c) => ({ id: c.id, slot: c.slot, name: c.name, state: c.state || "", cap: c.cap ? 1 : 0, pop: c.pop || 0, lng: c.lng, lat: c.lat, hp: c.cap ? 140 : 100, maxHp: c.cap ? 140 : 100, alive: true }));
@@ -128,7 +138,7 @@ export function buyPlace(w, slot, type, lng, lat, territoryOk) {
   const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
   if (n.points < cost) return { error: "not enough points" };
   n.points -= cost;
-  const unit = { id: nextId(w, "u"), slot, type, lng, lat, hp: def.hp, cooldown: 0, targetId: null };
+  const unit = { id: nextId(w, "u"), slot, type, lng, lat, hp: def.hp, cooldown: 0, targetId: null, warhead: def.kind === "offense" ? "standard" : null };
   w.units.push(unit); return { ok: true, unit };
 }
 export function moveUnit(w, slot, unitId, lng, lat, territoryOk) {
@@ -154,10 +164,26 @@ export function canQueue(n, techId) { const t = TECHS[techId]; if (!t) return fa
 export function enqueueResearch(w, slot, techId) { const n = nationOf(w, slot), t = TECHS[techId]; if (!n || !t) return { error: "invalid" }; if (!canQueue(n, techId)) return { error: "unavailable" }; if (n.points < t.cost) return { error: "not enough points" }; n.points -= t.cost; n.research.queue.push(techId); return { ok: true }; }
 export function unqueueResearch(w, slot, techId) { const n = nationOf(w, slot); const i = n.research.queue.indexOf(techId); if (i < 0) return { error: "not queued" }; const dep = n.research.queue.slice(i + 1).filter((q) => TECHS[q].req === techId); if (dep.length) return { error: "later tech depends on it" }; n.research.queue.splice(i, 1); n.points += TECHS[techId].cost; return { ok: true }; }
 
-function launch(w, unit, target) {
+export function produceAmmo(w, slot, type) {
+  const n = nationOf(w, slot), wh = WARHEADS[type]; if (!n || !wh) return { error: "invalid" };
+  if (!n.ammo) { n.ammo = { ...AMMO_START }; n.ammoQ = []; n.ammoCur = null; }
+  if (n.points < wh.prodCost) return { error: "not enough points" };
+  n.points -= wh.prodCost; n.ammoQ.push(type); return { ok: true };
+}
+export function cancelAmmo(w, slot, index) {
+  const n = nationOf(w, slot); if (!n || !n.ammoQ || index < 0 || index >= n.ammoQ.length) return { error: "invalid" };
+  const type = n.ammoQ.splice(index, 1)[0]; n.points += WARHEADS[type].prodCost; return { ok: true };
+}
+export function setWarhead(w, slot, unitId, type) {
+  const u = w.units.find((x) => x.id === unitId && x.slot === slot);
+  if (!u || UNITS[u.type].kind !== "offense" || !WARHEADS[type]) return { error: "invalid" };
+  u.warhead = type; return { ok: true };
+}
+
+function launch(w, unit, target, warhead) {
   const n = nationOf(w, unit.slot);
   const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
-  w.projectiles.push({ id: nextId(w, "p"), slot: unit.slot, type: unit.type, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1), speed: UNITS[unit.type].speed ?? MISSILE_SPEED, tried: [], altNorm: 0, fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat, lng: unit.lng, lat: unit.lat, aheadLng: unit.lng, aheadLat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0 });
+  w.projectiles.push({ id: nextId(w, "p"), slot: unit.slot, type: unit.type, warhead: warhead || "standard", damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1) * (WARHEADS[warhead] || WARHEADS.standard).dmgMult, speed: UNITS[unit.type].speed ?? MISSILE_SPEED, tried: [], altNorm: 0, fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat, lng: unit.lng, lat: unit.lat, aheadLng: unit.lng, aheadLat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0 });
 }
 function resolveHit(w, p) {
   const target = findTarget(w, p.targetId);
@@ -165,6 +191,17 @@ function resolveHit(w, p) {
   target.ref.hp -= p.damage; const dead = target.ref.hp <= 0;
   if (dead) { target.ref.hp = 0; if (target.kind === "city") target.ref.alive = false; }
   w.events.push({ id: nextId(w, "e"), t: w.time, type: dead ? "destroy" : "hit", kind: target.kind, cityId: target.ref.id, lng: target.lng, lat: target.lat, slot: p.slot });
+  const cwh = WARHEADS[p.warhead];
+  if (cwh && cwh.splash) {
+    const sd = p.damage * (cwh.splashFrac ?? 0.5), cx = target.lng, cy = target.lat;
+    for (const c of w.cities) {
+      if (!c.alive || c.id === target.ref.id || c.slot === p.slot || haversine(cx, cy, c.lng, c.lat) > cwh.splash) continue;
+      c.hp -= sd;
+      if (c.hp <= 0) { c.hp = 0; c.alive = false; w.events.push({ id: nextId(w, "e"), t: w.time, type: "destroy", kind: "city", cityId: c.id, lng: c.lng, lat: c.lat, slot: p.slot }); }
+      else w.events.push({ id: nextId(w, "e"), t: w.time, type: "hit", kind: "city", cityId: c.id, lng: c.lng, lat: c.lat, slot: p.slot });
+    }
+    for (const un of w.units) { if (un.hp > 0 && un.slot !== p.slot && haversine(cx, cy, un.lng, un.lat) <= cwh.splash) un.hp -= sd; }
+  }
 }
 // Weighted-by-population target pick (prefers populous enemy cities; skips pop-0 when possible).
 function pickTarget(w, enemies) {
@@ -189,6 +226,8 @@ function aiTick(w, dt) {
   for (const n of w.nations) {
     if (!n.isAi || !n.alive) continue;
     n._ai -= dt; if (n._ai > 0) continue; n._ai = 3 + rand(w) * 3;
+    if (!n.ammo) { n.ammo = { ...AMMO_START }; n.ammoQ = []; n.ammoCur = null; }
+    if ((n.ammo.standard || 0) < 4) n.ammo.standard = 4;
     const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
     const myCap = w.cities.find((c) => c.slot === n.slot && c.alive); if (!myCap) continue;
     const domes = w.units.filter((u) => u.slot === n.slot && u.type === "dome").length;
@@ -201,7 +240,7 @@ function aiTick(w, dt) {
       const p = aiSpot(w, n.slot, myCap); if (!p) continue;
       const r = buyPlace(w, n.slot, "silo", p.lng, p.lat);
       const tgt = pickTarget(w, enemies);
-      if (r.ok && tgt) commandAttack(w, r.unit.id, tgt.id);
+      if (r.ok && tgt) { if (rand(w) < 0.25) { r.unit.warhead = "thermo"; n.ammo.thermo = Math.max(1, n.ammo.thermo || 0); } commandAttack(w, r.unit.id, tgt.id); }
     }
   }
 }
@@ -217,6 +256,13 @@ export function step(w, dt) {
     if (rr.current) { rr.current.progress += (dt / TECHS[rr.current.id].time) * (n.researchSpeedMult ?? 1); if (rr.current.progress >= 1) { TECHS[rr.current.id].apply(n); rr.done.push(rr.current.id); rr.current = null; } }
   }
 
+  for (const n of w.nations) {
+    if (!n.alive) continue;
+    if (!n.ammo) { n.ammo = { ...AMMO_START }; n.ammoQ = []; n.ammoCur = null; }
+    if (!n.ammoCur && n.ammoQ.length) n.ammoCur = { type: n.ammoQ.shift(), progress: 0 };
+    if (n.ammoCur) { n.ammoCur.progress += dt / WARHEADS[n.ammoCur.type].prodTime; if (n.ammoCur.progress >= 1) { n.ammo[n.ammoCur.type] = (n.ammo[n.ammoCur.type] || 0) + 1; n.ammoCur = null; } }
+  }
+
   for (const u of w.units) {
     if (u.hp <= 0) continue;
     u.cooldown = Math.max(0, u.cooldown - dt);
@@ -226,7 +272,7 @@ export function step(w, dt) {
       if (!t || !t.alive || !atWar(w, u.slot, t.slot)) { u.targetId = null; continue; }
       const n = nationOf(w, u.slot);
       if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
-        if (n.points >= (def.fireCost || 0)) { n.points -= def.fireCost || 0; launch(w, u, t); u.cooldown = def.reload * (n?.reloadMult ?? 1); }
+        if (!n.ammo) { n.ammo = { ...AMMO_START }; n.ammoQ = []; n.ammoCur = null; } const _wh = u.warhead || "standard"; if ((n.ammo[_wh] || 0) > 0) { n.ammo[_wh] -= 1; launch(w, u, t, _wh); u.cooldown = def.reload * (n?.reloadMult ?? 1); }
       }
     }
   }
@@ -242,9 +288,9 @@ export function step(w, dt) {
       if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
       if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id)) continue;
       if (haversine(d.lng, d.lat, p.lng, p.lat) <= defenseRange(w, d)) {
-        const dn = nationOf(w, d.slot); const fc = UNITS[d.type].fireCost || 0;
-        if (dn.points < fc) continue; // cannot fire without money
-        p.tried.push(d.id); dn.points -= fc; d.cooldown = UNITS[d.type].reload || 3;
+        const dn = nationOf(w, d.slot);
+        if (dn.points <= 0 && netIncomeOf(w, d.slot) < 0) continue; // upkeep unmet \u2014 interceptors offline
+        p.tried.push(d.id); d.cooldown = UNITS[d.type].reload || 3;
         w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, targetId: p.id, hitProb: Math.min(0.97, UNITS[d.type].intercept + (dn.interceptAdd ?? 0)), speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1), altNorm: 0, launchDist: Math.max(1, haversine(d.lng, d.lat, p.lng, p.lat)), fromLng: d.lng, fromLat: d.lat, lng: d.lng, lat: d.lat, toLng: p.lng, toLat: p.lat });
       }
     }

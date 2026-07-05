@@ -1,5 +1,6 @@
 import { useEffect, useReducer } from "react";
 import { interpGC } from "../game/geo.js";
+import { WARHEADS } from "../game/engine.js";
 
 // Renders missiles/interceptors and their contrails in SCREEN space with a
 // ballistic altitude baked into every point, so the trail arcs up off the
@@ -43,7 +44,7 @@ export default function SkyLayer({ map, projectiles, interceptors }) {
     }
     trails.push({ id: "p" + p.id, pts, color: "#d7e6ff", width: 2.4 });
     const n = pts.length, head = pts[n - 1], prev = pts[Math.max(0, n - 2)];
-    heads.push({ id: "p" + p.id, x: head[0], y: head[1], deg: (Math.atan2(head[0] - prev[0], -(head[1] - prev[1])) * 180) / Math.PI, kind: "missile" });
+    heads.push({ id: "p" + p.id, x: head[0], y: head[1], deg: (Math.atan2(head[0] - prev[0], -(head[1] - prev[1])) * 180) / Math.PI, kind: "missile", flame: (WARHEADS[p.warhead] || WARHEADS.standard).flame });
   }
   for (const it of interceptors) {
     const [x0, y0] = pr(it.fromLng, it.fromLat);
@@ -57,7 +58,7 @@ export default function SkyLayer({ map, projectiles, interceptors }) {
     <>
       <svg className="gd-sky">{trails.map((t) => <g key={t.id}>{seg(t.pts, t.color, t.width)}</g>)}</svg>
       {heads.map((h) => (
-        <div key={h.id} className="gd-sky-sprite" style={{ left: h.x, top: h.y, transform: `translate(-50%,-50%) rotate(${h.deg}deg)` }}>
+        <div key={h.id} className="gd-sky-sprite" style={{ left: h.x, top: h.y, transform: `translate(-50%,-50%) rotate(${h.deg}deg)`, ["--flame"]: h.flame }}>
           {h.kind === "missile"
             ? <div className="gd-missile"><span className="gd-missile-glow" /><span className="gd-missile-body" /><span className="gd-missile-flame" /></div>
             : <div className="gd-interceptor"><span className="gd-int-body" /><span className="gd-int-flame" /></div>}

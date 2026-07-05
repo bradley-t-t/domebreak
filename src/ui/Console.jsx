@@ -2,11 +2,12 @@ import {useState} from "react";
 import UnitsPanel from "./panels/UnitsPanel.jsx";
 import ResearchPanel from "./panels/ResearchPanel.jsx";
 import DiplomacyPanel from "./panels/DiplomacyPanel.jsx";
+import Flag from "./Flag.jsx";
 import {netIncomeOf, populationOf} from "../game/engine.js";
 import {SLOT_COLOR} from "../game/constants.js";
 
 const TABS = [
-    {id: "units", label: "Forces", glyph: "▣"},
+    {id: "units", label: "Production", glyph: "▣"},
     {id: "research", label: "Research", glyph: "❉"},
     {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
 ];
@@ -32,7 +33,7 @@ export default function Console({world, api, mySlot, active, setActive, placing,
     return (
         <div className="gd-console">
             <div className="gd-con-head">
-                <div className="gd-con-flag" style={{borderColor: SLOT_COLOR[mySlot]}}>{(me?.iso || "—").toUpperCase()}</div>
+                <div className="gd-con-flag" style={{borderColor: SLOT_COLOR[mySlot]}}><Flag iso={me?.iso}/></div>
                 <div className="gd-con-id">
                     <div className="gd-con-name">{me?.name || "Nation"}</div>
                     <div className="gd-con-sub">{fmtPop(pop)} people</div>
@@ -52,7 +53,7 @@ export default function Console({world, api, mySlot, active, setActive, placing,
             </div>
             <div className="gd-panel" key={active}>
                 {active === "units" &&
-                    <UnitsPanel world={world} mySlot={mySlot} placing={placing} setPlacing={setPlacing}/>}
+                    <UnitsPanel world={world} api={api} mySlot={mySlot} placing={placing} setPlacing={setPlacing}/>}
                 {active === "research" && <ResearchPanel world={world} api={api} mySlot={mySlot}/>}
                 {active === "diplomacy" && <DiplomacyPanel world={world} api={api} mySlot={mySlot}/>}
             </div>

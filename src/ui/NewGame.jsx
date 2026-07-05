@@ -1,5 +1,5 @@
 import {useMemo, useState} from "react";
-import {isoFlag} from "../game/newGame.js";
+import Flag from "./Flag.jsx";
 
 export default function NewGame({data, settings, onStart, onBack}) {
     const [q, setQ] = useState("");
@@ -18,14 +18,14 @@ export default function NewGame({data, settings, onStart, onBack}) {
                 <label className="gd-label">Commander name</label>
                 <input className="gd-input" value={name} maxLength={24} onChange={(e) => setName(e.target.value)}/>
                 <label className="gd-label" style={{marginTop: 12}}>Choose your nation {sel &&
-                    <span className="gd-chip subtle">{isoFlag(sel.iso)} {sel.name} · {sel.count} cities</span>}</label>
+                    <span className="gd-chip subtle"><Flag iso={sel.iso}/> {sel.name} · {sel.count} cities</span>}</label>
                 <input className="gd-input" placeholder="Search countries…" value={q}
                        onChange={(e) => setQ(e.target.value)}/>
                 <div className="gd-country-list">
                     {list.slice(0, 400).map((c) => (
                         <button key={c.iso} className={`gd-country ${iso === c.iso ? "active" : ""}`}
                                 onClick={() => setIso(c.iso)}>
-                            <span className="gd-flag">{isoFlag(c.iso)}</span>
+                            <span className="gd-flag"><Flag iso={c.iso}/></span>
                             <span className="gd-country-name">{c.name}</span>
                             <span className="gd-country-meta">{c.count}</span>
                         </button>

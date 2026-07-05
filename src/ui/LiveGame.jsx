@@ -5,12 +5,13 @@ import Console from "./Console.jsx";
 import LayerBar from "./LayerBar.jsx";
 import UnitIcon from "./UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
+import CountryLabels from "./CountryLabels.jsx";
 import Explosion from "./Explosion.jsx";
 import ContextMenu from "./ContextMenu.jsx";
 import PinnedBar from "./PinnedBar.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
-import { UNITS, UNIT_ICON, unitLabel, defenseRange, inTerritory, placementBlocked } from "../game/engine.js";
+import { UNITS, UNIT_ICON, unitLabel, defenseRange, inTerritory, placementBlocked, WARHEADS, WARHEAD_ORDER } from "../game/engine.js";
 import { toGid3 } from "../game/iso3.js";
 import { circle, gcTrail } from "../game/geo.js";
 import { SLOT_COLOR, GAME_SPEEDS } from "../game/constants.js";
@@ -20,7 +21,7 @@ const fmtPop = (p) => (p >= 1e9 ? (p / 1e9).toFixed(2) + "B" : p >= 1e6 ? (p / 1
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;
 const DEFAULT_LAYERS = { countries: true, states: false, defense: false, radar: false, pop: false, backdrop: true };
 
-export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdrop, overlayOpen }) {
+export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdrop, overlayOpen, labels }) {
   const [w, api] = useEngine(world);
   const mySlot = w.mySlot;
   const myNation = w.nations.find((n) => n.slot === mySlot);
@@ -219,6 +220,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
         {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center" offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind} /></Marker>)}
       </WorldMap>
       <SkyLayer map={mapRef.current} projectiles={w.projectiles} interceptors={w.interceptors} tick={w.time} />
+      <CountryLabels map={mapRef.current} labels={labels} />
 
       <div className="gd-topbtns">
         <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat">{globe ? "◐" : "▦"}</button>
@@ -236,9 +238,18 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
         <div className="gd-selpanel">
           <div className="gd-selname"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={SLOT_COLOR[mySlot]} size={18} />{unitLabel(selectedUnit.type, selectedUnit.slot)}</div>
           <div className="gd-selmeta">range {Math.round(UNITS[selectedUnit.type].kind === "defense" ? defenseRange(w, selectedUnit) : UNITS[selectedUnit.type].range).toLocaleString()}km · hp {Math.round(selectedUnit.hp)} · {UNITS[selectedUnit.type].upkeep}/s</div>
-          {UNITS[selectedUnit.type].kind === "offense" && (selectedUnit.targetId
-            ? <button className="gd-btn" onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold fire</button>
-            : <button className={`gd-btn ${attackMode ? "primary" : ""}`} onClick={() => setAttackMode((v) => !v)}>{attackMode ? "Pick a target…" : "Command attack"}</button>)}
+          {UNITS[selectedUnit.type].kind === "offense" && (
+            <>
+              <div className="gd-wh-row">
+                {WARHEAD_ORDER.map((k) => { const wh = WARHEADS[k]; const stock = myNation?.ammo?.[k] || 0; const cur = (selectedUnit.warhead || "standard") === k;
+                  return <button key={k} className={`gd-wh-chip ${cur ? "on" : ""}`} style={{ ["--flame"]: wh.flame }} title={`${wh.name} — ${wh.desc}`} onClick={() => api.setWarhead(selectedUnit.id, k)}><span className="gd-wh-dot" />{wh.short}<b>{stock}</b></button>;
+                })}
+              </div>
+              {selectedUnit.targetId
+                ? <button className="gd-btn" onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold fire</button>
+                : <button className={`gd-btn ${attackMode ? "primary" : ""}`} onClick={() => setAttackMode((v) => !v)}>{attackMode ? "Pick a target…" : "Command attack"}</button>}
+            </>
+          )}
         </div>
       )}
       {selectedCity && !details && !w.over && (

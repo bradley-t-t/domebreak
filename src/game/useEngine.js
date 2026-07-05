@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef } from "react";
-import { step, buyPlace, commandAttack, enqueueResearch, unqueueResearch, moveUnit, declareWar, makePeace, scrapUnit } from "./engine.js";
+import { step, buyPlace, commandAttack, enqueueResearch, unqueueResearch, moveUnit, declareWar, makePeace, scrapUnit, produceAmmo, cancelAmmo, setWarhead } from "./engine.js";
 
 // Drives a supplied world (created by App from a new setup or a loaded save).
 // Mutated in place; re-renders on a throttled tick.
@@ -31,6 +31,9 @@ export function useEngine(world) {
     declareWar: (slot) => { declareWar(ref.current, ref.current.mySlot, slot); force(); },
     makePeace: (slot) => { makePeace(ref.current, ref.current.mySlot, slot); force(); },
     scrap: (uid) => { const r = scrapUnit(ref.current, ref.current.mySlot, uid); force(); return r; },
+    produceAmmo: (type) => { const r = produceAmmo(ref.current, ref.current.mySlot, type); force(); return r; },
+    cancelAmmo: (i) => { const r = cancelAmmo(ref.current, ref.current.mySlot, i); force(); return r; },
+    setWarhead: (uid, type) => { const r = setWarhead(ref.current, ref.current.mySlot, uid, type); force(); return r; },
   }), []);
   return [ref.current, api, force];
 }
