@@ -195,3 +195,66 @@ input { font-family: inherit; }
 .gd-rank { font-family: var(--mono); color: var(--faint); width: 18px; }
 .gd-standing-name { flex: 1; }
 .gd-standing-score { font-family: var(--mono); color: var(--text); }
+
+/* ---- live real-time game ---- */
+.gd-livehud {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5;
+  display: flex; align-items: center; gap: 18px; padding: 8px 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  box-shadow: var(--shadow); backdrop-filter: blur(12px); pointer-events: auto;
+}
+.gd-points { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+.gd-points-val { font-family: var(--mono); font-size: 22px; color: var(--gold); font-weight: 700; }
+.gd-points-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+.gd-speed { display: flex; gap: 4px; }
+.gd-speedbtn {
+  min-width: 34px; height: 30px; border: 1px solid var(--line); background: #0b1424; color: var(--dim);
+  border-radius: 8px; font-size: 12px; font-family: var(--mono); transition: 0.12s;
+}
+.gd-speedbtn:hover { color: var(--text); border-color: var(--blue); }
+.gd-speedbtn.active { background: var(--gold); color: #241a02; border-color: transparent; box-shadow: var(--glow-gold); }
+.gd-clock { display: flex; flex-direction: column; align-items: flex-end; font-family: var(--mono); font-size: 15px; }
+.gd-nations-left { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+
+.gd-shop {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 5;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  box-shadow: var(--shadow); backdrop-filter: blur(12px); pointer-events: auto; max-width: 96vw;
+}
+.gd-shop-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+.gd-shop-items { display: flex; gap: 8px; flex-wrap: wrap; }
+.gd-shopitem {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; width: 96px;
+  background: #0b1424; border: 1px solid var(--line); border-radius: 10px; padding: 10px 6px; color: var(--text); transition: 0.14s;
+}
+.gd-shopitem:hover { border-color: var(--blue); transform: translateY(-2px); }
+.gd-shopitem.active { border-color: var(--gold); box-shadow: var(--glow-gold); background: #14203a; }
+.gd-shopitem.poor { opacity: 0.45; }
+.gd-shop-glyph { font-size: 20px; color: var(--gold); }
+.gd-shop-glyph[data-kind="defense"] { color: var(--good); }
+.gd-shop-glyph[data-kind="support"] { color: var(--blue); }
+.gd-shop-name { font-size: 11px; text-align: center; }
+.gd-shop-cost { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+.gd-selpanel {
+  position: absolute; bottom: 20px; right: 20px; z-index: 5; width: 250px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+  box-shadow: var(--shadow); backdrop-filter: blur(12px); pointer-events: auto;
+}
+.gd-selname { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.gd-selflag { width: 12px; height: 12px; border-radius: 3px; }
+.gd-selmeta { font-size: 12px; color: var(--dim); margin: 4px 0 10px; }
+.gd-selmeta.hint { color: var(--faint); }
+.gd-selpanel .gd-btn { width: 100%; }
+
+.gd-unit { font-size: 17px; text-shadow: 0 0 8px currentColor, 0 1px 3px #000; cursor: pointer; user-select: none; }
+.gd-unit.mine { cursor: pointer; }
+.gd-unit.sel { transform: scale(1.35); }
+.gd-proj { width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.gd-hpbar { display: block; width: 26px; height: 3px; background: rgba(255,255,255,0.18); border-radius: 2px; margin: 2px 0; overflow: hidden; }
+.gd-hpbar > span { display: block; height: 100%; }
+.gd-toast {
+  position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 6;
+  background: rgba(255,93,93,0.15); border: 1px solid var(--danger); color: #ffd0d0;
+  padding: 8px 16px; border-radius: 999px; font-size: 13px; pointer-events: none;
+}
