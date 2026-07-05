@@ -656,3 +656,66 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 
 /* ---- relocate hint ---- */
 .gd-move-hint { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid rgba(244,192,42,0.4); color: var(--text); padding: 8px 14px; border-radius: 999px; font-size: 13px; box-shadow: var(--shadow); }
+
+/* ================= redesigned console ================= */
+.gd-console { width: 340px; }
+.gd-con-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: linear-gradient(180deg, rgba(20,32,58,0.9), rgba(10,17,32,0.6)); border-bottom: 1px solid var(--line-soft); }
+.gd-con-flag { width: 40px; height: 40px; display: grid; place-items: center; font-size: 24px; border-radius: 10px; border: 2px solid var(--line); background: #060b16; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
+.gd-con-id { flex: 1; min-width: 0; }
+.gd-con-name { font-weight: 800; font-size: 15px; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-con-sub { font-size: 11px; color: var(--dim); }
+.gd-con-pts { text-align: right; line-height: 1.1; }
+.gd-con-ptsval { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--gold); }
+.gd-con-net { font-family: var(--mono); font-size: 11px; }
+.gd-con-net.pos { color: var(--good); } .gd-con-net.neg { color: var(--danger); }
+.gd-con-head .gd-collapse { width: 24px; align-self: flex-start; margin: -4px -6px 0 0; }
+
+.gd-tabs2 { display: flex; gap: 4px; padding: 8px 10px; }
+.gd-tab2 { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 4px; border-radius: 9px; border: 1px solid transparent; background: #0b1424; color: var(--dim); font-size: 12.5px; font-weight: 600; transition: transform 140ms var(--ease-out), color 140ms ease, border-color 140ms ease, background 140ms ease; }
+.gd-tab2:hover { color: var(--text); }
+.gd-tab2:active { transform: scale(0.97); }
+.gd-tab2.active { color: var(--gold); border-color: rgba(244,192,42,0.4); background: var(--gold-soft); }
+.gd-tab2-g { font-size: 14px; }
+
+.gd-econbar { display: flex; gap: 8px; margin-bottom: 8px; }
+.gd-econ-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; background: #0b1424; border: 1px solid var(--line); border-radius: 10px; }
+.gd-econ-stat span { font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--faint); }
+.gd-econ-stat b { font-family: var(--mono); font-size: 15px; }
+
+.gd-arsenal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gd-acard { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px 10px; background: #0b1424; border: 1px solid var(--line); border-radius: 12px; color: var(--text); transition: transform 140ms var(--ease-out), border-color 140ms ease, box-shadow 140ms ease; animation: gdRowIn 280ms var(--ease-out) both; }
+.gd-arsenal-grid > *:nth-child(2) { animation-delay: 40ms; } .gd-arsenal-grid > *:nth-child(3) { animation-delay: 75ms; } .gd-arsenal-grid > *:nth-child(4) { animation-delay: 110ms; } .gd-arsenal-grid > *:nth-child(5) { animation-delay: 145ms; }
+.gd-acard:hover { border-color: var(--blue); transform: translateY(-2px); }
+.gd-acard:active { transform: scale(0.98); }
+.gd-acard.active { border-color: var(--gold); box-shadow: var(--glow-gold); background: #14203a; }
+.gd-acard.poor { filter: grayscale(0.7) brightness(0.7); }
+.gd-acard-ico { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: #0a1220; color: var(--gold); }
+.gd-acard-ico[data-kind="defense"] { color: var(--good); } .gd-acard-ico[data-kind="support"] { color: var(--blue); }
+.gd-acard-name { font-size: 11.5px; text-align: center; line-height: 1.15; }
+.gd-acard-meta { font-size: 9.5px; color: var(--dim); }
+.gd-acard-cost { font-family: var(--mono); font-size: 12px; color: var(--gold); }
+
+.gd-forces-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gd-fchip { display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: #0b1424; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+.gd-fchip b { font-family: var(--mono); color: var(--text); }
+.gd-fchip .gd-icon { background: var(--dim); }
+
+.gd-natlist { display: flex; flex-direction: column; gap: 7px; }
+.gd-natcard { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: #0b1424; border: 1px solid var(--line); border-radius: 11px; animation: gdRowIn 280ms var(--ease-out) both; }
+.gd-natcard.dead { opacity: 0.5; }
+.gd-nat-flag { width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; border-radius: 8px; border: 2px solid var(--line); background: #060b16; }
+.gd-nat-info { flex: 1; min-width: 0; }
+.gd-nat-info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-nat-info span { font-size: 11px; color: var(--dim); }
+.gd-rail-tab.expand { color: var(--gold); }
+
+/* ================= layer control bar ================= */
+.gd-layerbar { position: absolute; bottom: 18px; right: 18px; z-index: 5; width: 176px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+.gd-layerbar-t { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); padding: 4px 8px 6px; }
+.gd-layerbtn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 9px; border: none; background: transparent; color: var(--dim); border-radius: 8px; font-size: 12.5px; transition: background 140ms ease, color 140ms ease; }
+.gd-layerbtn:hover { background: #131f36; color: var(--text); }
+.gd-layerbtn.on { color: var(--text); }
+.gd-layerbtn-g { width: 16px; text-align: center; font-size: 13px; }
+.gd-layerbtn-l { flex: 1; text-align: left; }
+.gd-layerdot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); box-shadow: inset 0 0 0 1px var(--line); transition: background 140ms ease, box-shadow 140ms ease; }
+.gd-layerbtn.on .gd-layerdot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
