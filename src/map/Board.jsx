@@ -3,5 +3,5 @@
 import WorldMap from "./WorldMap.jsx";
 
 export default function Board() {
-  return <WorldMap />;
+    return <WorldMap/>;
 }
