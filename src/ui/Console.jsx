@@ -3,7 +3,6 @@ import UnitsPanel from "./panels/UnitsPanel.jsx";
 import ResearchPanel from "./panels/ResearchPanel.jsx";
 import DiplomacyPanel from "./panels/DiplomacyPanel.jsx";
 import {netIncomeOf, populationOf} from "../game/engine.js";
-import {isoFlag} from "../game/newGame.js";
 import {SLOT_COLOR} from "../game/constants.js";
 
 const TABS = [
@@ -33,7 +32,7 @@ export default function Console({world, api, mySlot, active, setActive, placing,
     return (
         <div className="gd-console">
             <div className="gd-con-head">
-                <div className="gd-con-flag" style={{borderColor: SLOT_COLOR[mySlot]}}>{isoFlag(me?.iso) || "🏳"}</div>
+                <div className="gd-con-flag" style={{borderColor: SLOT_COLOR[mySlot]}}>{(me?.iso || "—").toUpperCase()}</div>
                 <div className="gd-con-id">
                     <div className="gd-con-name">{me?.name || "Nation"}</div>
                     <div className="gd-con-sub">{fmtPop(pop)} people</div>

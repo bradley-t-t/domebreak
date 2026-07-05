@@ -1,5 +1,4 @@
 import { SLOT_COLOR } from "../../game/constants.js";
-import { isoFlag } from "../../game/newGame.js";
 
 export default function DiplomacyPanel({ world, api, mySlot }) {
   const me = world.nations.find((n) => n.slot === mySlot);
@@ -13,7 +12,7 @@ export default function DiplomacyPanel({ world, api, mySlot }) {
           const war = me?.relations[n.slot] === "war";
           return (
             <div key={n.slot} className={`gd-natcard ${!n.alive ? "dead" : ""}`}>
-              <span className="gd-nat-flag" style={{ borderColor: SLOT_COLOR[n.slot] }}>{isoFlag(n.iso) || "🏳"}</span>
+              <span className="gd-nat-flag" style={{ borderColor: SLOT_COLOR[n.slot] }}>{(n.iso || "—").toUpperCase()}</span>
               <div className="gd-nat-info"><b>{n.name}{isMe ? " (you)" : ""}</b><span>{cities} cities{n.alive ? "" : " · eliminated"}</span></div>
               {isMe ? <span className="gd-badge you">You</span>
                 : !n.alive ? <span className="gd-badge">—</span>

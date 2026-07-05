@@ -27,7 +27,7 @@ export default function ResearchPanel({ world, api, mySlot }) {
                   : isCur ? <span className="gd-tech-badge">…</span>
                   : qi >= 0 ? <span className="gd-tech-q">#{qi + 1}</span>
                   : avail ? <button className="gd-mini" disabled={points < t.cost} onClick={() => api.research(id)}>{t.cost}</button>
-                  : <span className="gd-tech-lock" title="Requires previous tech">🔒</span>}
+                  : <span className="gd-tech-lock" title="Requires previous tech">Locked</span>}
               </div>
             );
           })}
