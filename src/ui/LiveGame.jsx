@@ -23,6 +23,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const [cursor, setCursor] = useState(null);
   const [flashes, setFlashes] = useState({});
   const [intercepts, setIntercepts] = useState([]);
+  const [explosions, setExplosions] = useState([]);
   const [err, setErr] = useState(null);
   const lastEid = useRef(0);
 
@@ -43,6 +44,8 @@ export default function LiveGame({ setup, globe, onQuit }) {
     if (fFlash.length) {
       setFlashes((f) => { const n = { ...f }; for (const e of fFlash) n[e.cityId] = e.type; return n; });
       for (const e of fFlash) { const cid = e.cityId, ty = e.type; setTimeout(() => setFlashes((f) => { if (f[cid] !== ty) return f; const n = { ...f }; delete n[cid]; return n; }), 520); }
+      setExplosions((list) => [...list, ...fFlash.map((e) => ({ id: e.id, lng: e.lng, lat: e.lat, kind: e.type }))]);
+      for (const e of fFlash) { const id = e.id; setTimeout(() => setExplosions((list) => list.filter((x) => x.id !== id)), 800); }
     }
     if (fInt.length) {
       setIntercepts((list) => [...list, ...fInt.map((e) => ({ id: e.id, lng: e.lng, lat: e.lat }))]);
@@ -169,6 +172,12 @@ export default function LiveGame({ setup, globe, onQuit }) {
         {intercepts.map((i) => (
           <Marker key={i.id} longitude={i.lng} latitude={i.lat} anchor="center">
             <div className="gd-blast" />
+          </Marker>
+        ))}
+
+        {explosions.map((x) => (
+          <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center">
+            <div className={`gd-explosion ${x.kind}`}><span className="gd-boom" /><span className="gd-shock" /><span className="gd-flash" /></div>
           </Marker>
         ))}
       </WorldMap>
