@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef } from "react";
-import { createWorld, step, buyPlace, commandAttack, declareWar, makePeace } from "./engine.js";
+import { createWorld, step, buyPlace, commandAttack, commandResearch, declareWar, makePeace } from "./engine.js";
 
 // Drives the real-time loop. The world is mutated in place every animation frame;
 // the component re-renders on a throttled tick so React work stays ~15fps while
@@ -29,6 +29,7 @@ export function useEngine(setup) {
     play: () => { ref.current.paused = false; force(); },
     buyPlace: (type, lng, lat) => { const r = buyPlace(ref.current, ref.current.mySlot, type, lng, lat); force(); return r; },
     commandAttack: (uid, tid) => { const r = commandAttack(ref.current, uid, tid); force(); return r; },
+    research: (id) => { const r = commandResearch(ref.current, ref.current.mySlot, id); force(); return r; },
     declareWar: (slot) => { declareWar(ref.current, ref.current.mySlot, slot); force(); },
     makePeace: (slot) => { makePeace(ref.current, ref.current.mySlot, slot); force(); },
   }), []);

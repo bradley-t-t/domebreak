@@ -1,8 +1,6 @@
 // GoldenDome real-time simulation engine. Pure and deterministic given its seed:
-// the same seed + same commands + same dt sequence always produce the same world.
-// That lets it run identically in the browser rAF loop and in headless tests.
-// The world is mutated in place for performance; the React hook re-renders off a
-// version counter rather than cloning each frame.
+// same seed + same commands + same dt sequence always produce the same world.
+// Mutated in place for performance; the React hook re-renders off a version tick.
 
 export const START_POINTS = 450;
 export const MISSILE_SPEED = 1400; // km per game-second
@@ -13,6 +11,16 @@ export const UNITS = {
   radar:    { label: "Radar",               kind: "support", cost: 150, range: 1600,  hp: 40, glyph: "❉" },
   launcher: { label: "Cruise Launcher",     kind: "offense", cost: 200, range: 3800,  damage: 34, reload: 3.2, hp: 45, glyph: "➤" },
   silo:     { label: "Missile Silo",        kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, hp: 60, glyph: "▲" },
+};
+
+// Research: spend points up front, complete over game-time, apply a permanent
+// bonus to the owning nation. AI nations research too.
+export const TECHS = {
+  warheads: { label: "Advanced Warheads", cost: 250, time: 25, desc: "+30% strike damage", apply: (n) => { n.dmgMult *= 1.3; } },
+  defense:  { label: "Layered Defense",   cost: 250, time: 25, desc: "+15% intercept",     apply: (n) => { n.interceptAdd += 0.15; } },
+  economy:  { label: "War Economy",       cost: 200, time: 20, desc: "+35% income",        apply: (n) => { n.incomeMult *= 1.35; } },
+  range:    { label: "Extended Range",    cost: 220, time: 22, desc: "+40% strike range",  apply: (n) => { n.rangeMult *= 1.4; } },
+  reload:   { label: "Rapid Reload",      cost: 220, time: 22, desc: "-25% reload time",   apply: (n) => { n.reloadMult *= 0.75; } },
 };
 
 export function haversine(aLng, aLat, bLng, bLat) {
@@ -34,6 +42,8 @@ export function createWorld(setup) {
   const nations = setup.nations.map((n) => ({
     slot: n.slot, name: n.name, isAi: !!n.isAi, points: START_POINTS, alive: true,
     relations: {}, _ai: 2 + n.slot * 0.3,
+    research: { current: null, done: [] },
+    dmgMult: 1, interceptAdd: 0, incomeMult: 1, rangeMult: 1, reloadMult: 1,
   }));
   const cities = setup.cities.map((c) => ({
     id: c.id, slot: c.slot, name: c.name, lng: c.lng, lat: c.lat, hp: 100, maxHp: 100, alive: true,
@@ -51,8 +61,9 @@ export function atWar(w, a, b) {
   return !!(n && n.relations[b] === "war");
 }
 export function incomeOf(w, slot) {
+  const n = nationOf(w, slot);
   const cityCount = w.cities.filter((c) => c.slot === slot && c.alive).length;
-  return 10 + cityCount * 8;
+  return (10 + cityCount * 8) * (n?.incomeMult ?? 1);
 }
 function findTarget(w, id) {
   const c = w.cities.find((x) => x.id === id);
@@ -86,35 +97,51 @@ export function buyPlace(w, slot, type, lng, lat) {
 }
 export function commandAttack(w, unitId, targetId) {
   const u = w.units.find((x) => x.id === unitId);
-  const t = findTarget(w, targetId);
-  if (!u || !t) return { error: "gone" };
+  if (!u) return { error: "gone" };
   if (UNITS[u.type].kind !== "offense") return { error: "not an offensive unit" };
+  if (targetId == null) { u.targetId = null; return { ok: true }; }
+  const t = findTarget(w, targetId);
+  if (!t) return { error: "gone" };
   if (!atWar(w, u.slot, t.slot)) return { error: "not at war with that nation" };
   u.targetId = targetId;
   return { ok: true };
 }
+export function commandResearch(w, slot, techId) {
+  const n = nationOf(w, slot), tech = TECHS[techId];
+  if (!n || !tech) return { error: "invalid" };
+  if (n.research.done.includes(techId)) return { error: "already researched" };
+  if (n.research.current) return { error: "already researching" };
+  if (n.points < tech.cost) return { error: "not enough points" };
+  n.points -= tech.cost;
+  n.research.current = { id: techId, progress: 0 };
+  return { ok: true };
+}
 
 function launch(w, unit, target) {
+  const n = nationOf(w, unit.slot);
   const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
   w.projectiles.push({
-    id: nextId(w, "p"), slot: unit.slot, damage: UNITS[unit.type].damage,
+    id: nextId(w, "p"), slot: unit.slot, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1),
     fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat,
     lng: unit.lng, lat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0,
   });
 }
 function resolveImpact(w, p) {
   const target = findTarget(w, p.targetId);
-  if (!target || !target.alive) { w.events.push({ t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat }); return; }
+  if (!target || !target.alive) { w.events.push({ id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat }); return; }
+  const defNation = nationOf(w, target.slot);
   const defenders = w.units.filter((u) => u.slot === target.slot && UNITS[u.type].kind === "defense" && u.hp > 0);
   let survival = 1;
   for (const d of defenders) {
-    if (haversine(d.lng, d.lat, target.lng, target.lat) <= UNITS[d.type].range) survival *= 1 - UNITS[d.type].intercept;
+    if (haversine(d.lng, d.lat, target.lng, target.lat) <= UNITS[d.type].range) {
+      survival *= 1 - Math.min(0.97, UNITS[d.type].intercept + (defNation?.interceptAdd ?? 0));
+    }
   }
-  if (rand(w) < 1 - survival) { w.events.push({ t: w.time, type: "intercept", lng: target.lng, lat: target.lat }); return; }
+  if (rand(w) < 1 - survival) { w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", cityId: target.ref.id, lng: target.lng, lat: target.lat }); return; }
   target.ref.hp -= p.damage;
   const dead = target.ref.hp <= 0;
   if (dead) { target.ref.hp = 0; if (target.kind === "city") target.ref.alive = false; }
-  w.events.push({ t: w.time, type: dead ? "destroy" : "hit", kind: target.kind, lng: target.lng, lat: target.lat, slot: p.slot });
+  w.events.push({ id: nextId(w, "e"), t: w.time, type: dead ? "destroy" : "hit", kind: target.kind, cityId: target.ref.id, lng: target.lng, lat: target.lat, slot: p.slot });
 }
 
 function aiTick(w, dt) {
@@ -128,6 +155,10 @@ function aiTick(w, dt) {
     if (!myCap) continue;
     const domes = w.units.filter((u) => u.slot === n.slot && u.type === "dome").length;
     if (domes === 0 && n.points >= UNITS.dome.cost) { buyPlace(w, n.slot, "dome", myCap.lng, myCap.lat); return; }
+    if (!n.research.current && n.points >= 300) {
+      const undone = Object.keys(TECHS).filter((t) => !n.research.done.includes(t));
+      if (undone.length && rand(w) < 0.5) { commandResearch(w, n.slot, undone[Math.floor(rand(w) * undone.length)]); return; }
+    }
     if (!enemies.length) continue;
     if (n.points >= UNITS.silo.cost) {
       const r = buyPlace(w, n.slot, "silo", myCap.lng + (rand(w) - 0.5) * 2, myCap.lat + (rand(w) - 0.5) * 2);
@@ -142,6 +173,16 @@ export function step(w, dt) {
   w.time += dt;
   for (const n of w.nations) if (n.alive) n.points += incomeOf(w, n.slot) * dt;
 
+  for (const n of w.nations) {
+    if (!n.alive || !n.research.current) continue;
+    n.research.current.progress += dt / TECHS[n.research.current.id].time;
+    if (n.research.current.progress >= 1) {
+      TECHS[n.research.current.id].apply(n);
+      n.research.done.push(n.research.current.id);
+      n.research.current = null;
+    }
+  }
+
   for (const u of w.units) {
     if (u.hp <= 0) continue;
     u.cooldown = Math.max(0, u.cooldown - dt);
@@ -149,7 +190,10 @@ export function step(w, dt) {
     if (def.kind === "offense" && u.targetId && u.cooldown <= 0) {
       const t = findTarget(w, u.targetId);
       if (!t || !t.alive || !atWar(w, u.slot, t.slot)) { u.targetId = null; continue; }
-      if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range) { launch(w, u, t); u.cooldown = def.reload; }
+      const n = nationOf(w, u.slot);
+      if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
+        launch(w, u, t); u.cooldown = def.reload * (n?.reloadMult ?? 1);
+      }
     }
   }
 
@@ -162,7 +206,7 @@ export function step(w, dt) {
   }
   w.projectiles = w.projectiles.filter((p) => !p._dead);
   w.units = w.units.filter((u) => u.hp > 0);
-  if (w.events.length > 40) w.events.splice(0, w.events.length - 40);
+  if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
 
   aiTick(w, dt);
 
