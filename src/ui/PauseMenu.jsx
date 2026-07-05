@@ -10,6 +10,7 @@ export default function PauseMenu({ onResume, onSave, onLoad, onSettings, onQuit
           <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
           <button className="gd-menu-btn danger" onClick={onQuit}>Quit to Menu</button>
         </div>
+        {!over && <div className="gd-menu-hint">Space pause · + / − speed · 1–5 speed level · Esc menu</div>}
       </div>
     </div>
   );

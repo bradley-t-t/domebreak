@@ -12,3 +12,5 @@ export const SLOT_COLOR = {
     12: "#e05a9c", 13: "#5ad1e0", 14: "#d98cff", 15: "#ffd05a",
 };
 export const MAX_SLOTS = 16;
+// Simulation speed multipliers, slowest → fastest. Shared by the HUD, settings, and hotkeys.
+export const GAME_SPEEDS = [0.5, 1, 2, 4, 10];

@@ -13,14 +13,14 @@ import { useEngine } from "../game/useEngine.js";
 import { UNITS, UNIT_ICON, unitLabel, defenseRange, inTerritory, placementBlocked } from "../game/engine.js";
 import { toGid3 } from "../game/iso3.js";
 import { circle, gcTrail } from "../game/geo.js";
-import { SLOT_COLOR } from "../game/constants.js";
+import { SLOT_COLOR, GAME_SPEEDS } from "../game/constants.js";
 
 const CITY_LAYERS = ["live-cities"];
 const fmtPop = (p) => (p >= 1e9 ? (p / 1e9).toFixed(2) + "B" : p >= 1e6 ? (p / 1e6).toFixed(0) + "M" : p >= 1e3 ? (p / 1e3).toFixed(0) + "K" : "" + Math.round(p || 0));
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;
 const DEFAULT_LAYERS = { countries: true, states: false, defense: false, radar: false, pop: false, backdrop: true };
 
-export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdrop }) {
+export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdrop, overlayOpen }) {
   const [w, api] = useEngine(world);
   const mySlot = w.mySlot;
   const myNation = w.nations.find((n) => n.slot === mySlot);
@@ -75,6 +75,21 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
     };
     window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
   }, [menu, details, moving, placing, attackMode, onPause]);
+
+  // Game speed hotkeys, RTS-style: Space toggles pause, +/− step the speed, 1–5 pick a speed level.
+  useEffect(() => {
+    const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+    const nearest = () => GAME_SPEEDS.reduce((b, s, i) => (Math.abs(s - w.speed) < Math.abs(GAME_SPEEDS[b] - w.speed) ? i : b), 0);
+    const stepTo = (i) => api.setSpeed(GAME_SPEEDS[Math.max(0, Math.min(GAME_SPEEDS.length - 1, i))]);
+    const h = (e) => {
+      if (overlayOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+      if (e.key === " " || e.code === "Space") { e.preventDefault(); w.paused ? api.play() : api.pause(); }
+      else if (e.key === "+" || e.key === "=") { e.preventDefault(); stepTo(nearest() + 1); }
+      else if (e.key === "-" || e.key === "_") { e.preventDefault(); stepTo(nearest() - 1); }
+      else if (e.key.length === 1 && e.key >= "1" && e.key <= "5") { e.preventDefault(); stepTo(+e.key - 1); }
+    };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, [overlayOpen, api, w]);
 
   // Countries layer visibility (keep fill queryable at opacity 0 so land/water tests still work).
   useEffect(() => {
