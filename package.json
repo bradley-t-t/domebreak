@@ -33,10 +33,39 @@
   "build": {
     "appId": "com.trentontaylor.goldendome",
     "productName": "GoldenDome",
-    "directories": { "output": "release", "buildResources": "build" },
-    "files": ["dist/**", "electron/**"],
-    "mac": { "target": ["dmg"], "category": "public.app-category.games", "icon": "build/icon.png" },
-    "win": { "target": ["nsis"], "icon": "build/icon.png" },
-    "linux": { "target": ["AppImage"], "category": "Game", "icon": "build/icon.png" }
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.games",
+      "icon": "build/icon.png"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png"
+    }
+  },
+  "author": "Trenton Taylor",
+  "homepage": "https://github.com/bradley-t-t/goldendome",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bradley-t-t/goldendome.git"
   }
 }
