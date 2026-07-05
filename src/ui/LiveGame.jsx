@@ -4,8 +4,7 @@ import LiveHud from "./LiveHud.jsx";
 import Console from "./Console.jsx";
 import LayerBar from "./LayerBar.jsx";
 import UnitIcon from "./UnitIcon.jsx";
-import Missile from "./Missile.jsx";
-import Interceptor from "./Interceptor.jsx";
+import SkyLayer from "./SkyLayer.jsx";
 import Explosion from "./Explosion.jsx";
 import ContextMenu from "./ContextMenu.jsx";
 import PinnedBar from "./PinnedBar.jsx";
@@ -103,8 +102,6 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   }, [w.units, w.time, placing, cursor, selUnit, mySlot]);
 
   const cmdLines = useMemo(() => ({ type: "FeatureCollection", features: w.units.filter((u) => u.slot === mySlot && u.targetId).map((u) => { const t = w.cities.find((c) => c.id === u.targetId) || w.units.find((x) => x.id === u.targetId); return t ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: gcTrail(u.lng, u.lat, t.lng, t.lat, 1, 18) } } : null; }).filter(Boolean) }), [w.units, w.time, mySlot]);
-  const trails = useMemo(() => ({ type: "FeatureCollection", features: w.projectiles.map((p) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: gcTrail(p.fromLng, p.fromLat, p.toLng, p.toLat, p.progress) } })) }), [w.projectiles, w.time]);
-  const intTrails = useMemo(() => ({ type: "FeatureCollection", features: w.interceptors.map((it) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[it.fromLng, it.fromLat], [it.lng, it.lat]] } })) }), [w.interceptors, w.time]);
 
   const onMove = (e) => {
     if (placing || moving) setCursor(e.lngLat);
@@ -183,11 +180,6 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
           <Layer id="radar-ring" type="line" filter={["==", ["get", "radar"], 1]} paint={{ "line-color": ["get", "color"], "line-width": 0.9, "line-opacity": 0.5, "line-dasharray": [3, 3] }} />
         </Source>
         <Source id="cmd" type="geojson" data={cmdLines}><Layer id="cmd-line" type="line" paint={{ "line-color": SLOT_COLOR[mySlot], "line-width": 1.4, "line-opacity": 0.5, "line-dasharray": [2, 3] }} /></Source>
-        <Source id="trail" type="geojson" data={trails} lineMetrics>
-          <Layer id="trail-glow" type="line" paint={{ "line-color": "#cfe2ff", "line-width": 6, "line-blur": 4, "line-opacity": 0.12 }} />
-          <Layer id="trail-line" type="line" paint={{ "line-width": 2.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(230,240,255,0)", 0.7, "rgba(230,240,255,0.32)", 1, "rgba(245,250,255,0.9)"] }} />
-        </Source>
-        <Source id="inttrail" type="geojson" data={intTrails}><Layer id="inttrail-line" type="line" paint={{ "line-color": "#8dffbf", "line-width": 1.5, "line-opacity": 0.6 }} /></Source>
         <Source id="live-src" type="geojson" data={liveFC}><Layer id="live-cities" type="circle" paint={{ "circle-radius": ["case", ["==", ["get", "cap"], 1], 5, 3], "circle-color": ["get", "color"], "circle-stroke-color": ["case", ["==", ["get", "mine"], 1], "#ffffff", "#05070c"], "circle-stroke-width": ["case", ["==", ["get", "mine"], 1], 1.4, 0.6] }} /></Source>
 
         {selectedCity && <Marker longitude={selectedCity.lng} latitude={selectedCity.lat} anchor="center"><div className="gd-city-sel" /></Marker>}
@@ -198,10 +190,9 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
             </div>
           </Marker>
         ))}
-        {w.projectiles.map((p) => <Missile key={p.id} p={p} />)}
-        {w.interceptors.map((it) => <Interceptor key={it.id} it={it} />)}
         {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center" offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind} /></Marker>)}
       </WorldMap>
+      <SkyLayer map={mapRef.current} projectiles={w.projectiles} interceptors={w.interceptors} tick={w.time} />
 
       <div className="gd-topbtns">
         <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat">{globe ? "◐" : "▦"}</button>
