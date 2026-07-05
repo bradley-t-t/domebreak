@@ -28,13 +28,13 @@ function buildStyle() {
       regions: { type: "vector", url: tilesUrl("regions") },
     },
     layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#060a12" } },
+      { id: "bg", type: "background", paint: { "background-color": "#060b16" } },
       { id: "regions-fill", type: "fill", source: "regions", "source-layer": "regions",
-        paint: { "fill-color": "#0f1d33", "fill-opacity": 0.85 } },
+        paint: { "fill-color": "#12233d", "fill-opacity": 0.85 } },
       { id: "country-fill", type: "fill", source: "countries", "source-layer": "countries",
-        paint: { "fill-color": "#17294a", "fill-opacity": 0.55 } },
+        paint: { "fill-color": "#1b3054", "fill-opacity": 0.6 } },
       { id: "country-line", type: "line", source: "countries", "source-layer": "countries",
-        paint: { "line-color": "#38507a", "line-width": 0.6 } },
+        paint: { "line-color": "#4d6ea6", "line-width": 0.7, "line-opacity": 0.8 } },
     ],
   };
 }
