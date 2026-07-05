@@ -39,7 +39,7 @@ function buildStyle() {
 }
 
 export default function WorldMap({
-  cities = [], myCityIds, placements = [], tool, mySlot,
+  cities = [], myCityIds, slotByPlayer = {}, placements = [], tool, mySlot,
   onMapClick, onCityClick, arcs = [], flashes = {}, globe = true,
 }) {
   const mapRef = useRef(null);
@@ -72,22 +72,20 @@ export default function WorldMap({
     >
       <Source id="arcs" type="geojson" data={arcsFC}>
         <Layer id="arc-line" type="line"
-          paint={{
-            "line-color": ["match", ["get", "slot"], 0, SLOT_COLOR[0], 1, SLOT_COLOR[1], "#fff"],
-            "line-width": 2, "line-opacity": 0.85,
-          }} />
+          paint={{ "line-color": ["get", "color"], "line-width": 2, "line-opacity": 0.85 }} />
       </Source>
 
       {cities.map((c) => {
         const mine = myCityIds?.has(c.id);
         const flash = flashes[c.id];
         const targetable = tool === "silo" && !mine && c.alive;
+        const color = c.alive ? (SLOT_COLOR[slotByPlayer[c.player_id]] || "#8aa0bd") : "#3a3a3a";
         return (
           <Marker key={c.id} longitude={c.lng} latitude={c.lat} anchor="center"
             onClick={(ev) => { ev.originalEvent.stopPropagation(); onCityClick && onCityClick(c); }}>
             <div className={`gd-city ${mine ? "mine" : "enemy"} ${!c.alive ? "dead" : ""} ${targetable ? "targetable" : ""} ${flash ? "flash-" + flash : ""}`}
               title={`${c.name} — ${c.hp} hp`}>
-              <span className="gd-city-dot" />
+              <span className="gd-city-dot" style={{ background: color }} />
               <span className="gd-city-name">{c.name}</span>
             </div>
           </Marker>

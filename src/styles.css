@@ -168,3 +168,30 @@ input { font-family: inherit; }
 .gd-placement { font-size: 18px; text-shadow: 0 0 8px currentColor, 0 1px 3px #000; user-select: none; }
 
 .maplibregl-ctrl-attrib, .maplibregl-ctrl-logo { display: none !important; }
+
+/* ---- multi-slot setup, roster, standings ---- */
+.gd-stepper { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.gd-stepper-val { font-family: var(--mono); font-size: 22px; min-width: 28px; text-align: center; color: var(--gold); }
+.gd-stepper-val.sm { font-size: 16px; min-width: 22px; }
+.gd-slotcount { display: flex; align-items: center; gap: 8px; }
+.gd-slotgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; margin: 8px 0 14px; max-height: min(46vh, 320px); overflow: auto; }
+.gd-slotrow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 8px; background: #0a1120; }
+.gd-slotrow.open { opacity: 0.72; border-style: dashed; }
+.gd-slotname { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-slotctl { display: flex; gap: 6px; }
+.gd-mini { font-size: 11px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: #131d31; color: var(--text); }
+.gd-mini:hover:not(:disabled) { border-color: var(--blue); }
+.gd-mini.danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+.gd-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+.gd-roster { position: absolute; top: 14px; left: 14px; z-index: 4; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(10px); max-width: 250px; pointer-events: auto; }
+.gd-roster-title { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+.gd-roster-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; font-size: 13px; }
+.gd-roster-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-ready { color: var(--good); }
+.gd-standings { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; max-height: 42vh; overflow: auto; }
+.gd-standing { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; background: #0a1120; }
+.gd-standing.winner { border: 1px solid var(--gold); box-shadow: var(--glow-gold); }
+.gd-standing.me .gd-standing-name { color: var(--gold); }
+.gd-rank { font-family: var(--mono); color: var(--faint); width: 18px; }
+.gd-standing-name { flex: 1; }
+.gd-standing-score { font-family: var(--mono); color: var(--text); }

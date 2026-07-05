@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { MAX_SLOTS } from "../game/constants.js";
 
 export default function Home({ onCreate, onJoin, busy, error }) {
   const [handle, setHandle] = useState("");
   const [code, setCode] = useState("");
+  const [slots, setSlots] = useState(4);
   return (
     <div className="gd-overlay center">
       <div className="gd-card wide">
@@ -11,8 +13,15 @@ export default function Home({ onCreate, onJoin, busy, error }) {
         <label className="gd-label">Commander name</label>
         <input className="gd-input" value={handle} maxLength={24}
           placeholder="e.g. NORAD" onChange={(e) => setHandle(e.target.value)} />
+        <label className="gd-label" style={{ marginTop: 14 }}>Countries in play</label>
+        <div className="gd-stepper">
+          <button className="gd-ghost" onClick={() => setSlots((s) => Math.max(2, s - 1))}>−</button>
+          <span className="gd-stepper-val">{slots}</span>
+          <button className="gd-ghost" onClick={() => setSlots((s) => Math.min(MAX_SLOTS, s + 1))}>+</button>
+          <span className="gd-sub" style={{ margin: 0 }}>seats — fill with players or AI next</span>
+        </div>
         <div className="gd-row">
-          <button className="gd-btn primary" disabled={busy} onClick={() => onCreate(handle || "Commander")}>
+          <button className="gd-btn primary" disabled={busy} onClick={() => onCreate(handle || "Commander", slots)}>
             Create match
           </button>
         </div>
