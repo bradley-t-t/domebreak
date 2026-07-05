@@ -11,6 +11,7 @@ import PinnedBar from "./PinnedBar.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
 import { UNITS, UNIT_ICON, unitLabel, defenseRange, inTerritory, placementBlocked } from "../game/engine.js";
+import { toGid3 } from "../game/iso3.js";
 import { circle, gcTrail } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
@@ -23,6 +24,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   const [w, api] = useEngine(world);
   const mySlot = w.mySlot;
   const myNation = w.nations.find((n) => n.slot === mySlot);
+  const myGid = useMemo(() => toGid3(myNation?.iso), [myNation?.iso]);
   const mapRef = useRef(null);
 
   const [tab, setTab] = useState("units");
@@ -47,7 +49,9 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   const nationName = (slot) => w.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`;
   const flash = (m) => { setErr(m); setTimeout(() => setErr(null), 1800); };
   const toggleLayer = (id) => setLayers((L) => ({ ...L, [id]: !L[id] }));
-  const onLand = (e) => { const m = mapRef.current; return !!(m && m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }).length); };
+  const featsAt = (e) => { const m = mapRef.current; return m ? m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }) : []; };
+  const onLand = (e) => featsAt(e).length > 0;
+  const inMyLand = (e) => { const fs = featsAt(e); return myGid ? fs.some((f) => f.properties?.GID_0 === myGid) : (fs.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat)); };
 
   useEffect(() => {
     const fresh = [];
@@ -109,17 +113,19 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   const cmdLines = useMemo(() => ({ type: "FeatureCollection", features: w.units.filter((u) => u.slot === mySlot && u.targetId).map((u) => { const t = w.cities.find((c) => c.id === u.targetId) || w.units.find((x) => x.id === u.targetId); return t ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: gcTrail(u.lng, u.lat, t.lng, t.lat, 1, 18) } } : null; }).filter(Boolean) }), [w.units, w.time, mySlot]);
 
   const onMove = (e) => {
-    const m = mapRef.current;
+    const m = mapRef.current; if (!m) return;
+    const feats = m.queryRenderedFeatures(e.point, { layers: ["country-fill"] });
+    const gid = feats[0]?.properties?.GID_0 || null;
     if (placing || moving) {
       setCursor(e.lngLat);
-      const land = !!(m && m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }).length);
-      setPlaceValid(inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat) && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null) && land);
+      const mine = myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (feats.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat));
+      setPlaceValid(mine && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null));
     }
-    if (m) { const f = m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }); const gid = f[0]?.properties?.GID_0 || null; if (gid !== hoveredGid) setHoveredGid(gid); }
+    if (gid !== hoveredGid) setHoveredGid(gid);
   };
   const onMapClick = (e) => {
-    if (moving) { if (!onLand(e)) return flash("can't relocate into the ocean"); const r = api.move(moving, e.lngLat.lng, e.lngLat.lat); if (r.error) flash(r.error); else setMoving(null); return; }
-    if (placing) { if (!onLand(e)) return flash("can't build in the ocean"); const r = api.buyPlace(placing, e.lngLat.lng, e.lngLat.lat); if (r.error) flash(r.error); return; }
+    if (moving) { if (!onLand(e)) return flash("can't relocate into the ocean"); if (!inMyLand(e)) return flash("can't relocate outside your territory"); const r = api.move(moving, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); else setMoving(null); return; }
+    if (placing) { if (!onLand(e)) return flash("can't build in the ocean"); if (!inMyLand(e)) return flash("can't build outside your territory"); const r = api.buyPlace(placing, e.lngLat.lng, e.lngLat.lat, true); if (r.error) flash(r.error); return; }
     const feat = e.features?.find((f) => f.layer.id === "live-cities");
     if (feat) return onCityClick(feat.properties.id);
     setSelUnit(null); setSelCity(null); setAttackMode(false); setMenu(null);
