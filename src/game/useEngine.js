@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef } from "react";
-import { step, buyPlace, commandAttack, commandResearch, declareWar, makePeace, scrapUnit } from "./engine.js";
+import { step, buyPlace, commandAttack, enqueueResearch, unqueueResearch, moveUnit, declareWar, makePeace, scrapUnit } from "./engine.js";
 
 // Drives a supplied world (created by App from a new setup or a loaded save).
 // Mutated in place; re-renders on a throttled tick.
@@ -25,7 +25,9 @@ export function useEngine(world) {
     play: () => { ref.current.paused = false; force(); },
     buyPlace: (type, lng, lat) => { const r = buyPlace(ref.current, ref.current.mySlot, type, lng, lat); force(); return r; },
     commandAttack: (uid, tid) => { const r = commandAttack(ref.current, uid, tid); force(); return r; },
-    research: (id) => { const r = commandResearch(ref.current, ref.current.mySlot, id); force(); return r; },
+    research: (id) => { const r = enqueueResearch(ref.current, ref.current.mySlot, id); force(); return r; },
+    unqueue: (id) => { const r = unqueueResearch(ref.current, ref.current.mySlot, id); force(); return r; },
+    move: (uid, lng, lat) => { const r = moveUnit(ref.current, ref.current.mySlot, uid, lng, lat); force(); return r; },
     declareWar: (slot) => { declareWar(ref.current, ref.current.mySlot, slot); force(); },
     makePeace: (slot) => { makePeace(ref.current, ref.current.mySlot, slot); force(); },
     scrap: (uid) => { const r = scrapUnit(ref.current, ref.current.mySlot, uid); force(); return r; },

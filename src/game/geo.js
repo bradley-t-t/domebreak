@@ -35,8 +35,15 @@ export function interpGC(lng1, lat1, lng2, lat2, f) {
 }
 
 // Polyline of great-circle points from 0..progress, so trails curve correctly.
-export function gcTrail(lng1, lat1, lng2, lat2, progress, steps = 18) {
+export function gcTrail(lng1, lat1, lng2, lat2, progress, steps = 24) {
   const pts = [];
-  for (let i = 0; i <= steps; i++) pts.push(interpGC(lng1, lat1, lng2, lat2, (progress * i) / steps));
+  let prev = null;
+  for (let i = 0; i <= steps; i++) {
+    const p = interpGC(lng1, lat1, lng2, lat2, (progress * i) / steps);
+    // Unwrap longitude so a pole-crossing path never jumps +/-360 (which would
+    // otherwise draw a stray loop/line across the map near the poles).
+    if (prev) { while (p[0] - prev[0] > 180) p[0] -= 360; while (p[0] - prev[0] < -180) p[0] += 360; }
+    pts.push(p); prev = p;
+  }
   return pts;
 }

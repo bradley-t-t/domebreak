@@ -1,31 +1,27 @@
 // GoldenDome real-time simulation engine. Pure and deterministic given its seed.
-// Mutated in place for performance; the React hook re-renders off a version tick.
 import { interpGC } from "./geo.js";
 
-export const START_POINTS = 450;
+export const START_POINTS = 500;
 export const MISSILE_SPEED = 140;
 export const INTERCEPTOR_SPEED = 520;
-export const RADAR_RANGE_MULT = 2.5; // defenses networked to a radar reach this much farther
+export const RADAR_RANGE_MULT = 2.5;
+export const TERRITORY_RADIUS = 550; // km around own cities where you may build
+export const MOVE_COST_FRAC = 0.25;
 
 export const UNITS = {
-  battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 320,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆", hint: "Short range on its own — extend with a Radar" },
-  dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 250,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡", hint: "Strong point defense — extend reach with a Radar" },
-  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1500,  hp: 40, upkeep: 1.5, glyph: "❉", hint: "Extends interceptor range for your defenses in its coverage" },
+  battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 320,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
+  dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 250,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡" },
+  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1500,  hp: 40, upkeep: 1.5, glyph: "❉" },
   launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 60,  hp: 45, upkeep: 2, glyph: "➤" },
   silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 140, hp: 60, upkeep: 4, glyph: "▲" },
 };
-
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
 
 const MISSILE_NAMES = {
-  0:  { silo: "LGM-30 Minuteman III", launcher: "AGM-183 ARRW" },
-  1:  { silo: "RS-28 Sarmat",         launcher: "Kh-47M2 Kinzhal" },
-  2:  { silo: "DF-41",                launcher: "DF-17" },
-  3:  { silo: "Agni-V",               launcher: "BrahMos-II" },
-  5:  { silo: "Trident II D5",        launcher: "FC/ASW" },
-  6:  { silo: "M51",                  launcher: "ASN4G" },
-  13: { silo: "Khorramshahr-4",       launcher: "Fattah-1" },
-  15: { silo: "Tayfun",               launcher: "Gokdogan" },
+  0: { silo: "LGM-30 Minuteman III", launcher: "AGM-183 ARRW" }, 1: { silo: "RS-28 Sarmat", launcher: "Kh-47M2 Kinzhal" },
+  2: { silo: "DF-41", launcher: "DF-17" }, 3: { silo: "Agni-V", launcher: "BrahMos-II" },
+  5: { silo: "Trident II D5", launcher: "FC/ASW" }, 6: { silo: "M51", launcher: "ASN4G" },
+  13: { silo: "Khorramshahr-4", launcher: "Fattah-1" }, 15: { silo: "Tayfun", launcher: "Gokdogan" },
 };
 export function unitLabel(type, slot) {
   const def = UNITS[type];
@@ -33,12 +29,60 @@ export function unitLabel(type, slot) {
   return def.label;
 }
 
+// ---- Tech tree: 5 paths x 6 tiers, each tech requires the previous tier ----
+export const TECH_PATHS = [
+  { id: "off", name: "Strategic Command", glyph: "▲" },
+  { id: "def", name: "Aegis Program", glyph: "⬡" },
+  { id: "eco", name: "War Economy", glyph: "$" },
+  { id: "det", name: "Early Warning", glyph: "❉" },
+  { id: "cmd", name: "Command & Control", glyph: "✦" },
+];
+function chain(path, defs) {
+  const out = {};
+  defs.forEach((d, i) => { out[`${path}${i + 1}`] = { path, tier: i + 1, req: i ? `${path}${i}` : null, ...d }; });
+  return out;
+}
 export const TECHS = {
-  warheads: { label: "Advanced Warheads", cost: 250, time: 25, desc: "+30% strike damage", apply: (n) => { n.dmgMult *= 1.3; } },
-  defense:  { label: "Layered Defense",   cost: 250, time: 25, desc: "+15% intercept",     apply: (n) => { n.interceptAdd += 0.15; } },
-  economy:  { label: "War Economy",       cost: 200, time: 20, desc: "+35% income",        apply: (n) => { n.incomeMult *= 1.35; } },
-  range:    { label: "Extended Range",    cost: 220, time: 22, desc: "+40% strike range",  apply: (n) => { n.rangeMult *= 1.4; } },
-  reload:   { label: "Rapid Reload",      cost: 220, time: 22, desc: "-25% reload time",   apply: (n) => { n.reloadMult *= 0.75; } },
+  ...chain("off", [
+    { name: "Improved Warheads", desc: "+20% strike damage", cost: 220, time: 20, apply: (n) => (n.dmgMult *= 1.2) },
+    { name: "Heavy Warheads", desc: "+20% strike damage", cost: 300, time: 24, apply: (n) => (n.dmgMult *= 1.2) },
+    { name: "Extended Boosters", desc: "+30% missile range", cost: 340, time: 26, apply: (n) => (n.rangeMult *= 1.3) },
+    { name: "Rapid Reload", desc: "-20% reload time", cost: 380, time: 28, apply: (n) => (n.reloadMult *= 0.8) },
+    { name: "MIRV Technology", desc: "+25% strike damage", cost: 460, time: 32, apply: (n) => (n.dmgMult *= 1.25) },
+    { name: "Doomsday Arsenal", desc: "+30% strike damage", cost: 560, time: 38, apply: (n) => (n.dmgMult *= 1.3) },
+  ]),
+  ...chain("def", [
+    { name: "Interceptor Mk II", desc: "+10% intercept", cost: 220, time: 20, apply: (n) => (n.interceptAdd += 0.1) },
+    { name: "Layered Defense", desc: "+10% intercept", cost: 300, time: 24, apply: (n) => (n.interceptAdd += 0.1) },
+    { name: "Wide-Area Coverage", desc: "+30% defense range", cost: 340, time: 26, apply: (n) => (n.defRangeMult *= 1.3) },
+    { name: "Fast Interceptors", desc: "+30% interceptor speed", cost: 380, time: 28, apply: (n) => (n.interceptorSpeedMult *= 1.3) },
+    { name: "Directed Energy", desc: "+12% intercept", cost: 460, time: 32, apply: (n) => (n.interceptAdd += 0.12) },
+    { name: "Golden Dome Doctrine", desc: "+35% defense range", cost: 560, time: 38, apply: (n) => (n.defRangeMult *= 1.35) },
+  ]),
+  ...chain("eco", [
+    { name: "War Bonds", desc: "+20% income", cost: 180, time: 18, apply: (n) => (n.incomeMult *= 1.2) },
+    { name: "Industrial Base", desc: "+20% income", cost: 260, time: 22, apply: (n) => (n.incomeMult *= 1.2) },
+    { name: "Mass Production", desc: "-15% build cost", cost: 320, time: 24, apply: (n) => (n.buildCostMult *= 0.85) },
+    { name: "Efficient Logistics", desc: "-20% upkeep", cost: 360, time: 26, apply: (n) => (n.upkeepMult *= 0.8) },
+    { name: "Strategic Reserves", desc: "+25% income", cost: 440, time: 30, apply: (n) => (n.incomeMult *= 1.25) },
+    { name: "Total War Economy", desc: "-20% build cost", cost: 540, time: 36, apply: (n) => (n.buildCostMult *= 0.8) },
+  ]),
+  ...chain("det", [
+    { name: "Long-Range Radar", desc: "+30% radar coverage", cost: 200, time: 18, apply: (n) => (n.radarMult *= 1.3) },
+    { name: "Over-the-Horizon", desc: "+30% radar coverage", cost: 280, time: 22, apply: (n) => (n.radarMult *= 1.3) },
+    { name: "Satellite Recon", desc: "+20% defense range", cost: 340, time: 26, apply: (n) => (n.defRangeMult *= 1.2) },
+    { name: "Advanced Tracking", desc: "+15% intercept", cost: 400, time: 28, apply: (n) => (n.interceptAdd += 0.15) },
+    { name: "Missile Warning Net", desc: "+30% interceptor speed", cost: 460, time: 32, apply: (n) => (n.interceptorSpeedMult *= 1.3) },
+    { name: "Global Surveillance", desc: "+40% radar coverage", cost: 560, time: 38, apply: (n) => (n.radarMult *= 1.4) },
+  ]),
+  ...chain("cmd", [
+    { name: "R&D Investment", desc: "+25% research speed", cost: 180, time: 16, apply: (n) => (n.researchSpeedMult *= 1.25) },
+    { name: "Think Tanks", desc: "+25% research speed", cost: 260, time: 20, apply: (n) => (n.researchSpeedMult *= 1.25) },
+    { name: "Mobile Launchers", desc: "-40% relocation cost", cost: 320, time: 24, apply: (n) => (n.moveCostMult *= 0.6) },
+    { name: "Rapid Deployment", desc: "-15% build cost", cost: 380, time: 26, apply: (n) => (n.buildCostMult *= 0.85) },
+    { name: "Civil Defense", desc: "+20% income", cost: 440, time: 30, apply: (n) => (n.incomeMult *= 1.2) },
+    { name: "Grand Strategy", desc: "+15% damage, +10% intercept", cost: 600, time: 40, apply: (n) => { n.dmgMult *= 1.15; n.interceptAdd += 0.1; } },
+  ]),
 };
 
 export function haversine(aLng, aLat, bLng, bLat) {
@@ -58,13 +102,15 @@ function nextId(world, p) { world._id = (world._id || 0) + 1; return p + world._
 
 export function createWorld(setup) {
   const nations = setup.nations.map((n) => ({
-    slot: n.slot, name: n.name, isAi: !!n.isAi, points: START_POINTS, alive: true,
+    slot: n.slot, name: n.name, iso: n.iso, isAi: !!n.isAi, points: START_POINTS, alive: true,
     relations: {}, _ai: 2 + n.slot * 0.3,
-    research: { current: null, done: [] },
+    research: { queue: [], current: null, done: [] },
     dmgMult: 1, interceptAdd: 0, incomeMult: 1, rangeMult: 1, reloadMult: 1,
+    defRangeMult: 1, radarMult: 1, interceptorSpeedMult: 1, buildCostMult: 1, upkeepMult: 1, researchSpeedMult: 1, moveCostMult: 1,
   }));
   const cities = setup.cities.map((c) => ({
-    id: c.id, slot: c.slot, name: c.name, state: c.state || "", cap: c.cap ? 1 : 0, lng: c.lng, lat: c.lat, hp: c.cap ? 140 : 100, maxHp: c.cap ? 140 : 100, alive: true,
+    id: c.id, slot: c.slot, name: c.name, state: c.state || "", cap: c.cap ? 1 : 0, pop: c.pop || 0,
+    lng: c.lng, lat: c.lat, hp: c.cap ? 140 : 100, maxHp: c.cap ? 140 : 100, alive: true,
   }));
   return {
     time: 0, speed: 1, paused: true, mySlot: setup.mySlot, seed: setup.seed || 1, _r: (setup.seed || 1) >>> 0,
@@ -73,33 +119,33 @@ export function createWorld(setup) {
 }
 
 const nationOf = (w, slot) => w.nations.find((n) => n.slot === slot);
-export function atWar(w, a, b) {
-  if (a === b) return false;
-  const n = nationOf(w, a);
-  return !!(n && n.relations[b] === "war");
-}
+export function atWar(w, a, b) { if (a === b) return false; const n = nationOf(w, a); return !!(n && n.relations[b] === "war"); }
 export function incomeOf(w, slot) {
   const n = nationOf(w, slot);
   const cityCount = w.cities.filter((c) => c.slot === slot && c.alive).length;
   return (8 + cityCount * 2) * (n?.incomeMult ?? 1);
 }
 export function upkeepOf(w, slot) {
-  let sum = 0;
+  const n = nationOf(w, slot); let sum = 0;
   for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
-  return sum;
+  return sum * (n?.upkeepMult ?? 1);
 }
 export function netIncomeOf(w, slot) { return incomeOf(w, slot) - upkeepOf(w, slot); }
-
-// A defense's effective interception range: short by default, multiplied when it
-// sits inside a friendly radar's coverage (radar networking).
+export function populationOf(w, slot) {
+  let p = 0; for (const c of w.cities) if (c.slot === slot && c.alive) p += c.pop || 0; return p;
+}
+export function inTerritory(w, slot, lng, lat) {
+  return w.cities.some((c) => c.slot === slot && c.alive && haversine(c.lng, c.lat, lng, lat) <= TERRITORY_RADIUS);
+}
 export function radarLinked(w, d) {
-  return w.units.some((r) => r.type === "radar" && r.slot === d.slot && r.hp > 0 &&
-    haversine(r.lng, r.lat, d.lng, d.lat) <= UNITS.radar.range);
+  const n = nationOf(w, d.slot);
+  const link = UNITS.radar.range * (n?.radarMult ?? 1);
+  return w.units.some((r) => r.type === "radar" && r.slot === d.slot && r.hp > 0 && haversine(r.lng, r.lat, d.lng, d.lat) <= link);
 }
 export function defenseRange(w, d) {
-  const base = UNITS[d.type].range;
-  if (UNITS[d.type].kind !== "defense") return base;
-  return radarLinked(w, d) ? base * RADAR_RANGE_MULT : base;
+  const base = UNITS[d.type].range; if (UNITS[d.type].kind !== "defense") return base;
+  const n = nationOf(w, d.slot);
+  return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1) * (n?.defRangeMult ?? 1);
 }
 
 function findTarget(w, id) {
@@ -110,57 +156,63 @@ function findTarget(w, id) {
   return null;
 }
 
-export function declareWar(w, a, b) {
-  const na = nationOf(w, a), nb = nationOf(w, b);
-  if (!na || !nb || a === b) return { error: "invalid" };
-  na.relations[b] = "war"; nb.relations[a] = "war";
-  return { ok: true };
-}
-export function makePeace(w, a, b) {
-  const na = nationOf(w, a), nb = nationOf(w, b);
-  if (na) na.relations[b] = "peace";
-  if (nb) nb.relations[a] = "peace";
-  return { ok: true };
-}
+export function declareWar(w, a, b) { const na = nationOf(w, a), nb = nationOf(w, b); if (!na || !nb || a === b) return { error: "invalid" }; na.relations[b] = "war"; nb.relations[a] = "war"; return { ok: true }; }
+export function makePeace(w, a, b) { const na = nationOf(w, a), nb = nationOf(w, b); if (na) na.relations[b] = "peace"; if (nb) nb.relations[a] = "peace"; return { ok: true }; }
+
 export function buyPlace(w, slot, type, lng, lat) {
   const def = UNITS[type], n = nationOf(w, slot);
   if (!def || !n) return { error: "invalid" };
-  if (n.points < def.cost) return { error: "not enough points" };
-  n.points -= def.cost;
+  if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
+  if (n.points < cost) return { error: "not enough points" };
+  n.points -= cost;
   const unit = { id: nextId(w, "u"), slot, type, lng, lat, hp: def.hp, cooldown: 0, targetId: null };
   w.units.push(unit);
   return { ok: true, unit };
 }
-export function commandAttack(w, unitId, targetId) {
-  const u = w.units.find((x) => x.id === unitId);
-  if (!u) return { error: "gone" };
-  if (UNITS[u.type].kind !== "offense") return { error: "not an offensive unit" };
-  if (targetId == null) { u.targetId = null; return { ok: true }; }
-  const t = findTarget(w, targetId);
-  if (!t) return { error: "gone" };
-  if (!atWar(w, u.slot, t.slot)) return { error: "not at war with that nation" };
-  u.targetId = targetId;
-  return { ok: true };
+export function moveUnit(w, slot, unitId, lng, lat) {
+  const u = w.units.find((x) => x.id === unitId && x.slot === slot); if (!u) return { error: "not found" };
+  if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const n = nationOf(w, slot);
+  const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC * (n.moveCostMult ?? 1));
+  if (n.points < cost) return { error: "not enough points to relocate" };
+  n.points -= cost; u.lng = lng; u.lat = lat; return { ok: true, cost };
 }
 export function scrapUnit(w, slot, unitId) {
-  const i = w.units.findIndex((u) => u.id === unitId && u.slot === slot);
-  if (i < 0) return { error: "not found" };
-  const u = w.units[i];
-  const n = w.nations.find((x) => x.slot === slot);
+  const i = w.units.findIndex((u) => u.id === unitId && u.slot === slot); if (i < 0) return { error: "not found" };
+  const u = w.units[i]; const n = nationOf(w, slot);
   if (n) n.points += Math.floor((UNITS[u.type].cost || 0) / 2);
-  w.units.splice(i, 1);
-  return { ok: true };
+  w.units.splice(i, 1); return { ok: true };
+}
+export function commandAttack(w, unitId, targetId) {
+  const u = w.units.find((x) => x.id === unitId); if (!u) return { error: "gone" };
+  if (UNITS[u.type].kind !== "offense") return { error: "not an offensive unit" };
+  if (targetId == null) { u.targetId = null; return { ok: true }; }
+  const t = findTarget(w, targetId); if (!t) return { error: "gone" };
+  if (!atWar(w, u.slot, t.slot)) return { error: "not at war with that nation" };
+  u.targetId = targetId; return { ok: true };
 }
 
-export function commandResearch(w, slot, techId) {
-  const n = nationOf(w, slot), tech = TECHS[techId];
-  if (!n || !tech) return { error: "invalid" };
-  if (n.research.done.includes(techId)) return { error: "already researched" };
-  if (n.research.current) return { error: "already researching" };
-  if (n.points < tech.cost) return { error: "not enough points" };
-  n.points -= tech.cost;
-  n.research.current = { id: techId, progress: 0 };
-  return { ok: true };
+export function canQueue(n, techId) {
+  const t = TECHS[techId]; if (!t) return false;
+  if (n.research.done.includes(techId) || n.research.queue.includes(techId) || n.research.current?.id === techId) return false;
+  if (!t.req) return true;
+  return n.research.done.includes(t.req) || n.research.queue.includes(t.req) || n.research.current?.id === t.req;
+}
+export function enqueueResearch(w, slot, techId) {
+  const n = nationOf(w, slot), t = TECHS[techId];
+  if (!n || !t) return { error: "invalid" };
+  if (!canQueue(n, techId)) return { error: "unavailable" };
+  if (n.points < t.cost) return { error: "not enough points" };
+  n.points -= t.cost; n.research.queue.push(techId); return { ok: true };
+}
+export function unqueueResearch(w, slot, techId) {
+  const n = nationOf(w, slot); const i = n.research.queue.indexOf(techId);
+  if (i < 0) return { error: "not queued" };
+  // can only remove if nothing later depends on it in the queue
+  const dependents = n.research.queue.slice(i + 1).filter((q) => TECHS[q].req === techId);
+  if (dependents.length) return { error: "later tech depends on it" };
+  n.research.queue.splice(i, 1); n.points += TECHS[techId].cost; return { ok: true };
 }
 
 function launch(w, unit, target) {
@@ -186,19 +238,16 @@ function resolveHit(w, p) {
 function aiTick(w, dt) {
   for (const n of w.nations) {
     if (!n.isAi || !n.alive) continue;
-    n._ai -= dt;
-    if (n._ai > 0) continue;
-    n._ai = 3 + rand(w) * 3;
+    n._ai -= dt; if (n._ai > 0) continue; n._ai = 3 + rand(w) * 3;
     const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
-    const myCap = w.cities.find((c) => c.slot === n.slot && c.alive);
-    if (!myCap) continue;
+    const myCap = w.cities.find((c) => c.slot === n.slot && c.alive); if (!myCap) continue;
     const domes = w.units.filter((u) => u.slot === n.slot && u.type === "dome").length;
     if (domes === 0 && n.points >= UNITS.dome.cost) { buyPlace(w, n.slot, "dome", myCap.lng, myCap.lat); return; }
     const radars = w.units.filter((u) => u.slot === n.slot && u.type === "radar").length;
     if (domes > 0 && radars === 0 && n.points >= UNITS.radar.cost + 100) { buyPlace(w, n.slot, "radar", myCap.lng, myCap.lat); return; }
-    if (!n.research.current && n.points >= 300) {
-      const undone = Object.keys(TECHS).filter((t) => !n.research.done.includes(t));
-      if (undone.length && rand(w) < 0.5) { commandResearch(w, n.slot, undone[Math.floor(rand(w) * undone.length)]); return; }
+    if (!n.research.current && !n.research.queue.length && n.points >= 350) {
+      const avail = Object.keys(TECHS).filter((t) => canQueue(n, t));
+      if (avail.length && rand(w) < 0.55) { enqueueResearch(w, n.slot, avail[Math.floor(rand(w) * avail.length)]); return; }
     }
     if (!enemies.length) continue;
     if (n.points >= UNITS.silo.cost + 120 && netIncomeOf(w, n.slot) > 2) {
@@ -215,12 +264,12 @@ export function step(w, dt) {
   for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeOf(w, n.slot) * dt);
 
   for (const n of w.nations) {
-    if (!n.alive || !n.research.current) continue;
-    n.research.current.progress += dt / TECHS[n.research.current.id].time;
-    if (n.research.current.progress >= 1) {
-      TECHS[n.research.current.id].apply(n);
-      n.research.done.push(n.research.current.id);
-      n.research.current = null;
+    if (!n.alive) continue;
+    const rr = n.research;
+    if (!rr.current && rr.queue.length) rr.current = { id: rr.queue.shift(), progress: 0 };
+    if (rr.current) {
+      rr.current.progress += (dt / TECHS[rr.current.id].time) * (n.researchSpeedMult ?? 1);
+      if (rr.current.progress >= 1) { TECHS[rr.current.id].apply(n); rr.done.push(rr.current.id); rr.current = null; }
     }
   }
 
@@ -232,30 +281,26 @@ export function step(w, dt) {
       const t = findTarget(w, u.targetId);
       if (!t || !t.alive || !atWar(w, u.slot, t.slot)) { u.targetId = null; continue; }
       const n = nationOf(w, u.slot);
-      if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
-        launch(w, u, t); u.cooldown = def.reload * (n?.reloadMult ?? 1);
-      }
+      if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) { launch(w, u, t); u.cooldown = def.reload * (n?.reloadMult ?? 1); }
     }
   }
 
   for (const p of w.projectiles) {
     p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
     p.progress = Math.min(1, p.travelled / (p.dist || 1));
-    const pos = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, p.progress);
-    p.lng = pos[0]; p.lat = pos[1];
-    const ah = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, Math.min(1, p.progress + 0.03));
-    p.aheadLng = ah[0]; p.aheadLat = ah[1];
+    const pos = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, p.progress); p.lng = pos[0]; p.lat = pos[1];
+    const ah = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, Math.min(1, p.progress + 0.03)); p.aheadLng = ah[0]; p.aheadLat = ah[1];
     if (!p.doomed) {
       for (const d of w.units) {
         if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
-        if (!atWar(w, d.slot, p.slot)) continue;
+        if (d.slot === p.slot) continue; // a launched missile is a threat regardless of war status
         if (p.tried.includes(d.id)) continue;
         if (haversine(d.lng, d.lat, p.lng, p.lat) <= defenseRange(w, d)) {
           p.tried.push(d.id);
           const dn = nationOf(w, d.slot);
           if (rand(w) < Math.min(0.97, UNITS[d.type].intercept + (dn?.interceptAdd ?? 0))) {
             p.doomed = true;
-            w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, byId: d.id, targetId: p.id, speed: INTERCEPTOR_SPEED,
+            w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, byId: d.id, targetId: p.id, speed: INTERCEPTOR_SPEED * (dn?.interceptorSpeedMult ?? 1),
               fromLng: d.lng, fromLat: d.lat, lng: d.lng, lat: d.lat, toLng: p.lng, toLat: p.lat });
             break;
           }
@@ -269,16 +314,9 @@ export function step(w, dt) {
     const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
     if (!tgt) { it._dead = true; continue; }
     it.toLng = tgt.lng; it.toLat = tgt.lat;
-    const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
-    const stepKm = it.speed * dt;
-    if (dist <= Math.max(50, stepKm)) {
-      tgt._dead = true; it._dead = true;
-      w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", lng: tgt.lng, lat: tgt.lat, byLng: it.fromLng, byLat: it.fromLat });
-    } else {
-      const f = stepKm / dist;
-      it.lng += (tgt.lng - it.lng) * f;
-      it.lat += (tgt.lat - it.lat) * f;
-    }
+    const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat); const stepKm = it.speed * dt;
+    if (dist <= Math.max(50, stepKm)) { tgt._dead = true; it._dead = true; w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", lng: tgt.lng, lat: tgt.lat, byLng: it.fromLng, byLat: it.fromLat }); }
+    else { const f = stepKm / dist; it.lng += (tgt.lng - it.lng) * f; it.lat += (tgt.lat - it.lat) * f; }
   }
 
   w.interceptors = w.interceptors.filter((it) => !it._dead);
@@ -287,10 +325,7 @@ export function step(w, dt) {
   if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
 
   aiTick(w, dt);
-
-  for (const n of w.nations) {
-    if (n.alive && !w.cities.some((c) => c.slot === n.slot && c.alive)) n.alive = false;
-  }
+  for (const n of w.nations) if (n.alive && !w.cities.some((c) => c.slot === n.slot && c.alive)) n.alive = false;
   const alive = w.nations.filter((n) => n.alive);
   if (alive.length <= 1) { w.over = true; w.winnerSlot = alive[0]?.slot ?? null; w.paused = true; }
   return w;
