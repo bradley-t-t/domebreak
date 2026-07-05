@@ -365,16 +365,23 @@ input { font-family: inherit; }
 }
 
 .gd-console {
-  position: absolute; top: 74px; left: 16px; bottom: 16px; width: 328px; z-index: 5;
+  position: absolute; top: 0; left: 0; bottom: 0; width: 348px; z-index: 5;
   display: flex; flex-direction: column;
-  background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow), inset 0 1px 0 var(--hair);
+  background: linear-gradient(180deg, rgba(18, 30, 54, 0.55), transparent 160px), var(--panel-2);
+  border: none; border-right: 1px solid var(--line);
+  border-radius: 0; box-shadow: 26px 0 60px -30px rgba(0, 0, 0, 0.85), inset -1px 0 0 var(--hair);
   backdrop-filter: blur(16px); overflow: hidden;
   pointer-events: auto; animation: gdConsoleIn 280ms var(--ease-drawer);
 }
+/* top + inner-edge gold seams frame the docked command rail like an instrument bezel */
 .gd-console::before {
   content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 1;
   background: linear-gradient(90deg, transparent, var(--gold-line) 30%, var(--gold-line) 70%, transparent);
+}
+.gd-console::after {
+  content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 2px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--gold-line) 10%, var(--gold-line) 90%, transparent);
+  opacity: 0.5;
 }
 @keyframes gdConsoleIn { from { opacity: 0; transform: translateX(-18px); } }
 .gd-tabs { display: flex; border-bottom: 1px solid var(--line-soft); background: rgba(6, 11, 22, 0.55); }
@@ -644,12 +651,12 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 .gd-techpath-h { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text); margin: 6px 0 6px; padding-bottom: 5px; border-bottom: 1px solid var(--line-soft); }
 .gd-tech.locked { opacity: 0.5; }
 .gd-tech-q { font-family: var(--mono); font-size: 12px; color: var(--gold); }
-.gd-tech-lock { font-size: 12px; opacity: 0.7; }
+.gd-tech-lock { font-family: var(--display); font-size: 9px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); }
 
 /* ---- console collapse + rail ---- */
 .gd-collapse { margin-left: auto; width: 30px; background: transparent; border: none; color: var(--dim); font-size: 13px; }
 .gd-collapse:hover { color: var(--gold); }
-.gd-console-rail { position: absolute; top: 84px; left: 16px; z-index: 5; display: flex; flex-direction: column; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 6px; box-shadow: var(--shadow); backdrop-filter: blur(12px); animation: gdConsoleIn 220ms var(--ease-drawer); }
+.gd-console-rail { position: absolute; top: 0; left: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 8px; background: var(--panel-2); border: none; border-right: 1px solid var(--line); border-radius: 0; padding: 16px 10px; box-shadow: 26px 0 60px -30px rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px); animation: gdConsoleIn 220ms var(--ease-drawer); }
 .gd-rail-tab { width: 40px; height: 40px; border-radius: 9px; border: 1px solid var(--line); background: #0b1424; color: var(--dim); font-size: 17px; }
 .gd-rail-tab:hover { color: var(--text); border-color: var(--blue); }
 .gd-rail-tab.active { color: var(--gold); border-color: var(--gold); }
@@ -658,11 +665,11 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 .gd-move-hint { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid rgba(244,192,42,0.4); color: var(--text); padding: 8px 14px; border-radius: 999px; font-size: 13px; box-shadow: var(--shadow); }
 
 /* ================= redesigned console ================= */
-.gd-console { width: 340px; }
-.gd-con-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: linear-gradient(180deg, rgba(20,32,58,0.9), rgba(10,17,32,0.6)); border-bottom: 1px solid var(--line-soft); }
-.gd-con-flag { width: 40px; height: 40px; display: grid; place-items: center; font-size: 24px; border-radius: 10px; border: 2px solid var(--line); background: #060b16; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
+.gd-console { width: 348px; }
+.gd-con-head { display: flex; align-items: center; gap: 10px; padding: 16px 14px 13px; background: linear-gradient(180deg, rgba(20,32,58,0.9), rgba(10,17,32,0.5)); border-bottom: 1px solid var(--line-soft); }
+.gd-con-flag { width: 42px; height: 42px; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text); border-radius: 8px; border: 2px solid var(--line); background: linear-gradient(180deg, #0b1424, #060b16); box-shadow: inset 0 0 12px rgba(0,0,0,0.55); }
 .gd-con-id { flex: 1; min-width: 0; }
-.gd-con-name { font-weight: 800; font-size: 15px; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-con-name { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gd-con-sub { font-size: 11px; color: var(--dim); }
 .gd-con-pts { text-align: right; line-height: 1.1; }
 .gd-con-ptsval { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--gold); }
@@ -703,7 +710,7 @@ input[type="range"] { width: 100%; accent-color: var(--gold); }
 .gd-natlist { display: flex; flex-direction: column; gap: 7px; }
 .gd-natcard { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: #0b1424; border: 1px solid var(--line); border-radius: 11px; animation: gdRowIn 280ms var(--ease-out) both; }
 .gd-natcard.dead { opacity: 0.5; }
-.gd-nat-flag { width: 30px; height: 30px; display: grid; place-items: center; font-size: 17px; border-radius: 8px; border: 2px solid var(--line); background: #060b16; }
+.gd-nat-flag { width: 32px; height: 32px; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 11px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text); border-radius: 7px; border: 2px solid var(--line); background: linear-gradient(180deg, #0b1424, #060b16); }
 .gd-nat-info { flex: 1; min-width: 0; }
 .gd-nat-info b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gd-nat-info span { font-size: 11px; color: var(--dim); }
