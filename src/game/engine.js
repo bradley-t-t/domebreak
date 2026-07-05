@@ -118,11 +118,12 @@ export function placementBlocked(w, lng, lat, ignoreUnitId) {
   if (w.units.some((u) => u.id !== ignoreUnitId && u.hp > 0 && haversine(u.lng, u.lat, lng, lat) < MIN_SEP)) return "too close to another unit";
   return null;
 }
-export function buyPlace(w, slot, type, lng, lat) {
+export function buyPlace(w, slot, type, lng, lat, territoryOk) {
   const def = UNITS[type], n = nationOf(w, slot);
   if (!def || !n) return { error: "invalid" };
   if (netIncomeOf(w, slot) < 0) return { error: "cannot build while in deficit" };
-  if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
+  if (!okTerr) return { error: "outside your territory" };
   const blocked = placementBlocked(w, lng, lat, null); if (blocked) return { error: blocked };
   const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
   if (n.points < cost) return { error: "not enough points" };
@@ -130,9 +131,10 @@ export function buyPlace(w, slot, type, lng, lat) {
   const unit = { id: nextId(w, "u"), slot, type, lng, lat, hp: def.hp, cooldown: 0, targetId: null };
   w.units.push(unit); return { ok: true, unit };
 }
-export function moveUnit(w, slot, unitId, lng, lat) {
+export function moveUnit(w, slot, unitId, lng, lat, territoryOk) {
   const u = w.units.find((x) => x.id === unitId && x.slot === slot); if (!u) return { error: "not found" };
-  if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
+  if (!okTerr) return { error: "outside your territory" };
   const blocked = placementBlocked(w, lng, lat, unitId); if (blocked) return { error: blocked };
   const n = nationOf(w, slot);
   const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC * (n.moveCostMult ?? 1));
