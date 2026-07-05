@@ -2439,6 +2439,14 @@ input[type="range"] {
     width: 100%;
 }
 
+.gd-menu-hint {
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.02em;
+}
+
 .gd-set-row {
     display: flex;
     align-items: center;

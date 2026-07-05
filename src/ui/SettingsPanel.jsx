@@ -1,3 +1,5 @@
+import { GAME_SPEEDS } from "../game/constants.js";
+
 export default function SettingsPanel({ settings, onChange, onClose }) {
   const set = (k, v) => onChange({ ...settings, [k]: v });
   return (
@@ -5,7 +7,7 @@ export default function SettingsPanel({ settings, onChange, onClose }) {
       <div className="gd-card" onClick={(e) => e.stopPropagation()}>
         <div className="gd-menu-title sm">Settings</div>
         <div className="gd-set-row"><span>Default speed</span>
-          <div className="gd-seg">{[0.5, 1, 2, 4, 10].map((s) => <button key={s} className={settings.speed === s ? "active" : ""} onClick={() => set("speed", s)}>{s}×</button>)}</div>
+          <div className="gd-seg">{GAME_SPEEDS.map((s) => <button key={s} className={settings.speed === s ? "active" : ""} onClick={() => set("speed", s)}>{s}×</button>)}</div>
         </div>
         <div className="gd-set-row"><span>Default view</span>
           <div className="gd-seg"><button className={settings.globe ? "active" : ""} onClick={() => set("globe", true)}>Globe</button><button className={!settings.globe ? "active" : ""} onClick={() => set("globe", false)}>Flat</button></div>
