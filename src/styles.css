@@ -498,3 +498,5 @@ input { font-family: inherit; }
   background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff, #aaffcf 40%, #25e084 75%, transparent);
   box-shadow: 0 0 8px 2px rgba(60,230,140,0.85); animation: gdFlame 0.09s infinite alternate; }
 @media (prefers-reduced-motion: reduce) { .gd-int-flame { animation: none; } }
+
+.gd-arsenal-hint { font-size: 10.5px; color: var(--faint); line-height: 1.25; margin-top: 2px; }

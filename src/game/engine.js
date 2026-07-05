@@ -4,15 +4,16 @@ import { interpGC } from "./geo.js";
 
 export const START_POINTS = 450;
 export const MISSILE_SPEED = 140;
+export const INTERCEPTOR_SPEED = 520;
+export const RADAR_RANGE_MULT = 2.5; // defenses networked to a radar reach this much farther
 
 export const UNITS = {
-  battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
-  dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡" },
-  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1600,  hp: 40, upkeep: 1.5, glyph: "❉" },
+  battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 320,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆", hint: "Short range on its own — extend with a Radar" },
+  dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 250,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡", hint: "Strong point defense — extend reach with a Radar" },
+  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1500,  hp: 40, upkeep: 1.5, glyph: "❉", hint: "Extends interceptor range for your defenses in its coverage" },
   launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 60,  hp: 45, upkeep: 2, glyph: "➤" },
   silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 140, hp: 60, upkeep: 4, glyph: "▲" },
 };
-export const INTERCEPTOR_SPEED = 520; // km/game-second — outruns the incoming missile
 
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
 
@@ -88,6 +89,18 @@ export function upkeepOf(w, slot) {
   return sum;
 }
 export function netIncomeOf(w, slot) { return incomeOf(w, slot) - upkeepOf(w, slot); }
+
+// A defense's effective interception range: short by default, multiplied when it
+// sits inside a friendly radar's coverage (radar networking).
+export function radarLinked(w, d) {
+  return w.units.some((r) => r.type === "radar" && r.slot === d.slot && r.hp > 0 &&
+    haversine(r.lng, r.lat, d.lng, d.lat) <= UNITS.radar.range);
+}
+export function defenseRange(w, d) {
+  const base = UNITS[d.type].range;
+  if (UNITS[d.type].kind !== "defense") return base;
+  return radarLinked(w, d) ? base * RADAR_RANGE_MULT : base;
+}
 
 function findTarget(w, id) {
   const c = w.cities.find((x) => x.id === id);
@@ -171,6 +184,8 @@ function aiTick(w, dt) {
     if (!myCap) continue;
     const domes = w.units.filter((u) => u.slot === n.slot && u.type === "dome").length;
     if (domes === 0 && n.points >= UNITS.dome.cost) { buyPlace(w, n.slot, "dome", myCap.lng, myCap.lat); return; }
+    const radars = w.units.filter((u) => u.slot === n.slot && u.type === "radar").length;
+    if (domes > 0 && radars === 0 && n.points >= UNITS.radar.cost + 100) { buyPlace(w, n.slot, "radar", myCap.lng, myCap.lat); return; }
     if (!n.research.current && n.points >= 300) {
       const undone = Object.keys(TECHS).filter((t) => !n.research.done.includes(t));
       if (undone.length && rand(w) < 0.5) { commandResearch(w, n.slot, undone[Math.floor(rand(w) * undone.length)]); return; }
@@ -213,8 +228,6 @@ export function step(w, dt) {
     }
   }
 
-  // Move missiles along their great circle; defenses launch a homing interceptor
-  // the moment a hostile missile enters range (one roll per defender per missile).
   for (const p of w.projectiles) {
     p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
     p.progress = Math.min(1, p.travelled / (p.dist || 1));
@@ -227,7 +240,7 @@ export function step(w, dt) {
         if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
         if (!atWar(w, d.slot, p.slot)) continue;
         if (p.tried.includes(d.id)) continue;
-        if (haversine(d.lng, d.lat, p.lng, p.lat) <= UNITS[d.type].range) {
+        if (haversine(d.lng, d.lat, p.lng, p.lat) <= defenseRange(w, d)) {
           p.tried.push(d.id);
           const dn = nationOf(w, d.slot);
           if (rand(w) < Math.min(0.97, UNITS[d.type].intercept + (dn?.interceptAdd ?? 0))) {
@@ -242,7 +255,6 @@ export function step(w, dt) {
     if (!p._dead && !p.doomed && p.progress >= 1) { resolveHit(w, p); p._dead = true; }
   }
 
-  // Homing interceptors chase their target missile and kill it on contact.
   for (const it of w.interceptors) {
     const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
     if (!tgt) { it._dead = true; continue; }
