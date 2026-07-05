@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import WorldMap from "../map/WorldMap.jsx";
 import LiveHud from "./LiveHud.jsx";
 import Console from "./Console.jsx";
+import UnitIcon from "./UnitIcon.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
-import { UNITS } from "../game/engine.js";
-import { circle } from "../game/geo.js";
+import { UNITS, UNIT_ICON, unitLabel } from "../game/engine.js";
+import { circle, bearing } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
 export default function LiveGame({ setup, globe, onQuit }) {
@@ -25,7 +26,6 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
   const flash = (m) => { setErr(m); setTimeout(() => setErr(null), 1800); };
 
-  // Impact flashes on cities, driven by fresh combat events (real-time timeout).
   useEffect(() => {
     let maxId = lastEid.current;
     const fresh = [];
@@ -61,7 +61,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
     return { type: "FeatureCollection", features: f };
   }, [world.units, placing, cursor, selUnit, mySlot]);
 
-  const lines = useMemo(() => {
+  const cmdLines = useMemo(() => {
     const f = [];
     for (const u of world.units) {
       if (u.slot === mySlot && u.targetId) {
@@ -70,12 +70,14 @@ export default function LiveGame({ setup, globe, onQuit }) {
           geometry: { type: "LineString", coordinates: [[u.lng, u.lat], [t.lng, t.lat]] } });
       }
     }
-    for (const p of world.projectiles) {
-      f.push({ type: "Feature", properties: { color: SLOT_COLOR[p.slot] || "#fff" },
-        geometry: { type: "LineString", coordinates: [[p.fromLng, p.fromLat], [p.lng, p.lat]] } });
-    }
     return { type: "FeatureCollection", features: f };
-  }, [world.units, world.projectiles, mySlot]);
+  }, [world.units, mySlot]);
+
+  const trails = useMemo(() => ({
+    type: "FeatureCollection",
+    features: world.projectiles.map((p) => ({ type: "Feature", properties: {},
+      geometry: { type: "LineString", coordinates: [[p.fromLng, p.fromLat], [p.lng, p.lat]] } })),
+  }), [world.projectiles]);
 
   const onMapClick = (lngLat) => {
     if (placing) { const r = api.buyPlace(placing, lngLat.lng, lngLat.lat); if (r.error) flash(r.error); return; }
@@ -106,8 +108,12 @@ export default function LiveGame({ setup, globe, onQuit }) {
           <Layer id="range-fill" type="fill" paint={{ "fill-color": ["get", "color"], "fill-opacity": ["case", ["==", ["get", "sel"], 1], 0.14, 0.05] }} />
           <Layer id="range-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": ["case", ["==", ["get", "sel"], 1], 1.6, 0.7], "line-opacity": 0.6 }} />
         </Source>
-        <Source id="lines" type="geojson" data={lines}>
-          <Layer id="cmd-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": 1.6, "line-opacity": 0.85, "line-dasharray": [2, 2] }} />
+        <Source id="cmd" type="geojson" data={cmdLines}>
+          <Layer id="cmd-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": 1.4, "line-opacity": 0.55, "line-dasharray": [2, 3] }} />
+        </Source>
+        <Source id="trail" type="geojson" data={trails} lineMetrics>
+          <Layer id="trail-glow" type="line" paint={{ "line-color": "#cfe2ff", "line-width": 6, "line-blur": 4, "line-opacity": 0.12 }} />
+          <Layer id="trail-line" type="line" paint={{ "line-width": 2.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(230,240,255,0)", 0.7, "rgba(230,240,255,0.32)", 1, "rgba(245,250,255,0.9)"] }} />
         </Source>
 
         {world.cities.map((c) => {
@@ -130,14 +136,19 @@ export default function LiveGame({ setup, globe, onQuit }) {
         {world.units.map((u) => (
           <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
             onClick={(e) => { e.originalEvent.stopPropagation(); onUnitClick(u); }}>
-            <div className={`gd-unit ${u.slot === mySlot ? "mine" : "enemy"} ${u.id === selUnit ? "sel" : ""}`}
-              style={{ color: SLOT_COLOR[u.slot] }} title={UNITS[u.type].label}>{UNITS[u.type].glyph}</div>
+            <div className={`gd-unit ${u.slot === mySlot ? "mine" : "enemy"} ${u.id === selUnit ? "sel" : ""}`} title={unitLabel(u.type, u.slot)}>
+              <UnitIcon name={UNIT_ICON[u.type]} color={SLOT_COLOR[u.slot]} size={22} />
+            </div>
           </Marker>
         ))}
 
         {world.projectiles.map((p) => (
           <Marker key={p.id} longitude={p.lng} latitude={p.lat} anchor="center">
-            <div className="gd-proj" style={{ background: SLOT_COLOR[p.slot] || "#fff" }} />
+            <div className="gd-missile" style={{ transform: `rotate(${bearing(p.fromLng, p.fromLat, p.toLng, p.toLat)}deg)` }}>
+              <span className="gd-missile-glow" />
+              <span className="gd-missile-body" />
+              <span className="gd-missile-flame" />
+            </div>
           </Marker>
         ))}
       </WorldMap>
@@ -149,7 +160,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
 
       {selectedUnit && !world.over && (
         <div className="gd-selpanel">
-          <div className="gd-selname">{UNITS[selectedUnit.type].label}</div>
+          <div className="gd-selname"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={SLOT_COLOR[mySlot]} size={18} />{unitLabel(selectedUnit.type, selectedUnit.slot)}</div>
           <div className="gd-selmeta">range {UNITS[selectedUnit.type].range.toLocaleString()}km · hp {Math.round(selectedUnit.hp)}</div>
           {UNITS[selectedUnit.type].kind === "offense" && (
             selectedUnit.targetId

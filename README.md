@@ -33,3 +33,5 @@ npm run build    # production build (the release gate)
 The world map and tile assets are reused from
 [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT
 License. See LICENSE and NOTICE.
+
+Unit icons: [game-icons.net](https://game-icons.net) (Lorc, Delapouite), CC BY 3.0.

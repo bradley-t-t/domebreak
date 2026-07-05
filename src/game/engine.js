@@ -1,20 +1,40 @@
-// GoldenDome real-time simulation engine. Pure and deterministic given its seed:
-// same seed + same commands + same dt sequence always produce the same world.
+// GoldenDome real-time simulation engine. Pure and deterministic given its seed.
 // Mutated in place for performance; the React hook re-renders off a version tick.
 
 export const START_POINTS = 450;
-export const MISSILE_SPEED = 1400; // km per game-second
+export const MISSILE_SPEED = 7; // fallback km per game-second
 
+// Real-scale ballistic speeds (km per game-second): the map uses true km, so
+// these match real missiles. Use the speed control (up to 10x) to compress the
+// realistic timeline. ICBM ~7 km/s (~Mach 23), hypersonic ~3 km/s (~Mach 9).
 export const UNITS = {
-  battery:  { label: "Interceptor Battery", kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, glyph: "◆" },
-  dome:     { label: "Golden Dome",         kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, glyph: "⬡" },
-  radar:    { label: "Radar",               kind: "support", cost: 150, range: 1600,  hp: 40, glyph: "❉" },
-  launcher: { label: "Cruise Launcher",     kind: "offense", cost: 200, range: 3800,  damage: 34, reload: 3.2, hp: 45, glyph: "➤" },
-  silo:     { label: "Missile Silo",        kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, hp: 60, glyph: "▲" },
+  battery:  { label: "MIM-104 Patriot",        kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, glyph: "◆" },
+  dome:     { label: "Golden Dome",            kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, glyph: "⬡" },
+  radar:    { label: "AN/TPY-2 Radar",         kind: "support", cost: 150, range: 1600,  hp: 40, glyph: "❉" },
+  launcher: { label: "Hypersonic Missile",     kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 3, hp: 45, glyph: "➤" },
+  silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 7, hp: 60, glyph: "▲" },
 };
 
-// Research: spend points up front, complete over game-time, apply a permanent
-// bonus to the owning nation. AI nations research too.
+export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
+
+// Real missile names per nation for the missile powers; others fall back to the
+// generic real-world class label on the unit type.
+const MISSILE_NAMES = {
+  0:  { silo: "LGM-30 Minuteman III", launcher: "AGM-183 ARRW" },
+  1:  { silo: "RS-28 Sarmat",         launcher: "Kh-47M2 Kinzhal" },
+  2:  { silo: "DF-41",                launcher: "DF-17" },
+  3:  { silo: "Agni-V",               launcher: "BrahMos-II" },
+  5:  { silo: "Trident II D5",        launcher: "FC/ASW" },
+  6:  { silo: "M51",                  launcher: "ASN4G" },
+  13: { silo: "Khorramshahr-4",       launcher: "Fattah-1" },
+  15: { silo: "Tayfun",               launcher: "Gokdogan" },
+};
+export function unitLabel(type, slot) {
+  const def = UNITS[type];
+  if (def.kind === "offense") return MISSILE_NAMES[slot]?.[type] ?? def.label;
+  return def.label;
+}
+
 export const TECHS = {
   warheads: { label: "Advanced Warheads", cost: 250, time: 25, desc: "+30% strike damage", apply: (n) => { n.dmgMult *= 1.3; } },
   defense:  { label: "Layered Defense",   cost: 250, time: 25, desc: "+15% intercept",     apply: (n) => { n.interceptAdd += 0.15; } },
@@ -73,7 +93,6 @@ function findTarget(w, id) {
   return null;
 }
 
-// ---- commands ----
 export function declareWar(w, a, b) {
   const na = nationOf(w, a), nb = nationOf(w, b);
   if (!na || !nb || a === b) return { error: "invalid" };
@@ -121,7 +140,8 @@ function launch(w, unit, target) {
   const n = nationOf(w, unit.slot);
   const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
   w.projectiles.push({
-    id: nextId(w, "p"), slot: unit.slot, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1),
+    id: nextId(w, "p"), slot: unit.slot, type: unit.type, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1),
+    speed: UNITS[unit.type].speed ?? MISSILE_SPEED,
     fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat,
     lng: unit.lng, lat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0,
   });
@@ -198,7 +218,7 @@ export function step(w, dt) {
   }
 
   for (const p of w.projectiles) {
-    p.travelled += MISSILE_SPEED * dt;
+    p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
     p.progress = Math.min(1, p.travelled / (p.dist || 1));
     p.lng = p.fromLng + (p.toLng - p.fromLng) * p.progress;
     p.lat = p.fromLat + (p.toLat - p.fromLat) * p.progress;

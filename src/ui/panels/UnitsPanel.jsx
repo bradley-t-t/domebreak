@@ -1,4 +1,5 @@
-import { UNITS } from "../../game/engine.js";
+import { UNITS, UNIT_ICON, unitLabel } from "../../game/engine.js";
+import UnitIcon from "../UnitIcon.jsx";
 
 export default function UnitsPanel({ world, mySlot, placing, setPlacing }) {
   const me = world.nations.find((n) => n.slot === mySlot);
@@ -15,8 +16,8 @@ export default function UnitsPanel({ world, mySlot, placing, setPlacing }) {
           return (
             <button key={key} className={`gd-arsenal-item ${placing === key ? "active" : ""} ${afford ? "" : "poor"}`}
               onClick={() => setPlacing(placing === key ? null : key)}>
-              <span className="gd-arsenal-glyph" data-kind={u.kind}>{u.glyph}</span>
-              <span className="gd-arsenal-info"><b>{u.label}</b><span>{u.kind} · {u.range.toLocaleString()}km</span></span>
+              <span className="gd-arsenal-glyph" data-kind={u.kind}><UnitIcon name={UNIT_ICON[key]} size={22} /></span>
+              <span className="gd-arsenal-info"><b>{unitLabel(key, mySlot)}</b><span>{u.kind} · {u.range.toLocaleString()}km</span></span>
               <span className="gd-arsenal-cost">{u.cost}</span>
             </button>
           );
@@ -24,7 +25,7 @@ export default function UnitsPanel({ world, mySlot, placing, setPlacing }) {
       </div>
       {placing && (
         <div className="gd-place-hint">
-          Placing <b>{UNITS[placing].label}</b> — click the map.
+          Placing <b>{unitLabel(placing, mySlot)}</b> — click the map.
           <button className="gd-mini" onClick={() => setPlacing(null)}>Cancel</button>
         </div>
       )}
@@ -33,8 +34,8 @@ export default function UnitsPanel({ world, mySlot, placing, setPlacing }) {
         {mine.length === 0 && <div className="gd-empty">Nothing deployed yet. Buy from the arsenal, then click the map.</div>}
         {Object.entries(counts).map(([type, n]) => (
           <div key={type} className="gd-force-row">
-            <span className="gd-arsenal-glyph" data-kind={UNITS[type].kind}>{UNITS[type].glyph}</span>
-            <span className="gd-force-name">{UNITS[type].label}</span>
+            <span className="gd-arsenal-glyph" data-kind={UNITS[type].kind}><UnitIcon name={UNIT_ICON[type]} size={20} /></span>
+            <span className="gd-force-name">{unitLabel(type, mySlot)}</span>
             <span className="gd-force-count">×{n}</span>
           </div>
         ))}
