@@ -1,6 +1,6 @@
 import {netIncomeOf, populationOf} from "../game/engine.js";
+import {GAME_SPEEDS} from "../game/constants.js";
 
-const SPEEDS = [0.5, 1, 2, 4, 10];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const SEC_PER_GS = 1800; // 30 in-game minutes per game-second
 
@@ -33,13 +33,15 @@ export default function LiveHud({world, api, myNation}) {
                 className={`gd-points-label ${net < 0 ? "deficit" : ""}`}>pts · {net >= 0 ? "+" : "−"}{Math.abs(net).toFixed(0)}/s</span>
             </div>
             <div className="gd-hud-sep"/>
-            <div className="gd-speed">
-                <button className={`gd-speedbtn ${world.paused ? "active" : ""}`} onClick={api.pause} title="Pause">⏸
+            <div className="gd-speed" title="Space: pause · + / − : speed · 1–5: speed level">
+                <button className={`gd-speedbtn ${world.paused ? "active" : ""}`} onClick={api.pause}
+                        title="Pause (Space)">⏸
                 </button>
-                <button className="gd-speedbtn" onClick={api.play} title="Play">▶</button>
-                {SPEEDS.map((s) => <button key={s}
-                                           className={`gd-speedbtn ${!world.paused && world.speed === s ? "active" : ""}`}
-                                           onClick={() => api.setSpeed(s)}>{s}×</button>)}
+                <button className="gd-speedbtn" onClick={api.play} title="Resume (Space)">▶</button>
+                {GAME_SPEEDS.map((s, i) => <button key={s}
+                                                    className={`gd-speedbtn ${!world.paused && world.speed === s ? "active" : ""}`}
+                                                    onClick={() => api.setSpeed(s)}
+                                                    title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
             </div>
             <div className="gd-hud-sep"/>
             <div className="gd-hud-cell right"><span className="gd-hud-lbl">Population</span><span
