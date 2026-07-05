@@ -7,7 +7,7 @@ import Missile from "./Missile.jsx";
 import Interceptor from "./Interceptor.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
-import { UNITS, UNIT_ICON, unitLabel } from "../game/engine.js";
+import { UNITS, UNIT_ICON, unitLabel, defenseRange } from "../game/engine.js";
 import { circle, gcTrail } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
@@ -55,15 +55,18 @@ export default function LiveGame({ setup, globe, onQuit }) {
     for (const u of world.units) {
       if (u.slot !== mySlot) continue;
       const def = UNITS[u.type];
-      if ((def.kind === "defense" || def.kind === "support") && def.range <= 4000) {
-        const c = circle(u.lng, u.lat, def.range);
-        c.properties = { color: SLOT_COLOR[mySlot], sel: u.id === selUnit ? 1 : 0 };
+      let radius = null, isRadar = 0;
+      if (def.kind === "defense") radius = defenseRange(world, u);
+      else if (def.kind === "support") { radius = def.range; isRadar = 1; }
+      if (radius && radius <= 4000) {
+        const c = circle(u.lng, u.lat, radius);
+        c.properties = { color: SLOT_COLOR[mySlot], sel: u.id === selUnit ? 1 : 0, radar: isRadar };
         f.push(c);
       }
     }
-    if (placing && cursor && UNITS[placing].range <= 4000) {
+    if (placing && cursor && UNITS[placing].kind !== "offense" && UNITS[placing].range <= 4000) {
       const c = circle(cursor.lng, cursor.lat, UNITS[placing].range);
-      c.properties = { color: "#f4c02a", sel: 1 };
+      c.properties = { color: "#f4c02a", sel: 1, radar: UNITS[placing].kind === "support" ? 1 : 0 };
       f.push(c);
     }
     return { type: "FeatureCollection", features: f };
@@ -119,8 +122,9 @@ export default function LiveGame({ setup, globe, onQuit }) {
         onMouseMove={placing ? (ll) => setCursor(ll) : undefined}
         cursor={placing || attackMode ? "crosshair" : "grab"}>
         <Source id="ranges" type="geojson" data={ranges}>
-          <Layer id="range-fill" type="fill" paint={{ "fill-color": ["get", "color"], "fill-opacity": ["case", ["==", ["get", "sel"], 1], 0.14, 0.05] }} />
-          <Layer id="range-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": ["case", ["==", ["get", "sel"], 1], 1.6, 0.7], "line-opacity": 0.6 }} />
+          <Layer id="range-fill" type="fill" filter={["!=", ["get", "radar"], 1]} paint={{ "fill-color": ["get", "color"], "fill-opacity": ["case", ["==", ["get", "sel"], 1], 0.14, 0.05] }} />
+          <Layer id="range-line" type="line" filter={["!=", ["get", "radar"], 1]} paint={{ "line-color": ["get", "color"], "line-width": ["case", ["==", ["get", "sel"], 1], 1.6, 0.7], "line-opacity": 0.6 }} />
+          <Layer id="radar-ring" type="line" filter={["==", ["get", "radar"], 1]} paint={{ "line-color": ["get", "color"], "line-width": 0.9, "line-opacity": 0.5, "line-dasharray": [3, 3] }} />
         </Source>
         <Source id="cmd" type="geojson" data={cmdLines}>
           <Layer id="cmd-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": 1.4, "line-opacity": 0.5, "line-dasharray": [2, 3] }} />

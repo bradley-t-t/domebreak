@@ -28,7 +28,11 @@ export default function UnitsPanel({ world, mySlot, placing, setPlacing }) {
             <button key={key} className={`gd-arsenal-item ${placing === key ? "active" : ""} ${afford ? "" : "poor"}`}
               onClick={() => setPlacing(placing === key ? null : key)}>
               <span className="gd-arsenal-glyph" data-kind={u.kind}><UnitIcon name={UNIT_ICON[key]} size={22} /></span>
-              <span className="gd-arsenal-info"><b>{unitLabel(key, mySlot)}</b><span>{u.kind} · {u.range.toLocaleString()}km · {u.upkeep}/s</span></span>
+              <span className="gd-arsenal-info">
+                <b>{unitLabel(key, mySlot)}</b>
+                <span>{u.kind} · {u.range.toLocaleString()}km · {u.upkeep}/s</span>
+                {u.hint && <span className="gd-arsenal-hint">{u.hint}</span>}
+              </span>
               <span className="gd-arsenal-cost">{u.cost}</span>
             </button>
           );
