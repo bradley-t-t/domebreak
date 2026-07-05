@@ -25,22 +25,20 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const [intercepts, setIntercepts] = useState([]);
   const [explosions, setExplosions] = useState([]);
   const [err, setErr] = useState(null);
-  const lastEid = useRef(0);
+  const seen = useRef(new Set());
 
   const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
   const flash = (m) => { setErr(m); setTimeout(() => setErr(null), 1800); };
 
   useEffect(() => {
-    let maxId = lastEid.current;
     const fFlash = [], fInt = [];
     for (const e of world.events) {
-      if (e.id > lastEid.current) {
-        if (e.type === "intercept") fInt.push(e);
-        else if (e.cityId && (e.type === "hit" || e.type === "destroy")) fFlash.push(e);
-      }
-      if (e.id > maxId) maxId = e.id;
+      if (seen.current.has(e.id)) continue;
+      seen.current.add(e.id);
+      if (e.type === "intercept") fInt.push(e);
+      else if (e.cityId && (e.type === "hit" || e.type === "destroy")) fFlash.push(e);
     }
-    lastEid.current = maxId;
+    if (seen.current.size > 500) seen.current = new Set(world.events.map((e) => e.id));
     if (fFlash.length) {
       setFlashes((f) => { const n = { ...f }; for (const e of fFlash) n[e.cityId] = e.type; return n; });
       for (const e of fFlash) { const cid = e.cityId, ty = e.type; setTimeout(() => setFlashes((f) => { if (f[cid] !== ty) return f; const n = { ...f }; delete n[cid]; return n; }), 520); }
@@ -171,7 +169,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
 
         {intercepts.map((i) => (
           <Marker key={i.id} longitude={i.lng} latitude={i.lat} anchor="center">
-            <div className="gd-blast" />
+            <div className="gd-explosion intercept"><span className="gd-boom" /><span className="gd-shock" /><span className="gd-flash" /></div>
           </Marker>
         ))}
 

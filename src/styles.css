@@ -517,3 +517,8 @@ input { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .gd-boom, .gd-shock, .gd-flash { animation-duration: 0.3s; }
 }
+
+/* interception reads as a green explosion (vs orange damage impacts) */
+.gd-explosion.intercept { width: 15px; height: 15px; }
+.gd-explosion.intercept .gd-boom { background: radial-gradient(circle, #ffffff 0%, #d6ffe8 20%, #8dffbf 45%, #25e084 72%, rgba(37,224,132,0) 100%); }
+.gd-explosion.intercept .gd-shock { border-color: rgba(141,255,191,0.9); }
