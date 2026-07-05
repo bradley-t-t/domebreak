@@ -5,6 +5,7 @@ import Console from "./Console.jsx";
 import UnitIcon from "./UnitIcon.jsx";
 import Missile from "./Missile.jsx";
 import Interceptor from "./Interceptor.jsx";
+import Explosion from "./Explosion.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
 import { UNITS, UNIT_ICON, unitLabel, defenseRange } from "../game/engine.js";
@@ -169,13 +170,13 @@ export default function LiveGame({ setup, globe, onQuit }) {
 
         {intercepts.map((i) => (
           <Marker key={i.id} longitude={i.lng} latitude={i.lat} anchor="center">
-            <div className="gd-explosion intercept"><span className="gd-boom" /><span className="gd-shock" /><span className="gd-flash" /></div>
+            <Explosion kind="intercept" />
           </Marker>
         ))}
 
         {explosions.map((x) => (
           <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center">
-            <div className={`gd-explosion ${x.kind}`}><span className="gd-boom" /><span className="gd-shock" /><span className="gd-flash" /></div>
+            <Explosion kind={x.kind} />
           </Marker>
         ))}
       </WorldMap>
