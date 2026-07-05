@@ -66,7 +66,7 @@ export default function WorldMap({
       onLoad={(e) => { applyProjection(e.target); if (onMap) onMap(e.target); }}
       onClick={(e) => onMapClick && onMapClick(e)}
       onContextMenu={(e) => { e.originalEvent?.preventDefault?.(); onContextMenu && onContextMenu(e); }}
-      onMouseMove={(e) => onMouseMove && onMouseMove(e.lngLat)}
+      onMouseMove={(e) => onMouseMove && onMouseMove(e)}
       style={{ position: "absolute", inset: 0 }}
       cursor={cursor}
     >

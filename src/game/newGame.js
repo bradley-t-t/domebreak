@@ -27,7 +27,7 @@ export function buildSetup(data, playerIso, opponentCount, seed) {
   chosen.forEach((iso, slot) => {
     const cn = data.countries.find((c) => c.iso === iso);
     nations.push({ slot, iso, name: cn?.name || iso, isAi: iso !== playerIso });
-    data.cities[iso].slice(0, MAX_CITIES_PER_NATION).forEach((c, i) => {
+    data.cities[iso].forEach((c, i) => {
       cities.push({ id: `${iso}-${i}`, slot, name: c.n, state: c.s, cap: c.cap, pop: c.p, lng: c.lng, lat: c.lat });
     });
   });

@@ -7,6 +7,7 @@ export const INTERCEPTOR_SPEED = 520;
 export const RADAR_RANGE_MULT = 2.5;
 export const TERRITORY_RADIUS = 550; // km around own cities where you may build
 export const MOVE_COST_FRAC = 0.25;
+export const MIN_SEP = 45; // km — no stacking on cities/units
 
 export const UNITS = {
   battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 320,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
@@ -159,10 +160,19 @@ function findTarget(w, id) {
 export function declareWar(w, a, b) { const na = nationOf(w, a), nb = nationOf(w, b); if (!na || !nb || a === b) return { error: "invalid" }; na.relations[b] = "war"; nb.relations[a] = "war"; return { ok: true }; }
 export function makePeace(w, a, b) { const na = nationOf(w, a), nb = nationOf(w, b); if (na) na.relations[b] = "peace"; if (nb) nb.relations[a] = "peace"; return { ok: true }; }
 
+export function placementBlocked(w, lng, lat, ignoreUnitId) {
+  if (w.cities.some((c) => haversine(c.lng, c.lat, lng, lat) < MIN_SEP)) return "too close to a city";
+  if (w.units.some((u) => u.id !== ignoreUnitId && u.hp > 0 && haversine(u.lng, u.lat, lng, lat) < MIN_SEP)) return "too close to another unit";
+  return null;
+}
+
 export function buyPlace(w, slot, type, lng, lat) {
   const def = UNITS[type], n = nationOf(w, slot);
   if (!def || !n) return { error: "invalid" };
+  if (netIncomeOf(w, slot) < 0) return { error: "cannot build while in deficit" };
   if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const blocked = placementBlocked(w, lng, lat, null);
+  if (blocked) return { error: blocked };
   const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
   if (n.points < cost) return { error: "not enough points" };
   n.points -= cost;
@@ -173,6 +183,8 @@ export function buyPlace(w, slot, type, lng, lat) {
 export function moveUnit(w, slot, unitId, lng, lat) {
   const u = w.units.find((x) => x.id === unitId && x.slot === slot); if (!u) return { error: "not found" };
   if (!inTerritory(w, slot, lng, lat)) return { error: "outside your territory" };
+  const blocked = placementBlocked(w, lng, lat, unitId);
+  if (blocked) return { error: blocked };
   const n = nationOf(w, slot);
   const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC * (n.moveCostMult ?? 1));
   if (n.points < cost) return { error: "not enough points to relocate" };
