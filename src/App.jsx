@@ -68,7 +68,7 @@ export default function App() {
     <div className="gd-app">
       {screen === "menu" && <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue} onLoad={() => { setSaveMode("load"); setOverlay("saveload"); }} onSettings={() => setOverlay("settings")} />}
       {screen === "newgame" && <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")} />}
-      {screen === "playing" && world && <LiveGame key={session} world={world} globe={globe} onToggleGlobe={() => setGlobe((g) => !g)} onPause={pause} backdrop={backdrop} />}
+      {screen === "playing" && world && <LiveGame key={session} world={world} globe={globe} onToggleGlobe={() => setGlobe((g) => !g)} onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} />}
 
       {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => { setSaveMode("save"); setOverlay("saveload"); }} onLoad={() => { setSaveMode("load"); setOverlay("saveload"); }} onSettings={() => setOverlay("settings")} onQuit={quitToMenu} />}
       {overlay === "settings" && <SettingsPanel settings={settings} onChange={changeSettings} onClose={closeOverlay} />}
