@@ -2,17 +2,14 @@
 // Mutated in place for performance; the React hook re-renders off a version tick.
 
 export const START_POINTS = 450;
-export const MISSILE_SPEED = 70; // fallback km per game-second
+export const MISSILE_SPEED = 140; // fallback km per game-second
 
-// Missile speeds are ~10x real ballistic scale for playability on the true-km
-// map (still fast->slow by class). upkeep = ammunition/maintenance drain per
-// game-second while the unit is deployed.
 export const UNITS = {
   battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
   dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡" },
   radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1600,  hp: 40, upkeep: 1.5, glyph: "❉" },
-  launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 30, hp: 45, upkeep: 2, glyph: "➤" },
-  silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 70, hp: 60, upkeep: 4, glyph: "▲" },
+  launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 60,  hp: 45, upkeep: 2, glyph: "➤" },
+  silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 140, hp: 60, upkeep: 4, glyph: "▲" },
 };
 
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
@@ -88,9 +85,8 @@ export function upkeepOf(w, slot) {
   for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
   return sum;
 }
-export function netIncomeOf(w, slot) {
-  return incomeOf(w, slot) - upkeepOf(w, slot);
-}
+export function netIncomeOf(w, slot) { return incomeOf(w, slot) - upkeepOf(w, slot); }
+
 function findTarget(w, id) {
   const c = w.cities.find((x) => x.id === id);
   if (c) return { kind: "city", ref: c, slot: c.slot, get alive() { return c.alive; }, lng: c.lng, lat: c.lat };
@@ -147,23 +143,14 @@ function launch(w, unit, target) {
   const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
   w.projectiles.push({
     id: nextId(w, "p"), slot: unit.slot, type: unit.type, damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1),
-    speed: UNITS[unit.type].speed ?? MISSILE_SPEED,
+    speed: UNITS[unit.type].speed ?? MISSILE_SPEED, tried: [],
     fromLng: unit.lng, fromLat: unit.lat, toLng: target.lng, toLat: target.lat,
     lng: unit.lng, lat: unit.lat, targetId: target.ref.id, dist, travelled: 0, progress: 0,
   });
 }
-function resolveImpact(w, p) {
+function resolveHit(w, p) {
   const target = findTarget(w, p.targetId);
   if (!target || !target.alive) { w.events.push({ id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat }); return; }
-  const defNation = nationOf(w, target.slot);
-  const defenders = w.units.filter((u) => u.slot === target.slot && UNITS[u.type].kind === "defense" && u.hp > 0);
-  let survival = 1;
-  for (const d of defenders) {
-    if (haversine(d.lng, d.lat, target.lng, target.lat) <= UNITS[d.type].range) {
-      survival *= 1 - Math.min(0.97, UNITS[d.type].intercept + (defNation?.interceptAdd ?? 0));
-    }
-  }
-  if (rand(w) < 1 - survival) { w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", cityId: target.ref.id, lng: target.lng, lat: target.lat }); return; }
   target.ref.hp -= p.damage;
   const dead = target.ref.hp <= 0;
   if (dead) { target.ref.hp = 0; if (target.kind === "city") target.ref.alive = false; }
@@ -186,7 +173,6 @@ function aiTick(w, dt) {
       if (undone.length && rand(w) < 0.5) { commandResearch(w, n.slot, undone[Math.floor(rand(w) * undone.length)]); return; }
     }
     if (!enemies.length) continue;
-    // Leave headroom for upkeep so the AI does not bankrupt itself.
     if (n.points >= UNITS.silo.cost + 120 && netIncomeOf(w, n.slot) > 2) {
       const r = buyPlace(w, n.slot, "silo", myCap.lng + (rand(w) - 0.5) * 2, myCap.lat + (rand(w) - 0.5) * 2);
       const targets = w.cities.filter((c) => c.alive && enemies.some((e) => e.slot === c.slot));
@@ -224,12 +210,27 @@ export function step(w, dt) {
     }
   }
 
+  // Move projectiles; active point-defense engages any hostile missile the
+  // moment it enters a defender's range (one attempt per defender per missile).
   for (const p of w.projectiles) {
     p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
     p.progress = Math.min(1, p.travelled / (p.dist || 1));
     p.lng = p.fromLng + (p.toLng - p.fromLng) * p.progress;
     p.lat = p.fromLat + (p.toLat - p.fromLat) * p.progress;
-    if (p.progress >= 1) { resolveImpact(w, p); p._dead = true; }
+    for (const d of w.units) {
+      if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
+      if (!atWar(w, d.slot, p.slot)) continue;
+      if (p.tried.includes(d.id)) continue;
+      if (haversine(d.lng, d.lat, p.lng, p.lat) <= UNITS[d.type].range) {
+        p.tried.push(d.id);
+        const dn = nationOf(w, d.slot);
+        if (rand(w) < Math.min(0.97, UNITS[d.type].intercept + (dn?.interceptAdd ?? 0))) {
+          w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", cityId: p.targetId, lng: p.lng, lat: p.lat, byLng: d.lng, byLat: d.lat, byId: d.id });
+          p._dead = true; break;
+        }
+      }
+    }
+    if (!p._dead && p.progress >= 1) { resolveHit(w, p); p._dead = true; }
   }
   w.projectiles = w.projectiles.filter((p) => !p._dead);
   w.units = w.units.filter((u) => u.hp > 0);

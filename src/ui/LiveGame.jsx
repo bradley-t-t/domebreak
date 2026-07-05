@@ -21,25 +21,32 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const [attackMode, setAttackMode] = useState(false);
   const [cursor, setCursor] = useState(null);
   const [flashes, setFlashes] = useState({});
+  const [intercepts, setIntercepts] = useState([]);
   const [err, setErr] = useState(null);
   const lastEid = useRef(0);
 
   const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
   const flash = (m) => { setErr(m); setTimeout(() => setErr(null), 1800); };
 
+  // Fresh events -> city hit/destroy flashes and mid-air interception blasts.
   useEffect(() => {
     let maxId = lastEid.current;
-    const fresh = [];
+    const fFlash = [], fInt = [];
     for (const e of world.events) {
-      if (e.id > lastEid.current && e.cityId && (e.type === "hit" || e.type === "destroy" || e.type === "intercept")) fresh.push(e);
+      if (e.id > lastEid.current) {
+        if (e.type === "intercept") fInt.push(e);
+        else if (e.cityId && (e.type === "hit" || e.type === "destroy")) fFlash.push(e);
+      }
       if (e.id > maxId) maxId = e.id;
     }
     lastEid.current = maxId;
-    if (!fresh.length) return;
-    setFlashes((f) => { const n = { ...f }; for (const e of fresh) n[e.cityId] = e.type; return n; });
-    for (const e of fresh) {
-      const cid = e.cityId, ty = e.type;
-      setTimeout(() => setFlashes((f) => { if (f[cid] !== ty) return f; const n = { ...f }; delete n[cid]; return n; }), 520);
+    if (fFlash.length) {
+      setFlashes((f) => { const n = { ...f }; for (const e of fFlash) n[e.cityId] = e.type; return n; });
+      for (const e of fFlash) { const cid = e.cityId, ty = e.type; setTimeout(() => setFlashes((f) => { if (f[cid] !== ty) return f; const n = { ...f }; delete n[cid]; return n; }), 520); }
+    }
+    if (fInt.length) {
+      setIntercepts((list) => [...list, ...fInt.map((e) => ({ id: e.id, lng: e.lng, lat: e.lat, byLng: e.byLng, byLat: e.byLat }))]);
+      for (const e of fInt) { const id = e.id; setTimeout(() => setIntercepts((list) => list.filter((x) => x.id !== id)), 650); }
     }
   }, [world.time]);
 
@@ -80,6 +87,12 @@ export default function LiveGame({ setup, globe, onQuit }) {
       geometry: { type: "LineString", coordinates: [[p.fromLng, p.fromLat], [p.lng, p.lat]] } })),
   }), [world.projectiles]);
 
+  const shots = useMemo(() => ({
+    type: "FeatureCollection",
+    features: intercepts.filter((i) => i.byLng != null).map((i) => ({ type: "Feature", properties: {},
+      geometry: { type: "LineString", coordinates: [[i.byLng, i.byLat], [i.lng, i.lat]] } })),
+  }), [intercepts]);
+
   const onMapClick = (lngLat) => {
     if (placing) { const r = api.buyPlace(placing, lngLat.lng, lngLat.lat); if (r.error) flash(r.error); return; }
     setSelUnit(null); setAttackMode(false);
@@ -116,6 +129,9 @@ export default function LiveGame({ setup, globe, onQuit }) {
           <Layer id="trail-glow" type="line" paint={{ "line-color": "#cfe2ff", "line-width": 6, "line-blur": 4, "line-opacity": 0.12 }} />
           <Layer id="trail-line" type="line" paint={{ "line-width": 2.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(230,240,255,0)", 0.7, "rgba(230,240,255,0.32)", 1, "rgba(245,250,255,0.9)"] }} />
         </Source>
+        <Source id="shots" type="geojson" data={shots}>
+          <Layer id="shot-line" type="line" paint={{ "line-color": "#8dffbf", "line-width": 1.6, "line-opacity": 0.85, "line-dasharray": [1, 1.5] }} />
+        </Source>
 
         {world.cities.map((c) => {
           const mine = c.slot === mySlot;
@@ -144,6 +160,12 @@ export default function LiveGame({ setup, globe, onQuit }) {
         ))}
 
         {world.projectiles.map((p) => <Missile key={p.id} p={p} />)}
+
+        {intercepts.map((i) => (
+          <Marker key={i.id} longitude={i.lng} latitude={i.lat} anchor="center">
+            <div className="gd-blast" />
+          </Marker>
+        ))}
       </WorldMap>
 
       <LiveHud world={world} api={api} myNation={myNation} />
@@ -162,7 +184,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
                   {attackMode ? "Pick a target…" : "Command attack"}
                 </button>
           )}
-          {UNITS[selectedUnit.type].kind !== "offense" && <div className="gd-selmeta hint">Auto-defends nearby.</div>}
+          {UNITS[selectedUnit.type].kind !== "offense" && <div className="gd-selmeta hint">Auto-intercepts hostile missiles in range.</div>}
         </div>
       )}
 
