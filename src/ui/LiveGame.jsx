@@ -10,7 +10,7 @@ import ContextMenu from "./ContextMenu.jsx";
 import PinnedBar from "./PinnedBar.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
-import { UNITS, UNIT_ICON, unitLabel, defenseRange, TERRITORY_RADIUS } from "../game/engine.js";
+import { UNITS, UNIT_ICON, unitLabel, defenseRange, inTerritory, placementBlocked } from "../game/engine.js";
 import { circle, gcTrail } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
@@ -32,6 +32,7 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   const [selCity, setSelCity] = useState(null);
   const [attackMode, setAttackMode] = useState(false);
   const [cursor, setCursor] = useState(null);
+  const [placeValid, setPlaceValid] = useState(true);
   const [hoveredGid, setHoveredGid] = useState(null);
   const [layers, setLayers] = useState(DEFAULT_LAYERS);
   const [mapReady, setMapReady] = useState(0);
@@ -81,8 +82,6 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
   }, [layers.countries, mapReady]);
 
   const backdropFC = useMemo(() => ({ type: "FeatureCollection", features: (backdrop || []).map((c) => ({ type: "Feature", properties: { cap: c.cap ? 1 : 0 }, geometry: { type: "Point", coordinates: [c.lng, c.lat] } })) }), [backdrop]);
-  const showTerr = !!(placing || moving);
-  const territoryFC = useMemo(() => showTerr ? ({ type: "FeatureCollection", features: w.cities.filter((c) => c.slot === mySlot && c.alive).map((c) => circle(c.lng, c.lat, TERRITORY_RADIUS, 40)) }) : { type: "FeatureCollection", features: [] }, [showTerr, mySlot, w.cities]);
   const liveFC = useMemo(() => ({ type: "FeatureCollection", features: w.cities.map((c) => ({ type: "Feature", properties: { id: c.id, cap: c.cap ? 1 : 0, mine: c.slot === mySlot ? 1 : 0, color: c.alive ? SLOT_COLOR[c.slot] : "#3a3a3a" }, geometry: { type: "Point", coordinates: [c.lng, c.lat] } })) }), [w.cities, w.time, mySlot]);
 
   const radarFC = useMemo(() => layers.radar ? ({ type: "FeatureCollection", features: w.units.filter((u) => u.type === "radar" && u.hp > 0).map((u) => { const n = w.nations.find((x) => x.slot === u.slot); const c = circle(u.lng, u.lat, UNITS.radar.range * (n?.radarMult ?? 1), 44); c.properties = { color: SLOT_COLOR[u.slot] }; return c; }) }) : { type: "FeatureCollection", features: [] }, [layers.radar, w.units, w.time]);
@@ -97,15 +96,25 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
       if (def.kind === "defense") radius = defenseRange(w, sel); else if (def.kind === "support") { radius = def.range; isRadar = 1; }
       if (radius && radius <= 4000) { const c = circle(sel.lng, sel.lat, radius); c.properties = { color: SLOT_COLOR[mySlot], sel: 1, radar: isRadar }; f.push(c); }
     }
-    if (placing && cursor && UNITS[placing].kind !== "offense" && UNITS[placing].range <= 4000) { const c = circle(cursor.lng, cursor.lat, UNITS[placing].range); c.properties = { color: "#f4c02a", sel: 1, radar: UNITS[placing].kind === "support" ? 1 : 0 }; f.push(c); }
+    if ((placing || moving) && cursor) {
+      const t = placing ? UNITS[placing] : null;
+      const rad = (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
+      const c = circle(cursor.lng, cursor.lat, rad);
+      c.properties = { color: placeValid ? "#46d38a" : "#ff5d5d", sel: 1, radar: (t && t.kind === "support") ? 1 : 0 };
+      f.push(c);
+    }
     return { type: "FeatureCollection", features: f };
-  }, [w.units, w.time, placing, cursor, selUnit, mySlot]);
+  }, [w.units, w.time, placing, moving, cursor, selUnit, mySlot, placeValid]);
 
   const cmdLines = useMemo(() => ({ type: "FeatureCollection", features: w.units.filter((u) => u.slot === mySlot && u.targetId).map((u) => { const t = w.cities.find((c) => c.id === u.targetId) || w.units.find((x) => x.id === u.targetId); return t ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: gcTrail(u.lng, u.lat, t.lng, t.lat, 1, 18) } } : null; }).filter(Boolean) }), [w.units, w.time, mySlot]);
 
   const onMove = (e) => {
-    if (placing || moving) setCursor(e.lngLat);
     const m = mapRef.current;
+    if (placing || moving) {
+      setCursor(e.lngLat);
+      const land = !!(m && m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }).length);
+      setPlaceValid(inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat) && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null) && land);
+    }
     if (m) { const f = m.queryRenderedFeatures(e.point, { layers: ["country-fill"] }); const gid = f[0]?.properties?.GID_0 || null; if (gid !== hoveredGid) setHoveredGid(gid); }
   };
   const onMapClick = (e) => {
@@ -165,10 +174,6 @@ export default function LiveGame({ world, globe, onToggleGlobe, onPause, backdro
           <Layer id="pop-heat" type="heatmap" paint={{ "heatmap-weight": ["get", "wt"], "heatmap-intensity": 1.1, "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 1, 8, 6, 42], "heatmap-opacity": 0.75, "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"], 0, "rgba(0,0,0,0)", 0.2, "#1b3a6b", 0.4, "#2e8b8b", 0.6, "#e0c040", 0.8, "#ff8a1a", 1, "#ff2e0a"] }} />
         </Source>}
         {layers.backdrop && <Source id="backdrop-src" type="geojson" data={backdropFC}><Layer id="backdrop-cities" type="circle" paint={{ "circle-radius": ["case", ["==", ["get", "cap"], 1], 2.3, 1.3], "circle-color": "#63769a", "circle-opacity": 0.5 }} /></Source>}
-        <Source id="terr-src" type="geojson" data={territoryFC}>
-          <Layer id="terr-fill" type="fill" paint={{ "fill-color": "#f4c02a", "fill-opacity": 0.05 }} />
-          <Layer id="terr-line" type="line" paint={{ "line-color": "#f4c02a", "line-opacity": 0.35, "line-width": 1, "line-dasharray": [2, 2] }} />
-        </Source>
         {layers.radar && <Source id="radar-src" type="geojson" data={radarFC}><Layer id="radar-cov" type="line" paint={{ "line-color": ["get", "color"], "line-opacity": 0.4, "line-width": 0.9, "line-dasharray": [3, 3] }} /></Source>}
         {layers.defense && <Source id="defall-src" type="geojson" data={defenseFC}>
           <Layer id="defall-fill" type="fill" paint={{ "fill-color": ["get", "color"], "fill-opacity": 0.05 }} />

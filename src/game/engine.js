@@ -243,7 +243,7 @@ export function step(w, dt) {
         const dn = nationOf(w, d.slot); const fc = UNITS[d.type].fireCost || 0;
         if (dn.points < fc) continue; // cannot fire without money
         p.tried.push(d.id); dn.points -= fc; d.cooldown = UNITS[d.type].reload || 3;
-        w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, targetId: p.id, hitProb: Math.min(0.97, UNITS[d.type].intercept + (dn.interceptAdd ?? 0)), speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1), altNorm: 0, fromLng: d.lng, fromLat: d.lat, lng: d.lng, lat: d.lat, toLng: p.lng, toLat: p.lat });
+        w.interceptors.push({ id: nextId(w, "i"), slot: d.slot, targetId: p.id, hitProb: Math.min(0.97, UNITS[d.type].intercept + (dn.interceptAdd ?? 0)), speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1), altNorm: 0, launchDist: Math.max(1, haversine(d.lng, d.lat, p.lng, p.lat)), fromLng: d.lng, fromLat: d.lat, lng: d.lng, lat: d.lat, toLng: p.lng, toLat: p.lat });
       }
     }
     if (!p._dead && p.progress >= 1) { resolveHit(w, p); p._dead = true; }
@@ -252,8 +252,9 @@ export function step(w, dt) {
   for (const it of w.interceptors) {
     const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
     if (!tgt) { it._dead = true; continue; }
-    it.toLng = tgt.lng; it.toLat = tgt.lat; it.altNorm = tgt.altNorm ?? 0;
+    it.toLng = tgt.lng; it.toLat = tgt.lat;
     const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat); const stepKm = it.speed * dt;
+    it.altNorm = (tgt.altNorm ?? 0) * Math.min(1, Math.max(0, 1 - dist / (it.launchDist || 1)));
     if (dist <= Math.max(50, stepKm)) {
       it._dead = true;
       if (rand(w) < (it.hitProb ?? 0.8)) { tgt._dead = true; w.events.push({ id: nextId(w, "e"), t: w.time, type: "intercept", lng: tgt.lng, lat: tgt.lat, alt: tgt.altNorm ?? 0, byLng: it.fromLng, byLat: it.fromLat }); }

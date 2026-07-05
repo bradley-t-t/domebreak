@@ -44,7 +44,6 @@ export default function SkyLayer({ map, projectiles, interceptors }) {
     const [x0, y0] = pr(it.fromLng, it.fromLat);
     const [xc, yc] = pr(it.lng, it.lat);
     const head = [xc, yc - (it.altNorm || 0) * 72];
-    trails.push({ id: "i" + it.id, pts: [[x0, y0], head], color: "#8dffbf", width: 1.5 });
     heads.push({ id: "i" + it.id, x: head[0], y: head[1], deg: (Math.atan2(head[0] - x0, -(head[1] - y0)) * 180) / Math.PI, kind: "interceptor" });
   }
 
