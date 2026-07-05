@@ -29,11 +29,16 @@ export default function SkyLayer({ map, projectiles, interceptors }) {
 
   const trails = [], heads = [];
   for (const p of projectiles) {
-    const alt = ALT[p.type] || 60; const pts = [];
+    const alt = ALT[p.type] || 60; const pts = []; let prevLng = null;
     for (let i = 0; i <= SAMPLES; i++) {
       const f = (p.progress * i) / SAMPLES;
       const g = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, f);
-      const [x, y] = pr(g[0], g[1]);
+      // Unwrap longitude so a path crossing the antimeridian stays continuous
+      // in screen space (otherwise it teleports across the flat map at the seam).
+      let lng = g[0];
+      if (prevLng !== null) { while (lng - prevLng > 180) lng -= 360; while (lng - prevLng < -180) lng += 360; }
+      prevLng = lng;
+      const [x, y] = pr(lng, g[1]);
       pts.push([x, y - Math.sin(f * Math.PI) * alt]);
     }
     trails.push({ id: "p" + p.id, pts, color: "#d7e6ff", width: 2.4 });
@@ -42,7 +47,8 @@ export default function SkyLayer({ map, projectiles, interceptors }) {
   }
   for (const it of interceptors) {
     const [x0, y0] = pr(it.fromLng, it.fromLat);
-    const [xc, yc] = pr(it.lng, it.lat);
+    let clng = it.lng; while (clng - it.fromLng > 180) clng -= 360; while (clng - it.fromLng < -180) clng += 360;
+    const [xc, yc] = pr(clng, it.lat);
     const head = [xc, yc - (it.altNorm || 0) * 72];
     heads.push({ id: "i" + it.id, x: head[0], y: head[1], deg: (Math.atan2(head[0] - x0, -(head[1] - y0)) * 180) / Math.PI, kind: "interceptor" });
   }
