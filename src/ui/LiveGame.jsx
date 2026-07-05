@@ -3,10 +3,11 @@ import WorldMap from "../map/WorldMap.jsx";
 import LiveHud from "./LiveHud.jsx";
 import Console from "./Console.jsx";
 import UnitIcon from "./UnitIcon.jsx";
+import Missile from "./Missile.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
 import { UNITS, UNIT_ICON, unitLabel } from "../game/engine.js";
-import { circle, bearing } from "../game/geo.js";
+import { circle } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
 export default function LiveGame({ setup, globe, onQuit }) {
@@ -142,15 +143,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
           </Marker>
         ))}
 
-        {world.projectiles.map((p) => (
-          <Marker key={p.id} longitude={p.lng} latitude={p.lat} anchor="center">
-            <div className="gd-missile" style={{ transform: `rotate(${bearing(p.fromLng, p.fromLat, p.toLng, p.toLat)}deg)` }}>
-              <span className="gd-missile-glow" />
-              <span className="gd-missile-body" />
-              <span className="gd-missile-flame" />
-            </div>
-          </Marker>
-        ))}
+        {world.projectiles.map((p) => <Missile key={p.id} p={p} />)}
       </WorldMap>
 
       <LiveHud world={world} api={api} myNation={myNation} />
@@ -161,7 +154,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
       {selectedUnit && !world.over && (
         <div className="gd-selpanel">
           <div className="gd-selname"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={SLOT_COLOR[mySlot]} size={18} />{unitLabel(selectedUnit.type, selectedUnit.slot)}</div>
-          <div className="gd-selmeta">range {UNITS[selectedUnit.type].range.toLocaleString()}km · hp {Math.round(selectedUnit.hp)}</div>
+          <div className="gd-selmeta">range {UNITS[selectedUnit.type].range.toLocaleString()}km · hp {Math.round(selectedUnit.hp)} · {UNITS[selectedUnit.type].upkeep}/s</div>
           {UNITS[selectedUnit.type].kind === "offense" && (
             selectedUnit.targetId
               ? <button className="gd-btn" onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold fire</button>

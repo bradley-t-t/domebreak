@@ -2,23 +2,21 @@
 // Mutated in place for performance; the React hook re-renders off a version tick.
 
 export const START_POINTS = 450;
-export const MISSILE_SPEED = 7; // fallback km per game-second
+export const MISSILE_SPEED = 70; // fallback km per game-second
 
-// Real-scale ballistic speeds (km per game-second): the map uses true km, so
-// these match real missiles. Use the speed control (up to 10x) to compress the
-// realistic timeline. ICBM ~7 km/s (~Mach 23), hypersonic ~3 km/s (~Mach 9).
+// Missile speeds are ~10x real ballistic scale for playability on the true-km
+// map (still fast->slow by class). upkeep = ammunition/maintenance drain per
+// game-second while the unit is deployed.
 export const UNITS = {
-  battery:  { label: "MIM-104 Patriot",        kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, glyph: "◆" },
-  dome:     { label: "Golden Dome",            kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, glyph: "⬡" },
-  radar:    { label: "AN/TPY-2 Radar",         kind: "support", cost: 150, range: 1600,  hp: 40, glyph: "❉" },
-  launcher: { label: "Hypersonic Missile",     kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 3, hp: 45, glyph: "➤" },
-  silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 7, hp: 60, glyph: "▲" },
+  battery:  { label: "MIM-104 Patriot",          kind: "defense", cost: 150, range: 650,   intercept: 0.5,  hp: 50, upkeep: 1,   glyph: "◆" },
+  dome:     { label: "Golden Dome",              kind: "defense", cost: 400, range: 380,   intercept: 0.85, hp: 90, upkeep: 3,   glyph: "⬡" },
+  radar:    { label: "AN/TPY-2 Radar",           kind: "support", cost: 150, range: 1600,  hp: 40, upkeep: 1.5, glyph: "❉" },
+  launcher: { label: "Hypersonic Missile",       kind: "offense", cost: 200, range: 6000,  damage: 34, reload: 3.2, speed: 30, hp: 45, upkeep: 2, glyph: "➤" },
+  silo:     { label: "Ballistic Missile (ICBM)", kind: "offense", cost: 320, range: 20000, damage: 55, reload: 6.5, speed: 70, hp: 60, upkeep: 4, glyph: "▲" },
 };
 
 export const UNIT_ICON = { silo: "silo", launcher: "hypersonic", battery: "battery", dome: "dome", radar: "radar" };
 
-// Real missile names per nation for the missile powers; others fall back to the
-// generic real-world class label on the unit type.
 const MISSILE_NAMES = {
   0:  { silo: "LGM-30 Minuteman III", launcher: "AGM-183 ARRW" },
   1:  { silo: "RS-28 Sarmat",         launcher: "Kh-47M2 Kinzhal" },
@@ -84,6 +82,14 @@ export function incomeOf(w, slot) {
   const n = nationOf(w, slot);
   const cityCount = w.cities.filter((c) => c.slot === slot && c.alive).length;
   return (10 + cityCount * 8) * (n?.incomeMult ?? 1);
+}
+export function upkeepOf(w, slot) {
+  let sum = 0;
+  for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
+  return sum;
+}
+export function netIncomeOf(w, slot) {
+  return incomeOf(w, slot) - upkeepOf(w, slot);
 }
 function findTarget(w, id) {
   const c = w.cities.find((x) => x.id === id);
@@ -180,7 +186,8 @@ function aiTick(w, dt) {
       if (undone.length && rand(w) < 0.5) { commandResearch(w, n.slot, undone[Math.floor(rand(w) * undone.length)]); return; }
     }
     if (!enemies.length) continue;
-    if (n.points >= UNITS.silo.cost) {
+    // Leave headroom for upkeep so the AI does not bankrupt itself.
+    if (n.points >= UNITS.silo.cost + 120 && netIncomeOf(w, n.slot) > 2) {
       const r = buyPlace(w, n.slot, "silo", myCap.lng + (rand(w) - 0.5) * 2, myCap.lat + (rand(w) - 0.5) * 2);
       const targets = w.cities.filter((c) => c.alive && enemies.some((e) => e.slot === c.slot));
       if (r.ok && targets.length) commandAttack(w, r.unit.id, targets[Math.floor(rand(w) * targets.length)].id);
@@ -191,7 +198,7 @@ function aiTick(w, dt) {
 export function step(w, dt) {
   if (w.over || dt <= 0) return w;
   w.time += dt;
-  for (const n of w.nations) if (n.alive) n.points += incomeOf(w, n.slot) * dt;
+  for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeOf(w, n.slot) * dt);
 
   for (const n of w.nations) {
     if (!n.alive || !n.research.current) continue;
