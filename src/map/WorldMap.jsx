@@ -1,13 +1,14 @@
 /*!
  * GoldenDome board. Reused Open Historia PMTiles tiles (MIT) under a fresh
- * MapLibre renderer, with globe + flat projection and game overlays.
+ * MapLibre renderer, with globe + flat projection. Renders optional lobby city
+ * markers and accepts children for live-game overlays.
  */
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
-import Map, { Marker, Source, Layer } from "react-map-gl/maplibre";
+import Map, { Marker } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { TOOLS, SLOT_COLOR } from "../game/constants.js";
+import { SLOT_COLOR } from "../game/constants.js";
 
 let pmtilesRegistered = false;
 function ensurePmtiles() {
@@ -39,8 +40,8 @@ function buildStyle() {
 }
 
 export default function WorldMap({
-  cities = [], myCityIds, slotByPlayer = {}, placements = [], tool, mySlot,
-  onMapClick, onCityClick, arcs = [], flashes = {}, globe = true,
+  cities = [], myCityIds, slotByPlayer = {}, globe = true,
+  onMapClick, onMouseMove, cursor = "grab", children,
 }) {
   const mapRef = useRef(null);
   const mapStyle = useMemo(buildStyle, []);
@@ -54,8 +55,6 @@ export default function WorldMap({
     if (map) applyProjection(map);
   }, [globe]);
 
-  const arcsFC = useMemo(() => ({ type: "FeatureCollection", features: arcs }), [arcs]);
-
   return (
     <Map
       ref={mapRef}
@@ -67,38 +66,23 @@ export default function WorldMap({
       dragRotate={false}
       onLoad={(e) => applyProjection(e.target)}
       onClick={(e) => onMapClick && onMapClick(e.lngLat)}
+      onMouseMove={(e) => onMouseMove && onMouseMove(e.lngLat)}
       style={{ position: "absolute", inset: 0 }}
-      cursor={tool && tool !== "silo" ? "crosshair" : "grab"}
+      cursor={cursor}
     >
-      <Source id="arcs" type="geojson" data={arcsFC}>
-        <Layer id="arc-line" type="line"
-          paint={{ "line-color": ["get", "color"], "line-width": 2, "line-opacity": 0.85 }} />
-      </Source>
-
       {cities.map((c) => {
         const mine = myCityIds?.has(c.id);
-        const flash = flashes[c.id];
-        const targetable = tool === "silo" && !mine && c.alive;
-        const color = c.alive ? (SLOT_COLOR[slotByPlayer[c.player_id]] || "#8aa0bd") : "#3a3a3a";
+        const color = c.alive === false ? "#3a3a3a" : (SLOT_COLOR[slotByPlayer[c.player_id]] || "#8aa0bd");
         return (
-          <Marker key={c.id} longitude={c.lng} latitude={c.lat} anchor="center"
-            onClick={(ev) => { ev.originalEvent.stopPropagation(); onCityClick && onCityClick(c); }}>
-            <div className={`gd-city ${mine ? "mine" : "enemy"} ${!c.alive ? "dead" : ""} ${targetable ? "targetable" : ""} ${flash ? "flash-" + flash : ""}`}
-              title={`${c.name} — ${c.hp} hp`}>
+          <Marker key={c.id} longitude={c.lng} latitude={c.lat} anchor="center">
+            <div className={`gd-city ${mine ? "mine" : "enemy"}`} title={c.name}>
               <span className="gd-city-dot" style={{ background: color }} />
               <span className="gd-city-name">{c.name}</span>
             </div>
           </Marker>
         );
       })}
-
-      {placements.map((p) => (
-        <Marker key={p.id} longitude={p.lng} latitude={p.lat} anchor="center">
-          <div className="gd-placement" style={{ color: SLOT_COLOR[mySlot] }} title={TOOLS[p.kind]?.label}>
-            {TOOLS[p.kind]?.glyph}
-          </div>
-        </Marker>
-      ))}
+      {children}
     </Map>
   );
 }
