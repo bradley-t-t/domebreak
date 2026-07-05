@@ -500,3 +500,20 @@ input { font-family: inherit; }
 @media (prefers-reduced-motion: reduce) { .gd-int-flame { animation: none; } }
 
 .gd-arsenal-hint { font-size: 10.5px; color: var(--faint); line-height: 1.25; margin-top: 2px; }
+
+/* missile impact explosion (fireball + shockwave) */
+.gd-explosion { position: relative; width: 16px; height: 16px; pointer-events: none; }
+.gd-explosion.destroy { width: 24px; height: 24px; }
+.gd-explosion span { position: absolute; inset: 0; border-radius: 50%; }
+.gd-boom { background: radial-gradient(circle, #ffffff 0%, #ffe58a 22%, #ff8a1a 48%, #ff3a10 74%, rgba(255,58,16,0) 100%);
+  animation: gdBoom 0.7s ease-out forwards; }
+.gd-explosion.destroy .gd-boom { animation-duration: 0.85s; }
+.gd-shock { border: 2px solid rgba(255,190,90,0.85); animation: gdShock 0.7s ease-out forwards; }
+.gd-explosion.destroy .gd-shock { border-width: 3px; animation-duration: 0.9s; }
+.gd-flash { background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%); animation: gdImpactFlash 0.28s ease-out forwards; }
+@keyframes gdBoom { from { transform: scale(0.3); opacity: 1; } 55% { opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes gdShock { from { transform: scale(0.3); opacity: 0.9; } to { transform: scale(4.6); opacity: 0; } }
+@keyframes gdImpactFlash { from { transform: scale(0.5); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .gd-boom, .gd-shock, .gd-flash { animation-duration: 0.3s; }
+}
