@@ -4,10 +4,11 @@ import LiveHud from "./LiveHud.jsx";
 import Console from "./Console.jsx";
 import UnitIcon from "./UnitIcon.jsx";
 import Missile from "./Missile.jsx";
+import Interceptor from "./Interceptor.jsx";
 import { Marker, Source, Layer } from "react-map-gl/maplibre";
 import { useEngine } from "../game/useEngine.js";
 import { UNITS, UNIT_ICON, unitLabel } from "../game/engine.js";
-import { circle } from "../game/geo.js";
+import { circle, gcTrail } from "../game/geo.js";
 import { SLOT_COLOR } from "../game/constants.js";
 
 export default function LiveGame({ setup, globe, onQuit }) {
@@ -28,7 +29,6 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
   const flash = (m) => { setErr(m); setTimeout(() => setErr(null), 1800); };
 
-  // Fresh events -> city hit/destroy flashes and mid-air interception blasts.
   useEffect(() => {
     let maxId = lastEid.current;
     const fFlash = [], fInt = [];
@@ -45,7 +45,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
       for (const e of fFlash) { const cid = e.cityId, ty = e.type; setTimeout(() => setFlashes((f) => { if (f[cid] !== ty) return f; const n = { ...f }; delete n[cid]; return n; }), 520); }
     }
     if (fInt.length) {
-      setIntercepts((list) => [...list, ...fInt.map((e) => ({ id: e.id, lng: e.lng, lat: e.lat, byLng: e.byLng, byLat: e.byLat }))]);
+      setIntercepts((list) => [...list, ...fInt.map((e) => ({ id: e.id, lng: e.lng, lat: e.lat }))]);
       for (const e of fInt) { const id = e.id; setTimeout(() => setIntercepts((list) => list.filter((x) => x.id !== id)), 650); }
     }
   }, [world.time]);
@@ -75,7 +75,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
       if (u.slot === mySlot && u.targetId) {
         const t = world.cities.find((c) => c.id === u.targetId) || world.units.find((x) => x.id === u.targetId);
         if (t) f.push({ type: "Feature", properties: { color: SLOT_COLOR[mySlot] },
-          geometry: { type: "LineString", coordinates: [[u.lng, u.lat], [t.lng, t.lat]] } });
+          geometry: { type: "LineString", coordinates: gcTrail(u.lng, u.lat, t.lng, t.lat, 1, 20) } });
       }
     }
     return { type: "FeatureCollection", features: f };
@@ -84,14 +84,14 @@ export default function LiveGame({ setup, globe, onQuit }) {
   const trails = useMemo(() => ({
     type: "FeatureCollection",
     features: world.projectiles.map((p) => ({ type: "Feature", properties: {},
-      geometry: { type: "LineString", coordinates: [[p.fromLng, p.fromLat], [p.lng, p.lat]] } })),
+      geometry: { type: "LineString", coordinates: gcTrail(p.fromLng, p.fromLat, p.toLng, p.toLat, p.progress) } })),
   }), [world.projectiles]);
 
-  const shots = useMemo(() => ({
+  const intTrails = useMemo(() => ({
     type: "FeatureCollection",
-    features: intercepts.filter((i) => i.byLng != null).map((i) => ({ type: "Feature", properties: {},
-      geometry: { type: "LineString", coordinates: [[i.byLng, i.byLat], [i.lng, i.lat]] } })),
-  }), [intercepts]);
+    features: world.interceptors.map((it) => ({ type: "Feature", properties: {},
+      geometry: { type: "LineString", coordinates: [[it.fromLng, it.fromLat], [it.lng, it.lat]] } })),
+  }), [world.interceptors]);
 
   const onMapClick = (lngLat) => {
     if (placing) { const r = api.buyPlace(placing, lngLat.lng, lngLat.lat); if (r.error) flash(r.error); return; }
@@ -123,14 +123,14 @@ export default function LiveGame({ setup, globe, onQuit }) {
           <Layer id="range-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": ["case", ["==", ["get", "sel"], 1], 1.6, 0.7], "line-opacity": 0.6 }} />
         </Source>
         <Source id="cmd" type="geojson" data={cmdLines}>
-          <Layer id="cmd-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": 1.4, "line-opacity": 0.55, "line-dasharray": [2, 3] }} />
+          <Layer id="cmd-line" type="line" paint={{ "line-color": ["get", "color"], "line-width": 1.4, "line-opacity": 0.5, "line-dasharray": [2, 3] }} />
         </Source>
         <Source id="trail" type="geojson" data={trails} lineMetrics>
           <Layer id="trail-glow" type="line" paint={{ "line-color": "#cfe2ff", "line-width": 6, "line-blur": 4, "line-opacity": 0.12 }} />
           <Layer id="trail-line" type="line" paint={{ "line-width": 2.4, "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(230,240,255,0)", 0.7, "rgba(230,240,255,0.32)", 1, "rgba(245,250,255,0.9)"] }} />
         </Source>
-        <Source id="shots" type="geojson" data={shots}>
-          <Layer id="shot-line" type="line" paint={{ "line-color": "#8dffbf", "line-width": 1.6, "line-opacity": 0.85, "line-dasharray": [1, 1.5] }} />
+        <Source id="inttrail" type="geojson" data={intTrails}>
+          <Layer id="inttrail-line" type="line" paint={{ "line-color": "#8dffbf", "line-width": 1.5, "line-opacity": 0.6 }} />
         </Source>
 
         {world.cities.map((c) => {
@@ -160,6 +160,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
         ))}
 
         {world.projectiles.map((p) => <Missile key={p.id} p={p} />)}
+        {world.interceptors.map((it) => <Interceptor key={it.id} it={it} />)}
 
         {intercepts.map((i) => (
           <Marker key={i.id} longitude={i.lng} latitude={i.lat} anchor="center">
@@ -184,7 +185,7 @@ export default function LiveGame({ setup, globe, onQuit }) {
                   {attackMode ? "Pick a target…" : "Command attack"}
                 </button>
           )}
-          {UNITS[selectedUnit.type].kind !== "offense" && <div className="gd-selmeta hint">Auto-intercepts hostile missiles in range.</div>}
+          {UNITS[selectedUnit.type].kind !== "offense" && <div className="gd-selmeta hint">Fires interceptors at hostile missiles in range.</div>}
         </div>
       )}
 
