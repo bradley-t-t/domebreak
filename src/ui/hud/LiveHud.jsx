@@ -1,4 +1,4 @@
-import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf} from "../../game/engine.js";
+import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtNet, fmtPop} from "../common/format.js";
@@ -30,6 +30,16 @@ function leadSub(lead) {
     return "Secure";
 }
 
+// Stability shares Leadership's traffic-light palette; a collapsing nation (unrest
+// timer running toward civil war) always shows red with a warning word.
+function stabSub(stab) {
+    if (!stab) return "";
+    if (stab.collapsing) return "Collapse imminent";
+    if (stab.pct >= 67) return "Stable";
+    if (stab.pct >= 34) return "Strained";
+    return "Unrest";
+}
+
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
     {id: "production", label: "Production", glyph: "▣"},
@@ -44,6 +54,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const gdp = myNation ? gdpOf(world, myNation.slot) : 0;
     const ind = myNation ? industryOutputOf(world, myNation.slot) : 0;
     const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
+    const stab = myNation ? stabilityStatus(world, myNation.slot) : null;
     const alive = world.nations.filter((n) => n.alive).length;
     const {date, time} = gameDate(world.time);
     return (
@@ -98,6 +109,17 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
                     className="text-sm font-bold font-mono"
                     style={{color: leadColor(lead.pct)}}>{lead.pct}%</span><span
                     className="text-[10px] text-dim" aria-live="polite">{leadSub(lead)}</span>
+                </div>
+            </>}
+            {stab && <>
+                <div className="w-px self-stretch bg-line-soft"/>
+                <div className="flex flex-col items-end leading-[1.15]"
+                     title="National stability — population loss, war, leadership loss/bunkering, and deficits erode it; hold at 0% too long and your nation fractures in civil war"><span
+                    className="text-[9px] tracking-[1px] uppercase text-faint">Stability</span><span
+                    className="text-sm font-bold font-mono"
+                    style={{color: stab.collapsing ? "#ff3b3b" : leadColor(stab.pct)}}>{stab.pct}%</span><span
+                    className={cn("text-[10px] text-dim", stab.collapsing && "text-red font-bold")}
+                    aria-live="polite">{stabSub(stab)}</span>
                 </div>
             </>}
             {onPanel && <>

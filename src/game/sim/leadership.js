@@ -39,39 +39,44 @@ function cityPriority(a, b) {
 // populous cities (up to leaderCities total) weighted by population, via
 // largest-remainder rounding so the integer tokens always sum to startTokens.
 export function distributeLeadership(nations, cities) {
-    for (const n of nations) {
-        n.lead = {total: LEADERSHIP.startTokens, lost: 0, sheltered: 0};
-        n.commandMult = 1;
-        n._evac = false;
-        const own = cities.filter((c) => c.slot === n.slot);
-        for (const c of own) c.leaders = 0;
-        if (!own.length) {
-            n.lead.total = 0; // nation with no cities — nothing to seed (buildSetup shouldn't produce this)
-            continue;
-        }
-        const ordered = [...own].sort(cityPriority);
-        const selected = ordered.slice(0, Math.max(1, LEADERSHIP.leaderCities));
-        const total = LEADERSHIP.startTokens;
-        if (selected.length === 1) {
-            selected[0].leaders = total;
-            continue;
-        }
-        // Capital keeps the biggest slice, but never so much that the other selected
-        // cities can't each hold at least one leader.
-        const capTokens = Math.max(1, Math.min(Math.round(total * LEADERSHIP.capitalShare), total - (selected.length - 1)));
-        const others = selected.slice(1);
-        const rest = total - capTokens;
-        const wsum = others.reduce((s, c) => s + (c.pop || 1), 0) || 1;
-        const alloc = others.map((c) => {
-            const exact = rest * (c.pop || 1) / wsum;
-            return {c, base: Math.floor(exact), frac: exact - Math.floor(exact)};
-        });
-        let leftover = rest - alloc.reduce((s, a) => s + a.base, 0);
-        alloc.sort((a, b) => b.frac - a.frac);
-        for (let i = 0; i < alloc.length && leftover > 0; i++, leftover--) alloc[i].base++;
-        selected[0].leaders = capTokens;
-        for (const a of alloc) a.c.leaders = a.base;
+    for (const n of nations) seedLeadership(n, cities.filter((c) => c.slot === n.slot));
+}
+
+// Seeds a single nation's fresh leader-token pool across its own cities (passed in),
+// resetting its leadership state. Used at world creation (per nation) and by the
+// civil-war fracture to re-seed both successor governments from scratch.
+export function seedLeadership(n, ownCities) {
+    n.lead = {total: LEADERSHIP.startTokens, lost: 0, sheltered: 0};
+    n.commandMult = 1;
+    n._evac = false;
+    const own = ownCities.filter((c) => c.alive !== false);
+    for (const c of own) c.leaders = 0;
+    if (!own.length) {
+        n.lead.total = 0; // nation with no cities — nothing to seed (buildSetup shouldn't produce this)
+        return;
     }
+    const ordered = [...own].sort(cityPriority);
+    const selected = ordered.slice(0, Math.max(1, LEADERSHIP.leaderCities));
+    const total = LEADERSHIP.startTokens;
+    if (selected.length === 1) {
+        selected[0].leaders = total;
+        return;
+    }
+    // Capital keeps the biggest slice, but never so much that the other selected
+    // cities can't each hold at least one leader.
+    const capTokens = Math.max(1, Math.min(Math.round(total * LEADERSHIP.capitalShare), total - (selected.length - 1)));
+    const others = selected.slice(1);
+    const rest = total - capTokens;
+    const wsum = others.reduce((s, c) => s + (c.pop || 1), 0) || 1;
+    const alloc = others.map((c) => {
+        const exact = rest * (c.pop || 1) / wsum;
+        return {c, base: Math.floor(exact), frac: exact - Math.floor(exact)};
+    });
+    let leftover = rest - alloc.reduce((s, a) => s + a.base, 0);
+    alloc.sort((a, b) => b.frac - a.frac);
+    for (let i = 0; i < alloc.length && leftover > 0; i++, leftover--) alloc[i].base++;
+    selected[0].leaders = capTokens;
+    for (const a of alloc) a.c.leaders = a.base;
 }
 
 // Leadership as a 0..100 percentage (surviving tokens over the starting pool).
@@ -171,7 +176,18 @@ export function updateCommand(w) {
 export function evacTick(w) {
     for (const n of w.nations) {
         if (!n.alive || !n.lead) continue;
-        if (n.isAi && !n._evac && w.nations.some((m) => m.alive && atWar(w, n.slot, m.slot))) n._evac = "shelter";
+        // AI leadership doctrine: shelter leaders while at war with exposed leaders
+        // (dodge the heavy leadership-loss stability hit), and bring them home in
+        // peacetime (shed the bunkered-leadership stability penalty). Player evac
+        // stays fully manual.
+        if (n.isAi) {
+            const atWarNow = w.nations.some((m) => m.alive && atWar(w, n.slot, m.slot));
+            if (atWarNow) {
+                if (n._evac !== "shelter" && citiesWithLeaders(w, n.slot).length) n._evac = "shelter";
+            } else if (n._evac !== "release" && (n.lead.sheltered || 0) > 0) {
+                n._evac = "release";
+            }
+        }
         if (!n._evac) continue;
         const bunker = bunkerOf(w, n.slot);
         if (!bunker) {

@@ -45,6 +45,7 @@ export function createWorld(setup) {
         //     hulls into better sub-hunters (det7/8/11/12).
         hypersonicEvasion: 0,
         sonarMult: 1,
+        stability: 100,   // national stability 0–100 (see sim/stability.js)
     }));
     const cities = setup.cities.map((c) => ({
         id: c.id,
@@ -187,3 +188,5 @@ export {
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {step, growCities} from "./sim/tick.js";
+
+export {updateStability, stabilityOf, stabilityStatus, stabilityTarget, fractureNation} from "./sim/stability.js";
