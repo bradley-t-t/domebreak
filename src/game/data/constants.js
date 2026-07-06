@@ -104,6 +104,13 @@ export const AI_TUNING = {
     // cushion before committing to the Space Command HQ prerequisite.
     researchDepthTarget: 12, deepReserve: 300, deepTierGate: 8,
     unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
+    // Strategic placement (see ai-strategic-placement-2026-07-06.md and aiPlace in
+    // sim/tick.js). The AI sites units by role and spreads them across its cities
+    // instead of piling everything onto the capital.
+    spreadKm: 150,                   // min distance the AI keeps between two same-role units
+    defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
+    radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
+    bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
 };
 
 // Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
