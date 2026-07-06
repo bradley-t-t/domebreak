@@ -149,6 +149,9 @@ export default function SelectionPanel({
             {selectedUnit.type === "bunker" && selectedUnit.slot === mySlot && (() => {
                 const lead = leadershipStatus(w, mySlot);
                 if (!lead) return null;
+                // Leadership is reported as a share of national command, never a
+                // headcount — one bunkered leader out of a handful is still a %.
+                const leadPct = (v) => Math.round((v / (lead.total || 1)) * 100);
                 const sheltering = lead.mode === "shelter";
                 const releasing = lead.mode === "release";
                 const act = (fn) => {
@@ -159,10 +162,10 @@ export default function SelectionPanel({
                     <div className="gd-lead-panel">
                         <div className="gd-wing-head">National Leadership</div>
                         <div className="gd-detail-grid gd-selstats">
-                            <div><span>Leadership</span><b>{lead.pct}%</b></div>
-                            <div><span>Sheltered</span><b>{lead.sheltered}/{lead.total}</b></div>
-                            <div><span>In Cities</span><b>{lead.atCity}</b></div>
-                            <div><span>In Transit</span><b>{lead.inTransit}</b></div>
+                            <div><span>Surviving</span><b>{lead.pct}%</b></div>
+                            <div><span>Sheltered</span><b>{leadPct(lead.sheltered)}%</b></div>
+                            <div><span>In Cities</span><b>{leadPct(lead.atCity)}%</b></div>
+                            <div><span>In Transit</span><b>{leadPct(lead.inTransit)}%</b></div>
                         </div>
                         <button className={`gd-btn ${sheltering ? "primary" : ""}`}
                                 disabled={!lead.exposed || sheltering || !lead.hasAirstrip}

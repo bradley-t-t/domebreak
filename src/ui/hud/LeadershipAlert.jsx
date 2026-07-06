@@ -18,13 +18,20 @@ export default function LeadershipAlert({world, api, mySlot}) {
     if (!showPrompt && !showProgress) return null;
 
     if (showProgress) {
-        const remaining = s.atCity + s.inTransit;
+        // Leadership reads as a share of national command, never a headcount:
+        // "X% evacuated · Y% exposed". atCity + inTransit are still at risk until
+        // they land in the bunker, so both count as exposed.
+        const total = s.total || 1;
+        const pctOf = (v) => Math.round((v / total) * 100);
+        const evacuated = pctOf(s.sheltered);
+        const exposed = pctOf(s.atCity + s.inTransit);
+        const lost = pctOf(s.lost);
         return (
             <div className="gd-lead-alert evac" role="status" aria-live="polite">
                 <div className="gd-lead-icon">⬢</div>
                 <div className="gd-lead-body">
                     <div className="gd-lead-title">Evacuating Leadership</div>
-                    <div className="gd-lead-text">{s.sheltered} sheltered · {remaining} still exposed{s.lost ? ` · ${s.lost} lost` : ""}</div>
+                    <div className="gd-lead-text">{evacuated}% evacuated · {exposed}% exposed{s.lost ? ` · ${lost}% lost` : ""}</div>
                 </div>
             </div>
         );
