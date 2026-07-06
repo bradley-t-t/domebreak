@@ -4735,3 +4735,117 @@ input[type="range"] {
         transition: none;
     }
 }
+
+/* --- Controls reference overlay -------------------------------------------
+   In-game command reference (? / F1). Two-column groups of label → keycap
+   rows, styled on the light-paper modal tokens like the rest of the cards. */
+.gd-card.gd-controls {
+    width: min(760px, 94vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.gd-controls-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.gd-controls-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--dim);
+    margin-top: 4px;
+}
+
+.gd-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 34px;
+    margin: 12px 0 20px;
+}
+
+.gd-ctrl-group {
+    break-inside: avoid;
+}
+
+.gd-ctrl-group-h {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 14px 0 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--line);
+}
+
+.gd-ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 13px;
+    color: var(--dim);
+}
+
+.gd-ctrl-lbl {
+    min-width: 0;
+}
+
+.gd-ctrl-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.gd-kbd-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.gd-kbd {
+    min-width: 22px;
+    height: 23px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    background: var(--btn-bg);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.gd-kbd.mouse {
+    color: var(--dim);
+    font-size: 10.5px;
+    letter-spacing: 0.01em;
+}
+
+.gd-kbd-plus {
+    color: var(--faint);
+    font-size: 11px;
+}
+
+.gd-kbd-sep {
+    width: 2px;
+}
+
+@media (max-width: 640px) {
+    .gd-controls-grid {
+        grid-template-columns: 1fr;
+    }
+}
