@@ -1,3 +1,5 @@
+import {useState} from "react";
+
 // "Month Year" from an ISO created_at timestamp, e.g. "July 2026".
 const monthYear = (iso) => {
     if (!iso) return null;
@@ -17,6 +19,10 @@ export default function StartMenu({
                                       stats,
                                       onSignOut
                                   }) {
+    // Menu is a small two-level tree: the root offers the three top-level modes;
+    // Single Player and Multiplayer each open a sub-panel. Settings opens its
+    // own screen directly. Section state is local — App's callbacks are unchanged.
+    const [section, setSection] = useState(null); // null | "single" | "multi"
     const since = monthYear(profile?.created_at);
     const total = stats?.total_matches ?? 0;
     const winRate = total > 0 ? Math.round(((stats?.wins ?? 0) / total) * 100) : 0;
@@ -33,11 +39,29 @@ export default function StartMenu({
                     <p className="gd-menu-tag">Global Missile Command</p>
                 </div>
                 <nav className="gd-menu-btns">
-                    <button className="gd-menu-btn primary" onClick={onPlay}>Play</button>
-                    {canContinue && <button className="gd-menu-btn" onClick={onContinue}>Continue</button>}
-                    <button className="gd-menu-btn" onClick={onNew}>New Game</button>
-                    <button className="gd-menu-btn" onClick={onLoad}>Load Game</button>
-                    <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
+                    {section === null && (
+                        <>
+                            <button className="gd-menu-btn primary" onClick={() => setSection("multi")}>Multiplayer</button>
+                            <button className="gd-menu-btn" onClick={() => setSection("single")}>Single Player</button>
+                            <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
+                        </>
+                    )}
+                    {section === "multi" && (
+                        <>
+                            <div className="gd-menu-section">Multiplayer</div>
+                            <button className="gd-menu-btn primary" onClick={onPlay}>Play</button>
+                            <button className="gd-menu-btn back" onClick={() => setSection(null)}>Back</button>
+                        </>
+                    )}
+                    {section === "single" && (
+                        <>
+                            <div className="gd-menu-section">Single Player</div>
+                            {canContinue && <button className="gd-menu-btn primary" onClick={onContinue}>Continue</button>}
+                            <button className="gd-menu-btn" onClick={onNew}>New Game</button>
+                            <button className="gd-menu-btn" onClick={onLoad}>Load Game</button>
+                            <button className="gd-menu-btn back" onClick={() => setSection(null)}>Back</button>
+                        </>
+                    )}
                 </nav>
                 <div className="gd-commander-strip">
                     <div className="gd-commander-id">

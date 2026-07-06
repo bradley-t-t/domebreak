@@ -2112,6 +2112,35 @@ input {
     color: var(--danger);
 }
 
+/* Sub-panel heading (Single Player / Multiplayer) above its options. */
+.gd-menu-section {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.8;
+    padding: 0 2px 2px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--line);
+}
+
+/* Back link out of a sub-panel: quieter than a mode button. */
+.gd-menu-btn.back {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-dim, var(--text));
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.gd-menu-btn.back:hover,
+.gd-menu-btn.back:focus-visible {
+    opacity: 1;
+    border-color: var(--line);
+    color: var(--text);
+}
+
 .gd-menu-foot {
     margin-top: 30px;
     color: var(--faint);
