@@ -444,6 +444,24 @@ export default function LiveGame({
         return () => window.removeEventListener("keydown", h);
     }, [overlayOpen, api, w, K.pause, K.speedUp, K.speedDown]);
 
+    // Keyboard zoom (bindings configurable in Settings; defaults Z / X). MapLibre's
+    // own +/- zoom is disabled (WorldMap) so those keys stay reserved for game speed;
+    // zoom lives here instead. Key auto-repeat gives smooth continuous zoom on hold.
+    useEffect(() => {
+        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+        const h = (e) => {
+            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+            const code = keyToken(e);
+            const dir = code === K.zoomIn ? 1 : code === K.zoomOut ? -1 : 0;
+            if (!dir) return;
+            e.preventDefault();
+            const m = mapRef.current;
+            if (m) m.zoomTo(m.getZoom() + dir * 0.6, {duration: 160}); // MapLibre clamps to min/maxZoom
+        };
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [overlayOpen, K.zoomIn, K.zoomOut]);
+
     // Camera pan: pan the flat map / rotate the globe while a pan key is held
     // (bindings configurable in Settings; defaults W / A / S / D). Pixel-based
     // panBy works in both projections (on the globe it rotates the camera).
