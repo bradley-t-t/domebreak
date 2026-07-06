@@ -16,7 +16,7 @@ export default function LeadershipAlert({world, api, mySlot}) {
     if (!showPrompt && !showProgress) return null;
 
     if (showProgress) {
-        const remaining = s.atCapital + s.inTransit;
+        const remaining = s.atCity + s.inTransit;
         return (
             <div className="gd-lead-alert evac" role="status" aria-live="polite">
                 <div className="gd-lead-icon">⬢</div>
@@ -31,13 +31,15 @@ export default function LeadershipAlert({world, api, mySlot}) {
     const canShelter = s.hasBunker && s.hasAirstrip;
     const hint = !s.hasBunker ? "Build a Leadership Bunker to shelter your leaders."
         : !s.hasAirstrip ? "Build an Airstrip to fly the evacuation." : null;
-    const caps = s.capitals.length ? s.capitals.join(", ") : "your capital";
+    const where = s.sites.length
+        ? s.sites.slice(0, 3).join(", ") + (s.sites.length > 3 ? `, +${s.sites.length - 3} more` : "")
+        : "the field";
     return (
         <div className="gd-lead-alert warn" role="alert" aria-live="assertive">
             <div className="gd-lead-icon">⚠</div>
             <div className="gd-lead-body">
                 <div className="gd-lead-title">Leadership Exposed — War Declared</div>
-                <div className="gd-lead-text">Your national command is still in {caps}. Airlift them to the
+                <div className="gd-lead-text">Your national command is spread across {where}. Airlift them to the
                     bunker before an enemy strike decapitates you.</div>
                 {hint && <div className="gd-lead-hint">{hint}</div>}
             </div>

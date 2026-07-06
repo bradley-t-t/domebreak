@@ -35,12 +35,14 @@ leaders are gone for good.
 ### 3.1 Leader tokens
 - Each nation starts with `LEADERSHIP.startTokens` leader tokens (default 12) and
   100% Leadership.
-- Tokens are distributed across the nation's **capital cities** (cities flagged
-  `cap === 1`). If a nation has multiple capitals, tokens split as evenly as
-  possible, remainder to the most populous capital. If a nation has no flagged
-  capital, its most populous living city is treated as the capital.
+- Tokens are seeded across the nation's **top `LEADERSHIP.leaderCities` cities**
+  (default 5), ordered capital-first then by population. The **capital holds the
+  largest single share** (`LEADERSHIP.capitalShare`, default 40%); the remainder
+  spreads across the other selected cities weighted by population (largest-remainder
+  rounding, so tokens always sum to `startTokens`). A nation with only one city
+  holds all its leaders there.
 - A token is always in exactly one state:
-  - `at_capital` — sitting in a capital city (exposed).
+  - `at_city` — sitting in one of the nation's cities (exposed).
   - `in_transit` — aboard a transport aircraft (still killable).
   - `sheltered` — delivered to the Leadership Bunker (safe unless the bunker
     itself is destroyed).
@@ -49,8 +51,9 @@ leaders are gone for good.
   score; it prevents it from falling.
 
 ### 3.2 What kills leaders
-- **Capital destroyed** (by direct strike or fallout) while it holds `at_capital`
-  tokens → those tokens become `lost`. Fires a `leadership` event.
+- **A city destroyed** (by direct strike or fallout) while it holds `at_city`
+  tokens → those tokens become `lost`. Fires a `leadership` event. (Capitals hold
+  the most, so decapitation strikes still hit hardest there.)
 - **Transport destroyed** (fallout, blast) while carrying `in_transit` tokens →
   cargo `lost`. Fires a `leadership` event.
 - **Bunker destroyed** while it holds `sheltered` tokens → all sheltered tokens
@@ -58,27 +61,29 @@ leaders are gone for good.
   because concentrating leadership there is a single point of failure.)
 
 ### 3.3 The war alert (persistent prompt)
-- Whenever the player's nation is at war and still has `at_capital` leaders and has
+- Whenever the player's nation is at war and still has `at_city` leaders and has
   not yet started sheltering, a **non-dismissing** alert appears with a primary
   **Shelter Leadership** action. It does not auto-dismiss on a timer.
-- The alert clears when the player starts the evacuation, or when no `at_capital`
+- The alert clears when the player starts the evacuation, or when no `at_city`
   leaders remain (all sheltered or lost). It re-arms if a *new* war begins while
   leaders are again exposed.
 - If the player has no Leadership Bunker, the action is disabled with the hint
   "Build a Leadership Bunker." If the player has a bunker but no airstrip, the hint
   is "Build an Airstrip."
 
-### 3.4 Evacuation (auto-dispatch)
+### 3.4 Evacuation (auto-dispatch, whole-fleet)
 - Pressing **Shelter Leadership** sets the nation's `_evac` flag. The player does
   not micromanage individual planes.
-- Each tick, for a nation whose `_evac` is set, the evac controller ensures up to
-  `LEADERSHIP.transportsPerCapital` transports (default 2) are working each capital
-  that still holds leaders. New transports launch from the nearest friendly
-  airstrip that has transport stock.
-- A ferry transport flies the loop: **airstrip → capital → (load delay) → bunker →
+- Each tick the evac controller flies **every** friendly airstrip, up to
+  `LEADERSHIP.transportsPerAirstrip` transports each (default 3), drawing from its
+  transport hangar stock. Each free plane is dispatched to the **highest-priority
+  city that still has leaders not already covered by an inbound ferry** — capital
+  first, then by population — so the fleet fans out across all cities rather than
+  piling on one, and multiple airfields work in parallel.
+- A ferry transport flies the loop: **airstrip → city → (load delay) → bunker →
   (unload delay) → home airstrip**, carrying up to `LEADERSHIP.perPlane` tokens
-  (default 3) per trip. On landing home it stows; the controller relaunches it if
-  its capital still holds leaders. The loop ends when the capital is empty.
+  (default 3) per trip. On landing home it stows; the controller relaunches it to
+  whichever city still needs lift. Evacuation ends when every city is empty.
 - Ferry transports are unarmed and fly a simplified point-to-point profile (no
   runway pattern) so they can set down at cities and the bunker, which are not
   airbases.
@@ -106,8 +111,14 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
   With `commandFloor = 0.5`: full Leadership → ×1.0 output; zero Leadership → ×0.5.
 - **Income with penalty:** existing `incomeOf` result × `command`.
 - **Research with penalty (if enabled):** per-tick research progress × `command`.
-- **Token split across `k` capitals:** each capital gets `floor(total / k)`; the
-  first `total mod k` (ordered by population, descending) get one extra.
+- **Token seeding:** select the top `leaderCities` cities (capital first, then by
+  population). The capital gets `capTokens = clamp(round(total × capitalShare), 1,
+  total − (k−1))` where `k` is the number of selected cities. The remaining
+  `total − capTokens` split across the others by population weight with
+  largest-remainder rounding, so the integer tokens always sum to `total`.
+- **Evac dispatch:** a city still needs a plane when
+  `city.leaders − (inboundFerries × perPlane) > 0`; each airstrip launches until it
+  hits `transportsPerAirstrip` or its transport stock runs out.
 - **Tokens loaded per stop:** `min(LEADERSHIP.perPlane − cargo, city.leaders)`.
 - **Arrival test:** a ferry has "arrived" at a waypoint when great-circle distance
   ≤ `LEADERSHIP.arriveKm` (default 12 km).
@@ -151,26 +162,30 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
 
 ## 7. Tuning Knobs (`LEADERSHIP` block in `constants.js`)
 
-| Knob                   | Default | Meaning                                             |
-|------------------------|---------|-----------------------------------------------------|
-| `startTokens`          | 12      | Leader tokens per nation (also the % denominator)   |
-| `perPlane`             | 3       | Tokens a transport carries per trip                 |
-| `loadSec`              | 4       | Ground delay loading at a capital                   |
-| `unloadSec`            | 4       | Ground delay unloading at the bunker                |
-| `transportsPerCapital` | 2       | Concurrent transports worked per capital            |
-| `arriveKm`             | 12      | Distance to count a ferry "arrived" at a waypoint   |
-| `commandFloor`         | 0.5     | Output multiplier at 0% Leadership                  |
-| `penalizeResearch`     | true    | Whether research speed also scales with Leadership  |
+| Knob                    | Default | Meaning                                              |
+|-------------------------|---------|------------------------------------------------------|
+| `startTokens`           | 12      | Leader tokens per nation (also the % denominator)    |
+| `leaderCities`          | 5       | How many cities hold leadership (capital + top others)|
+| `capitalShare`          | 0.4     | Fraction of the pool seeded on the capital           |
+| `perPlane`              | 3       | Tokens a transport carries per trip                  |
+| `loadSec`               | 4       | Ground delay loading at a city                       |
+| `unloadSec`             | 4       | Ground delay unloading at the bunker                 |
+| `transportsPerAirstrip` | 3       | Concurrent transports each airstrip flies            |
+| `arriveKm`              | 12      | Distance to count a ferry "arrived" at a waypoint    |
+| `commandFloor`          | 0.5     | Output multiplier at 0% Leadership                   |
+| `penalizeResearch`      | true    | Whether research speed also scales with Leadership   |
 
 ## 8. Acceptance Criteria
 
-1. Every nation starts at 100% Leadership with `startTokens` tokens seeded in its
-   capital(s); the player's Leadership % shows in the HUD.
+1. Every nation starts at 100% Leadership with `startTokens` tokens seeded across
+   its top `leaderCities` cities (capital holding the largest share); the player's
+   Leadership % shows in the HUD.
 2. When the player enters a war with exposed leaders, a persistent alert appears
    and does not auto-dismiss.
-3. Pressing **Shelter Leadership** launches transports that ferry leaders
-   capital → bunker → home on a repeating loop until the capital is empty; the
-   alert transitions to an evacuation-progress state and clears when done.
+3. Pressing **Shelter Leadership** launches transports from **every** airstrip
+   (multiple per strip) that ferry leaders city → bunker → home on a repeating
+   loop, working all leader-holding cities capital-first until empty; the alert
+   transitions to an evacuation-progress state and clears when done.
 4. With no bunker or no airstrip, the Shelter action is disabled and shows the
    correct build hint.
 5. Nuking a capital that still holds leaders reduces that nation's Leadership by

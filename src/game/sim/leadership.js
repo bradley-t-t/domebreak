@@ -8,37 +8,57 @@
 // reconciliation reads the same city.alive / unit.hp flags combat already sets,
 // so leadership stays a pure, deterministic (no-RNG) layer over the sim.
 import {LEADERSHIP} from "../data/constants.js";
-import {haversine} from "../geo/geo.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {ensureHangar, launchFerry} from "./aircraft.js";
 
-// Seeds each nation's leader-token pool onto its capital cities. Called once from
-// createWorld with the freshly-built nations/cities arrays. Tokens split as evenly
-// as possible across the nation's flagged capitals (remainder to the most populous),
-// falling back to the single most-populous city when no capital is flagged.
+// Orders a nation's living cities by evacuation priority: capital(s) first, then
+// by population descending. Shared by seeding and the evac controller so leaders
+// are always seeded and airlifted capital-first.
+function cityPriority(a, b) {
+    const ca = a.cap ? 1 : 0, cb = b.cap ? 1 : 0;
+    if (ca !== cb) return cb - ca;
+    return (b.pop || 0) - (a.pop || 0);
+}
+
+// Seeds each nation's leader-token pool across its top cities. Called once from
+// createWorld with the freshly-built nations/cities arrays. The capital takes the
+// largest single share (capitalShare); the remainder spreads across the next most
+// populous cities (up to leaderCities total) weighted by population, via
+// largest-remainder rounding so the integer tokens always sum to startTokens.
 export function distributeLeadership(nations, cities) {
     for (const n of nations) {
         n.lead = {total: LEADERSHIP.startTokens, lost: 0, sheltered: 0};
         n.commandMult = 1;
         n._evac = false;
-        let caps = cities.filter((c) => c.slot === n.slot && c.cap);
-        if (!caps.length) {
-            const own = cities.filter((c) => c.slot === n.slot);
-            if (own.length) caps = [own.reduce((a, b) => ((b.pop || 0) > (a.pop || 0) ? b : a))];
-        }
-        caps.sort((a, b) => (b.pop || 0) - (a.pop || 0));
-        for (const c of caps) c.leaders = 0;
-        const k = caps.length;
-        if (!k) {
+        const own = cities.filter((c) => c.slot === n.slot);
+        for (const c of own) c.leaders = 0;
+        if (!own.length) {
             n.lead.total = 0; // nation with no cities — nothing to seed (buildSetup shouldn't produce this)
             continue;
         }
-        const base = Math.floor(LEADERSHIP.startTokens / k);
-        const extra = LEADERSHIP.startTokens % k;
-        caps.forEach((c, i) => {
-            c.leaders = base + (i < extra ? 1 : 0);
+        const ordered = [...own].sort(cityPriority);
+        const selected = ordered.slice(0, Math.max(1, LEADERSHIP.leaderCities));
+        const total = LEADERSHIP.startTokens;
+        if (selected.length === 1) {
+            selected[0].leaders = total;
+            continue;
+        }
+        // Capital keeps the biggest slice, but never so much that the other selected
+        // cities can't each hold at least one leader.
+        const capTokens = Math.max(1, Math.min(Math.round(total * LEADERSHIP.capitalShare), total - (selected.length - 1)));
+        const others = selected.slice(1);
+        const rest = total - capTokens;
+        const wsum = others.reduce((s, c) => s + (c.pop || 1), 0) || 1;
+        const alloc = others.map((c) => {
+            const exact = rest * (c.pop || 1) / wsum;
+            return {c, base: Math.floor(exact), frac: exact - Math.floor(exact)};
         });
+        let leftover = rest - alloc.reduce((s, a) => s + a.base, 0);
+        alloc.sort((a, b) => b.frac - a.frac);
+        for (let i = 0; i < alloc.length && leftover > 0; i++, leftover--) alloc[i].base++;
+        selected[0].leaders = capTokens;
+        for (const a of alloc) a.c.leaders = a.base;
     }
 }
 
@@ -64,8 +84,10 @@ function airstripsOf(w, slot) {
     return w.units.filter((u) => u.slot === slot && u.type === "airstrip" && u.hp > 0);
 }
 
-function capitalsWithLeaders(w, slot) {
-    return w.cities.filter((c) => c.slot === slot && c.alive && (c.leaders || 0) > 0);
+// Living cities of a nation that still hold leaders, in evacuation priority order
+// (capital first, then by population).
+function citiesWithLeaders(w, slot) {
+    return w.cities.filter((c) => c.slot === slot && c.alive && (c.leaders || 0) > 0).sort(cityPriority);
 }
 
 // Full leadership picture for a slot, for the HUD/alert. Presentation reads this;
@@ -73,8 +95,8 @@ function capitalsWithLeaders(w, slot) {
 export function leadershipStatus(w, slot) {
     const n = nationOf(w, slot);
     if (!n || !n.lead) return null;
-    let atCapital = 0;
-    for (const c of w.cities) if (c.slot === slot && c.alive) atCapital += (c.leaders || 0);
+    let atCity = 0;
+    for (const c of w.cities) if (c.slot === slot && c.alive) atCity += (c.leaders || 0);
     let inTransit = 0;
     for (const u of w.units) {
         if (u.slot === slot && u.hp > 0 && u.mission?.role === "leadershipFerry") inTransit += u.mission.cargo || 0;
@@ -85,14 +107,14 @@ export function leadershipStatus(w, slot) {
         total: n.lead.total || 0,
         lost: n.lead.lost || 0,
         sheltered: n.lead.sheltered || 0,
-        atCapital,
+        atCity,
         inTransit,
-        exposed: atCapital > 0,
+        exposed: atCity > 0,
         evac: !!n._evac,
         atWar: atWarNow,
         hasBunker: !!bunkerOf(w, slot),
         hasAirstrip: airstripsOf(w, slot).length > 0,
-        capitals: capitalsWithLeaders(w, slot).map((c) => c.name),
+        sites: citiesWithLeaders(w, slot).map((c) => c.name),
     };
 }
 
@@ -114,10 +136,12 @@ export function updateCommand(w) {
 }
 
 // Per-tick evac controller. For each nation actively sheltering (player pressed
-// Shelter, or an AI that has entered a war), keeps up to transportsPerCapital
-// ferries working each capital that still holds leaders, launched from the nearest
-// airstrip with transport stock. Clears the evac flag once every capital is empty
-// and no ferries remain airborne.
+// Shelter, or an AI that has entered a war), it flies EVERY airstrip — up to
+// transportsPerAirstrip ferries each — pulling leaders from all cities that still
+// hold them in priority order (capital first, then by population). Each free slot
+// is assigned the highest-priority city whose leaders aren't already covered by
+// inbound ferries, so the whole fleet fans out across cities instead of piling on
+// one. Clears the evac flag once every city is empty and no ferries remain airborne.
 export function evacTick(w) {
     for (const n of w.nations) {
         if (!n.alive || !n.lead) continue;
@@ -128,29 +152,30 @@ export function evacTick(w) {
         const strips = airstripsOf(w, n.slot);
         if (!strips.length) continue;
         for (const s of strips) ensureHangar(w, s);
-        const caps = capitalsWithLeaders(w, n.slot);
-        const ferriesAirborne = w.units.some((u) => u.slot === n.slot && u.hp > 0 && u.mission?.role === "leadershipFerry");
-        if (!caps.length) {
-            if (!ferriesAirborne) n._evac = false; // evacuation complete
+        const sites = citiesWithLeaders(w, n.slot);
+        const ferries = w.units.filter((u) => u.slot === n.slot && u.hp > 0 && u.mission?.role === "leadershipFerry");
+        if (!sites.length) {
+            if (!ferries.length) n._evac = false; // evacuation complete
             continue;
         }
-        for (const c of caps) {
-            const active = w.units.filter((u) =>
-                u.slot === n.slot && u.hp > 0 && u.mission?.role === "leadershipFerry" && u.mission.capId === c.id).length;
-            let want = LEADERSHIP.transportsPerCapital - active;
-            while (want > 0) {
-                let best = null, bestD = Infinity;
-                for (const s of strips) {
-                    if ((s.hangar?.transport || 0) <= 0) continue;
-                    const d = haversine(s.lng, s.lat, c.lng, c.lat);
-                    if (d < bestD) {
-                        bestD = d;
-                        best = s;
-                    }
-                }
-                if (!best) break; // no transport stock anywhere
-                launchFerry(w, best, c.id, bunker.id);
-                want--;
+        // Leaders already being fetched, per city: an inbound (not-yet-loaded) ferry
+        // will lift up to perPlane, so it covers that many of the city's remaining
+        // leaders. Loaded ferries have already drawn their cargo out of city.leaders.
+        const inbound = new Map();
+        for (const u of ferries) {
+            if (u.mission.phase === "toCity") inbound.set(u.mission.capId, (inbound.get(u.mission.capId) || 0) + LEADERSHIP.perPlane);
+        }
+        const perStrip = new Map();
+        for (const u of ferries) perStrip.set(u.mission.homeId, (perStrip.get(u.mission.homeId) || 0) + 1);
+        const needsFerry = (c) => (c.leaders || 0) - (inbound.get(c.id) || 0) > 0;
+        for (const s of strips) {
+            let slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
+            while (slots > 0 && (s.hangar?.transport || 0) > 0) {
+                const city = sites.find(needsFerry);
+                if (!city) break; // every city's leaders are already covered by inbound ferries
+                launchFerry(w, s, city.id, bunker.id);
+                inbound.set(city.id, (inbound.get(city.id) || 0) + LEADERSHIP.perPlane);
+                slots--;
             }
         }
     }
