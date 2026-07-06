@@ -147,12 +147,13 @@ export function launchOne(w, base, type) {
     base.launchT = LAUNCH_GAP;
 }
 
-// Launch one transport from an airstrip on a leadership-evacuation ferry. Unlike a
-// patrol launch this bypasses the runway/orbit/landing model entirely (cities and
-// the bunker aren't airbases), starting the transport airborne with a mission that
-// flyFerry flies point-to-point: airstrip -> capital -> bunker -> home, repeating.
-// Returns the launched transport, or null if no transport stock remains.
-export function launchFerry(w, base, capId, bunkerId) {
+// Launch one transport from an airstrip on a leadership ferry. Unlike a patrol
+// launch this bypasses the runway/orbit/landing model entirely (cities and the
+// bunker aren't airbases), starting the transport airborne with a mission flyFerry
+// flies point-to-point. mode "shelter" runs airstrip -> city -> bunker -> home;
+// mode "release" runs the reverse, airstrip -> bunker -> city -> home. Returns the
+// launched transport, or null if no transport stock remains.
+export function launchFerry(w, base, capId, bunkerId, mode = "shelter") {
     ensureHangar(w, base);
     if ((base.hangar.transport || 0) <= 0) return null;
     base.hangar.transport--;
@@ -161,34 +162,45 @@ export function launchFerry(w, base, capId, bunkerId) {
         id: nextId(w, "u"), slot: base.slot, type: "transport",
         lng: base.lng, lat: base.lat, hp: ad.hp, cooldown: 0, targetId: null, warhead: null,
         baseId: base.id, phase: "ferry", hdg: runwayAxis(base), alt: 1, vis: 0, fuel: Infinity,
-        mission: {role: "leadershipFerry", phase: "toCity", capId, bunkerId, homeId: base.id, timer: 0, cargo: 0},
+        mission: {role: "leadershipFerry", mode, phase: "toPickup", capId, bunkerId, homeId: base.id, timer: 0, cargo: 0},
     };
     w.units.push(jet);
     return jet;
 }
 
-// Point-to-point leadership ferry. Flies a straight line toward the current
-// waypoint (climbing to cruise), sets down for a timed load/unload, then flies the
-// next leg. Load pulls tokens off the capital into cargo; unload deposits cargo
-// into the nation's sheltered pool; landing home stows the airframe (evacTick
-// relaunches it if the capital still holds leaders). Cargo aboard when the bunker
-// is gone is redeposited into the origin capital (or lost with it).
+// Point-to-point leadership ferry, direction set by mission.mode. Flies a straight
+// line toward the current waypoint (climbing to cruise), sets down for a timed
+// load/unload, then flies the next leg, then home to stow. In "shelter" mode it
+// picks up from a city and drops at the bunker (sheltered); in "release" mode it
+// picks up from the bunker (sheltered) and drops at a city. Cargo that can't be
+// delivered is redeposited safely (or lost only when nothing valid remains).
 function flyFerry(w, u, def, dt) {
     const m = u.mission;
+    const release = m.mode === "release";
     const sp = def.airSpeed, tr = def.turnRate;
     const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
+    const n = nationOf(w, u.slot);
     const city = w.cities.find((c) => c.id === m.capId);
     const bunker = w.units.find((x) => x.id === m.bunkerId && x.hp > 0);
     const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
+    const pickup = release ? bunker : city;   // where we load
+    const drop = release ? city : bunker;     // where we deliver
     u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
     if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    // Put stuck cargo somewhere sane. Shelter runs return it to the origin city (or
+    // lose it with a dead city); release runs keep it safe in the bunker, else a
+    // living city, else lost.
     const redeposit = () => {
         if (!(m.cargo > 0)) return;
-        if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
-        else {
-            const n = nationOf(w, u.slot);
-            if (n?.lead) n.lead.lost += m.cargo;
-        }
+        if (release) {
+            if (bunker && n?.lead) n.lead.sheltered += m.cargo;
+            else {
+                const alt = w.cities.find((c) => c.slot === u.slot && c.alive);
+                if (alt) alt.leaders = (alt.leaders || 0) + m.cargo;
+                else if (n?.lead) n.lead.lost += m.cargo;
+            }
+        } else if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
+        else if (n?.lead) n.lead.lost += m.cargo;
         m.cargo = 0;
     };
     const flyTo = (pt) => {
@@ -200,19 +212,25 @@ function flyFerry(w, u, def, dt) {
         }
         u.alt = 1;
         // Ease speed down and tighten the turn on approach: an airlifter's normal
-        // cruise turn radius (v/ω) is far larger than the gaps between a capital,
-        // its bunker, and the airstrip, so it must slow to capture a near waypoint.
+        // cruise turn radius (v/ω) is far larger than the gaps between a city, the
+        // bunker, and the airstrip, so it must slow to capture a near waypoint.
         const speed = Math.min(sp, Math.max(sp * 0.3, rng / 1.5));
         advance(u, bearingTo(u, pt), speed, tr * 3, dt);
         return false;
     };
+    // Is there anything left to load at the source?
+    const sourceEmpty = release
+        ? (!bunker || (n?.lead?.sheltered || 0) <= 0)
+        : (!city || !city.alive || (city.leaders || 0) <= 0);
+    // Is the delivery destination still valid?
+    const dropGone = release ? (!city || !city.alive) : !bunker;
     switch (m.phase) {
-        case "toCity":
-            if (!city || !city.alive || (city.leaders || 0) <= 0) {
-                m.phase = m.cargo > 0 ? "toBunker" : "toHome"; // nothing left to pick up here
+        case "toPickup":
+            if (sourceEmpty || !pickup) {
+                m.phase = m.cargo > 0 ? "toDrop" : "toHome"; // nothing to lift here
                 break;
             }
-            if (flyTo(city)) {
+            if (flyTo(pickup)) {
                 m.phase = "loading";
                 m.timer = LEADERSHIP.loadSec;
                 u.alt = 0;
@@ -222,20 +240,29 @@ function flyFerry(w, u, def, dt) {
             u.alt = 0;
             m.timer -= dt;
             if (m.timer <= 0) {
-                const take = city && city.alive ? Math.min(LEADERSHIP.perPlane - m.cargo, city.leaders || 0) : 0;
-                if (take > 0) {
-                    city.leaders -= take;
-                    m.cargo += take;
+                const room = LEADERSHIP.perPlane - m.cargo;
+                if (release) {
+                    const take = n?.lead ? Math.min(room, n.lead.sheltered || 0) : 0;
+                    if (take > 0) {
+                        n.lead.sheltered -= take;
+                        m.cargo += take;
+                    }
+                } else {
+                    const take = city && city.alive ? Math.min(room, city.leaders || 0) : 0;
+                    if (take > 0) {
+                        city.leaders -= take;
+                        m.cargo += take;
+                    }
                 }
-                m.phase = m.cargo > 0 ? "toBunker" : "toHome";
+                m.phase = m.cargo > 0 ? "toDrop" : "toHome";
             }
             break;
-        case "toBunker":
-            if (!bunker) {
-                m.phase = "toHome"; // bunker lost — carry cargo home and redeposit
+        case "toDrop":
+            if (dropGone || !drop) {
+                m.phase = "toHome"; // destination lost — carry home and redeposit safely
                 break;
             }
-            if (flyTo(bunker)) {
+            if (flyTo(drop)) {
                 m.phase = "unloading";
                 m.timer = LEADERSHIP.unloadSec;
                 u.alt = 0;
@@ -245,9 +272,13 @@ function flyFerry(w, u, def, dt) {
             u.alt = 0;
             m.timer -= dt;
             if (m.timer <= 0) {
-                const n = nationOf(w, u.slot);
-                if (n?.lead && m.cargo > 0) n.lead.sheltered += m.cargo;
-                m.cargo = 0;
+                if (m.cargo > 0) {
+                    if (release) {
+                        if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
+                        else redeposit();
+                    } else if (n?.lead) n.lead.sheltered += m.cargo;
+                    m.cargo = 0;
+                }
                 m.phase = "toHome";
             }
             break;
@@ -263,7 +294,7 @@ function flyFerry(w, u, def, dt) {
                 redeposit(); // only carries cargo here if it was diverted; a normal run lands empty
                 const cap = hangarCapOf(home.type, "transport");
                 if ((home.hangar?.transport || 0) < cap) home.hangar.transport = (home.hangar.transport || 0) + 1;
-                u.hp = 0; // stow into stock; evacTick relaunches if the capital still has leaders
+                u.hp = 0; // stow into stock; evacTick relaunches if there is more to move
                 return;
             }
             break;

@@ -14,6 +14,7 @@ import {
     scrapUnit,
     setAwacsPatrol,
     setMarch,
+    releaseLeadership,
     setPatrolSize,
     setSail,
     setWarhead,
@@ -154,6 +155,11 @@ export function useEngine(world) {
         },
         shelterLeadership: () => {
             const r = shelterLeadership(ref.current, ref.current.mySlot);
+            force();
+            return r;
+        },
+        releaseLeadership: () => {
+            const r = releaseLeadership(ref.current, ref.current.mySlot);
             force();
             return r;
         },

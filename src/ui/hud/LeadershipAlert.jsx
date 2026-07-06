@@ -12,7 +12,9 @@ export default function LeadershipAlert({world, api, mySlot}) {
     if (!s) return null;
 
     const showPrompt = s.atWar && s.exposed && !s.evac;
-    const showProgress = s.evac && (s.exposed || s.inTransit > 0);
+    // Only the inbound (shelter) airlift shows a progress banner; a release run is
+    // driven from the bunker panel, not the war alert.
+    const showProgress = s.mode === "shelter" && (s.exposed || s.inTransit > 0);
     if (!showPrompt && !showProgress) return null;
 
     if (showProgress) {

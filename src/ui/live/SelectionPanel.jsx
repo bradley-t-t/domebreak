@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {armamentOf, FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {armamentOf, FALLOUT, hangarCapOf, hangarCount, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
 import "./SelectionPanel.css";
 
 export default function SelectionPanel({
@@ -143,6 +143,39 @@ export default function SelectionPanel({
                                     title={(selectedUnit.hangar?.awacs ?? 0) === 0 ? "No AWACS available — order one above." : "A wide surveillance orbit over the base."}
                                     onClick={() => api.setAwacsPatrol(selectedUnit.id)}>{selectedUnit.awacsPatrol ? "AWACS Patrol · On" : "AWACS Patrol · Off"}</button>
                         )}
+                    </div>
+                );
+            })()}
+            {selectedUnit.type === "bunker" && selectedUnit.slot === mySlot && (() => {
+                const lead = leadershipStatus(w, mySlot);
+                if (!lead) return null;
+                const sheltering = lead.mode === "shelter";
+                const releasing = lead.mode === "release";
+                const act = (fn) => {
+                    const r = fn();
+                    if (r?.error) flash(r.error, "err");
+                };
+                return (
+                    <div className="gd-lead-panel">
+                        <div className="gd-wing-head">National Leadership</div>
+                        <div className="gd-detail-grid gd-selstats">
+                            <div><span>Leadership</span><b>{lead.pct}%</b></div>
+                            <div><span>Sheltered</span><b>{lead.sheltered}/{lead.total}</b></div>
+                            <div><span>In Cities</span><b>{lead.atCity}</b></div>
+                            <div><span>In Transit</span><b>{lead.inTransit}</b></div>
+                        </div>
+                        <button className={`gd-btn ${sheltering ? "primary" : ""}`}
+                                disabled={!lead.exposed || sheltering || !lead.hasAirstrip}
+                                title={!lead.hasAirstrip ? "Build an Airstrip to fly the evacuation." : !lead.exposed ? "No leaders are exposed in your cities." : "Airlift exposed leaders into the bunker."}
+                                onClick={() => act(api.shelterLeadership)}>
+                            {sheltering ? "Sheltering…" : "Shelter Leadership"}
+                        </button>
+                        <button className={`gd-btn ${releasing ? "primary" : ""}`}
+                                disabled={lead.sheltered <= 0 || releasing || !lead.hasAirstrip}
+                                title={!lead.hasAirstrip ? "Build an Airstrip to fly them back out." : lead.sheltered <= 0 ? "No leadership is sheltered." : "Fly sheltered leaders back out to your cities."}
+                                onClick={() => act(api.releaseLeadership)}>
+                            {releasing ? "Releasing…" : "Release Leadership"}
+                        </button>
                     </div>
                 );
             })()}

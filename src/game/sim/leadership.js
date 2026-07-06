@@ -111,6 +111,7 @@ export function leadershipStatus(w, slot) {
         inTransit,
         exposed: atCity > 0,
         evac: !!n._evac,
+        mode: n._evac || null,      // "shelter" | "release" | null
         atWar: atWarNow,
         hasBunker: !!bunkerOf(w, slot),
         hasAirstrip: airstripsOf(w, slot).length > 0,
@@ -125,7 +126,20 @@ export function shelterLeadership(w, slot) {
     if (!n || !n.lead) return {error: "No leadership to shelter."};
     if (!bunkerOf(w, slot)) return {error: "Build a Leadership Bunker first."};
     if (!airstripsOf(w, slot).length) return {error: "Build an Airstrip first."};
-    n._evac = true;
+    n._evac = "shelter";
+    return {ok: true};
+}
+
+// Order: release sheltered leadership back out to the nation's cities — the reverse
+// airlift. Requires leaders actually in the bunker plus the infrastructure to fly
+// them; ferries then run bunker -> city instead of city -> bunker.
+export function releaseLeadership(w, slot) {
+    const n = nationOf(w, slot);
+    if (!n || !n.lead) return {error: "No leadership to release."};
+    if (!bunkerOf(w, slot)) return {error: "No Leadership Bunker."};
+    if ((n.lead.sheltered || 0) <= 0) return {error: "No leadership is sheltered."};
+    if (!airstripsOf(w, slot).length) return {error: "Build an Airstrip first."};
+    n._evac = "release";
     return {ok: true};
 }
 
@@ -145,15 +159,24 @@ export function updateCommand(w) {
 export function evacTick(w) {
     for (const n of w.nations) {
         if (!n.alive || !n.lead) continue;
-        if (n.isAi && !n._evac && w.nations.some((m) => m.alive && atWar(w, n.slot, m.slot))) n._evac = true;
+        if (n.isAi && !n._evac && w.nations.some((m) => m.alive && atWar(w, n.slot, m.slot))) n._evac = "shelter";
         if (!n._evac) continue;
         const bunker = bunkerOf(w, n.slot);
-        if (!bunker) continue;
+        if (!bunker) {
+            if (n._evac === "release") n._evac = false; // nothing to release from
+            continue;
+        }
         const strips = airstripsOf(w, n.slot);
         if (!strips.length) continue;
         for (const s of strips) ensureHangar(w, s);
-        const sites = citiesWithLeaders(w, n.slot);
         const ferries = w.units.filter((u) => u.slot === n.slot && u.hp > 0 && u.mission?.role === "leadershipFerry");
+        const perStrip = new Map();
+        for (const u of ferries) perStrip.set(u.mission.homeId, (perStrip.get(u.mission.homeId) || 0) + 1);
+        if (n._evac === "release") {
+            releaseAssign(w, n, bunker, strips, ferries, perStrip);
+            continue;
+        }
+        const sites = citiesWithLeaders(w, n.slot);
         if (!sites.length) {
             if (!ferries.length) n._evac = false; // evacuation complete
             continue;
@@ -163,20 +186,62 @@ export function evacTick(w) {
         // leaders. Loaded ferries have already drawn their cargo out of city.leaders.
         const inbound = new Map();
         for (const u of ferries) {
-            if (u.mission.phase === "toCity") inbound.set(u.mission.capId, (inbound.get(u.mission.capId) || 0) + LEADERSHIP.perPlane);
+            if (u.mission.phase === "toPickup") inbound.set(u.mission.capId, (inbound.get(u.mission.capId) || 0) + LEADERSHIP.perPlane);
         }
-        const perStrip = new Map();
-        for (const u of ferries) perStrip.set(u.mission.homeId, (perStrip.get(u.mission.homeId) || 0) + 1);
         const needsFerry = (c) => (c.leaders || 0) - (inbound.get(c.id) || 0) > 0;
         for (const s of strips) {
             let slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
             while (slots > 0 && (s.hangar?.transport || 0) > 0) {
                 const city = sites.find(needsFerry);
                 if (!city) break; // every city's leaders are already covered by inbound ferries
-                launchFerry(w, s, city.id, bunker.id);
+                launchFerry(w, s, city.id, bunker.id, "shelter");
                 inbound.set(city.id, (inbound.get(city.id) || 0) + LEADERSHIP.perPlane);
                 slots--;
             }
+        }
+    }
+}
+
+// Reverse airlift: fly sheltered leaders out of the bunker back to living cities,
+// spreading across the top cities (capital first) toward the least-filled so they
+// repopulate evenly. Clears the release flag when the bunker is empty and no
+// ferries remain.
+function releaseAssign(w, n, bunker, strips, ferries, perStrip) {
+    if ((n.lead.sheltered || 0) <= 0 && !ferries.length) {
+        n._evac = false;
+        return;
+    }
+    const targets = w.cities.filter((c) => c.slot === n.slot && c.alive).sort(cityPriority).slice(0, Math.max(1, LEADERSHIP.leaderCities));
+    if (!targets.length) {
+        if (!ferries.length) n._evac = false; // nowhere alive to send them
+        return;
+    }
+    // Sheltered leaders not yet claimed by an inbound (heading-to-bunker) ferry.
+    const enroute = ferries.filter((u) => u.mission.mode === "release" && u.mission.phase === "toPickup").length;
+    let unclaimed = (n.lead.sheltered || 0) - enroute * LEADERSHIP.perPlane;
+    // Effective fill per target = current leaders + leaders already inbound on a
+    // release ferry, so new launches spread to the emptiest cities.
+    const fill = new Map();
+    for (const c of targets) fill.set(c.id, c.leaders || 0);
+    for (const u of ferries) {
+        if (u.mission.mode === "release" && fill.has(u.mission.capId)) fill.set(u.mission.capId, fill.get(u.mission.capId) + LEADERSHIP.perPlane);
+    }
+    for (const s of strips) {
+        let slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
+        while (slots > 0 && (s.hangar?.transport || 0) > 0 && unclaimed > 0) {
+            let tgt = null, min = Infinity;
+            for (const c of targets) {
+                const f = fill.get(c.id);
+                if (f < min) {
+                    min = f;
+                    tgt = c;
+                }
+            }
+            if (!tgt) break;
+            launchFerry(w, s, tgt.id, bunker.id, "release");
+            fill.set(tgt.id, fill.get(tgt.id) + LEADERSHIP.perPlane);
+            unclaimed -= LEADERSHIP.perPlane;
+            slots--;
         }
     }
 }
