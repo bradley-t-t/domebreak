@@ -211,6 +211,30 @@ input {
     border-color: var(--ink);
 }
 
+/* mini buttons (Load/Save/Delete) inherit the card's light paper theme,
+   not the dark HUD gradient — otherwise dark text lands on a dark box */
+.gd-card .gd-mini {
+    background: var(--btn-bg);
+    border-color: var(--line);
+    color: var(--text);
+}
+
+.gd-card .gd-mini:hover:not(:disabled) {
+    border-color: var(--ink);
+}
+
+.gd-card .gd-mini.danger {
+    background: var(--btn-bg);
+    border-color: rgba(224, 87, 79, 0.5);
+    color: var(--danger);
+}
+
+.gd-card .gd-mini.danger:hover:not(:disabled) {
+    background: rgba(224, 87, 79, 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
 .gd-card .gd-menu-title {
     color: var(--text);
 }
