@@ -3971,6 +3971,96 @@ input[type="range"] {
     }
 }
 
+/* ================= in-game loading veil ================= */
+/* Covers the map from mount until the tiles settle, so the world is only
+   revealed once it's fully drawn and already framed on the player's capital. */
+.gd-boot {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 120% at 50% 42%, #0b0e13 0%, #05070b 72%);
+    transition: opacity 520ms var(--ease-out);
+}
+
+.gd-boot.gone {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gd-boot-inner {
+    text-align: center;
+    animation: gdRowIn 500ms var(--ease-out) both;
+}
+
+.gd-boot-flag {
+    font-size: 30px;
+    border-radius: 3px;
+    box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.7);
+}
+
+.gd-boot-title {
+    margin-top: 16px;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+.gd-boot-sub {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+
+.gd-boot-bar {
+    width: 190px;
+    height: 2px;
+    margin: 22px auto 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.gd-boot-bar i {
+    display: block;
+    height: 100%;
+    width: 38%;
+    background: linear-gradient(90deg, transparent, var(--text), transparent);
+    animation: gdBootScan 1.15s ease-in-out infinite;
+}
+
+@keyframes gdBootScan {
+    from {
+        transform: translateX(-130%);
+    }
+    to {
+        transform: translateX(330%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-boot {
+        transition: none;
+    }
+
+    .gd-boot-inner {
+        animation: none;
+    }
+
+    .gd-boot-bar i {
+        animation: none;
+        width: 100%;
+        opacity: 0.4;
+    }
+}
+
 /* ================= multiplayer: identity chip, friends, lobby browser/room ================= */
 
 /* ---- MeBadge: profile chip + popover ---- */
