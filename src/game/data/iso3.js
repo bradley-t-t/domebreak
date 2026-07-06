@@ -232,3 +232,9 @@ export const ISO3 = {
 };
 
 export const toGid3 = (iso2) => (iso2 ? ISO3[iso2.toUpperCase()] || null : null);
+
+// Reverse lookup: map a GID_0 / ISO3 code (as carried on the country map tiles)
+// back to the ISO2 code the game uses for nations. Lets a click on the globe be
+// resolved to a nation.
+const GID3_TO_ISO2 = Object.fromEntries(Object.entries(ISO3).map(([iso2, gid]) => [gid, iso2]));
+export const fromGid3 = (gid3) => (gid3 ? GID3_TO_ISO2[gid3.toUpperCase()] || null : null);

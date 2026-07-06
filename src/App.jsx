@@ -333,7 +333,7 @@ export default function App() {
                                   onCancel={() => setScreen("menu")}/>}
             {screen === "lobby" && lobbyId &&
                 <LobbyScreen lobbyId={lobbyId} me={accountProfile} connecting={netStatus === "connecting"}
-                             onLaunch={joinMatch}
+                             data={data} onLaunch={joinMatch}
                              onLeft={() => {
                                  setLobbyId(null);
                                  setScreen("menu");

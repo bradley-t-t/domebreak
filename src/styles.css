@@ -4701,6 +4701,163 @@ input[type="range"] {
     margin-top: 14px;
 }
 
+/* ---- War-room lobby: interactive globe + command rail ---- */
+.gd-lobby-globe {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: auto; /* the sphere is the nation picker */
+}
+
+.gd-lobby-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse 120% 100% at 66% 46%, transparent 46%, rgba(4, 6, 9, 0.42) 82%, rgba(4, 6, 9, 0.72) 100%);
+}
+
+.gd-lobby-rail {
+    z-index: 2;
+    padding-bottom: 22px;
+}
+
+/* Your claimed nation — the headline readout above the roster. */
+.gd-lobby-you {
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 16px;
+}
+
+.gd-lobby-you-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-lobby-you-nation {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.gd-lobby-you-nation.empty {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--faint);
+}
+
+.gd-lobby-you-nation .gd-flag,
+.gd-lobby-you-nation img {
+    width: 26px;
+    border-radius: 3px;
+}
+
+/* Roster — one seat per member (human + bot, rendered identically). */
+.gd-lobby-roster {
+    pointer-events: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 4px;
+}
+
+.gd-lobby-seat {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 11px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line-soft);
+    background: rgba(9, 11, 15, 0.5);
+}
+
+.gd-lobby-seat.you {
+    border-color: var(--gold-line);
+    background: rgba(9, 11, 15, 0.72);
+}
+
+.gd-lobby-seat.ready {
+    border-color: var(--gold-line);
+}
+
+.gd-lobby-seat-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.gd-lobby-seat .gd-flag,
+.gd-lobby-seat img {
+    width: 22px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.gd-lobby-seat-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gd-lobby-seat-ready {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+    flex-shrink: 0;
+}
+
+.gd-lobby-seat-ready.on {
+    color: var(--gold);
+}
+
+/* Actions — the prominent Ready button + Leave. */
+.gd-lobby-actions {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.gd-lobby-actions .gd-menu-btn {
+    width: 100%;
+    text-align: center;
+}
+
+.gd-lobby-ready-btn.armed {
+    background: var(--gold);
+    color: var(--gold-contrast);
+    border-color: var(--gold-line);
+}
+
+.gd-lobby-ready-btn:disabled {
+    opacity: 0.5;
+}
+
+.gd-lobby-rail .gd-lobby-hint {
+    text-align: left;
+    margin-top: 14px;
+    max-width: 300px;
+}
+
 /* ---- Searching (quick-match queue) ---- */
 .gd-searching {
     width: min(420px, 94vw);
