@@ -3,7 +3,7 @@
 // every symbol the engine used to export directly is re-exported from the
 // focused modules it now lives in (constants/queries/production/aircraft/
 // combat/tick) so existing importers keep working unchanged.
-import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS} from "./data/constants.js";
+import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, colorForSlot} from "./data/constants.js";
 
 // Builds a fresh world from a match setup: {mySlot, seed, nations: [{slot,
 // name, iso, isAi, gdp}], cities: [{id, slot, name, state, cap, pop, econ,
@@ -16,6 +16,7 @@ export function createWorld(setup) {
         iso: n.iso,
         isAi: !!n.isAi,
         gdp: n.gdp || 0,
+        color: colorForSlot(n.slot),
         points: START_POINTS,
         alive: true,
         relations: {},
