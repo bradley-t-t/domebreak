@@ -12,6 +12,12 @@ export const PORT = parseInt(process.env.GD_PORT || "8790", 10);
 export const WS_URLS = (process.env.GD_WS_URLS || `ws://127.0.0.1:${PORT}`).split(",").map((s) => s.trim());
 // Seconds a disconnected human keeps their nation before the AI takes over.
 export const RECONNECT_GRACE_S = parseInt(process.env.GD_RECONNECT_GRACE_S || "60", 10);
+// Seconds a match may run with NO human connected before it is reaped and its
+// capacity slot freed. Covers a client that never dials in and one whose humans
+// all left: a headless AI-vs-AI game that never reaches a win condition would
+// otherwise hold a MAX_MATCHES slot forever and jam matchmaking. Must exceed
+// RECONNECT_GRACE_S so a genuine reconnect is never pre-empted.
+export const ABANDON_GRACE_S = parseInt(process.env.GD_ABANDON_GRACE_S || "120", 10);
 // Most live matches this server will host at once; lobbies beyond it stay
 // 'starting' and get re-swept until a slot frees.
 export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
