@@ -71,6 +71,7 @@ export function createWorld(setup) {
         units: [],
         projectiles: [],
         interceptors: [],
+        effects: [],
         events: [],
         winnerSlot: null,
         over: false
@@ -112,6 +113,8 @@ export {
     airborne,
     atWar,
     vitalityOf,
+    falloutIntensity,
+    falloutProximity,
     industryOutputOf,
     industryCountOf,
     industryCapOf,

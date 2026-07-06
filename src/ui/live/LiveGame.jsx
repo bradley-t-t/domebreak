@@ -8,6 +8,7 @@ import UnitIcon from "../common/UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
 import Explosion from "./Explosion.jsx";
+import FalloutCloud from "./FalloutCloud.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
 import PinnedBar from "../hud/PinnedBar.jsx";
 import Flag from "../common/Flag.jsx";
@@ -21,6 +22,7 @@ import {
     COAST_KM,
     defenseMinRange,
     defenseRange,
+    falloutIntensity,
     gdpOf,
     hangarCapOf,
     hangarCount,
@@ -535,6 +537,7 @@ export default function LiveGame({
     const {
         backdropFC,
         liveFC,
+        falloutFC,
         mySensors,
         visUnits,
         radarFC,
@@ -953,7 +956,32 @@ export default function LiveGame({
                         "circle-opacity": 0.6
                     }}/>
                 </Source>
+                {/* Radioactive fallout footprint: a glowing contamination haze whose
+                    opacity tracks the cloud's live intensity, plus a dashed edge marking
+                    the danger radius. Drawn under the cities so ruins and dots stay legible. */}
+                <Source id="fallout-src" type="geojson" data={falloutFC}>
+                    <Layer id="fallout-haze" type="fill" paint={{
+                        "fill-color": "#8cff3a",
+                        "fill-opacity": ["*", ["get", "intensity"], 0.17]
+                    }}/>
+                    <Layer id="fallout-edge" type="line" paint={{
+                        "line-color": "#b6ff5c",
+                        "line-width": 1,
+                        "line-dasharray": [2, 2],
+                        "line-opacity": ["*", ["get", "intensity"], 0.55]
+                    }}/>
+                </Source>
                 <Source id="live-src" type="geojson" data={liveFC}>
+                    {/* Destroyed city: a scorched crater with a burnt scar ring, drawn
+                        larger than a live city so a ruin reads unmistakably at map scale. */}
+                    <Layer id="live-city-ruin" type="circle" filter={["==", ["get", "dead"], 1]} paint={{
+                        "circle-radius": ["case", ["==", ["get", "cap"], 1], 9, 7],
+                        "circle-color": "#160c0a",
+                        "circle-opacity": 0.88,
+                        "circle-stroke-color": "#c2410c",
+                        "circle-stroke-width": 1.8,
+                        "circle-stroke-opacity": 0.9
+                    }}/>
                     {/* City-health halo: a ring that only appears once a city is damaged,
                         thickening and reddening (green→amber→red) as vitality falls to 0.
                         Faction fill (below) still encodes ownership. */}
@@ -1019,6 +1047,11 @@ export default function LiveGame({
                         </Marker>
                     );
                 })}
+                {(w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => (
+                    <Marker key={fx.id} longitude={fx.lng} latitude={fx.lat} anchor="center">
+                        <FalloutCloud intensity={falloutIntensity(fx.age)}/>
+                    </Marker>
+                ))}
                 {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center"
                                                offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind}/></Marker>)}
             </WorldMap>
