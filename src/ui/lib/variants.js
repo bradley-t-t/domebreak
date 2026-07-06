@@ -159,7 +159,12 @@ export const card = cva(
 /**
  * No VFX hook — no @layer vfx rule targets .gd-overlay.
  */
-export const overlay = cva("absolute inset-0 z-[4] flex pointer-events-none", {
+// fixed (not absolute) so a modal is always anchored to the viewport, never to a
+// positioned ancestor. FriendsPanel opens from MeBadge, whose menu root is
+// `fixed top-[14px] right-4` — an `absolute inset-0` overlay filled that tiny
+// corner box and threw the centered card off-screen. All overlay() consumers are
+// full-screen modals, so viewport anchoring is correct for every one.
+export const overlay = cva("fixed inset-0 z-[4] flex pointer-events-none", {
     variants: {
         placement: {
             none: "",
