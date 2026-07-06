@@ -17,6 +17,7 @@ import {useGameSession} from "../hooks/useGameSession.js";
 import TechTree from "../screens/TechTree.jsx";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
+import ControlsOverlay from "../screens/ControlsOverlay.jsx";
 import {
     armamentOf,
     COAST_KM,
@@ -104,6 +105,8 @@ export default function LiveGame({
     const [disembarkId, setDisembarkId] = useState(null);
     const [hover, setHover] = useState(null);
     const [pins, setPins] = useState([]);
+    // In-game controls reference (toggled with ? / F1, or the corner button).
+    const [helpOpen, setHelpOpen] = useState(false);
     const [err, setErr] = useState(null);
     // Loading veil: covers the map from mount until the style + tiles finish
     // (map "idle"), so the player only sees the world once it's fully drawn and
@@ -384,6 +387,21 @@ export default function LiveGame({
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
     }, [overlayOpen, w.over, K.production, K.diplomacy, K.research]);
+
+    // Controls reference toggle: "?" or F1 opens/closes the command reference.
+    // Fixed keys (not rebindable) — the overlay itself lists every binding.
+    useEffect(() => {
+        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+        const h = (e) => {
+            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+            if (e.key === "?" || e.key === "F1") {
+                e.preventDefault();
+                setHelpOpen((v) => !v);
+            }
+        };
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [overlayOpen]);
 
     // Game speed hotkeys, RTS-style: pause toggle + speed up/down step the speed
     // (bindings configurable in Settings; defaults Space / = / −), and the fixed
@@ -1064,8 +1082,12 @@ export default function LiveGame({
 
             <div className="gd-topbtns">
                 <AmmoBar nation={myNation}/>
-                <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat">{globe ? "◐" : "▦"}</button>
-                <button className="gd-iconbtn" onClick={onPause} title="Menu (Esc)">☰</button>
+                <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat view"
+                        aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>
+                <button className="gd-iconbtn" onClick={() => setHelpOpen(true)} title="Controls (?)"
+                        aria-label="Show controls reference">?</button>
+                <button className="gd-iconbtn" onClick={onPause} title="Menu (Esc)"
+                        aria-label="Open pause menu">☰</button>
                 {meBadge}
             </div>
 
@@ -1101,6 +1123,7 @@ export default function LiveGame({
                                 setAttackMode={setAttackMode} flash={flash}/>
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
+            {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
             {hover?.kind === "country" && (() => {
                 const gl = countryByGid[hover.gid];
                 const nation = w.nations.find((n) => toGid3(n.iso) === hover.gid);
