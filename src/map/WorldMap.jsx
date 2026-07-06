@@ -54,9 +54,14 @@ const COUNTRY_FILL_COLOR = ["interpolate", ["linear"], ["zoom"], 2, "#767b84", 3
 const COUNTRY_LINE_COLOR = ["interpolate", ["linear"], ["zoom"], 2, "#9ba1ab", 4, "#686e77", 6, "#464b53"];
 const COUNTRY_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 2, 0.6, 6, 1.5];
 
-function buildStyle() {
+function buildStyle(globe) {
     return {
         version: 8,
+        // Bake the projection into the style so the very first painted frame is
+        // already a globe (or flat). Without this, MapLibre renders one flat
+        // mercator frame before onLoad's setProjection kicks in — the "flat
+        // flashes before the globe" ugliness on the attract screen.
+        projection: {type: globe ? "globe" : "mercator"},
         sources: {
             relief: {
                 type: "image",
@@ -135,7 +140,11 @@ export default function WorldMap({
                                  }) {
     const mapRef = useRef(null);
     const stopWater = useRef(null);
-    const mapStyle = useMemo(() => buildStyle(), []);
+    // Seed the style's projection from the initial globe value so first paint is
+    // correct. Runtime flat/globe toggles still go through setProjection below,
+    // so the style itself is only built once (no source/layer churn on toggle).
+    const initialGlobe = useRef(globe).current;
+    const mapStyle = useMemo(() => buildStyle(initialGlobe), [initialGlobe]);
     ensurePmtiles();
 
     const applyProjection = (map) => {
