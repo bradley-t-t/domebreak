@@ -241,6 +241,20 @@ export default function LiveGame({
         return null;
     };
 
+    // Spatial cue: place an event's sound in the stereo field by where it sits on
+    // screen, and pull its volume down when it's off the edges (distant news).
+    // Events without map coordinates (diplomacy, research) return centred/full.
+    const spatialize = (e) => {
+        const m = mapRef.current;
+        if (!m || e.lng == null || e.lat == null) return undefined;
+        const p = m.project([e.lng, e.lat]);
+        const w = m.getContainer().clientWidth || 1;
+        const frac = p.x / w;                         // 0 = left edge, 1 = right edge
+        const pan = Math.max(-1, Math.min(1, (frac - 0.5) * 2));
+        const off = frac < 0 ? -frac : frac > 1 ? frac - 1 : 0; // fraction past the edge
+        return {pan, gain: Math.max(0.35, 1 - off * 0.8)};
+    };
+
     // Battle audio: every fresh engine event gets a synthesized cue. Impacts and
     // intercepts are world-scale (the news gets out); launches and MIRV splits
     // only sound if my sensors actually saw them — fog of war has ears too.
@@ -252,9 +266,9 @@ export default function LiveGame({
             hit: "boom",
             destroy: "destroy"
         };
-        if (WORLD[e.type]) return sfx(WORLD[e.type]);
+        if (WORLD[e.type]) return sfx(WORLD[e.type], spatialize(e));
         if (e.type === "launch" || e.type === "mirv") {
-            if (!e.seen || e.seen.includes(mySlot)) return sfx(e.type === "mirv" ? "mirv" : "launch");
+            if (!e.seen || e.seen.includes(mySlot)) return sfx(e.type === "mirv" ? "mirv" : "launch", spatialize(e));
             return;
         }
         if (e.type === "detected" && e.slot === mySlot) return sfx("detected");
