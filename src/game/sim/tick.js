@@ -7,6 +7,7 @@ import {
     DEFAULT_BUILD_TIME,
     DEFAULT_HIT_PROB,
     DEFAULT_RELOAD,
+    FALLOUT,
     HANGAR_SPEC,
     INTERCEPT_CAP,
     INTERCEPT_KILL_RADIUS_KM,
@@ -23,13 +24,16 @@ import {
     airborne,
     atWar,
     defenseRange,
+    defenseMinRange,
+    falloutIntensity,
+    falloutProximity,
     inTerritory,
     netIncomeOf,
     placementBlocked,
     sensorsCover,
     sensorsOf
 } from "./queries.js";
-import {findTarget, launch, mirvSplit, resolveHit, trackPoint} from "./combat.js";
+import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
 import {canQueue, commandAttack, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
@@ -382,7 +386,11 @@ export function step(w, dt) {
             if (UNITS[d.type].airSpeed && UNITS[p.type]?.ballistic) continue;
             if (inboundSlot == null || inboundSlot !== d.slot) continue;
             if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || !airborne(d)) continue;
-            if (haversine(d.lng, d.lat, p.lng, p.lat) <= defenseRange(w, d)) {
+            // Engage only within the battery's annulus: inside defenseRange (outer
+            // reach) but outside defenseMinRange (the keep-out gap for area ABMs
+            // like THAAD, which can't kill a target that's already dived in close).
+            const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
+            if (dToTarget <= defenseRange(w, d) && dToTarget >= defenseMinRange(w, d)) {
                 const dn = nationOf(w, d.slot);
                 if (dn.points <= 0 && netIncomeOf(w, d.slot) < 0) continue; // upkeep unmet — interceptors offline
                 p.tried.push(d.id);
@@ -401,11 +409,12 @@ export function step(w, dt) {
                 w.interceptors.push({
                     id: nextId(w, "i"),
                     slot: d.slot,
+                    srcType: d.type,   // firing battery type — drives the sky sprite variant
                     targetId: p.id,
                     hitProb,
                     speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1),
                     altNorm: 0,
-                    launchDist: Math.max(1, haversine(d.lng, d.lat, p.lng, p.lat)),
+                    launchDist: Math.max(1, dToTarget),
                     fromLng: d.lng,
                     fromLat: d.lat,
                     lng: d.lng,
@@ -419,6 +428,46 @@ export function step(w, dt) {
             resolveHit(w, p);
             p._dead = true;
         }
+    }
+
+    // Radioactive fallout: each contamination cloud ages, drifts on the prevailing
+    // wind, and irradiates every living city and unit inside its radius — friend or
+    // foe alike — for damage over time, then decays away. Pure math (intensity /
+    // proximity / drift are functions of age, position, and dt, no rng), so the
+    // sim stays deterministic. A city that fallout drops to 0 hp dies exactly like
+    // a direct hit — same destroy event, so the toast, explosion, and ruin fire.
+    if (w.effects && w.effects.length) {
+        for (const fx of w.effects) {
+            if (fx.type !== "fallout") continue;
+            fx.age += dt;
+            const driftKm = FALLOUT.driftKmPerSec * dt;
+            const brng = (FALLOUT.driftHeadingDeg * Math.PI) / 180;
+            fx.lat += (driftKm * Math.cos(brng)) / 111;
+            fx.lng += (driftKm * Math.sin(brng)) / (111 * Math.cos((fx.lat * Math.PI) / 180) || 1);
+            const intensity = falloutIntensity(fx.age);
+            if (intensity <= 0) continue;
+            const rate = FALLOUT.dmgPerSec * intensity * dt;
+            for (const c of w.cities) {
+                if (!c.alive) continue;
+                const prox = falloutProximity(haversine(fx.lng, fx.lat, c.lng, c.lat), fx.radiusKm);
+                if (prox <= 0) continue;
+                c.hp -= rate * prox;
+                if (c.hp <= 0) {
+                    c.hp = 0;
+                    c.alive = false;
+                    w.events.push({
+                        id: nextId(w, "e"), t: w.time, type: "destroy", kind: "city",
+                        cityId: c.id, lng: c.lng, lat: c.lat, slot: fx.slot, fallout: 1
+                    });
+                }
+            }
+            for (const u of w.units) {
+                if (u.hp <= 0) continue;
+                const prox = falloutProximity(haversine(fx.lng, fx.lat, u.lng, u.lat), fx.radiusKm);
+                if (prox > 0) u.hp -= rate * prox;
+            }
+        }
+        w.effects = w.effects.filter((fx) => fx.type !== "fallout" || fx.age < FALLOUT.lifeSec);
     }
 
     // Sensor sweep (~4 Hz): each nation's radars pick up missiles entering their
@@ -451,8 +500,12 @@ export function step(w, dt) {
             it._dead = true;
             continue;
         }
-        it.toLng = tgt.lng;
-        it.toLat = tgt.lat;
+        // Lead pursuit: steer toward where the target *will* be, not where it is.
+        // The kill test still measures the real separation (below), so leading only
+        // shapes the flight path — it can't teleport a hit.
+        const aim = leadInterceptPoint(it, tgt);
+        it.toLng = aim[0];
+        it.toLat = aim[1];
         const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
         const stepKm = it.speed * dt;
         it.altNorm = (tgt.altNorm ?? 0) * Math.min(1, Math.max(0, 1 - dist / (it.launchDist || 1)));
@@ -481,9 +534,10 @@ export function step(w, dt) {
                 });
             }
         } else {
-            const f = stepKm / dist;
-            it.lng += (tgt.lng - it.lng) * f;
-            it.lat += (tgt.lat - it.lat) * f;
+            const aimDist = haversine(it.lng, it.lat, aim[0], aim[1]) || 1;
+            const f = Math.min(1, stepKm / aimDist);
+            it.lng += (aim[0] - it.lng) * f;
+            it.lat += (aim[1] - it.lat) * f;
         }
     }
 

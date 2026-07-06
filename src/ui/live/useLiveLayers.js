@@ -4,7 +4,7 @@
 // invalidation. Nothing here owns state; it only derives GeoJSON from engine
 // state (w) and the handful of UI toggles/inputs the map layers care about.
 import {useMemo} from "react";
-import {airborne, defenseRange, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail} from "../../game/geo/geo.js";
 
@@ -38,12 +38,27 @@ export function useLiveLayers({
                 id: c.id,
                 cap: c.cap ? 1 : 0,
                 mine: c.slot === mySlot ? 1 : 0,
+                dead: c.alive ? 0 : 1,
                 vit: c.alive ? vitalityOf(c) : 1,
                 color: c.alive ? teamColor(c.slot) : "#3a3a3a"
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [w.cities, w.time, mySlot]);
+
+    // Radioactive fallout footprints: one polygon per active cloud, its opacity
+    // driven by the same intensity curve the tick uses for damage, so the visible
+    // haze and the real danger zone are always the same shape and strength. Not
+    // fog-gated — a contamination cloud is a physical, map-scale hazard everyone
+    // can see. Rebuilds each tick (w.time) as clouds grow, drift, and decay.
+    const falloutFC = useMemo(() => ({
+        type: "FeatureCollection",
+        features: (w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => {
+            const c = circle(fx.lng, fx.lat, fx.radiusKm, 48);
+            c.properties = {intensity: falloutIntensity(fx.age)};
+            return c;
+        })
+    }), [w.effects, w.time]);
 
     // Fog of war: enemy assets exist on my map only where my sensor picture
     // covers them — my own units are always mine to see. unitVisibleTo also
@@ -71,7 +86,7 @@ export function useLiveLayers({
     const defenseFC = useMemo(() => layers.defense ? ({
         type: "FeatureCollection",
         features: visUnits.filter((u) => UNITS[u.type].kind === "defense" && u.hp > 0).map((u) => {
-            const c = circle(u.lng, u.lat, defenseRange(w, u), 40);
+            const c = circle(u.lng, u.lat, defenseRange(w, u), 40, defenseMinRange(w, u));
             c.properties = {color: teamColor(u.slot)};
             return c;
         })
@@ -98,7 +113,7 @@ export function useLiveLayers({
                 isRadar = 1;
             }
             if (radius && (def.detect || radius <= 4000)) {
-                const c = circle(sel.lng, sel.lat, radius);
+                const c = circle(sel.lng, sel.lat, radius, 56, def.kind === "defense" ? defenseMinRange(w, sel) : 0);
                 c.properties = {color: teamColor(mySlot), sel: 1, radar: isRadar};
                 f.push(c);
             }
@@ -109,7 +124,7 @@ export function useLiveLayers({
             const rad = t?.coastal ? COAST_KM
                 : t?.detect ? radarRangeOf(type) * (myNation?.radarMult ?? 1)
                     : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
-            const c = circle(cursor.lng, cursor.lat, rad);
+            const c = circle(cursor.lng, cursor.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
                 color: placeValid ? "#46d38a" : "#ff5d5d",
                 sel: 1,
@@ -154,5 +169,5 @@ export function useLiveLayers({
         })
     }), [w.units, w.time, mySlot]);
 
-    return {backdropFC, liveFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
+    return {backdropFC, liveFC, falloutFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
 }
