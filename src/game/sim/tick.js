@@ -554,6 +554,19 @@ function aiTick(w, dt) {
                 continue; // income positive — bank toward the bunker before lesser builds
             }
         }
+        // 5b. Leadership airfield — at least one airstrip to fly the evacuation. A
+        // bunker with no strip is a dead end: leaders can never be airlifted to it,
+        // so a nation that has stood up (or queued) a bunker builds a supporting
+        // strip next, banking toward it the same way it banks toward the bunker.
+        const hasStrip = myUnits.some((u) => u.type === "airstrip") || prodCount(n, "unit", "airstrip") > 0;
+        if (hasBunker && !hasStrip && defenders > 0) {
+            if (n.points >= UNITS.airstrip.cost + AI_TUNING.bunkerReserve) {
+                const p = place("airstrip");
+                if (p && queueUnit(w, n.slot, "airstrip", p.lng, p.lat).ok) return;
+            } else if (net > 0) {
+                continue; // bank toward the evac airfield before lesser builds
+            }
+        }
         // 6. Extend the shield — more air defense out to the target, each dome aimed
         // (via aiPlace) at the most valuable point not yet inside a friendly envelope.
         if (defenders < defenseTarget && n.points >= UNITS.dome.cost) {
