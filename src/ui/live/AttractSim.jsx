@@ -9,20 +9,48 @@ import WorldMap from "../../map/WorldMap.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import Explosion from "./Explosion.jsx";
 import {atWar, createWorld, declareWar} from "../../game/engine.js";
-import {buildSetup, GREAT_POWERS} from "../../game/sim/newGame.js";
+import {buildSetup} from "../../game/sim/newGame.js";
+import {MAX_SLOTS} from "../../game/data/constants.js";
 import {useEngine} from "../hooks/useEngine.js";
 
-const CAST_SIZE = 8;
+const CAST_SIZE = MAX_SLOTS; // fill every belligerent slot the engine supports (16)
 const SIM_SPEED = 4;         // wall-clock drama without the 10× blur
-const OPENING_FRONTS = 3;    // wars lit immediately so the sky is never empty
-const ESCALATE_MS = 12000;   // a new front roughly every 12s of wall time
+const OPENING_FRONTS = 6;    // wars lit immediately so the whole globe is alight
+const ESCALATE_MS = 7000;    // a new front roughly every 7s of wall time
 const DRIFT_LNG_PER_FRAME = 0.0045; // ~16 min per revolution — barely perceptible
 const RAIL_PAD = 340;        // left projection padding (px) that recenters the globe beside the menu rail
+const ATTRACT_ZOOM = 1.7;    // pulled in from 1.45 so the globe reads bigger behind the menu
+
+// Belligerent pool grouped by region. The engine caps at 16 active nations
+// (MAX_SLOTS), so we can't literally arm all ~220 countries — instead we draft
+// across every continent so a fresh cast always lights wars worldwide, not just
+// among the northern great powers.
+const DEMO_REGIONS = {
+    americas: ["US", "CA", "BR", "AR", "MX", "CO"],
+    europe: ["GB", "FR", "DE", "IT", "ES", "PL", "UA"],
+    mideast: ["RU", "TR", "IR", "SA", "EG", "PK"],
+    asia: ["CN", "IN", "JP", "KR", "ID", "TH", "VN"],
+    africa: ["ZA", "NG", "DZ"],
+    oceania: ["AU"],
+};
+
+// Round-robin draft: shuffle each region, then pull one per region in rotation
+// until the cast is full. Guarantees geographic spread every remount.
+function draftCast(data) {
+    const shuffle = (a) => [...a].sort(() => Math.random() - 0.5);
+    const buckets = Object.values(DEMO_REGIONS)
+        .map((r) => shuffle(r.filter((iso) => data.cities[iso]?.length)));
+    const cast = [];
+    for (let i = 0; cast.length < CAST_SIZE && buckets.some((b) => b.length); i++) {
+        const b = buckets[i % buckets.length];
+        if (b.length) cast.push(b.shift());
+    }
+    return cast;
+}
 
 function demoWorld(data) {
     // Throwaway spectacle — Math.random is fine here, determinism only matters in real games.
-    const pool = GREAT_POWERS.filter((iso) => data.cities[iso]?.length);
-    const cast = [...pool].sort(() => Math.random() - 0.5).slice(0, CAST_SIZE);
+    const cast = draftCast(data);
     const setup = buildSetup(data, cast[0], cast.slice(1), Math.floor(Math.random() * 1e9) || 1);
     setup.nations.forEach((n) => {
         n.isAi = true;
@@ -134,7 +162,7 @@ function AttractWorld({data, onOver, framed}) {
                     // Correct the canvas if the map initialized before its container
                     // had size (leaves the GL canvas stuck at its 400×300 fallback).
                     m.resize();
-                    m.jumpTo({center: [24, 24], zoom: 1.45, padding: {top: 0, right: 0, bottom: 0, left: framed ? RAIL_PAD : 0}});
+                    m.jumpTo({center: [24, 24], zoom: ATTRACT_ZOOM, padding: {top: 0, right: 0, bottom: 0, left: framed ? RAIL_PAD : 0}});
                 } catch { /* map tearing down */
                 }
                 setMapReady((x) => x + 1);
