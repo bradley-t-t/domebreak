@@ -15,25 +15,34 @@ const TWO_PI = 2 * Math.PI;
 // This is overlay-only; actual detection stays geodesic (sensorsCover uses
 // haversine), so accuracy where it matters is untouched. For small rings the
 // two are visually identical.
-export function circle(lng, lat, km, steps = 56) {
+// Pass innerKm > 0 to punch a concentric keep-out hole (an annulus) — e.g. a
+// THAAD battery whose interceptors can't engage inside a minimum range. The hole
+// is a second polygon ring, so fill layers leave it empty and line layers outline
+// it as an inner boundary.
+export function circle(lng, lat, km, steps = 56, innerKm = 0) {
     const rad = Math.PI / 180, deg = 180 / Math.PI;
     const cosLat = Math.max(0.05, Math.cos(lat * rad));   // clamp near the poles
-    const rho = (km / R_EARTH_KM) / (TWO_PI * cosLat);    // normalized Mercator radius
     const x0 = lng / 360 + 0.5;
     const y0 = 0.5 - Math.asinh(Math.tan(lat * rad)) / TWO_PI;
-    // Vertex count scales with on-screen size so big rings stay smooth; small
-    // rings keep the caller's count.
-    const n = Math.min(360, Math.max(steps, Math.ceil(rho * 800)));
-    const coords = [];
-    for (let i = 0; i <= n; i++) {
-        const a = (TWO_PI * i) / n;
-        const x = x0 + rho * Math.cos(a);
-        const y = y0 + rho * Math.sin(a);
-        const clng = (x - 0.5) * 360;                     // continuous across ±180°
-        const clat = Math.atan(Math.sinh((0.5 - y) * TWO_PI)) * deg;  // clamps to ±90°
-        coords.push([clng, clat]);
-    }
-    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: [coords]}};
+    const ring = (radiusKm) => {
+        const rho = (radiusKm / R_EARTH_KM) / (TWO_PI * cosLat);   // normalized Mercator radius
+        // Vertex count scales with on-screen size so big rings stay smooth; small
+        // rings keep the caller's count.
+        const n = Math.min(360, Math.max(steps, Math.ceil(rho * 800)));
+        const coords = [];
+        for (let i = 0; i <= n; i++) {
+            const a = (TWO_PI * i) / n;
+            const x = x0 + rho * Math.cos(a);
+            const y = y0 + rho * Math.sin(a);
+            const clng = (x - 0.5) * 360;                     // continuous across ±180°
+            const clat = Math.atan(Math.sinh((0.5 - y) * TWO_PI)) * deg;  // clamps to ±90°
+            coords.push([clng, clat]);
+        }
+        return coords;
+    };
+    const rings = [ring(km)];
+    if (innerKm > 0 && innerKm < km) rings.push(ring(innerKm));
+    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: rings}};
 }
 
 // Initial great-circle bearing from point 1 to point 2, compass degrees

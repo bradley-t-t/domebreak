@@ -223,6 +223,13 @@ export function defenseRange(w, d) {
     return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1) * (n?.defRangeMult ?? 1);
 }
 
+// Inner keep-out radius (km): targets closer than this can't be engaged. It's a
+// flat kinematic floor of the battery — radar links and range research push the
+// outer edge out, but never shrink this inner gap. 0 for units without one.
+export function defenseMinRange(_w, d) {
+    return UNITS[d.type].minRange || 0;
+}
+
 // Returns the human-readable reason a structure can't be sited here, or null
 // if the spot is clear (minimum separation from cities and living units).
 export function placementBlocked(w, lng, lat, ignoreUnitId) {
