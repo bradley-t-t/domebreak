@@ -7,7 +7,7 @@ import {createWorld, step} from "../src/game/engine.js";
 import {buildSetup, GREAT_POWERS} from "../src/game/sim/newGame.js";
 import {gameData} from "./data.js";
 import {COMMANDS} from "./commands.js";
-import {RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
+import {ABANDON_GRACE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
 
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
@@ -42,6 +42,7 @@ export class Match {
         this.graceTimers = new Map();
         this.quit = new Set();      // userIds recorded as quit
         this.reported = false;
+        this.abandonTimer = null;   // reaps the match if no human is ever present
 
         const isos = resolveIsos(roster.map((r) => r.iso));
         this.players = roster.map((r, i) => ({...r, slot: i, iso: isos[i]}));
@@ -68,6 +69,32 @@ export class Match {
             if (this.world.over) this.finish();
         }, TICK_MS);
         this.snapTimer = setInterval(() => this.broadcastSnapshot(), SNAPSHOT_MS);
+        // A fresh match has no sockets yet: arm the reaper so a client that never
+        // dials in can't strand this slot. attach() disarms it the moment a human
+        // connects; detach() re-arms it when the last human leaves.
+        this.armAbandon();
+    }
+
+    // Free this match's capacity slot when no human is connected. A quick-match
+    // always seats at least one human; if they never connect, or every human
+    // drops and none returns within ABANDON_GRACE_S, the match is ticking for
+    // nobody — end it so its MAX_MATCHES slot is released. Headless AI-vs-AI
+    // games that never reach a win condition are exactly what jam the server.
+    armAbandon() {
+        if (this.reported || this.abandonTimer) return;
+        this.abandonTimer = setTimeout(() => {
+            this.abandonTimer = null;
+            if (this.reported || this.sockets.size > 0) return;
+            for (const p of this.players) if (p.userId && !p.isBot) this.quit.add(p.userId);
+            this.finish(); // records humans as quit, closes the lobby, frees the slot
+        }, ABANDON_GRACE_S * 1000);
+    }
+
+    disarmAbandon() {
+        if (this.abandonTimer) {
+            clearTimeout(this.abandonTimer);
+            this.abandonTimer = null;
+        }
     }
 
     // Bots have userId === null and never call attach(); only human rows are
@@ -92,11 +119,13 @@ export class Match {
         if (nation) nation.isAi = false; // back from AI stewardship on reconnect
         this.quit.delete(userId);
         this.sockets.set(p.slot, ws);
+        this.disarmAbandon(); // a human is present — cancel any pending reap
         return p;
     }
 
     detach(slot) {
         this.sockets.delete(slot);
+        if (this.sockets.size === 0) this.armAbandon(); // last human gone — arm the reaper
         if (this.world.over) return;
         // grace window, then the AI takes the chair and the drop counts as a quit
         this.graceTimers.set(slot, setTimeout(() => {
@@ -138,6 +167,7 @@ export class Match {
     finish() {
         if (this.reported) return;
         this.reported = true;
+        this.disarmAbandon();
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
@@ -165,6 +195,7 @@ export class Match {
     }
 
     dispose() {
+        this.disarmAbandon();
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
