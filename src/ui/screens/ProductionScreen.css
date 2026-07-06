@@ -19,9 +19,17 @@
     justify-content: space-between;
     gap: 6px;
     min-width: 0;
+    overflow: hidden;
 }
 
+/* Label yields first: it truncates with an ellipsis so a long label + value
+   pair (e.g. "Strike Range" + "26,000 km") can never push the value past the
+   card edge. The value stays whole — it's the number the player is buying on. */
 .gd-ucard-stats dt {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 8.5px;
     letter-spacing: 0.4px;
     text-transform: uppercase;
@@ -30,6 +38,7 @@
 }
 
 .gd-ucard-stats dd {
+    flex: none;
     margin: 0;
     font-family: var(--mono);
     font-size: 10.5px;

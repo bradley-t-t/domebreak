@@ -4162,10 +4162,10 @@ input[type="range"] {
     background: rgba(4, 6, 9, 0.22);
 }
 
-/* The tactical map palette is tuned for gameplay contrast — as scenery it
-   needs a lift or the land vanishes into the abyss ocean. */
+/* A gentle lift so land reads against the abyss ocean without washing the
+   faction tints out — the political colors and closer zoom now carry contrast. */
 .gd-attract canvas {
-    filter: brightness(1.35) contrast(1.02);
+    filter: brightness(1.12) contrast(1.06);
 }
 
 .gd-attract-ticker {
@@ -5612,18 +5612,14 @@ input[type="range"] {
     align-items: center;
 }
 
+/* Scroll is driven imperatively by a rAF loop in NewsTicker (transform is set
+   in JS) — a CSS keyframe animation snapped back every time a new headline
+   changed the track width/duration. No hover pause. */
 .gd-ticker-track {
     display: inline-flex;
     flex-wrap: nowrap;
     white-space: nowrap;
-    animation-name: gdTickerScroll;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
     will-change: transform;
-}
-
-.gd-ticker:hover .gd-ticker-track {
-    animation-play-state: paused;
 }
 
 .gd-ticker-run {
@@ -5680,21 +5676,9 @@ input[type="range"] {
     color: var(--faint);
 }
 
-@keyframes gdTickerScroll {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-50%);
-    }
-}
-
-/* Motion-sensitive users: freeze the scroll, show the latest headlines static. */
+/* Motion-sensitive users: the rAF loop bails out (leaving the track static),
+   so just hide the duplicate run and show the latest headlines. */
 @media (prefers-reduced-motion: reduce) {
-    .gd-ticker-track {
-        animation: none;
-    }
-
     .gd-ticker-run:nth-child(2) {
         display: none;
     }
