@@ -936,6 +936,24 @@ export const WARHEAD_ORDER = ["standard", "cluster", "thermo"];
 // Warhead stockpile every nation starts the match with.
 export const AMMO_START = {standard: 6, cluster: 0, thermo: 0};
 
+// Radioactive fallout: certain warheads scatter long-lived contamination at
+// ground zero. The resulting cloud drifts on the prevailing wind and irradiates
+// every city and unit inside it — friend or foe alike — for damage over time
+// until it decays. Data-driven per the coding standards: the tick and renderers
+// read these numbers, they are never hardcoded in systems. See
+// design/gdd/radioactive-fallout.md for the model and formulas.
+export const FALLOUT = {
+    warheads: ["thermo"],   // warhead keys that leave a fallout cloud on impact
+    radiusKm: 480,          // contamination radius at ground zero
+    lifeSec: 80,            // sim seconds the cloud lingers before full decay
+    riseSec: 6,             // seconds to reach peak intensity after detonation
+    fadeFrac: 0.55,         // fraction of life spent at peak before decay begins
+    dmgPerSec: 2.2,         // hp/sec at the cloud core, at peak intensity
+    edgeFalloff: 0.35,      // intensity retained at the cloud edge (0..1); core is 1
+    driftKmPerSec: 1.1,     // prevailing-wind drift speed of the cloud center
+    driftHeadingDeg: 90,    // drift bearing (90 = due east / westerlies)
+};
+
 // One generic, nation-agnostic name per unit type (UNITS labels). Platform
 // armament is generic flavor too — never named after any one country's missile.
 export function unitLabel(type) {

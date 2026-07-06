@@ -2,7 +2,7 @@
 // Target resolution (findTarget) also lives here since launch/impact/attack
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
-import {MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
+import {FALLOUT, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 
@@ -113,6 +113,12 @@ export function launch(w, unit, target, warhead) {
 // (cities permanently — alive=false), and emits the hit/destroy/fizzle event.
 export function resolveHit(w, p) {
     const target = findTarget(w, p.targetId);
+    // A qualifying warhead (thermonuclear) contaminates the ground where it goes
+    // off, whether or not a live target was there to absorb the blast — so the
+    // cloud is sited before the fizzle bail-out, at the impact point.
+    if (FALLOUT.warheads.includes(p.warhead)) {
+        spawnFallout(w, target ? target.lng : p.toLng, target ? target.lat : p.toLat, p.slot);
+    }
     if (!target || !target.alive) {
         w.events.push({id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat});
         return;
@@ -133,6 +139,24 @@ export function resolveHit(w, p) {
         lat: target.lat,
         slot: p.slot
     });
+}
+
+// Seeds a radioactive fallout cloud at a ground-zero point. The cloud is a
+// long-lived world effect (w.effects) the tick ages, drifts, and reads for
+// damage-over-time; the map renders its footprint and epicenter. Deterministic —
+// no rng — so replays and tests stay stable.
+export function spawnFallout(w, lng, lat, slot) {
+    if (!w.effects) w.effects = []; // saves from before fallout existed
+    w.effects.push({
+        id: nextId(w, "fx"),
+        type: "fallout",
+        lng,
+        lat,
+        radiusKm: FALLOUT.radiusKm,
+        age: 0,
+        slot,
+    });
+    w.events.push({id: nextId(w, "e"), t: w.time, type: "fallout", lng, lat, slot});
 }
 
 // Cluster bus reentry: release subCount MIRVs from the bus position. Half dive
