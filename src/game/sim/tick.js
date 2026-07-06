@@ -15,6 +15,7 @@ import {
     INTERCEPTOR_SPEED,
     MIRV_SPLIT_AT,
     MISSILE_SPEED,
+    POPULATION,
     TECHS,
     UNITS,
     WARHEADS,
@@ -32,7 +33,8 @@ import {
     netIncomeOf,
     placementBlocked,
     sensorsCover,
-    sensorsOf
+    sensorsOf,
+    vitalityOf
 } from "./queries.js";
 import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
@@ -592,6 +594,23 @@ function aiTick(w, dt) {
     }
 }
 
+// Population growth: each living city's people grow toward a ceiling, scaled by
+// vitality so healthy cities repopulate over a match and battered ones barely
+// recover. Pure and deterministic — a function of stored pop/hp and dt, no RNG
+// (see design/quick-specs/population-growth-2026-07-06.md). Raw pop is capped at
+// pop0 * growthCapMult; pop0 falls back to current pop for legacy saves.
+export function growCities(w, dt) {
+    if (dt <= 0) return;
+    const {growthPerSec, growthCapMult} = POPULATION;
+    if (growthPerSec <= 0 || growthCapMult <= 1) return;
+    for (const c of w.cities) {
+        if (!c.alive) continue;
+        const cap = (c.pop0 ?? c.pop) * growthCapMult;
+        if (c.pop >= cap) continue;
+        c.pop = Math.min(cap, c.pop * (1 + growthPerSec * vitalityOf(c) * dt));
+    }
+}
+
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
 // end-of-tick cleanup (dead unit/projectile pruning, win condition).
@@ -902,6 +921,9 @@ export function step(w, dt) {
     // Dispatch/relaunch leadership evac ferries for nations actively sheltering
     // (player pressed Shelter, or an AI that has entered a war).
     evacTick(w);
+    // Grow city populations for this tick before the tally reads them, so income,
+    // industry cap, and the domination check all see the updated figures.
+    growCities(w, dt);
     // One pass over cities: which slots still hold a living city, and the population
     // tally for the domination check. O(cities), not O(nations × cities) — the naive
     // per-nation `cities.some(...)` was 222 × ~2565 every tick at full-world scale.
