@@ -174,6 +174,10 @@ export default function WorldMap({
             onLoad={(e) => {
                 try {
                     e.target.boxZoom.disable();
+                    // Kill MapLibre's built-in keyboard nav: it zooms on +/- and pans on
+                    // the arrows, which collides with the game's own bindings (+/- = game
+                    // speed, WASD = pan, Z/X = zoom). The game owns every key now.
+                    e.target.keyboard.disable();
                 } catch { /* older gl */
                 }
                 applyProjection(e.target);

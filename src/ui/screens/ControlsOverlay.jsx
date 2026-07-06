@@ -53,7 +53,8 @@ export default function ControlsOverlay({keys, onClose}) {
             h: "Camera", rows: [
                 {label: "Pan map / rotate globe", combo: [cap(keyLabel(K.panUp)), cap(keyLabel(K.panLeft)), cap(keyLabel(K.panDown)), cap(keyLabel(K.panRight))]},
                 {label: "Pan (drag)", combo: [mouse("L-Drag")]},
-                {label: "Zoom", combo: [mouse("Scroll")]},
+                {label: "Zoom in · out", combo: [cap(keyLabel(K.zoomIn)), cap(keyLabel(K.zoomOut))]},
+                {label: "Zoom (scroll)", combo: [mouse("Scroll")]},
                 {label: "Globe / flat view", combo: [mouse("Corner ◐ / ▦")]},
             ]
         },
