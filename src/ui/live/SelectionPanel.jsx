@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {armamentOf, FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {armamentOf, FALLOUT, hangarCapOf, hangarCount, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
@@ -50,7 +50,7 @@ export default function SelectionPanel({
                     <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd", hpFrac <= 0.35 ? "bg-danger" : "bg-good")}
                        style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
             </div>
-            <div className="gd-detail-grid mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
+            <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
                 {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
             </div>
             {armament && <p className="font-mono text-[11px] tracking-[0.4px] text-dim mt-0 mb-2">Armament: {armament}</p>}
@@ -148,6 +148,36 @@ export default function SelectionPanel({
                                     title={(selectedUnit.hangar?.awacs ?? 0) === 0 ? "No AWACS available — order one above." : "A wide surveillance orbit over the base."}
                                     onClick={() => api.setAwacsPatrol(selectedUnit.id)}>{selectedUnit.awacsPatrol ? "AWACS Patrol · On" : "AWACS Patrol · Off"}</button>
                         )}
+                    </div>
+                );
+            })()}
+            {selectedUnit.type === "bunker" && selectedUnit.slot === mySlot && (() => {
+                const lead = leadershipStatus(w, mySlot);
+                if (!lead) return null;
+                const leadPct = (v) => Math.round((v / (lead.total || 1)) * 100);
+                const sheltering = lead.mode === "shelter";
+                const releasing = lead.mode === "release";
+                const act = (fn) => {
+                    const r = fn();
+                    if (r?.error) flash(r.error, "err");
+                };
+                return (
+                    <div className="mt-2">
+                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">National Leadership</div>
+                        <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
+                            <div><span>Surviving</span><b>{lead.pct}%</b></div>
+                            <div><span>Sheltered</span><b>{leadPct(lead.sheltered)}%</b></div>
+                            <div><span>In Cities</span><b>{leadPct(lead.atCity)}%</b></div>
+                            <div><span>In Transit</span><b>{leadPct(lead.inTransit)}%</b></div>
+                        </div>
+                        <button className={cn(button({variant: sheltering ? "primary" : "default"}), "w-full mt-1.5")}
+                                disabled={!lead.exposed || sheltering || !lead.hasAirstrip}
+                                title={!lead.hasAirstrip ? "Build an Airstrip to fly the evacuation." : !lead.exposed ? "No leaders are exposed in your cities." : "Airlift exposed leaders into the bunker."}
+                                onClick={() => act(api.shelterLeadership)}>{sheltering ? "Sheltering…" : "Shelter Leadership"}</button>
+                        <button className={cn(button({variant: releasing ? "primary" : "default"}), "w-full mt-1.5")}
+                                disabled={lead.sheltered <= 0 || releasing || !lead.hasAirstrip}
+                                title={!lead.hasAirstrip ? "Build an Airstrip to fly them back out." : lead.sheltered <= 0 ? "No leadership is sheltered." : "Fly sheltered leaders back out to your cities."}
+                                onClick={() => act(api.releaseLeadership)}>{releasing ? "Releasing…" : "Release Leadership"}</button>
                     </div>
                 );
             })()}

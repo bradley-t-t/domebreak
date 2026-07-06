@@ -1,4 +1,4 @@
-import {gdpOf, industryOutputOf, netIncomeOf, populationOf} from "../../game/engine.js";
+import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtNet, fmtPop} from "../common/format.js";
@@ -15,6 +15,21 @@ function gameDate(t) {
     };
 }
 
+function leadColor(pct) {
+    if (pct == null) return undefined;
+    if (pct >= 67) return "#46d38a";
+    if (pct >= 34) return "#ffb020";
+    return "#ff3b3b";
+}
+
+function leadSub(lead) {
+    if (!lead) return "";
+    if (lead.exposed && lead.atWar) return lead.evac ? "Evacuating" : "Exposed";
+    if (lead.inTransit > 0) return "Evacuating";
+    if (lead.sheltered > 0) return "Sheltered";
+    return "Secure";
+}
+
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
     {id: "production", label: "Production", glyph: "▣"},
@@ -28,6 +43,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const pop = myNation ? populationOf(world, myNation.slot) : 0;
     const gdp = myNation ? gdpOf(world, myNation.slot) : 0;
     const ind = myNation ? industryOutputOf(world, myNation.slot) : 0;
+    const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
     const alive = world.nations.filter((n) => n.alive).length;
     const {date, time} = gameDate(world.time);
     return (
@@ -74,6 +90,16 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
                 className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span className="text-[10px] text-dim"
                                                                                     aria-live="polite">{alive} Powers Left</span>
             </div>
+            {lead && <>
+                <div className="w-px self-stretch bg-line-soft"/>
+                <div className="flex flex-col items-end leading-[1.15]"
+                     title="National leadership surviving — evacuate to the bunker to protect it"><span
+                    className="text-[9px] tracking-[1px] uppercase text-faint">Leadership</span><span
+                    className="text-sm font-bold font-mono"
+                    style={{color: leadColor(lead.pct)}}>{lead.pct}%</span><span
+                    className="text-[10px] text-dim" aria-live="polite">{leadSub(lead)}</span>
+                </div>
+            </>}
             {onPanel && <>
                 <div className="w-px self-stretch bg-line-soft"/>
                 <div className="flex gap-[5px] flex-none">
