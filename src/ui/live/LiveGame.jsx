@@ -259,12 +259,13 @@ export default function LiveGame({
         return {pan, gain: Math.max(0.35, 1 - off * 0.8)};
     };
 
-    // Battle audio: every fresh engine event gets a synthesized cue. Impacts and
-    // intercepts are world-scale (the news gets out); launches and MIRV splits
-    // only sound if my sensors actually saw them — fog of war has ears too.
+    // Battle audio: every fresh engine event gets a synthesized cue. Impacts are
+    // world-scale (the news gets out); launches and MIRV splits only sound if my
+    // sensors actually saw them — fog of war has ears too. Successful interceptor
+    // kills (the "intercept" event) are intentionally silent — the visual flash
+    // still plays, but by request they carry no sound.
     const eventSound = (e) => {
         const WORLD = {
-            intercept: "intercept",
             miss: "miss",
             fizzle: "fizzle",
             hit: "boom",
