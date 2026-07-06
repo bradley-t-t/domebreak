@@ -1138,10 +1138,13 @@ export default function LiveGame({
                 {meBadge}
             </div>
 
-            {/* Top command bar + news ticker share one centred lane that reserves
-                gutters for the left nation panel and the right corner controls, so
-                the bar can never crowd the globe/help/menu buttons. */}
-            <div className="absolute top-4 left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none max-[1300px]:left-4 max-[1300px]:right-4 [&>*]:pointer-events-auto">
+            {/* Top command bar + news ticker share one centred lane that always
+                reserves gutters for the left nation panel and the right corner
+                controls, so the bar can never crowd the globe/help/menu buttons. The
+                gutters are held at every width; LiveHud auto-scales the bar to fit the
+                lane it's given (see its measured zoom-fit), so shrinking the viewport
+                shrinks the bar instead of letting it overflow into the corners. */}
+            <div className="absolute top-4 left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
                 <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
                 <NewsTicker world={w} mySlot={mySlot}/>

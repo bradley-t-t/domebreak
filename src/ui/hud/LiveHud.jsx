@@ -1,3 +1,4 @@
+import {useLayoutEffect, useRef, useState} from "react";
 import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
@@ -57,9 +58,42 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const stab = myNation ? stabilityStatus(world, myNation.slot) : null;
     const alive = world.nations.filter((n) => n.alive).length;
     const {date, time} = gameDate(world.time);
+
+    // Adaptive fit: on smaller/laptop screens the command bar is wider than the lane
+    // its gutters leave it, so shrink the whole bar (zoom) just enough to fit rather
+    // than letting it overflow into the corner clusters. Measured, not breakpoint-based,
+    // so it adapts to any width and to content changes. zoom (not transform) also
+    // collapses the layout height, so the ticker below sits flush. natural width is
+    // recovered as scrollWidth / current-zoom, making the measure→scale loop converge
+    // in one step with no oscillation.
+    const barRef = useRef(null);
+    const scaleRef = useRef(1);
+    const [scale, setScale] = useState(1);
+    useLayoutEffect(() => {
+        const measure = () => {
+            const bar = barRef.current, lane = bar?.parentElement;
+            if (!bar || !lane) return;
+            const avail = lane.clientWidth;
+            const natural = bar.scrollWidth / (scaleRef.current || 1);
+            if (!avail || !natural) return;
+            const next = Math.min(1, avail / natural);
+            if (Math.abs(next - scaleRef.current) < 0.004) return;
+            scaleRef.current = next;
+            setScale(next);
+        };
+        measure();
+        const bar = barRef.current, lane = bar?.parentElement;
+        const ro = new ResizeObserver(measure);
+        if (bar) ro.observe(bar);
+        if (lane) ro.observe(lane);
+        return () => ro.disconnect();
+    }, []);
+
     return (
         <div
-            className="gd-livehud relative z-5 flex max-w-full flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
+            ref={barRef}
+            style={scale < 1 ? {zoom: scale} : undefined}
+            className="gd-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
             <div className="flex flex-col items-start leading-[1.15]"><span
                 className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span
                 className="text-sm font-bold font-mono">{date}</span><span
