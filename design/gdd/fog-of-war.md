@@ -1,4 +1,10 @@
-# GDD: Animated Fog of War
+<h1 align="center">Animated Fog of War</h1>
+
+<p align="center">
+  <b>A dark, animated veil that peels back around your live sensor coverage and closes in wherever contact is lost.</b>
+</p>
+
+<br />
 
 ## 1. Overview
 
@@ -77,3 +83,9 @@ from the murk for a heartbeat when your destroyer pings it, then vanishes again.
   color via `RADAR_RING_COLORS[unit.type]`.
 - (Phase 2) Fog animates in/out with coverage and honors reduced-motion.
 - (Phase 2) Space and OTH/radar rings are visually distinct on the map.
+
+<br />
+
+<p align="center">
+  <sub>Push a scout forward and the dark peels back; lose contact and the unknown closes in behind it.</sub>
+</p>

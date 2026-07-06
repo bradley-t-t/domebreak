@@ -1,4 +1,10 @@
-# Sensors & Fog of War
+<h1 align="center">Sensors & Fog of War</h1>
+
+<p align="center">
+  <b>A nation sees only what its sensors cover, and a launch warning arrives only once a radar catches the missile.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -89,3 +95,9 @@ cadence `0.25 s` (engine `step`). Defense organic-sensing = base `range` (no mul
 - Missiles you have no track on draw no trail/sprite; ones aimed at third parties you *do* cover
   draw normally.
 - AI nations acquire one OTH array in long games. `npm run lint` and `npm run build` pass.
+
+<br />
+
+<p align="center">
+  <sub>Build the fence and the klaxon sounds half a world away; skip it and the first warning is already inbound.</sub>
+</p>
