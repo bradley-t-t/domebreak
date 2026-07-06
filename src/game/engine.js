@@ -130,6 +130,7 @@ export {
     sensorsCover,
     sensedBy,
     defenseRange,
+    defenseMinRange,
     placementBlocked,
 } from "./sim/queries.js";
 

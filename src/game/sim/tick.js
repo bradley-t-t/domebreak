@@ -23,6 +23,7 @@ import {
     airborne,
     atWar,
     defenseRange,
+    defenseMinRange,
     inTerritory,
     netIncomeOf,
     placementBlocked,
@@ -382,7 +383,11 @@ export function step(w, dt) {
             if (UNITS[d.type].airSpeed && UNITS[p.type]?.ballistic) continue;
             if (inboundSlot == null || inboundSlot !== d.slot) continue;
             if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || !airborne(d)) continue;
-            if (haversine(d.lng, d.lat, p.lng, p.lat) <= defenseRange(w, d)) {
+            // Engage only within the battery's annulus: inside defenseRange (outer
+            // reach) but outside defenseMinRange (the keep-out gap for area ABMs
+            // like THAAD, which can't kill a target that's already dived in close).
+            const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
+            if (dToTarget <= defenseRange(w, d) && dToTarget >= defenseMinRange(w, d)) {
                 const dn = nationOf(w, d.slot);
                 if (dn.points <= 0 && netIncomeOf(w, d.slot) < 0) continue; // upkeep unmet — interceptors offline
                 p.tried.push(d.id);
@@ -401,11 +406,12 @@ export function step(w, dt) {
                 w.interceptors.push({
                     id: nextId(w, "i"),
                     slot: d.slot,
+                    srcType: d.type,   // firing battery type — drives the sky sprite variant
                     targetId: p.id,
                     hitProb,
                     speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1),
                     altNorm: 0,
-                    launchDist: Math.max(1, haversine(d.lng, d.lat, p.lng, p.lat)),
+                    launchDist: Math.max(1, dToTarget),
                     fromLng: d.lng,
                     fromLat: d.lat,
                     lng: d.lng,

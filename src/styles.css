@@ -1455,6 +1455,84 @@ input {
     }
 }
 
+/* THAAD hit-to-kill interceptor: a colder cyan/white exo-atmospheric dart with a
+   pulsing energy core and a bright divert-thruster flare — reads apart from the
+   green area-defense interceptors. */
+.gd-interceptor.thaad {
+    width: 8px;
+    height: 18px;
+}
+
+.gd-interceptor.thaad .gd-int-body {
+    left: 2.5px;
+    width: 3px;
+    height: 10px;
+    background: linear-gradient(180deg, #ffffff, #b8f4ff 55%, #37b6ef);
+    box-shadow: 0 0 6px rgba(120, 226, 255, 0.95);
+    animation: gdThaadCore 0.5s infinite alternate;
+}
+
+.gd-interceptor.thaad .gd-int-body::before {
+    left: -0.25px;
+    top: -4px;
+    border-left-width: 1.75px;
+    border-right-width: 1.75px;
+    border-bottom: 5px solid #ffffff;
+}
+
+.gd-interceptor.thaad .gd-int-flame {
+    left: 2.5px;
+    top: 11px;
+    width: 3px;
+    height: 8px;
+    background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff, #cdf3ff 35%, #33b4ef 75%, transparent);
+    box-shadow: 0 0 9px 2px rgba(90, 205, 255, 0.9);
+    animation: gdFlame 0.07s infinite alternate;
+}
+
+/* Kinetic-kill spark: a bright shimmering point of light riding the nose, the
+   signature "brilliant pebble" glint. */
+.gd-int-spark {
+    position: absolute;
+    left: 50%;
+    top: 1px;
+    width: 3px;
+    height: 3px;
+    margin-left: -1.5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #d6f4ff 45%, transparent 75%);
+    box-shadow: 0 0 7px 2px rgba(150, 232, 255, 0.95);
+    animation: gdThaadSpark 0.32s infinite alternate;
+}
+
+@keyframes gdThaadCore {
+    from {
+        box-shadow: 0 0 5px rgba(120, 226, 255, 0.75);
+    }
+    to {
+        box-shadow: 0 0 10px 1px rgba(160, 238, 255, 1);
+    }
+}
+
+@keyframes gdThaadSpark {
+    from {
+        opacity: 0.55;
+        transform: scale(0.7);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1.25);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-interceptor.thaad .gd-int-body,
+    .gd-interceptor.thaad .gd-int-flame,
+    .gd-int-spark {
+        animation: none;
+    }
+}
+
 /* missile impact explosion (fireball + shockwave) */
 .gd-explosion {
     position: relative;
