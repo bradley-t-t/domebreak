@@ -4,7 +4,8 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {armamentOf, FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import "./SelectionPanel.css";
 
 export default function SelectionPanel({
                                            selectedUnit,
@@ -24,6 +25,9 @@ export default function SelectionPanel({
                                        }) {
     const def = UNITS[selectedUnit.type];
     const hpFrac = Math.max(0, Math.min(1, selectedUnit.hp / def.hp));
+    // Strategic launchers draw from the nation arsenal — surface the round they
+    // fire (ICBM / Hypersonic Glide Vehicle) as a plain armament line.
+    const armament = armamentOf(selectedUnit.type);
     return (
         <div className="gd-selpanel">
             <div className="gd-selname"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
@@ -40,12 +44,15 @@ export default function SelectionPanel({
             <div className="gd-hp">
                 <div className="gd-hp-row"><span>Integrity</span><b>{Math.round(selectedUnit.hp)}/{def.hp}</b>
                 </div>
-                <div className="gd-hp-bar"><i className={hpFrac <= 0.35 ? "low" : ""}
-                                              style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
+                <div className="gd-hp-bar" role="progressbar" aria-label="Integrity"
+                     aria-valuenow={Math.round(hpFrac * 100)} aria-valuemin={0} aria-valuemax={100}>
+                    <i className={hpFrac <= 0.35 ? "low" : ""}
+                       style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
             </div>
             <div className="gd-detail-grid gd-selstats">
                 {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
             </div>
+            {armament && <p className="gd-sel-armament">Armament: {armament}</p>}
             {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
                 ? <button className="gd-btn" onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
                 : <button className={`gd-btn ${moving === selectedUnit.id ? "primary" : ""}`} onClick={() => {
@@ -70,7 +77,10 @@ export default function SelectionPanel({
                                         <span className="gd-wing-name">{labelOf(at, mySlot)}</span>
                                         {airborne > 0 && <span className="gd-wing-air">{airborne}▲</span>}
                                         <span className="gd-wing-count">{stock}/{cap}</span>
+                                        {!full &&
+                                            <span className="gd-wing-x5" aria-hidden="true">⇧×5</span>}
                                         <button className="gd-wing-add" disabled={full}
+                                                aria-label={full ? `${labelOf(at, mySlot)} hangar full` : `Order ${labelOf(at, mySlot)} — ${UNITS[at].cost} points, ${UNITS[at].buildTime}s. Shift-click orders five.`}
                                                 title={full ? "The hangar is at capacity for that type." : `Order one — ◆ ${UNITS[at].cost}, ${UNITS[at].buildTime}s on the line. Shift-click: ×5.`}
                                                 onClick={(e) => {
                                                     // Shift-click orders five; capacity/points stop the run early.
@@ -113,15 +123,22 @@ export default function SelectionPanel({
                             );
                         })()}
                         <div className="gd-wing-head">Fighter Patrol</div>
+                        <p className="gd-patrol-summary">
+                            {(selectedUnit.patrolSize || 0) === 0 ? "Patrol Stood Down" : `${selectedUnit.patrolSize}-Ship CAP`}
+                            {" · "}AWACS {selectedUnit.awacsPatrol ? "On" : "Off"}
+                        </p>
                         <div className="gd-seg gd-patrol-seg">
                             {PATROL_SIZES.map((n) => (
                                 <button key={n} className={(selectedUnit.patrolSize || 0) === n ? "active" : ""}
+                                        aria-pressed={(selectedUnit.patrolSize || 0) === n}
+                                        aria-label={n === 0 ? "Stand patrol down" : `Keep a ${n}-ship patrol on station`}
                                         title={n === 0 ? "Stand the patrol down." : `Keep a ${n}-ship on station.`}
                                         onClick={() => api.setPatrolSize(selectedUnit.id, n)}>{n === 0 ? "Off" : `${n}-Ship`}</button>
                             ))}
                         </div>
                         {hangarCapOf(selectedUnit.type, "awacs") > 0 && (
                             <button className={`gd-btn ${selectedUnit.awacsPatrol ? "primary" : ""}`}
+                                    aria-pressed={!!selectedUnit.awacsPatrol}
                                     disabled={!selectedUnit.awacsPatrol && (selectedUnit.hangar?.awacs ?? 0) === 0 && w.units.filter((x) => x.baseId === selectedUnit.id && x.type === "awacs" && x.hp > 0).length === 0}
                                     title={(selectedUnit.hangar?.awacs ?? 0) === 0 ? "No AWACS available — order one above." : "A wide surveillance orbit over the base."}
                                     onClick={() => api.setAwacsPatrol(selectedUnit.id)}>{selectedUnit.awacsPatrol ? "AWACS Patrol · On" : "AWACS Patrol · Off"}</button>
@@ -142,6 +159,8 @@ export default function SelectionPanel({
                                 const cur = (selectedUnit.warhead || "standard") === k;
                                 return <button key={k} className={`gd-wh-chip ${cur ? "on" : ""}`}
                                                style={{["--flame"]: wh.flame}}
+                                               aria-pressed={cur}
+                                               aria-label={`${wh.name} — ${stock} in stock`}
                                                title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
                                                onClick={() => api.setWarhead(selectedUnit.id, k)}><span
                                     className="gd-wh-dot"/>{wh.short}<b>{stock}</b></button>;

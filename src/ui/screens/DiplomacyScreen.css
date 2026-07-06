@@ -1,0 +1,11 @@
+/* Rank column: prepend a narrow leading column to the roster grid. Scoped so it
+   overrides the base 7-column .gd-dip-row template from styles.css without
+   touching the global stylesheet. In-house style — mono numerals, dim tone,
+   no new colors. */
+.gd-dip-ranked .gd-dip-row {
+    grid-template-columns: 52px minmax(200px, 2fr) 96px 76px 76px 88px 116px 150px;
+}
+
+.gd-dip-ranked .gd-dip-row .gd-dip-rank {
+    color: var(--faint);
+}

@@ -82,11 +82,13 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
                 <h1 className="gd-menu-title sm">War Room</h1>
                 {revertErr && <p className="gd-friends-err">War server unreachable — try again.</p>}
 
-                <div className="gd-lobby-members">
+                <div className="gd-lobby-members" role="list" aria-label="War room roster">
                     {members.map((m) => {
                         const own = me?.id === m.userId;
+                        const rowLabel = `Slot ${m.slot + 1} — ${m.username || "Commander"} — ${m.iso || "no nation chosen"} — ${m.ready ? "ready" : "not ready"}`;
                         return (
-                            <div key={m.userId ?? `bot-${m.slot}`} className={`gd-lobby-row ${m.ready ? "ready" : ""}`}>
+                            <div key={m.userId ?? `bot-${m.slot}`} className={`gd-lobby-row ${m.ready ? "ready" : ""}`}
+                                 role="listitem" aria-label={rowLabel}>
                                 <span className="gd-lobby-slot">{m.slot + 1}</span>
                                 <Flag iso={m.iso}/>
                                 <span className="gd-lobby-name">{m.username}</span>
@@ -100,6 +102,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
                                 ) : <span className="gd-lobby-select-static">{m.iso || "…"}</span>}
                                 {own ? (
                                     <button className={`gd-lobby-ready ${m.ready ? "on" : ""}`}
+                                            aria-pressed={m.ready}
                                             onClick={() => setReady(!m.ready)}>
                                         {m.ready ? "Ready" : "Not Ready"}
                                     </button>

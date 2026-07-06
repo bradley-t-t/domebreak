@@ -12,9 +12,10 @@ export default function AmmoBar({nation}) {
                 const n = nation.ammo?.[t] ?? 0;
                 return (
                     <span key={t} className={`gd-ammo-chip ${n === 0 ? "empty" : ""}`}
+                          role="img" aria-label={`${WARHEADS[t].name} warheads: ${n}`}
                           title={`${WARHEADS[t].name} warheads in stockpile: ${n}`}>
                         <UnitIcon name={WARHEAD_ICON[t]} color={WARHEADS[t].flame} size={13}/>
-                        <b>{n}</b>
+                        <b aria-hidden="true">{n}</b>
                     </span>
                 );
             })}

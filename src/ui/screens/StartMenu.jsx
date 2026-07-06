@@ -30,15 +30,16 @@ export default function StartMenu({
                 <div className="gd-commander-strip">
                     <div className="gd-commander-id">
                         <span className="gd-commander-name">{profile?.username || "—"}</span>
-                        <button className="gd-commander-signout" onClick={onSignOut}>Sign Out</button>
+                        <button className="gd-commander-signout" onClick={onSignOut}
+                                aria-label="Sign out of commander account">Sign Out</button>
                     </div>
                     <div className="gd-commander-since">{profile ? `Commander since ${since || "—"}` : "—"}</div>
-                    <div className="gd-commander-stats">
-                        <span>{stats ? `${stats.wins}W` : "—"}</span>
-                        <span>{stats ? `${stats.losses}L` : "—"}</span>
-                        <span>{stats ? `${total} Matches` : "—"}</span>
-                        <span>{stats ? `${winRate}% Win Rate` : "—"}</span>
-                        <span>{hours != null ? `${hours}h Playtime` : "—"}</span>
+                    <div className="gd-commander-stats" role="group" aria-label="Career record">
+                        <span title="Wins" aria-label={stats ? `${stats.wins} wins` : "Wins — unavailable"}>{stats ? `${stats.wins}W` : "—"}</span>
+                        <span title="Losses" aria-label={stats ? `${stats.losses} losses` : "Losses — unavailable"}>{stats ? `${stats.losses}L` : "—"}</span>
+                        <span title="Total matches played" aria-label={stats ? `${total} matches played` : "Matches — unavailable"}>{stats ? `${total} Matches` : "—"}</span>
+                        <span title="Win rate" aria-label={stats ? `${winRate} percent win rate` : "Win rate — unavailable"}>{stats ? `${winRate}% Win Rate` : "—"}</span>
+                        <span title="Total time in command" aria-label={hours != null ? `${hours} hours playtime` : "Playtime — unavailable"}>{hours != null ? `${hours}h Playtime` : "—"}</span>
                     </div>
                 </div>
                 <div className="gd-menu-btns">
