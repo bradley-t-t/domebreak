@@ -176,6 +176,7 @@ export {hangarCapOf} from "./sim/aircraft.js";
 
 export {
     shelterLeadership,
+    releaseLeadership,
     leadershipStatus,
     leadershipPct,
     commandFactor,

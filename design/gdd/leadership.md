@@ -100,6 +100,19 @@ leaders are gone for good.
   income (and, when `LEADERSHIP.penalizeResearch` is true, to research speed):
   low Leadership means a less effective state, never a dead one.
 
+### 3.7 Releasing leadership (reverse airlift)
+- The Leadership Bunker's selection panel (bottom-right) shows the leadership stats
+  plus **Shelter Leadership** and **Release Leadership** actions.
+- **Release Leadership** runs the airlift in reverse: transports fly
+  **airstrip → bunker → city → home**, pulling sheltered leaders out of the bunker
+  and redistributing them across the nation's living cities (capital-first, spread
+  toward the emptiest so cities repopulate evenly). It uses the same whole-fleet,
+  multi-airstrip controller and tuning as sheltering.
+- Release is only available while leaders are actually sheltered. Sheltering and
+  releasing are mutually exclusive modes; starting one supersedes the other.
+- Cargo that can't be delivered (its destination city died mid-flight) is kept safe
+  back in the bunker rather than lost — releasing never costs Leadership by itself.
+
 ## 4. Formulas
 
 Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
@@ -195,5 +208,9 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
    drops by that amount); a destroyed bunker loses all sheltered tokens.
 7. Income (and research if enabled) scales by the command factor: at 50%
    Leadership with `commandFloor 0.5`, output multiplier is 0.75.
-8. `npm run lint` is clean (0 errors) and `npm run build` succeeds; behavior is
+8. The bunker's selection panel offers **Release Leadership**; pressing it flies
+   sheltered leaders back out to living cities (capital-first, spread), empties the
+   bunker, loses nothing, and clears when done. Release is disabled with no
+   sheltered leaders.
+9. `npm run lint` is clean (0 errors) and `npm run build` succeeds; behavior is
    verified in the Electron build.

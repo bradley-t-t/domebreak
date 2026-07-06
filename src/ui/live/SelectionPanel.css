@@ -36,3 +36,13 @@
     letter-spacing: 0.4px;
     color: var(--dim);
 }
+
+/* Leadership controls shown when the Leadership Bunker is selected: a small stat
+   grid plus the Shelter / Release actions, spaced like the rest of the panel. */
+.gd-lead-panel {
+    margin-top: 8px;
+}
+
+.gd-lead-panel .gd-btn {
+    margin-top: 6px;
+}
