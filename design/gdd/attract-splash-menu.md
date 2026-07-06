@@ -32,6 +32,13 @@ world already at war; signing in feels like taking command mid-crisis.
 - The layer is pure scenery: `pointer-events: none`, `aria-hidden`, no sound,
   omniscient event view (no per-slot visibility filtering).
 - A SITREP ticker (fronts / strikes / intercepts) runs along the bottom edge.
+- **Start-menu command rail:** on the menu the chrome is not a centered panel
+  but a slim left-anchored console (title, primary actions, commander dossier,
+  credits) on a glass backing that fades to transparent before the globe's
+  center — nothing overlays the globe. To keep the sphere clear of the rail the
+  attract map takes a left projection padding (`framed`) that recenters the
+  globe into the open right area. The login screen keeps its centered card
+  (no rail, no offset).
 - Reduced motion (OS preference or in-game toggle): the attract sim does not
   mount (static vignette backdrop stands in) and splash cards hold ~1.3s with
   no fades. Splash remains skippable.
@@ -40,6 +47,8 @@ world already at war; signing in feels like taking command mid-crisis.
 
 - Fronts = unique war pairs across nation relations.
 - Camera drift: +0.0045° longitude per frame (~16 min per revolution).
+- Menu globe offset: left projection padding of 340px (`RAIL_PAD`) shifts the
+  globe center ~170px right of the viewport center, clear of the 384px rail.
 
 ## Edge Cases
 
@@ -48,6 +57,9 @@ world already at war; signing in feels like taking command mid-crisis.
   cast and seed.
 - Explosion event backlog capped: the seen-set resets past 500 entries,
   mirroring LiveGame.
+- Map initialized before its container has size (e.g. mounted while laying out)
+  → the attract map calls `resize()` on load so the globe never sticks at the
+  GL 400×300 fallback.
 
 ## Dependencies
 
@@ -59,7 +71,8 @@ orchestration of a throwaway world.
 ## Tuning Knobs
 
 `CAST_SIZE`, `SIM_SPEED`, `OPENING_FRONTS`, `ESCALATE_MS`,
-`DRIFT_LNG_PER_FRAME` (src/ui/live/AttractSim.jsx); splash hold times
+`DRIFT_LNG_PER_FRAME`, `RAIL_PAD` (src/ui/live/AttractSim.jsx); rail width and
+glass fade (`.gd-menu-rail` in src/styles.css); splash hold times
 (src/ui/screens/SplashSequence.jsx).
 
 ## Acceptance Criteria
@@ -68,7 +81,10 @@ orchestration of a throwaway world.
 - Menu and login render over a visibly active war (missile trails, intercept
   flashes) within ~20s of mount; SITREP counters increase over time.
 - No pointer interaction reaches the background map from menu or login.
-- With reduced motion enabled, no sim mounts and no splash fades play.
+- On the menu, the command rail is left-anchored and nothing covers the globe's
+  center; the globe sits offset in the clear right area and keeps rotating.
+- With reduced motion enabled, no sim mounts and no splash fades play (and the
+  rail's status-dot blink and slide-in are disabled).
 - `npm run lint` 0 errors; `npm run build` passes; real gameplay unaffected.
 
 <br />

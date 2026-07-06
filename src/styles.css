@@ -211,6 +211,30 @@ input {
     border-color: var(--ink);
 }
 
+/* mini buttons (Load/Save/Delete) inherit the card's light paper theme,
+   not the dark HUD gradient — otherwise dark text lands on a dark box */
+.gd-card .gd-mini {
+    background: var(--btn-bg);
+    border-color: var(--line);
+    color: var(--text);
+}
+
+.gd-card .gd-mini:hover:not(:disabled) {
+    border-color: var(--ink);
+}
+
+.gd-card .gd-mini.danger {
+    background: var(--btn-bg);
+    border-color: rgba(224, 87, 79, 0.5);
+    color: var(--danger);
+}
+
+.gd-card .gd-mini.danger:hover:not(:disabled) {
+    background: rgba(224, 87, 79, 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
 .gd-card .gd-menu-title {
     color: var(--text);
 }
@@ -539,11 +563,10 @@ input {
 }
 
 /* ---- live real-time command bar ---- */
+/* Positioned by its .gd-tophud lane wrapper (which reserves the side gutters),
+   so the bar itself is a plain in-flow flex row now — no viewport centring. */
 .gd-livehud {
-    position: absolute;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: relative;
     z-index: 5;
     display: flex;
     align-items: center;
@@ -555,7 +578,43 @@ input {
     box-shadow: var(--shadow), inset 0 1px 0 var(--hair);
     backdrop-filter: blur(14px);
     pointer-events: auto;
-    animation: gdDropIn 300ms var(--ease-drawer);
+    animation: gdDropInY 300ms var(--ease-drawer);
+}
+
+/* Top lane: centres the command bar + ticker in the gap between the left nation
+   panel and the right corner controls, so neither can ever be overlapped. The
+   wrapper is click-through; only the bars inside catch the pointer. */
+.gd-tophud {
+    position: absolute;
+    top: 16px;
+    left: 272px;   /* clear the left nation panel (246 + margins) */
+    right: 372px;  /* clear the right controls (ammo + globe/help/menu + badge) */
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    pointer-events: none;
+}
+
+.gd-tophud > * {
+    pointer-events: auto;
+}
+
+@keyframes gdDropInY {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+}
+
+/* Small windows can't afford the wide side gutters — fall back to near-full-width
+   centring (the pre-lane behaviour) and let the nav collapse to icons handle fit. */
+@media (max-width: 1300px) {
+    .gd-tophud {
+        left: 16px;
+        right: 16px;
+    }
 }
 
 @keyframes gdDropIn {
@@ -2112,10 +2171,192 @@ input {
     color: var(--danger);
 }
 
+/* Sub-panel heading (Single Player / Multiplayer) above its options. */
+.gd-menu-section {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.8;
+    padding: 0 2px 2px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--line);
+}
+
+/* Back link out of a sub-panel: quieter than a mode button. */
+.gd-menu-btn.back {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-dim, var(--text));
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.gd-menu-btn.back:hover,
+.gd-menu-btn.back:focus-visible {
+    opacity: 1;
+    border-color: var(--line);
+    color: var(--text);
+}
+
 .gd-menu-foot {
     margin-top: 30px;
     color: var(--faint);
     font-size: 11px;
+}
+
+/* ================= main menu: left command rail ================= */
+/* The attract war plays uncovered on the globe; every control lives in this
+   left-anchored console. Scoped under .framed so other .gd-menu-screen users
+   (login, lobby, multiplayer, new game) keep their centered card. */
+.gd-menu-screen.framed {
+    display: block;
+    place-items: initial;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* Edge-weighted scrim biased right-of-center: darkens the far corners while the
+   offset globe stays bright. */
+.gd-menu-screen.framed .gd-menu-bg {
+    background: radial-gradient(ellipse 120% 100% at 66% 46%, transparent 46%, rgba(4, 6, 9, 0.42) 82%, rgba(4, 6, 9, 0.72) 100%);
+}
+
+.gd-menu-rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 384px;
+    max-width: 84vw;
+    display: flex;
+    flex-direction: column;
+    padding: 46px 46px 26px 40px;
+    text-align: left;
+    pointer-events: none; /* let the cleared globe breathe; controls opt back in */
+    animation: gdRailIn 520ms var(--ease-out) both;
+}
+
+/* Fading glass backing — opaque at the left edge, gone before the globe center.
+   Sits behind the content so text and buttons stay crisp over the war. */
+.gd-menu-rail::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(7, 9, 13, 0.82) 0%, rgba(7, 9, 13, 0.58) 52%, rgba(7, 9, 13, 0) 100%);
+    backdrop-filter: blur(9px) saturate(1.1);
+    -webkit-backdrop-filter: blur(9px) saturate(1.1);
+    -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 58%, transparent 100%);
+}
+
+/* Corner tick frames the console like a reticle. */
+.gd-menu-rail::after {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 16px;
+    height: 16px;
+    border-top: 1px solid var(--line-soft);
+    border-left: 1px solid var(--line-soft);
+}
+
+.gd-rail-top {
+    margin-bottom: 34px;
+}
+
+.gd-rail-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 16px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-rail-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 7px var(--danger);
+    animation: gdBlink 2.4s var(--ease-in-out) infinite;
+}
+
+.gd-menu-rail .gd-menu-title {
+    font-size: 46px;
+    letter-spacing: 8px;
+    line-height: 0.96;
+    color: var(--dim);
+}
+
+.gd-menu-rail .gd-menu-title span {
+    display: block;
+}
+
+.gd-menu-rail .gd-menu-tag {
+    margin: 12px 0 0;
+}
+
+.gd-menu-rail .gd-menu-btns {
+    width: 100%;
+    margin: 0 0 22px;
+    gap: 9px;
+    pointer-events: auto;
+}
+
+.gd-menu-rail .gd-menu-btn {
+    text-align: left;
+}
+
+.gd-menu-rail .gd-commander-strip {
+    width: 100%;
+    margin: 0;
+    pointer-events: auto;
+}
+
+.gd-menu-rail .gd-menu-foot {
+    margin: auto 0 0;
+    max-width: 300px;
+    font-size: 10px;
+    line-height: 1.6;
+    pointer-events: auto;
+}
+
+@keyframes gdRailIn {
+    from {
+        opacity: 0;
+        transform: translateX(-18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes gdBlink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.28;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-menu-rail {
+        animation: none;
+    }
+
+    .gd-rail-dot {
+        animation: none;
+    }
 }
 
 .gd-newgame {
@@ -2632,7 +2873,7 @@ input[type="range"] {
 
 /* ---- HUD date + population cells ---- */
 .gd-livehud {
-    max-width: 96vw;
+    max-width: 100%;     /* stay within the .gd-tophud lane */
     flex-wrap: nowrap;   /* one row — the command nav must never wrap below the stats */
     white-space: nowrap;
 }
@@ -2714,10 +2955,11 @@ input[type="range"] {
     line-height: 1;
 }
 
-/* Tight windows: the stats + 7 speed buttons + nav can't all fit one row with
-   full nav labels, so drop the nav to icon-only (name kept in title/aria-label)
-   rather than letting the bar wrap. Labels return when there's room. */
-@media (max-width: 1240px) {
+/* Below the width where the full-label bar fits its lane between the side panel
+   and the corner controls, drop the nav to icon-only (name kept in title/aria-
+   label) rather than letting the bar wrap or crowd the corner. Labels return on
+   wider displays where there's room. */
+@media (max-width: 1560px) {
     .gd-navbtn {
         padding: 6px 9px;
     }
@@ -5042,5 +5284,428 @@ input[type="range"] {
 @media (max-width: 640px) {
     .gd-controls-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================= *
+ * Nation panel (left dock) + News ticker (top-bar extension)    *
+ * ============================================================= */
+
+.gd-natpanel {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 5;
+    width: 246px;
+    max-height: calc(100vh - 132px);
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow), inset 0 1px 0 var(--hair);
+    backdrop-filter: blur(14px);
+    pointer-events: auto;
+    overflow: hidden;
+    animation: gdDropIn 300ms var(--ease-drawer);
+}
+
+.gd-natpanel.collapsed {
+    width: 246px;
+}
+
+.gd-natpanel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-flag {
+    width: 26px;
+    height: 18px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--line);
+    flex: 0 0 auto;
+}
+
+.gd-natpanel-id {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    min-width: 0;
+    flex: 1;
+}
+
+.gd-natpanel-name {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gd-natpanel-tag {
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-collapse {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--dim);
+    font-size: 11px;
+    flex: 0 0 auto;
+    transition: border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+
+.gd-natpanel-collapse:hover {
+    color: var(--text);
+    border-color: var(--line-soft);
+}
+
+.gd-natpanel-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--hair);
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 12px;
+    background: var(--panel);
+}
+
+.gd-natpanel-sl {
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-sv {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.gd-natpanel-sv.neg {
+    color: var(--red);
+}
+
+.gd-natpanel-of {
+    color: var(--faint);
+    font-weight: 400;
+    font-size: 12px;
+}
+
+.gd-natpanel-ind {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-ind-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.gd-natpanel-ind-v {
+    font-family: var(--display);
+    font-size: 12.5px;
+    color: var(--dim);
+}
+
+.gd-natpanel-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--hair);
+    overflow: hidden;
+}
+
+.gd-natpanel-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--dim), var(--text));
+    transition: width 400ms var(--ease-out);
+}
+
+.gd-natpanel-terr-h {
+    padding: 9px 12px 5px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-terr {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 6px 8px;
+}
+
+.gd-terr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms var(--ease-out);
+}
+
+.gd-terr-row:hover {
+    background: var(--hair);
+}
+
+.gd-terr-row.dead {
+    opacity: 0.55;
+}
+
+.gd-terr-main {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.gd-terr-name {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 132px;
+}
+
+.gd-terr-state {
+    font-size: 10px;
+    color: var(--faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 132px;
+}
+
+.gd-terr-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex: 0 0 auto;
+}
+
+.gd-terr-pop {
+    font-family: var(--display);
+    font-size: 11.5px;
+    color: var(--dim);
+}
+
+.gd-terr-pill {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--dim);
+}
+
+.gd-terr-pill.secure {
+    color: var(--dim);
+    border-color: var(--line);
+}
+
+.gd-terr-pill.strained {
+    color: #d79a3f;
+    border-color: rgba(215, 154, 63, 0.5);
+}
+
+.gd-terr-pill.critical {
+    color: var(--red);
+    border-color: rgba(224, 87, 79, 0.5);
+}
+
+.gd-terr-pill.lost {
+    color: var(--faint);
+    border-color: var(--line);
+}
+
+.gd-terr-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 12px;
+}
+
+/* News ticker — a scrolling strip tucked beneath the centred top bar. */
+.gd-ticker {
+    z-index: 4;
+    display: flex;
+    align-items: stretch;
+    width: min(720px, 100%);   /* capped to the .gd-tophud lane, centred by it */
+    height: 28px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+    pointer-events: auto;
+    animation: gdDropInY 340ms var(--ease-drawer);
+}
+
+.gd-ticker-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 11px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    flex: 0 0 auto;
+}
+
+.gd-ticker-tag::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: gdPulse 2s ease-in-out infinite;
+}
+
+@keyframes gdPulse {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.gd-ticker-window {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.gd-ticker-track {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    animation-name: gdTickerScroll;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform;
+}
+
+.gd-ticker:hover .gd-ticker-track {
+    animation-play-state: paused;
+}
+
+.gd-ticker-run {
+    display: inline-flex;
+    flex-wrap: nowrap;
+}
+
+.gd-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.gd-ticker-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--faint);
+    flex: 0 0 auto;
+}
+
+.gd-ticker-item.info .gd-ticker-dot {
+    background: var(--faint);
+}
+
+.gd-ticker-item.good {
+    color: var(--text);
+}
+
+.gd-ticker-item.good .gd-ticker-dot {
+    background: var(--text);
+}
+
+.gd-ticker-item.alert .gd-ticker-dot {
+    background: #d79a3f;
+}
+
+.gd-ticker-item.danger {
+    color: #f0a39d;
+}
+
+.gd-ticker-item.danger .gd-ticker-dot {
+    background: var(--red);
+    box-shadow: 0 0 5px rgba(224, 87, 79, 0.8);
+}
+
+.gd-ticker-idle {
+    padding: 0 16px;
+    font-size: 12px;
+    color: var(--faint);
+}
+
+@keyframes gdTickerScroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* Motion-sensitive users: freeze the scroll, show the latest headlines static. */
+@media (prefers-reduced-motion: reduce) {
+    .gd-ticker-track {
+        animation: none;
+    }
+
+    .gd-ticker-run:nth-child(2) {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .gd-natpanel {
+        width: 210px;
+    }
+
+    .gd-ticker {
+        display: none;
     }
 }
