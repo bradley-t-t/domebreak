@@ -681,7 +681,9 @@ export function step(w, dt) {
     // projectile (was O(projectiles × all units), the hot loop at full-world scale).
     const defBySlot = new Map();
     for (const d of w.units) {
-        if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
+        // Fighters flying a leadership escort are not air-defense batteries — skip
+        // them so they hold formation instead of peeling off to fire interceptors.
+        if (d.hp <= 0 || UNITS[d.type].kind !== "defense" || d.mission?.role === "leadershipEscort") continue;
         let arr = defBySlot.get(d.slot);
         if (!arr) defBySlot.set(d.slot, arr = []);
         arr.push(d);

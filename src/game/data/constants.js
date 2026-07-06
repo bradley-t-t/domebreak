@@ -156,6 +156,9 @@ export const LEADERSHIP = {
     loadSec: 4,                 // ground delay loading leaders at a city
     unloadSec: 4,               // ground delay unloading at the bunker
     transportsPerAirstrip: 3,   // concurrent ferry transports each airstrip flies
+    launchGapSec: 2.5,          // min seconds between successive takeoffs from ONE airstrip (queue, not all-at-once)
+    escortsPerFerry: 2,         // patrol fighters scrambled to escort each leadership ferry
+    escortOffsetKm: 7,          // formation stand-off the escorts hold off the ferry
     arriveKm: 12,               // distance to count a ferry "arrived" at a waypoint
     commandFloor: 0.5,          // national output multiplier at 0% Leadership (1.0 at 100%)
     penalizeResearch: true,     // scale research speed by the command factor too
