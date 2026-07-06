@@ -119,7 +119,9 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
             x: head[0],
             y: head[1],
             deg: (dx || dy) ? (Math.atan2(dx, -dy) * 180) / Math.PI : 0,
-            kind: "interceptor"
+            kind: "interceptor",
+            // THAAD hit-to-kill vehicles get their own cyan sprite + animation.
+            variant: it.srcType === "thaad" ? "thaad" : ""
         });
     }
 
@@ -137,8 +139,9 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
                         ? <div className="gd-missile"><span className="gd-missile-glow"/><span
                             className="gd-missile-body"/><span className="gd-missile-flame"/></div>
                         :
-                        <div className="gd-interceptor"><span className="gd-int-body"/><span className="gd-int-flame"/>
-                        </div>}
+                        <div className={`gd-interceptor ${h.variant || ""}`}><span className="gd-int-body"/><span
+                            className="gd-int-flame"/>{h.variant === "thaad" &&
+                            <span className="gd-int-spark"/>}</div>}
                 </div>
             ))}
         </>
