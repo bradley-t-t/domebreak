@@ -1729,6 +1729,91 @@ input {
     }
 }
 
+/* ---- radioactive fallout: animated cloud epicenter ---- */
+/* --i (0..1) is the live cloud intensity from the sim: it fades the whole
+   epicenter in as the cloud ramps and out as it decays. */
+.gd-fallout {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    pointer-events: none;
+    opacity: calc(0.25 + 0.75 * var(--i, 1));
+}
+
+.gd-fallout span {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+}
+
+.gd-fallout-glow {
+    background: radial-gradient(circle, rgba(160, 255, 74, 0.5) 0%, rgba(120, 220, 40, 0.22) 42%, rgba(90, 180, 30, 0) 72%);
+    animation: gdFalloutGlow 2.4s ease-in-out infinite;
+}
+
+.gd-fallout-ring {
+    border: 1px solid rgba(182, 255, 92, 0.75);
+    box-shadow: 0 0 6px rgba(140, 255, 58, 0.5);
+    animation: gdFalloutRing 2.8s ease-out infinite;
+}
+
+.gd-fallout-ring.two {
+    animation-delay: 1.4s;
+}
+
+.gd-fallout-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    color: #c9ff7a;
+    text-shadow: 0 0 5px rgba(140, 255, 58, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+    animation: gdFalloutCore 2.4s ease-in-out infinite;
+}
+
+@keyframes gdFalloutGlow {
+    0%, 100% {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
+@keyframes gdFalloutRing {
+    0% {
+        transform: scale(0.35);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes gdFalloutCore {
+    0%, 100% {
+        transform: scale(0.95);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-fallout-glow, .gd-fallout-ring, .gd-fallout-ring.two, .gd-fallout-core {
+        animation: none;
+    }
+    .gd-fallout-ring {
+        opacity: 0.4;
+    }
+}
+
 /* ================= game shell: menus, context, pins, details ================= */
 .gd-app {
     position: relative;
@@ -3883,6 +3968,96 @@ input[type="range"] {
     .gd-menu-btn::before,
     .gd-menu-btn::after {
         transition: none;
+    }
+}
+
+/* ================= in-game loading veil ================= */
+/* Covers the map from mount until the tiles settle, so the world is only
+   revealed once it's fully drawn and already framed on the player's capital. */
+.gd-boot {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 120% at 50% 42%, #0b0e13 0%, #05070b 72%);
+    transition: opacity 520ms var(--ease-out);
+}
+
+.gd-boot.gone {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gd-boot-inner {
+    text-align: center;
+    animation: gdRowIn 500ms var(--ease-out) both;
+}
+
+.gd-boot-flag {
+    font-size: 30px;
+    border-radius: 3px;
+    box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.7);
+}
+
+.gd-boot-title {
+    margin-top: 16px;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+.gd-boot-sub {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+
+.gd-boot-bar {
+    width: 190px;
+    height: 2px;
+    margin: 22px auto 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.gd-boot-bar i {
+    display: block;
+    height: 100%;
+    width: 38%;
+    background: linear-gradient(90deg, transparent, var(--text), transparent);
+    animation: gdBootScan 1.15s ease-in-out infinite;
+}
+
+@keyframes gdBootScan {
+    from {
+        transform: translateX(-130%);
+    }
+    to {
+        transform: translateX(330%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-boot {
+        transition: none;
+    }
+
+    .gd-boot-inner {
+        animation: none;
+    }
+
+    .gd-boot-bar i {
+        animation: none;
+        width: 100%;
+        opacity: 0.4;
     }
 }
 
