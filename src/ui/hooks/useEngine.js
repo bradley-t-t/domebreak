@@ -17,6 +17,7 @@ import {
     setPatrolSize,
     setSail,
     setWarhead,
+    shelterLeadership,
     step,
     stopSail,
     unqueueResearch
@@ -148,6 +149,11 @@ export function useEngine(world) {
         },
         disembark: (transportId, lng, lat) => {
             const r = disembark(ref.current, ref.current.mySlot, transportId, lng, lat);
+            force();
+            return r;
+        },
+        shelterLeadership: () => {
+            const r = shelterLeadership(ref.current, ref.current.mySlot);
             force();
             return r;
         },

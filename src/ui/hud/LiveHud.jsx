@@ -1,4 +1,4 @@
-import {gdpOf, industryOutputOf, netIncomeOf, populationOf} from "../../game/engine.js";
+import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtNet, fmtPop} from "../common/format.js";
@@ -15,6 +15,23 @@ function gameDate(t) {
     };
 }
 
+// Leadership readout colour + one-word status, by surviving-command percent and
+// current exposure (see design/gdd/leadership.md).
+function leadColor(pct) {
+    if (pct == null) return undefined;
+    if (pct >= 67) return "#46d38a";
+    if (pct >= 34) return "#ffb020";
+    return "#ff3b3b";
+}
+
+function leadSub(lead) {
+    if (!lead) return "";
+    if (lead.exposed && lead.atWar) return lead.evac ? "Evacuating" : "Exposed";
+    if (lead.inTransit > 0) return "Evacuating";
+    if (lead.sheltered > 0) return "Sheltered";
+    return "Secure";
+}
+
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
     {id: "production", label: "Production", glyph: "▣"},
@@ -28,6 +45,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const pop = myNation ? populationOf(world, myNation.slot) : 0;
     const gdp = myNation ? gdpOf(world, myNation.slot) : 0;
     const ind = myNation ? industryOutputOf(world, myNation.slot) : 0;
+    const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
     const alive = world.nations.filter((n) => n.alive).length;
     const {date, time} = gameDate(world.time);
     return (
@@ -61,6 +79,14 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
             <div className="gd-hud-sep"/>
             <div className="gd-hud-cell right"><span className="gd-hud-lbl">Population</span><span
                 className="gd-hud-val">{fmtPop(pop)}</span><span className="gd-hud-sub" aria-live="polite">{alive} Powers Left</span></div>
+            {lead && <>
+                <div className="gd-hud-sep"/>
+                <div className="gd-hud-cell right" title="National leadership surviving — evacuate to the bunker to protect it">
+                    <span className="gd-hud-lbl">Leadership</span>
+                    <span className="gd-hud-val" style={{color: leadColor(lead.pct)}}>{lead.pct}%</span>
+                    <span className="gd-hud-sub" aria-live="polite">{leadSub(lead)}</span>
+                </div>
+            </>}
             {onPanel && <>
                 <div className="gd-hud-sep"/>
                 <div className="gd-hud-nav">

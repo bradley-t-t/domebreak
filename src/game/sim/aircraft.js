@@ -14,6 +14,7 @@ import {
     HOLD_PAD,
     KM_PER_DEG,
     LAUNCH_GAP,
+    LEADERSHIP,
     PATROL_FIGHTER,
     PATROL_FUEL,
     ROLL_KM,
@@ -23,7 +24,7 @@ import {
     UNITS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
-import {nextId} from "./worldState.js";
+import {nationOf, nextId} from "./worldState.js";
 
 // Ships and ground units move continuously to a routed waypoint at their own
 // speed — no point cost. Naval courses are plotted around land over the sea
@@ -146,6 +147,129 @@ export function launchOne(w, base, type) {
     base.launchT = LAUNCH_GAP;
 }
 
+// Launch one transport from an airstrip on a leadership-evacuation ferry. Unlike a
+// patrol launch this bypasses the runway/orbit/landing model entirely (cities and
+// the bunker aren't airbases), starting the transport airborne with a mission that
+// flyFerry flies point-to-point: airstrip -> capital -> bunker -> home, repeating.
+// Returns the launched transport, or null if no transport stock remains.
+export function launchFerry(w, base, capId, bunkerId) {
+    ensureHangar(w, base);
+    if ((base.hangar.transport || 0) <= 0) return null;
+    base.hangar.transport--;
+    const ad = UNITS.transport;
+    const jet = {
+        id: nextId(w, "u"), slot: base.slot, type: "transport",
+        lng: base.lng, lat: base.lat, hp: ad.hp, cooldown: 0, targetId: null, warhead: null,
+        baseId: base.id, phase: "ferry", hdg: runwayAxis(base), alt: 1, vis: 0, fuel: Infinity,
+        mission: {role: "leadershipFerry", phase: "toCity", capId, bunkerId, homeId: base.id, timer: 0, cargo: 0},
+    };
+    w.units.push(jet);
+    return jet;
+}
+
+// Point-to-point leadership ferry. Flies a straight line toward the current
+// waypoint (climbing to cruise), sets down for a timed load/unload, then flies the
+// next leg. Load pulls tokens off the capital into cargo; unload deposits cargo
+// into the nation's sheltered pool; landing home stows the airframe (evacTick
+// relaunches it if the capital still holds leaders). Cargo aboard when the bunker
+// is gone is redeposited into the origin capital (or lost with it).
+function flyFerry(w, u, def, dt) {
+    const m = u.mission;
+    const sp = def.airSpeed, tr = def.turnRate;
+    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
+    const city = w.cities.find((c) => c.id === m.capId);
+    const bunker = w.units.find((x) => x.id === m.bunkerId && x.hp > 0);
+    const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
+    u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
+    if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    const redeposit = () => {
+        if (!(m.cargo > 0)) return;
+        if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
+        else {
+            const n = nationOf(w, u.slot);
+            if (n?.lead) n.lead.lost += m.cargo;
+        }
+        m.cargo = 0;
+    };
+    const flyTo = (pt) => {
+        const rng = dist(u, pt);
+        if (rng <= LEADERSHIP.arriveKm) {
+            u.lng = pt.lng; // snap onto the pad so the ground-hold reads as a clean landing
+            u.lat = pt.lat;
+            return true;
+        }
+        u.alt = 1;
+        // Ease speed down and tighten the turn on approach: an airlifter's normal
+        // cruise turn radius (v/ω) is far larger than the gaps between a capital,
+        // its bunker, and the airstrip, so it must slow to capture a near waypoint.
+        const speed = Math.min(sp, Math.max(sp * 0.3, rng / 1.5));
+        advance(u, bearingTo(u, pt), speed, tr * 3, dt);
+        return false;
+    };
+    switch (m.phase) {
+        case "toCity":
+            if (!city || !city.alive || (city.leaders || 0) <= 0) {
+                m.phase = m.cargo > 0 ? "toBunker" : "toHome"; // nothing left to pick up here
+                break;
+            }
+            if (flyTo(city)) {
+                m.phase = "loading";
+                m.timer = LEADERSHIP.loadSec;
+                u.alt = 0;
+            }
+            break;
+        case "loading":
+            u.alt = 0;
+            m.timer -= dt;
+            if (m.timer <= 0) {
+                const take = city && city.alive ? Math.min(LEADERSHIP.perPlane - m.cargo, city.leaders || 0) : 0;
+                if (take > 0) {
+                    city.leaders -= take;
+                    m.cargo += take;
+                }
+                m.phase = m.cargo > 0 ? "toBunker" : "toHome";
+            }
+            break;
+        case "toBunker":
+            if (!bunker) {
+                m.phase = "toHome"; // bunker lost — carry cargo home and redeposit
+                break;
+            }
+            if (flyTo(bunker)) {
+                m.phase = "unloading";
+                m.timer = LEADERSHIP.unloadSec;
+                u.alt = 0;
+            }
+            break;
+        case "unloading":
+            u.alt = 0;
+            m.timer -= dt;
+            if (m.timer <= 0) {
+                const n = nationOf(w, u.slot);
+                if (n?.lead && m.cargo > 0) n.lead.sheltered += m.cargo;
+                m.cargo = 0;
+                m.phase = "toHome";
+            }
+            break;
+        case "toHome":
+        default:
+            if (!home) { // home strip lost mid-flight — the ferry goes down (cargo lost via reconcile)
+                redeposit();
+                u.hp = 0;
+                u.face = null;
+                return;
+            }
+            if (flyTo(home)) {
+                redeposit(); // only carries cargo here if it was diverted; a normal run lands empty
+                const cap = hangarCapOf(home.type, "transport");
+                if ((home.hangar?.transport || 0) < cap) home.hangar.transport = (home.hangar.transport || 0) + 1;
+                u.hp = 0; // stow into stock; evacTick relaunches if the capital still has leaders
+                return;
+            }
+            break;
+    }
+}
+
 // Per-tick base controller: keep the requested patrol pattern airborne — launch
 // from stock when short (stock rotation covers refueling), recall extras.
 export function runAirbase(w, base, dt) {
@@ -244,6 +368,9 @@ function flyRotary(w, u, def, base, dt) {
 }
 
 export function flyAircraft(w, u, def, dt) {
+    // Leadership ferries fly their own point-to-point profile, not the patrol
+    // pattern — handled entirely before the airbase/runway machinery below.
+    if (u.mission?.role === "leadershipFerry") return flyFerry(w, u, def, dt);
     const base = w.units.find((b) => b.id === u.baseId && b.hp > 0);
     if (!base) {
         u.hp = 0;

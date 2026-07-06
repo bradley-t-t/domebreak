@@ -38,6 +38,8 @@ import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoin
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
 import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
+import {evacTick, reconcileLeadership, updateCommand} from "./leadership.js";
+import {LEADERSHIP} from "../data/constants.js";
 import {isSea} from "../geo/seaRoute.js";
 
 // Reload multiplier a hull gets while inside a friendly Replenishment Ship's
@@ -416,6 +418,9 @@ function aiTick(w, dt) {
 export function step(w, dt) {
     if (w.over || dt <= 0) return w;
     w.time += dt;
+    // Refresh each nation's leadership command factor before the economy reads it
+    // (incomeOf / research below both scale by n.commandMult).
+    updateCommand(w);
     for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeOf(w, n.slot) * dt);
 
     for (const n of w.nations) {
@@ -423,7 +428,9 @@ export function step(w, dt) {
         const rr = n.research;
         if (!rr.current && rr.queue.length) rr.current = {id: rr.queue.shift(), progress: 0};
         if (rr.current) {
-            rr.current.progress += (dt / TECHS[rr.current.id].time) * (n.researchSpeedMult ?? 1);
+            // Weakened leadership slows research too (command factor), when enabled.
+            const cmd = LEADERSHIP.penalizeResearch ? (n.commandMult ?? 1) : 1;
+            rr.current.progress += (dt / TECHS[rr.current.id].time) * (n.researchSpeedMult ?? 1) * cmd;
             if (rr.current.progress >= 1) {
                 TECHS[rr.current.id].apply(n);
                 rr.done.push(rr.current.id);
@@ -699,6 +706,10 @@ export function step(w, dt) {
         }
     }
 
+    // Turn any leaders killed this tick into permanent losses BEFORE the prune,
+    // while a downed ferry (hp 0) still carries its cargo to be accounted for.
+    reconcileLeadership(w);
+
     w.interceptors = w.interceptors.filter((it) => !it._dead);
     w.projectiles = w.projectiles.filter((p) => !p._dead);
     w.units = w.units.filter((u) => u.hp > 0);
@@ -706,6 +717,9 @@ export function step(w, dt) {
 
     aiTick(w, dt);
     diploTick(w, dt);
+    // Dispatch/relaunch leadership evac ferries for nations actively sheltering
+    // (player pressed Shelter, or an AI that has entered a war).
+    evacTick(w);
     // One pass over cities: which slots still hold a living city, and the population
     // tally for the domination check. O(cities), not O(nations × cities) — the naive
     // per-nation `cities.some(...)` was 222 × ~2565 every tick at full-world scale.
