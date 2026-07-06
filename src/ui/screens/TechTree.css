@@ -41,12 +41,13 @@
     border-color: var(--gold);
 }
 
-/* Queue preview — a compact panel floated over the top-left of the viewport,
-   listing the nation's research queue in order. Click a row to unqueue it. */
+/* Research dock — a compact panel pinned to the top-right of the viewport
+   (clear of the tier-1 nodes), always showing the in-progress project plus the
+   queued techs in order. Click a queued row to pull it back out. */
 .gd-tt-queue-panel {
     position: absolute;
     top: 14px;
-    left: 14px;
+    right: 14px;
     z-index: 3;
     width: 260px;
     max-height: calc(100% - 28px);
@@ -123,4 +124,44 @@
     font-family: var(--mono);
     font-size: 11px;
     color: var(--gold);
+}
+
+/* The in-progress project pinned atop the dock — gold-accented and non-removable
+   (you can't cancel an active project), with a live progress underlay that
+   mirrors the fill on the in-tree node. */
+.gd-tt-queue-row.current {
+    position: relative;
+    overflow: hidden;
+    border-color: var(--gold);
+    background: var(--btn-bg);
+    cursor: default;
+}
+
+.gd-tt-queue-row.current > span {
+    position: relative;
+    z-index: 1;
+}
+
+.gd-tt-queue-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    background: var(--gold);
+    opacity: 0.16;
+    pointer-events: none;
+}
+
+.gd-tt-queue-row.current .gd-tt-queue-pos {
+    color: var(--gold);
+    text-align: center;
+}
+
+/* Hint shown when a project is running but nothing is lined up behind it. */
+.gd-tt-queue-empty {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+    padding: 8px 10px 6px;
+    list-style: none;
 }
