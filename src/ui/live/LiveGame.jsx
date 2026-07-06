@@ -4,6 +4,8 @@ import LiveHud from "../hud/LiveHud.jsx";
 import AmmoBar from "../hud/AmmoBar.jsx";
 import LayerBar from "../hud/LayerBar.jsx";
 import ProductionBar from "../hud/ProductionBar.jsx";
+import NationPanel from "../hud/NationPanel.jsx";
+import NewsTicker from "../hud/NewsTicker.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
@@ -1093,6 +1095,8 @@ export default function LiveGame({
 
             <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
                      onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
+            <NewsTicker world={w} mySlot={mySlot}/>
+            {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "production" &&
