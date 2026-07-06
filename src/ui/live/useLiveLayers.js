@@ -4,7 +4,7 @@
 // invalidation. Nothing here owns state; it only derives GeoJSON from engine
 // state (w) and the handful of UI toggles/inputs the map layers care about.
 import {useMemo} from "react";
-import {airborne, defenseMinRange, defenseRange, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail} from "../../game/geo/geo.js";
 
@@ -38,12 +38,27 @@ export function useLiveLayers({
                 id: c.id,
                 cap: c.cap ? 1 : 0,
                 mine: c.slot === mySlot ? 1 : 0,
+                dead: c.alive ? 0 : 1,
                 vit: c.alive ? vitalityOf(c) : 1,
                 color: c.alive ? teamColor(c.slot) : "#3a3a3a"
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [w.cities, w.time, mySlot]);
+
+    // Radioactive fallout footprints: one polygon per active cloud, its opacity
+    // driven by the same intensity curve the tick uses for damage, so the visible
+    // haze and the real danger zone are always the same shape and strength. Not
+    // fog-gated — a contamination cloud is a physical, map-scale hazard everyone
+    // can see. Rebuilds each tick (w.time) as clouds grow, drift, and decay.
+    const falloutFC = useMemo(() => ({
+        type: "FeatureCollection",
+        features: (w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => {
+            const c = circle(fx.lng, fx.lat, fx.radiusKm, 48);
+            c.properties = {intensity: falloutIntensity(fx.age)};
+            return c;
+        })
+    }), [w.effects, w.time]);
 
     // Fog of war: enemy assets exist on my map only where my sensor picture
     // covers them — my own units are always mine to see. unitVisibleTo also
@@ -154,5 +169,5 @@ export function useLiveLayers({
         })
     }), [w.units, w.time, mySlot]);
 
-    return {backdropFC, liveFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
+    return {backdropFC, liveFC, falloutFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
 }
