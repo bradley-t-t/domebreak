@@ -8,6 +8,7 @@ import UnitIcon from "../common/UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
 import Explosion from "./Explosion.jsx";
+import FalloutCloud from "./FalloutCloud.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
 import PinnedBar from "../hud/PinnedBar.jsx";
 import Flag from "../common/Flag.jsx";
@@ -16,11 +17,15 @@ import {useGameSession} from "../hooks/useGameSession.js";
 import TechTree from "../screens/TechTree.jsx";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
+import ControlsOverlay from "../screens/ControlsOverlay.jsx";
 import {
     armamentOf,
     COAST_KM,
     defenseMinRange,
     defenseRange,
+    falloutIntensity,
+    falloutDoseAt,
+    FALLOUT,
     gdpOf,
     hangarCapOf,
     hangarCount,
@@ -40,7 +45,7 @@ import {
     vitalityOf
 } from "../../game/engine.js";
 import {toGid3} from "../../game/data/iso3.js";
-import {GAME_SPEEDS} from "../../game/data/constants.js";
+import {GAME_SPEEDS, START_CAM} from "../../game/data/constants.js";
 import {keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
@@ -102,7 +107,13 @@ export default function LiveGame({
     const [disembarkId, setDisembarkId] = useState(null);
     const [hover, setHover] = useState(null);
     const [pins, setPins] = useState([]);
+    // In-game controls reference (toggled with ? / F1, or the corner button).
+    const [helpOpen, setHelpOpen] = useState(false);
     const [err, setErr] = useState(null);
+    // Loading veil: covers the map from mount until the style + tiles finish
+    // (map "idle"), so the player only sees the world once it's fully drawn and
+    // already framed on their capital. Failsafe timer lifts it regardless.
+    const [booting, setBooting] = useState(true);
     // Seed with whatever the world already carries (loaded saves keep their last
     // 60 events) so mount doesn't replay a backlog of explosions and sounds.
     const seen = useRef(null);
@@ -257,12 +268,13 @@ export default function LiveGame({
         return {pan, gain: Math.max(0.35, 1 - off * 0.8)};
     };
 
-    // Battle audio: every fresh engine event gets a synthesized cue. Impacts and
-    // intercepts are world-scale (the news gets out); launches and MIRV splits
-    // only sound if my sensors actually saw them — fog of war has ears too.
+    // Battle audio: every fresh engine event gets a synthesized cue. Impacts are
+    // world-scale (the news gets out); launches and MIRV splits only sound if my
+    // sensors actually saw them — fog of war has ears too. Successful interceptor
+    // kills (the "intercept" event) are intentionally silent — the visual flash
+    // still plays, but by request they carry no sound.
     const eventSound = (e) => {
         const WORLD = {
-            intercept: "intercept",
             miss: "miss",
             fizzle: "fizzle",
             hit: "boom",
@@ -289,7 +301,7 @@ export default function LiveGame({
             eventSound(e);
             if (e.type === "destroy" && e.kind === "city") {
                 const c = w.cities.find((x) => x.id === e.cityId);
-                if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot});
+                if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot, fallout: !!e.fallout});
             }
             // Attack warning: a launch at me my sensors caught, or a track my
             // radars picked up mid-flight — either way, the klaxon toast.
@@ -297,6 +309,13 @@ export default function LiveGame({
                 (e.type === "detected" && e.slot === mySlot)) {
                 setErr({msg: "Launch detected — missile inbound.", kind: "err"});
                 setTimeout(() => setErr(null), 2600);
+            }
+            // Fallout on home soil: a fresh cloud that covers one of my cities
+            // raises a one-time contamination warning (my own strikes near the
+            // front count too — the radiation doesn't check allegiance).
+            if (e.type === "fallout" && w.cities.some((c) => c.alive && c.slot === mySlot && haversine(e.lng, e.lat, c.lng, c.lat) <= FALLOUT.radiusKm)) {
+                setErr({msg: "Radioactive fallout over your territory.", kind: "warn"});
+                setTimeout(() => setErr(null), 3000);
             }
             if (e.type === "intercept") fresh.push({
                 id: e.id,
@@ -326,9 +345,10 @@ export default function LiveGame({
         // priority over enemy losses (positive) for the single toast slot.
         if (cityDeaths.length) {
             const fmtList = (names) => names.slice(0, 2).join(", ") + (names.length > 2 ? ` +${names.length - 2}` : "");
-            const mineLost = cityDeaths.filter((d) => d.mine).map((d) => d.name);
+            const mine = cityDeaths.filter((d) => d.mine);
+            const mineLost = mine.map((d) => d.name);
             const enemyLost = cityDeaths.filter((d) => !d.mine).map((d) => d.name);
-            if (mineLost.length) setErr({msg: `Lost ${fmtList(mineLost)}`, kind: "err"});
+            if (mineLost.length) setErr({msg: `Lost ${fmtList(mineLost)}${mine.every((d) => d.fallout) ? " to fallout" : ""}`, kind: "err"});
             else if (enemyLost.length) setErr({msg: `${fmtList(enemyLost)} destroyed`, kind: "info"});
             setTimeout(() => setErr(null), 3200);
         }
@@ -377,6 +397,21 @@ export default function LiveGame({
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
     }, [overlayOpen, w.over, K.production, K.diplomacy, K.research]);
+
+    // Controls reference toggle: "?" or F1 opens/closes the command reference.
+    // Fixed keys (not rebindable) — the overlay itself lists every binding.
+    useEffect(() => {
+        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+        const h = (e) => {
+            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+            if (e.key === "?" || e.key === "F1") {
+                e.preventDefault();
+                setHelpOpen((v) => !v);
+            }
+        };
+        window.addEventListener("keydown", h);
+        return () => window.removeEventListener("keydown", h);
+    }, [overlayOpen]);
 
     // Game speed hotkeys, RTS-style: pause toggle + speed up/down step the speed
     // (bindings configurable in Settings; defaults Space / = / −), and the fixed
@@ -531,6 +566,7 @@ export default function LiveGame({
     const {
         backdropFC,
         liveFC,
+        falloutFC,
         mySensors,
         visUnits,
         radarFC,
@@ -810,12 +846,56 @@ export default function LiveGame({
     const selectedCity = w.cities.find((c) => c.id === selCity);
     const hoverEnt = hover && (hover.kind === "unit" ? visUnits.find((u) => u.id === hover.id) : w.cities.find((c) => c.id === hover.id));
 
+    // Open the game already looking at home: center on the player's capital at a
+    // zoom that fits most of their nation. The frame is the geographic span of
+    // my cities around the capital, padded and clamped so a city-state still
+    // keeps regional context. fitBounds handles the projection math (flat/globe).
+    const frameOnCapital = (m) => {
+        const mine = w.cities.filter((c) => c.slot === mySlot && c.alive);
+        if (!mine.length) return;
+        const cap = mine.find((c) => c.cap) || mine[0];
+        // Widest deviation of any of my cities from the capital, wrapping longitude
+        // across the antimeridian so a nation split by ±180 still frames sanely.
+        let dLat = 0.05, dLng = 0.05;
+        for (const c of mine) {
+            let dl = c.lng - cap.lng;
+            if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
+            dLat = Math.max(dLat, Math.abs(c.lat - cap.lat));
+            dLng = Math.max(dLng, Math.abs(dl));
+        }
+        dLat *= START_CAM.spanPad;
+        dLng *= START_CAM.spanPad;
+        try {
+            m.fitBounds(
+                [[cap.lng - dLng, cap.lat - dLat], [cap.lng + dLng, cap.lat + dLat]],
+                {padding: START_CAM.padPx, maxZoom: START_CAM.maxZoom, duration: 0}
+            );
+        } catch { /* projection not ready — keep the default view */ }
+    };
+
+    // Map is live: frame home, then hold the loading veil until the tiles settle
+    // (map "idle"), with a hard failsafe so a slow/never-idling map still reveals.
+    const handleMap = (m) => {
+        mapRef.current = m;
+        setMapReady((x) => x + 1);
+        frameOnCapital(m);
+        let settled = false;
+        const reveal = () => {
+            if (settled) return;
+            settled = true;
+            setBooting(false);
+        };
+        try {
+            m.once("idle", reveal);
+        } catch {
+            reveal();
+        }
+        setTimeout(reveal, START_CAM.bootMs);
+    };
+
     return (
         <>
-            <WorldMap globe={globe} onMap={(m) => {
-                mapRef.current = m;
-                setMapReady((x) => x + 1);
-            }} interactiveLayerIds={CITY_LAYERS}
+            <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <Source id="gd-regions" type="vector" url={REGIONS_URL}>
@@ -905,7 +985,32 @@ export default function LiveGame({
                         "circle-opacity": 0.6
                     }}/>
                 </Source>
+                {/* Radioactive fallout footprint: a glowing contamination haze whose
+                    opacity tracks the cloud's live intensity, plus a dashed edge marking
+                    the danger radius. Drawn under the cities so ruins and dots stay legible. */}
+                <Source id="fallout-src" type="geojson" data={falloutFC}>
+                    <Layer id="fallout-haze" type="fill" paint={{
+                        "fill-color": "#8cff3a",
+                        "fill-opacity": ["*", ["get", "intensity"], 0.17]
+                    }}/>
+                    <Layer id="fallout-edge" type="line" paint={{
+                        "line-color": "#b6ff5c",
+                        "line-width": 1,
+                        "line-dasharray": [2, 2],
+                        "line-opacity": ["*", ["get", "intensity"], 0.55]
+                    }}/>
+                </Source>
                 <Source id="live-src" type="geojson" data={liveFC}>
+                    {/* Destroyed city: a scorched crater with a burnt scar ring, drawn
+                        larger than a live city so a ruin reads unmistakably at map scale. */}
+                    <Layer id="live-city-ruin" type="circle" filter={["==", ["get", "dead"], 1]} paint={{
+                        "circle-radius": ["case", ["==", ["get", "cap"], 1], 9, 7],
+                        "circle-color": "#160c0a",
+                        "circle-opacity": 0.88,
+                        "circle-stroke-color": "#c2410c",
+                        "circle-stroke-width": 1.8,
+                        "circle-stroke-opacity": 0.9
+                    }}/>
                     {/* City-health halo: a ring that only appears once a city is damaged,
                         thickening and reddening (green→amber→red) as vitality falls to 0.
                         Faction fill (below) still encodes ownership. */}
@@ -971,6 +1076,11 @@ export default function LiveGame({
                         </Marker>
                     );
                 })}
+                {(w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => (
+                    <Marker key={fx.id} longitude={fx.lng} latitude={fx.lat} anchor="center">
+                        <FalloutCloud intensity={falloutIntensity(fx.age)}/>
+                    </Marker>
+                ))}
                 {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center"
                                                offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind}/></Marker>)}
             </WorldMap>
@@ -982,8 +1092,12 @@ export default function LiveGame({
 
             <div className="gd-topbtns">
                 <AmmoBar nation={myNation}/>
-                <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat">{globe ? "◐" : "▦"}</button>
-                <button className="gd-iconbtn" onClick={onPause} title="Menu (Esc)">☰</button>
+                <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat view"
+                        aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>
+                <button className="gd-iconbtn" onClick={() => setHelpOpen(true)} title="Controls (?)"
+                        aria-label="Show controls reference">?</button>
+                <button className="gd-iconbtn" onClick={onPause} title="Menu (Esc)"
+                        aria-label="Open pause menu">☰</button>
                 {meBadge}
             </div>
 
@@ -1019,6 +1133,7 @@ export default function LiveGame({
                                 setAttackMode={setAttackMode} flash={flash}/>
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
+            {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
             {hover?.kind === "country" && (() => {
                 const gl = countryByGid[hover.gid];
                 const nation = w.nations.find((n) => toGid3(n.iso) === hover.gid);
@@ -1100,6 +1215,14 @@ export default function LiveGame({
                                 <div>
                                     <span>Status</span><b>{hoverEnt.slot === mySlot ? "Yours" : relation(hoverEnt.slot) === "war" ? "At War" : "At Peace"}</b>
                                 </div>
+                                {(() => {
+                                    // Radioactive contamination: only shown when the city sits
+                                    // under an active fallout cloud. Reports the live loss rate
+                                    // and roughly how long the hazard lingers.
+                                    const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
+                                    if (fo.remain <= 0) return null;
+                                    return <div><span>Fallout</span><b className="gd-contam">☢ −{(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~{Math.ceil(fo.remain)}s</b></div>;
+                                })()}
                             </div>
                             <div className="gd-hp-bar gd-city-hp">
                                 <i className={vitalityOf(hoverEnt) <= 0.35 ? "low" : ""}
@@ -1121,6 +1244,15 @@ export default function LiveGame({
                     </div>
                 </div>
             )}
+
+            <div className={`gd-boot ${booting ? "" : "gone"}`} aria-hidden={!booting}>
+                <div className="gd-boot-inner">
+                    {myNation?.iso && <Flag iso={myNation.iso} className="gd-boot-flag"/>}
+                    <div className="gd-boot-title">{myNation?.name || "Command"}</div>
+                    <div className="gd-boot-sub">Establishing theater command</div>
+                    <div className="gd-boot-bar"><i/></div>
+                </div>
+            </div>
         </>
     );
 }

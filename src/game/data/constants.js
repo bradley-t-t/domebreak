@@ -11,6 +11,16 @@ export const MAX_SLOTS = 16;
 // Simulation speed multipliers, slowest → fastest. Shared by the HUD, settings, and hotkeys.
 export const GAME_SPEEDS = [0.5, 1, 2, 4, 10];
 
+// Opening camera framing: when a game begins the view centers on the player's
+// capital at a zoom that fits most of their nation. The frame is derived from
+// the geographic span of the player's cities around the capital, then clamped.
+export const START_CAM = {
+    spanPad: 1.25,  // grow the nation's span before fitting, so it isn't edge-to-edge
+    padPx: 80,      // pixel inset so the framed nation clears the HUD chrome
+    maxZoom: 5.4,   // cap the opening zoom so even a city-state keeps regional context
+    bootMs: 6000,   // failsafe: lift the loading veil after this even if the map never idles
+};
+
 // --- Core sim tuning (moved from engine.js — behavior-preserving extraction) ---
 export const START_POINTS = 500;
 export const MISSILE_SPEED = 140;
@@ -925,6 +935,24 @@ export const MIRV_SPLIT_AT = 0.72;
 export const WARHEAD_ORDER = ["standard", "cluster", "thermo"];
 // Warhead stockpile every nation starts the match with.
 export const AMMO_START = {standard: 6, cluster: 0, thermo: 0};
+
+// Radioactive fallout: certain warheads scatter long-lived contamination at
+// ground zero. The resulting cloud drifts on the prevailing wind and irradiates
+// every city and unit inside it — friend or foe alike — for damage over time
+// until it decays. Data-driven per the coding standards: the tick and renderers
+// read these numbers, they are never hardcoded in systems. See
+// design/gdd/radioactive-fallout.md for the model and formulas.
+export const FALLOUT = {
+    warheads: ["thermo"],   // warhead keys that leave a fallout cloud on impact
+    radiusKm: 480,          // contamination radius at ground zero
+    lifeSec: 80,            // sim seconds the cloud lingers before full decay
+    riseSec: 6,             // seconds to reach peak intensity after detonation
+    fadeFrac: 0.55,         // fraction of life spent at peak before decay begins
+    dmgPerSec: 2.2,         // hp/sec at the cloud core, at peak intensity
+    edgeFalloff: 0.35,      // intensity retained at the cloud edge (0..1); core is 1
+    driftKmPerSec: 1.1,     // prevailing-wind drift speed of the cloud center
+    driftHeadingDeg: 90,    // drift bearing (90 = due east / westerlies)
+};
 
 // One generic, nation-agnostic name per unit type (UNITS labels). Platform
 // armament is generic flavor too — never named after any one country's missile.

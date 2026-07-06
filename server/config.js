@@ -17,3 +17,26 @@ export const RECONNECT_GRACE_S = parseInt(process.env.GD_RECONNECT_GRACE_S || "6
 export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
 export const TICK_MS = 100;      // simulation step cadence
 export const SNAPSHOT_MS = 500;  // full-world broadcast cadence
+
+// ---- matchmaker (ADR-0004) --------------------------------------------------
+// Nations per formed lobby (humans + bot fill). Range 2-16 per the GDD.
+export const TARGET_NATIONS = parseInt(process.env.GD_TARGET_NATIONS || "6", 10);
+// Human-gather window (ms) measured from the anchor (oldest waiter)'s
+// enqueued_at; a group closes early if it fills to TARGET_NATIONS first.
+export const MATCH_WINDOW_MS = parseInt(process.env.GD_MATCH_WINDOW_MS || "6000", 10);
+// Per-bot delay (ms), from lobby formation, before that bot's iso write lands
+// (its visible "join"). Randomized independently per bot within this range.
+export const BOT_JOIN_STAGGER_MS = [400, 1600];
+// Per-bot additional delay (ms), from that bot's own join time, before its
+// ready write lands. Randomized independently per bot within this range.
+export const BOT_READY_DELAY_MS = [1000, 4000];
+// Hard ceiling (ms) from lobby formation: force-launch regardless of ready
+// state if every member hasn't readied by then.
+export const LOBBY_READY_TIMEOUT_MS = parseInt(process.env.GD_LOBBY_READY_TIMEOUT_MS || "45000", 10);
+// Plausible commander callsigns bots draw from (unique per lobby; recycled
+// across lobbies since the pool only needs to avoid collision within one).
+export const BOT_CALLSIGNS = [
+    "Vanguard", "Ironside", "Reaper", "Falcon", "Sentinel", "Marauder", "Cipher", "Warden",
+    "Hollowpoint", "Ashfall", "Nightshade", "Ironclad", "Talon", "Ragnarok", "Specter", "Bulwark",
+    "Havoc", "Grimwald", "Stormcrow", "Ironwolf", "Blackout", "Vulcan", "Dreadnought", "Wraith",
+];

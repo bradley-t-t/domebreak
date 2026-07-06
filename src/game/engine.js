@@ -71,6 +71,7 @@ export function createWorld(setup) {
         units: [],
         projectiles: [],
         interceptors: [],
+        effects: [],
         events: [],
         winnerSlot: null,
         over: false
@@ -94,6 +95,7 @@ export {
     UNITS,
     UNIT_ICON,
     WARHEADS,
+    FALLOUT,
     MIRV_SPLIT_AT,
     WARHEAD_ORDER,
     AMMO_START,
@@ -112,6 +114,9 @@ export {
     airborne,
     atWar,
     vitalityOf,
+    falloutIntensity,
+    falloutProximity,
+    falloutDoseAt,
     industryOutputOf,
     industryCountOf,
     industryCapOf,
@@ -164,6 +169,6 @@ export {
 
 export {hangarCapOf} from "./sim/aircraft.js";
 
-export {trackPoint} from "./sim/combat.js";
+export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {step} from "./sim/tick.js";
