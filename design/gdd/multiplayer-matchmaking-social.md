@@ -1,4 +1,10 @@
-# Multiplayer, Matchmaking & Friends
+<h1 align="center">Multiplayer, Matchmaking & Friends</h1>
+
+<p align="center">
+  <b>Find or host live matches against real commanders on an authoritative server running the same deterministic engine as single-player.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -345,7 +351,7 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
 ## Tuning Knobs
 
 | Knob                            | Category | Range / Values                                                                     | Rationale                                                                                                                                                                                                               |
-|---------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | `max_players` per lobby         | Gate     | 2–16 (DB `check` constraint)                                                       | Mirrors the existing free-for-all seat range established by the local/`gd-match` multiplayer backend in `docs/spec.md`; not intended to be widened without re-validating server tick cost at high seat counts.          |
 | Server tick rate                | Feel     | Fixed at `10 Hz` for this version                                                  | Matches the responsiveness the deterministic engine already assumes locally (`useEngine`'s per-frame `step` calls); raising it trades server CPU for lower input-to-effect latency, not currently needed at this scale. |
 | Snapshot broadcast rate         | Curve    | Fixed at `2 Hz` for this version                                                   | Full-snapshot bandwidth scales with world size and player count; 2 Hz was chosen as "clearly enough to correct drift" without profiling bandwidth at max seats. Revisit once delta encoding (ADR follow-up) lands.      |
@@ -407,3 +413,9 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
 - The Me badge, Friends panel, Multiplayer screen, and Lobby room are each reachable from the
   relevant menu/in-game context and reflect live state (seat fills, ready toggles, friend
   request changes) without a manual page refresh, verified with two simultaneous test clients.
+
+<br />
+
+<p align="center">
+  <sub>The stakes turn real when the pressure comes from another commander's decisions, not a script.</sub>
+</p>

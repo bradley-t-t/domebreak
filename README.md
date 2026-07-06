@@ -18,7 +18,6 @@
   <img src="https://img.shields.io/badge/MapLibre-GL-2563eb?style=for-the-badge&logo=maplibre&logoColor=white" alt="MapLibre GL" />
   <img src="https://img.shields.io/badge/Electron-33-1f56cf?style=for-the-badge&logo=electron&logoColor=white" alt="Electron 33" />
   <img src="https://img.shields.io/badge/Supabase-backend-3b82f6?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase" />
-  <img src="https://img.shields.io/badge/license-MIT-2563eb?style=for-the-badge" alt="License MIT" />
 </p>
 
 <br />
@@ -39,11 +38,11 @@ you win.
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, and air — SAM batteries, the Golden Dome, missile silos, hypersonics, missile cruisers, carriers, and interceptors — firing standard, cluster, and thermonuclear warheads.</p>
+      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">Out-tech, out-economy</h3>
-      <p align="center">Five research tracks, a city-driven war economy with upkeep, live diplomacy, and continuous autosave — all simulated in real time at up to 10× speed.</p>
+      <p align="center">Five research tracks across three eras, a city-vitality war economy with upkeep, live diplomacy, and continuous autosave — all simulated in real time at up to 10× speed.</p>
     </td>
   </tr>
 </table>
@@ -66,6 +65,7 @@ the map. Progress autosaves to local storage; **Continue** picks up where you le
 npm run build            # production web build (the release gate)
 npm run preview          # preview the production build
 npm run lint             # eslint
+npm test                 # vitest suite
 
 npm run electron         # run the desktop shell against the build
 npm run electron:build:mac   # package a macOS .dmg
@@ -81,21 +81,30 @@ npm run electron:build:all   # package macOS + Windows
   their reach (`RADAR_RANGE_MULT`), so early warning is worth as much as raw firepower.
 - **Offense is munitions-limited.** Silos and launchers fire warheads you produce — cheap standard rounds, splash-damage
   cluster munitions, or slow, expensive city-killer thermonuclear yields.
-- **Economy is the clock.** Income scales with your surviving cities and is drained by unit upkeep; research and
-  construction spend against it while the war continues around you.
-- A **server-authoritative multiplayer backend** ships in the repo — a Supabase edge function resolves a shared, seeded
-  combat exchange so every client replays it identically.
+- **Economy runs on city vitality.** Each city's income, population, and industrial capacity scale with its remaining
+  health, so bombing a rival's cities strangles their war machine while unit upkeep drains your own points.
+- A **server-authoritative multiplayer backend** ships in the repo — an authoritative Node game server imports the same
+  engine, claims Supabase lobbies, and streams full-world snapshots over WebSockets so every client agrees on the match.
 
 ## Arsenal
 
-| Domain       | Systems                                                                                                                            |
-|:-------------|:-----------------------------------------------------------------------------------------------------------------------------------|
-| **Land**     | SAM battery, Golden Dome, early-warning radar, over-the-horizon radar, hypersonic launcher, missile silo                           |
-| **Sea**      | Missile cruiser, destroyer, battleship, aircraft carrier                                                                           |
-| **Air**      | Airstrip, multirole fighter, strike fighter, air-superiority fighter, close air support, transport, AEW&C, and the carrier fighter |
-| **Warheads** | Standard, cluster (splash), and thermonuclear — each with its own cost and build time                                              |
+| Domain              | Systems                                                                                                                                       |
+|:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
+| **Land — defense**  | SAM battery and the Golden Dome, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                                |
+| **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the tech-gated hypersonic missile battery — each firing selectable warheads                      |
+| **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
+| **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
+| **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus tech-gated SSN / SSBN submarines and amphibious / replenishment ships     |
+| **Air**             | Multirole, strike, air-superiority, and carrier fighters, close air support, transport, and AEW&C — flown from airstrips and carriers as wings |
+| **Space**           | Behind a Space Command HQ: space-based interceptors, an orbital laser, and an orbital strike platform                                          |
+| **Warheads**        | Standard, cluster (MIRV splash), and thermonuclear — each produced against its own cost and build time                                         |
 
 ## Research tracks
+
+Five doctrine tracks each run **twelve tiers** banded into three eras — Cold War, Modern, and Space Age (60 techs in
+all). Advancing a track boosts national multipliers and, at key tiers, unlocks new hardware: Patriot and THAAD, hypersonic
+glide vehicles, submarines, satellites, and eventually a Space Command HQ and its orbital arsenal. Cost and research time
+escalate super-linearly with tier, so the future is slow and expensive to reach.
 
 | Track                 | Focus                                                       |
 |:----------------------|:------------------------------------------------------------|
@@ -105,31 +114,31 @@ npm run electron:build:all   # package macOS + Windows
 | **Early Warning**     | Radar coverage, tracking, and intercept accuracy.           |
 | **Command & Control** | Research speed, relocation cost, and cross-cutting bonuses. |
 
-Each track runs six tiers, unlocked in order.
-
 ## Stack
 
-- **Client** — React 19 + Vite 7, rendered over MapLibre GL and `react-map-gl`, with PMTiles tiles read client-side and
-  `polygon-clipping` for territory geometry. Flags via `flag-icons`.
+- **Client** — React 19 + Vite 7, rendered over MapLibre GL and `react-map-gl`, with PMTiles tiles read client-side.
+  Flags via `flag-icons`.
 - **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with
   `electron-builder`.
-- **Multiplayer backend** — Supabase Postgres + a `gd-match` edge function (server-authoritative, free-for-all for 2–16
-  seats held by humans or AI). Configure it with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
+- **Multiplayer backend** — Supabase (Auth, Postgres, and Deno edge functions `gd-account`, `gd-lobby`, and `gd-social`)
+  plus an authoritative Node game server (`server/`) that imports the same engine and runs live matches over WebSockets.
+  Configure the client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
 
 ## Design
 
-See [`docs/spec.md`](docs/spec.md) for the design and architecture notes.
+See [`docs/spec.md`](docs/spec.md) for the design and architecture notes, and [`docs/architecture/`](docs/architecture)
+for the decision records behind accounts, local saves, and the authoritative server.
 
 ## Attribution
 
 The interactive world map — MapLibre + PMTiles rendering and the region/country/city tile layers — is reused
 from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License. Unit icons are
-from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. See [`LICENSE`](LICENSE) and [
-`NOTICE`](NOTICE).
+from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0.
 
 ## License
 
-Released under the MIT License. Created by **Trenton Taylor**.
+Authored by **Trenton Taylor**. Reused components — the Open Historia map engine and game-icons.net icons — retain their
+upstream licenses noted above; the repository does not yet ship its own license file.
 
 <br />
 

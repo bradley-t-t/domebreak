@@ -12,68 +12,95 @@ Command a nation on a live world map. Build offensive and defensive systems arou
 manage a war economy, and out-fight your rivals in a continuous exchange of launches and intercepts. Most infrastructure
 standing wins.
 
-Two modes share one design:
+Two modes share one engine:
 
 - **Single-player** — a pure, deterministic client engine plays you against AI nations in real time. No account, no
   server; progress autosaves to local storage.
-- **Multiplayer** — a Supabase edge function resolves a shared, seeded combat exchange server-side, so every client
-  agrees on the outcome. Present in the repo; not yet wired into the client shell.
+- **Multiplayer** — an authoritative Node game server runs the *same* engine and streams the shared world to every
+  client over WebSockets, coordinated through Supabase lobbies. The client wires to this path today.
 
 ## Client architecture
 
 - **React 19 + Vite 7.** The map is MapLibre GL + PMTiles (reused from Open Historia) rendered as the board, with
-  `react-map-gl` bindings and `polygon-clipping` for territory geometry.
+  `react-map-gl` bindings.
 - **Simulation engine** (`src/game/engine.js`) — pure and deterministic given its seed. `useEngine` steps the world in
   an animation-frame loop at a selectable speed (0.5× to 10×) and re-renders on a throttled tick.
-- **Persistence** — settings, saves, and a rolling autosave live in local storage (`src/game/saves.js`, `settings.js`);
-  no backend is required to play.
+- **Persistence** — settings, saves, and a rolling autosave live in local storage (`src/game/platform/`); on the
+  desktop build every write is mirrored to owner-only JSON files under the OS user-data directory (see
+  [`adr-002-desktop-first-local-saves.md`](architecture/adr-002-desktop-first-local-saves.md)). No backend is required
+  to play.
 
-## Multiplayer backend (Supabase)
+## Accounts & stats
 
-- **Edge function `gd-match`** — the single server-authoritative entry point. Every mutation runs there with the
-  service-role key after validating the caller against a per-player secret.
-- **Free-for-all for 2–16 seats**, each held by a human or a server-played AI. The host manages seats with a short join
-  code; combat is a deterministic, seeded simulation.
-- **Lifecycle** — `lobby` → `build` (a countdown during which players place systems against a budget) → `combat` (
-  resolved once, under a compare-and-swap lock) → `done`, with results and a replay persisted.
+- **Supabase Auth** (email + password) provides a durable player identity; a signup trigger mints a `profiles` row per
+  user. Clients read their own `profiles`, `matches`, and the aggregated `player_stats` view directly under Row Level
+  Security.
+- **All writes go through the `gd-account` edge function** — `touch` (stamp `last_login`) and `report_match` (insert one
+  `matches` row) — which derives the caller's identity from a verified JWT and writes with the service-role key, so a
+  client can never forge its own stats. Full rationale in
+  [`adr-001-supabase-accounts.md`](architecture/adr-001-supabase-accounts.md).
 
-### Actions
+## Multiplayer backend
 
-| Action                                                          | Who    | Purpose                                                          |
-|:----------------------------------------------------------------|:-------|:-----------------------------------------------------------------|
-| `create` / `join`                                               | any    | Open a match (returns a join code) or take an empty seat.        |
-| `setMaxSlots` / `addAi` / `removeParticipant` / `replaceWithAi` | host   | Shape the lobby and swap seats for AI.                           |
-| `start`                                                         | host   | Begin the build phase and set the deadline.                      |
-| `place` / `ready`                                               | player | Spend budget on systems; mark ready.                             |
-| `resolve`                                                       | any    | Trigger server resolution at the deadline or once all are ready. |
-| `state`                                                         | any    | Read match, players, cities, and (for the caller) placements.    |
+Live play is a Supabase control plane plus one authoritative Node game server; see
+[`adr-003-authoritative-server.md`](architecture/adr-003-authoritative-server.md).
+
+- **Lobby control plane (`gd-lobby`)** — every lobby mutation runs through this JWT-verified edge function: `create`,
+  `join`, `leave`, `find` (quick match), `set_iso`, `ready`, `set_ai`, and `start`. `start` only flips a lobby's status
+  to `starting`; it runs no simulation.
+- **Authoritative game server (`server/`)** — a long-lived Node process that imports `src/game/engine.js` unmodified. It
+  holds an outbound Supabase Realtime subscription on lobbies at `status = 'starting'`, **claims** each with a guarded
+  update to `active`, builds the world with the shared engine, and advertises its WebSocket URL back on the row. It ticks
+  the world at 10 Hz and broadcasts a full-world JSON snapshot at 2 Hz; clients present their Supabase JWT at handshake
+  and may only send whitelisted commands forced to their own seat. On game over it writes one `matches` row per human
+  (`mode: 'online'`).
+- **Friends (`gd-social`)** — a JWT-verified edge function for the friend graph: `request`, `accept`, and `remove`.
+
+### Lobby lifecycle
+
+`open` → `starting` (host presses start) → `active` (server claims and runs the match) → `closed`. A `starting` lobby
+that no server claims is swept back to `open`; idle `open` lobbies eventually close.
 
 ### Data model
 
-| Table              | Holds                                                              |
-|:-------------------|:-------------------------------------------------------------------|
-| `gd_players`       | Player identity and per-player secret.                             |
-| `gd_matches`       | Match code, status, host, seat count, build deadline, seed.        |
-| `gd_match_players` | Seat, handle, budget/spent, ready flag, AI flag, home coordinates. |
-| `gd_cities`        | Each participant's cities with HP and alive state.                 |
-| `gd_placements`    | Placed systems (kind, position, target, cost).                     |
-| `gd_results`       | Winner, score summary, and the replay timeline.                    |
+| Table           | Holds                                                                                  |
+|:----------------|:----------------------------------------------------------------------------------------|
+| `profiles`      | One row per auth user — username, `last_login`, bot flag.                               |
+| `matches`       | One row per finished game — result, nation, opponents, duration, `mode` (solo/online).  |
+| `player_stats`  | A `security_invoker` view aggregating `matches` into wins, losses, quits, and playtime. |
+| `friendships`   | The friend graph — requester, addressee, and `pending`/`accepted` status.               |
+| `lobbies`       | Host, name, status, seat count, AI slots, and the claimed `match_id` / `server_url`.     |
+| `lobby_members` | Each seat in a lobby — slot, nation ISO, and ready flag.                                 |
+| `bots`          | A seeded pool of AI callsigns.                                                           |
+
+All game-affecting writes run server-side (edge functions or the game server, both with the service-role key); clients
+read their own rows under RLS and never write them directly.
+
+### Legacy one-shot resolver
+
+An earlier multiplayer path also lives in the repo: the `gd-match` edge function is a self-contained free-for-all that
+runs a build phase and then resolves a single seeded combat exchange over its own `gd_*` tables (`gd_players`,
+`gd_matches`, `gd_match_players`, `gd_cities`, `gd_placements`, `gd_results`), authenticated by a per-player secret
+rather than a Supabase account. It is retained for reference; the shipping client uses the authoritative server above.
 
 ## Combat model
 
-- Offensive placements launch at target cities; defensive placements intercept by range and probability, with radar in
-  range boosting nearby interceptors.
-- Resolution is **seeded per match**, so both the server and every client replay it identically.
-- Damage aggregates per city; survivors and damage dealt are scored, and a winner (or tie) is declared.
+- Offensive placements launch at target cities; defensive placements intercept by range and probability, with radar or
+  AEW&C in range boosting nearby interceptors.
+- The simulation is **seeded and deterministic**, so the authoritative server and every client resolve the same world
+  from the same inputs.
+- Damage aggregates per city and scales that city's economy and population through the city-vitality model; when a
+  nation loses its cities, it loses the war.
 
 ## Attribution & licensing
 
-GoldenDome is © 2026 Trenton Taylor, released under the MIT License. The reused map engine and tiles come
-from [Open Historia](https://github.com/Open-Historia/open-historia) under MIT; original notices are retained in [
-`LICENSE`](../LICENSE) and [`NOTICE`](../NOTICE).
+GoldenDome is authored by Trenton Taylor. The reused map engine and tiles come
+from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License, and unit icons are
+from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. The repository does not yet ship its
+own license file.
 
 <br />
 
 <p align="center">
-  <sub>One engine, two modes — the same exchange, whether the server or your machine rolls the dice.</sub>
+  <sub>One engine, two modes — the same exchange, whether the server or your machine runs the clock.</sub>
 </p>

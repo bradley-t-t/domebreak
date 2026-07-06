@@ -1,4 +1,10 @@
-# Accounts & Player Stats
+<h1 align="center">Accounts & Player Stats</h1>
+
+<p align="center">
+  <b>Persistent, server-verified commander identities carrying a lifetime match record no cleared cache can erase.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -210,7 +216,7 @@ quitRate(stats)  = stats.quits  / stats.total_matches   if total_matches > 0, el
 ## Tuning Knobs
 
 | Knob                          | Category | Range / Values                                                                           | Rationale                                                                                                                                                                                                                                             |
-|-------------------------------|----------|------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | Username length               | Curve    | 3–24 characters (DB `check` constraint)                                                  | Long enough for expressive handles, short enough to fit UI chrome (start menu header, leaderboards if added later).                                                                                                                                   |
 | Match-report retry count      | Gate     | Fixed at `1` retry (2 attempts total)                                                    | Balances "give a transient network blip a second chance" against "never let stats reporting add perceptible delay to returning to the menu." Raising this trades a marginally lower drop rate for longer worst-case time before the fallback give-up. |
 | Signup email verification     | Gate     | Off (autoconfirm) for now; togglable in Supabase project settings                        | Removes signup friction during early access / solo-dev testing. Revisit before any public multiplayer launch — this is a security posture decision, not just a UX one.                                                                                |
@@ -250,3 +256,9 @@ quitRate(stats)  = stats.quits  / stats.total_matches   if total_matches > 0, el
 - Forcing a token expiry mid-match and then triggering a game-over or quit either (a) successfully
   refreshes and reports, or (b) fails the refresh and drops the report silently — in both cases the
   player reaches the menu without an error dialog or a hang.
+
+<br />
+
+<p align="center">
+  <sub>Your name is on the door, and the record behind it is yours — not something a cleared cache can take.</sub>
+</p>
