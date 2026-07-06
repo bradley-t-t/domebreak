@@ -1533,199 +1533,233 @@ input {
     }
 }
 
-/* missile impact explosion (fireball + shockwave) */
-.gd-explosion {
+/* ===================== fireball detonation (Explosion.jsx) =====================
+   A layered fire burst: white flash + shock ring + three billowing flame blobs +
+   a white-hot core + a short smoke wisp + flung embers. Every kind is FIRE; kinds
+   only change scale and a small ring accent. Pure transform/opacity so dozens can
+   play at once. All layers fill the box (inset:0) and scale past it as they grow. */
+.gd-boom {
     position: relative;
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-}
-
-.gd-explosion.destroy {
-    width: 24px;
-    height: 24px;
-}
-
-.gd-explosion span {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-}
-
-/* interception reads as a green explosion (vs orange damage impacts) */
-.gd-explosion.intercept {
     width: 15px;
     height: 15px;
+    pointer-events: none;
 }
 
-/* ---- compact fire explosion ---- */
-.gd-explosion {
-    position: relative;
+.gd-boom.destroy {
+    width: 22px;
+    height: 22px;
+}
+
+.gd-boom.intercept {
     width: 12px;
     height: 12px;
-    pointer-events: none;
-    --d: 10px;
 }
 
-.gd-explosion.destroy {
-    width: 17px;
-    height: 17px;
-    --d: 15px;
+.gd-boom.mirv {
+    width: 12px;
+    height: 12px;
 }
 
-.gd-explosion.intercept {
-    width: 11px;
-    height: 11px;
-    --d: 9px;
+.gd-boom.miss {
+    width: 9px;
+    height: 9px;
 }
 
-.gd-explosion span {
+.gd-boom span {
     position: absolute;
     inset: 0;
     border-radius: 50%;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
 }
 
-.gd-fx-flash {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 62%);
-    animation: gdFxFlash 0.18s ease-out forwards;
+/* white-hot detonation flash */
+.gd-boom-flash {
+    background: radial-gradient(circle, #fff 0%, rgba(255, 244, 214, 0.9) 34%, rgba(255, 210, 120, 0) 66%);
+    animation: gdBoomFlash 0.17s ease-out forwards;
 }
 
-.gd-fx-fire {
-    filter: blur(0.6px);
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #ffd24a 16%, #ff7b1a 40%, #ff2e0a 66%, rgba(120, 20, 0, 0) 82%);
-    animation: gdFxFire 0.6s ease-out forwards;
-}
-
-.gd-fx-fire.two {
-    mix-blend-mode: screen;
-    animation: gdFxFire2 0.55s ease-out forwards;
-}
-
-.gd-fx-smoke {
+/* expanding shock ring */
+.gd-boom-ring {
+    background: none;
+    border: 1.5px solid rgba(255, 214, 140, 0.9);
+    box-shadow: 0 0 4px rgba(255, 180, 90, 0.6);
     opacity: 0;
-    background: radial-gradient(circle, rgba(90, 90, 90, 0.9) 0%, rgba(70, 70, 70, 0.4) 45%, rgba(60, 60, 60, 0) 75%);
-    animation: gdFxSmoke 0.9s ease-out 0.12s forwards;
+    animation: gdBoomRing 0.42s ease-out forwards;
 }
 
-.gd-ember {
+/* billowing flame — hot white center falling to deep red/black edge */
+.gd-boom-fire {
+    background: radial-gradient(circle at 50% 55%,
+    #fff 0%, #fff2c0 13%, #ffd24a 30%, #ff8a1a 52%, #ff3b0a 72%, rgba(120, 20, 0, 0) 87%);
+    mix-blend-mode: screen;
+    filter: blur(0.4px);
+    opacity: 0;
+}
+
+.gd-boom-fire.f1 {
+    animation: gdBoomFireA 0.58s ease-out forwards;
+}
+
+.gd-boom-fire.f2 {
+    animation: gdBoomFireB 0.52s ease-out 0.04s forwards;
+}
+
+.gd-boom-fire.f3 {
+    animation: gdBoomFireC 0.5s ease-out 0.06s forwards;
+}
+
+/* persistent white-hot core */
+.gd-boom-core {
+    background: radial-gradient(circle, #fff 0%, #fff0b8 40%, rgba(255, 200, 90, 0) 72%);
+    animation: gdBoomCore 0.3s ease-out forwards;
+}
+
+/* short, faint smoke wisp rising off the burn — fire stays the star */
+.gd-boom-smoke {
+    opacity: 0;
+    background: radial-gradient(circle, rgba(60, 54, 48, 0.7) 0%, rgba(48, 44, 40, 0.3) 46%, rgba(40, 36, 32, 0) 74%);
+    animation: gdBoomSmoke 0.6s ease-out 0.16s forwards;
+}
+
+/* flung embers — fly outward along --a to --dist, shrinking */
+.gd-boom-spark {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 2px;
-    height: 2px;
-    margin: -1px 0 0 -1px;
+    width: var(--sz, 2px);
+    height: var(--sz, 2px);
+    margin: calc(var(--sz, 2px) / -2) 0 0 calc(var(--sz, 2px) / -2);
     border-radius: 50%;
-    inset: auto;
-    background: #ffcf5a;
+    background: #ffd873;
     box-shadow: 0 0 4px 1px #ff8a1a;
-    animation: gdEmber 0.55s ease-out forwards;
+    animation: gdBoomSpark 0.5s ease-out var(--delay, 0ms) forwards;
 }
 
-.gd-explosion.destroy .gd-ember {
-    animation-duration: 0.7s;
+/* interception accent: keep the fire, but tint the shock ring + embers cool so a
+   missile-vs-missile kill still reads apart from a ground impact — no green. */
+.gd-boom.intercept .gd-boom-ring {
+    border-color: rgba(160, 226, 255, 0.9);
+    box-shadow: 0 0 4px rgba(120, 200, 255, 0.6);
 }
 
-.gd-explosion.intercept .gd-fx-fire {
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #ccffe4 16%, #5cffab 40%, #12c46e 66%, rgba(0, 80, 40, 0) 82%);
+.gd-boom.destroy .gd-boom-spark {
+    animation-duration: 0.62s;
 }
 
-.gd-explosion.intercept .gd-ember {
-    background: #9dffc0;
-    box-shadow: 0 0 4px 1px #25e084;
-}
-
-.gd-explosion.intercept .gd-fx-smoke {
-    background: radial-gradient(circle, rgba(60, 120, 90, 0.7) 0%, rgba(40, 90, 60, 0.3) 45%, rgba(40, 90, 60, 0) 75%);
-}
-
-.gd-explosion.mirv {
-    width: 10px;
-    height: 10px;
-    --d: 8px;
-}
-
-.gd-explosion.mirv .gd-fx-fire {
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #d9f6ff 16%, #61e0ff 40%, #1a9ad4 66%, rgba(0, 60, 90, 0) 82%);
-}
-
-.gd-explosion.mirv .gd-ember {
-    background: #a8ecff;
-    box-shadow: 0 0 4px 1px #61e0ff;
-}
-
-.gd-explosion.mirv .gd-fx-smoke {
-    background: radial-gradient(circle, rgba(60, 100, 120, 0.6) 0%, rgba(40, 70, 90, 0.28) 45%, rgba(40, 70, 90, 0) 75%);
-}
-
-@keyframes gdFxFlash {
+@keyframes gdBoomFlash {
     from {
-        transform: scale(0.4);
-        opacity: 1;
-    }
-    to {
-        transform: scale(1.7);
-        opacity: 0;
-    }
-}
-
-@keyframes gdFxFire {
-    0% {
         transform: scale(0.3);
         opacity: 1;
     }
+    to {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomRing {
+    0% {
+        transform: scale(0.2);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(2.8);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomCore {
+    0% {
+        transform: scale(0.4);
+        opacity: 1;
+    }
     35% {
-        transform: scale(1.25) scaleY(1.15);
+        transform: scale(1.35);
         opacity: 1;
     }
     100% {
-        transform: scale(2) scaleY(1.35) translateY(-2px);
+        transform: scale(0.7);
         opacity: 0;
     }
 }
 
-@keyframes gdFxFire2 {
+@keyframes gdBoomFireA {
     0% {
-        transform: scale(0.5) translateY(1px);
-        opacity: 0.9;
-    }
-    45% {
-        transform: scale(1.1) translateY(-1px);
-        opacity: 0.85;
-    }
-    100% {
-        transform: scale(1.7) scaleY(1.5) translateY(-4px);
-        opacity: 0;
-    }
-}
-
-@keyframes gdFxSmoke {
-    0% {
-        transform: scale(0.4);
-        opacity: 0;
+        transform: scale(0.3);
+        opacity: 0.95;
     }
     30% {
-        opacity: 0.32;
+        transform: scale(1.15);
+        opacity: 1;
     }
     100% {
-        transform: scale(1.9) translateY(-6px);
+        transform: scale(1.9) translateY(-2px);
         opacity: 0;
     }
 }
 
-@keyframes gdEmber {
+@keyframes gdBoomFireB {
+    0% {
+        transform: translate(-6%, -4%) scale(0.2);
+        opacity: 0;
+    }
+    28% {
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate(-30%, -34%) scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomFireC {
+    0% {
+        transform: translate(6%, 4%) scale(0.2);
+        opacity: 0;
+    }
+    28% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translate(30%, 30%) scale(1.45);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomSmoke {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    35% {
+        opacity: 0.3;
+    }
+    100% {
+        transform: scale(1.8) translateY(-7px);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomSpark {
     0% {
         transform: rotate(var(--a)) translateY(0) scale(1);
         opacity: 1;
     }
     100% {
-        transform: rotate(var(--a)) translateY(calc(-1 * var(--d, 10px))) scale(0.3);
+        transform: rotate(var(--a)) translateY(calc(-1 * var(--dist, 10px))) scale(0.2);
         opacity: 0;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gd-fx-fire, .gd-fx-fire.two, .gd-fx-smoke, .gd-ember, .gd-fx-flash {
-        animation-duration: 0.25s;
+    .gd-boom span, .gd-boom-spark {
+        animation-duration: 0.22s !important;
+        animation-delay: 0s !important;
+    }
+
+    .gd-boom-fire.f2, .gd-boom-fire.f3, .gd-boom-smoke {
+        display: none;
     }
 }
 
@@ -3578,20 +3612,6 @@ input[type="range"] {
     border: 1.5px solid rgba(255, 255, 255, 0.75);
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
     animation: none;
-}
-
-/* interceptor miss = small gray puff */
-.gd-explosion.miss {
-    width: 9px;
-    height: 9px;
-}
-
-.gd-explosion.miss .gd-fx-fire {
-    background: radial-gradient(circle, #d4d7da 0%, #8a94a4 45%, rgba(120, 130, 150, 0) 72%);
-}
-
-.gd-explosion.miss .gd-fx-fire.two, .gd-explosion.miss .gd-fx-smoke, .gd-explosion.miss .gd-fx-flash, .gd-explosion.miss .gd-ember {
-    display: none;
 }
 
 /* screen-space ballistic overlay (missiles + contrails arc into the sky) */
