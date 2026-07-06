@@ -95,19 +95,30 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
         }
         if (pts.length > 1) trails.push({id: "a" + a.id, pts, color: "#dfe4ea", width: 1});
     }
+    const projById = new Map(projectiles.map((p) => [p.id, p]));
     for (const it of interceptors) {
         let clng = it.lng;
         while (clng - it.fromLng > 180) clng -= 360;
         while (clng - it.fromLng < -180) clng += 360;
         if (occludedByGlobe(map, clng, it.lat)) continue;
-        const [x0, y0] = pr(it.fromLng, it.fromLat);
         const [xc, yc] = pr(clng, it.lat);
         const head = [xc, yc - (it.altNorm || 0) * 72];
+        // Aim the nose at the live target's on-screen position — its actual
+        // direction of travel this instant. The old chord back to the launch site
+        // diverges from the heading once the globe projection curves the path, so
+        // the sprite pointed off-target in globe mode.
+        const tgt = projById.get(it.targetId);
+        let tlng = it.toLng;
+        while (tlng - clng > 180) tlng -= 360;
+        while (tlng - clng < -180) tlng += 360;
+        const [xt, yt] = pr(tlng, it.toLat);
+        const tgtLift = tgt ? (ALT[tgt.type] || 60) * (tgt.altNorm || 0) : (it.altNorm || 0) * 72;
+        const dx = xt - head[0], dy = (yt - tgtLift) - head[1];
         heads.push({
             id: "i" + it.id,
             x: head[0],
             y: head[1],
-            deg: (Math.atan2(head[0] - x0, -(head[1] - y0)) * 180) / Math.PI,
+            deg: (dx || dy) ? (Math.atan2(dx, -dy) * 180) / Math.PI : 0,
             kind: "interceptor"
         });
     }
