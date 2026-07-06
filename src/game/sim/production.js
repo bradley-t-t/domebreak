@@ -26,6 +26,10 @@ export function declareWar(w, a, b) {
     if (!na || !nb || a === b) return {error: "Invalid order."};
     na.relations[b] = "war";
     nb.relations[a] = "war";
+    // Stamp the war-start time on both sides so diplomacy can age the conflict
+    // regardless of which nation opened it (see diploTick in sim/tick.js).
+    (na._warStart || (na._warStart = {}))[b] = w.time;
+    (nb._warStart || (nb._warStart = {}))[a] = w.time;
     w.events.push({id: nextId(w, "e"), t: w.time, type: "war", a, b});
     return {ok: true};
 }
