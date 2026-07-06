@@ -53,6 +53,7 @@ export function createWorld(setup) {
         state: c.state || "",
         cap: c.cap ? 1 : 0,
         pop: c.pop || 0,
+        pop0: c.pop || 0,   // starting population — growth ceiling baseline (see POPULATION)
         econ: c.econ || 0,
         lng: c.lng,
         lat: c.lat,
@@ -185,4 +186,4 @@ export {
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
-export {step} from "./sim/tick.js";
+export {step, growCities} from "./sim/tick.js";

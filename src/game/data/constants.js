@@ -83,6 +83,16 @@ export const INDUSTRY = {
     max: 24,
 };
 
+// Population growth (see design/quick-specs/population-growth-2026-07-06.md).
+// Each living city's people grow every tick, scaled by its vitality (hp/maxHp)
+// so healthy cities repopulate and battered ones barely recover, capped at a
+// multiple of the city's starting population. Pure/deterministic — a function of
+// stored pop, hp, and dt, no RNG. Feeds populationOf → industry cap / domination.
+export const POPULATION = {
+    growthPerSec: 0.00015,   // fractional pop growth per game-second at full vitality
+    growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
+};
+
 // Opponent-AI tuning (consumed by aiTick in sim/tick.js). Reserves are the
 // points cushion the AI keeps on hand before committing to that purchase.
 export const AI_TUNING = {
