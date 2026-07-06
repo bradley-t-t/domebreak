@@ -17,6 +17,7 @@ const SIM_SPEED = 4;         // wall-clock drama without the 10× blur
 const OPENING_FRONTS = 3;    // wars lit immediately so the sky is never empty
 const ESCALATE_MS = 12000;   // a new front roughly every 12s of wall time
 const DRIFT_LNG_PER_FRAME = 0.0045; // ~16 min per revolution — barely perceptible
+const RAIL_PAD = 340;        // left projection padding (px) that recenters the globe beside the menu rail
 
 function demoWorld(data) {
     // Throwaway spectacle — Math.random is fine here, determinism only matters in real games.
@@ -43,7 +44,7 @@ function igniteFront(w) {
     declareWar(w, a, b);
 }
 
-function AttractWorld({data, onOver}) {
+function AttractWorld({data, onOver, framed}) {
     const world = useMemo(() => demoWorld(data), [data]);
     const [w] = useEngine(world);
     const mapRef = useRef(null);
@@ -89,6 +90,17 @@ function AttractWorld({data, onOver}) {
         }
     }, [w.time]);
 
+    // Recenter the globe beside the menu rail: left projection padding shifts the
+    // sphere clear of the console. Drift keeps working — jumpTo doesn't touch padding.
+    useEffect(() => {
+        const m = mapRef.current;
+        if (!m) return;
+        try {
+            m.easeTo({padding: {top: 0, right: 0, bottom: 0, left: framed ? RAIL_PAD : 0}, duration: 600});
+        } catch { /* map tearing down */
+        }
+    }, [framed]);
+
     // Slow eastward camera drift — the globe turns under the war.
     useEffect(() => {
         let raf;
@@ -116,9 +128,13 @@ function AttractWorld({data, onOver}) {
         <>
             <WorldMap globe onMap={(m) => {
                 mapRef.current = m;
-                // Pull back so the whole globe reads as a war-room backdrop.
+                // Pull back so the whole globe reads as a war-room backdrop, and
+                // offset it past the rail from the first frame (no visible slide).
                 try {
-                    m.jumpTo({center: [24, 24], zoom: 1.45});
+                    // Correct the canvas if the map initialized before its container
+                    // had size (leaves the GL canvas stuck at its 400×300 fallback).
+                    m.resize();
+                    m.jumpTo({center: [24, 24], zoom: 1.45, padding: {top: 0, right: 0, bottom: 0, left: framed ? RAIL_PAD : 0}});
                 } catch { /* map tearing down */
                 }
                 setMapReady((x) => x + 1);
@@ -141,13 +157,14 @@ function AttractWorld({data, onOver}) {
     );
 }
 
-export default function AttractSim({data}) {
+export default function AttractSim({data, framed}) {
     // Remount with a fresh cast once a war fully resolves.
     const [gen, setGen] = useState(0);
     if (!data) return null;
     return (
         <div className="gd-attract" aria-hidden="true">
-            <AttractWorld key={gen} data={data} onOver={() => setTimeout(() => setGen((g) => g + 1), 4000)}/>
+            <AttractWorld key={gen} data={data} framed={framed}
+                          onOver={() => setTimeout(() => setGen((g) => g + 1), 4000)}/>
             <div className="gd-attract-shade"/>
         </div>
     );
