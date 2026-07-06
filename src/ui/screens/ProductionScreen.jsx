@@ -22,7 +22,7 @@ import {
     WARHEAD_ORDER,
     WARHEADS,
 } from "../../game/engine.js";
-import {DEFAULT_BUILD_TIME, WARHEAD_ICON} from "../../game/data/constants.js";
+import {DEFAULT_BUILD_TIME, FALLOUT, WARHEAD_ICON} from "../../game/data/constants.js";
 import {fmtNet} from "../common/format.js";
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -130,12 +130,13 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         const stock = ammo[key] || 0;
         const afford = points >= wh.prodCost;
         const qn = queuedOf("ammo", key);
+        const fallout = FALLOUT.warheads.includes(key);
         return (
             <button key={key} className={`gd-ucard ${afford ? "" : "poor"}`}
                     onClick={(e) => {
                         for (let i = 0, n = e.shiftKey ? 5 : 1; i < n; i++) if (api.produceAmmo(key)?.error) break;
                     }}
-                    title={`${wh.name} — ${wh.desc} (Shift-click ×5)`}>
+                    title={`${wh.name} — ${wh.desc}${fallout ? " · Contaminates ground zero with radioactive fallout." : ""} (Shift-click ×5)`}>
                 <span className="gd-ucard-ico"><UnitIcon name={WARHEAD_ICON[key]} size={30}/></span>
                 <div className="gd-ucard-body">
                     <div className="gd-ucard-top">
@@ -143,6 +144,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         <span className="gd-ucard-cost">◆ {wh.prodCost}</span>
                     </div>
                     <span className="gd-ucard-line">{wh.desc}</span>
+                    {fallout && <span className="gd-ucard-tag gd-contam">☢ Leaves fallout</span>}
                     <div className="gd-ucard-foot">
                         <span>⧗ {wh.prodTime}s</span>
                         <span className="gd-ucard-stock">{stock} in stock</span>

@@ -26,6 +26,8 @@ import {
     defenseMinRange,
     defenseRange,
     falloutIntensity,
+    falloutDoseAt,
+    FALLOUT,
     gdpOf,
     hangarCapOf,
     hangarCount,
@@ -301,7 +303,7 @@ export default function LiveGame({
             eventSound(e);
             if (e.type === "destroy" && e.kind === "city") {
                 const c = w.cities.find((x) => x.id === e.cityId);
-                if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot});
+                if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot, fallout: !!e.fallout});
             }
             // Attack warning: a launch at me my sensors caught, or a track my
             // radars picked up mid-flight — either way, the klaxon toast.
@@ -309,6 +311,13 @@ export default function LiveGame({
                 (e.type === "detected" && e.slot === mySlot)) {
                 setErr({msg: "Launch detected — missile inbound.", kind: "err"});
                 setTimeout(() => setErr(null), 2600);
+            }
+            // Fallout on home soil: a fresh cloud that covers one of my cities
+            // raises a one-time contamination warning (my own strikes near the
+            // front count too — the radiation doesn't check allegiance).
+            if (e.type === "fallout" && w.cities.some((c) => c.alive && c.slot === mySlot && haversine(e.lng, e.lat, c.lng, c.lat) <= FALLOUT.radiusKm)) {
+                setErr({msg: "Radioactive fallout over your territory.", kind: "warn"});
+                setTimeout(() => setErr(null), 3000);
             }
             if (e.type === "intercept") fresh.push({
                 id: e.id,
@@ -338,9 +347,10 @@ export default function LiveGame({
         // priority over enemy losses (positive) for the single toast slot.
         if (cityDeaths.length) {
             const fmtList = (names) => names.slice(0, 2).join(", ") + (names.length > 2 ? ` +${names.length - 2}` : "");
-            const mineLost = cityDeaths.filter((d) => d.mine).map((d) => d.name);
+            const mine = cityDeaths.filter((d) => d.mine);
+            const mineLost = mine.map((d) => d.name);
             const enemyLost = cityDeaths.filter((d) => !d.mine).map((d) => d.name);
-            if (mineLost.length) setErr({msg: `Lost ${fmtList(mineLost)}`, kind: "err"});
+            if (mineLost.length) setErr({msg: `Lost ${fmtList(mineLost)}${mine.every((d) => d.fallout) ? " to fallout" : ""}`, kind: "err"});
             else if (enemyLost.length) setErr({msg: `${fmtList(enemyLost)} destroyed`, kind: "info"});
             setTimeout(() => setErr(null), 3200);
         }
@@ -1209,6 +1219,14 @@ export default function LiveGame({
                                 <div>
                                     <span>Status</span><b>{hoverEnt.slot === mySlot ? "Yours" : relation(hoverEnt.slot) === "war" ? "At War" : "At Peace"}</b>
                                 </div>
+                                {(() => {
+                                    // Radioactive contamination: only shown when the city sits
+                                    // under an active fallout cloud. Reports the live loss rate
+                                    // and roughly how long the hazard lingers.
+                                    const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
+                                    if (fo.remain <= 0) return null;
+                                    return <div><span>Fallout</span><b className="gd-contam">☢ −{(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~{Math.ceil(fo.remain)}s</b></div>;
+                                })()}
                             </div>
                             <div className="gd-hp-bar gd-city-hp">
                                 <i className={vitalityOf(hoverEnt) <= 0.35 ? "low" : ""}
