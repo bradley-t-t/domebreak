@@ -1,13 +1,29 @@
-// Lobby/matchmaking writes. The client reads lobbies over RLS + Realtime and
-// calls here for every mutation; identity always derives from the verified
-// JWT. "start" only flips status to 'starting' — the game server (subscribed
-// with the service role) claims it, spins the match, and advertises its
-// WebSocket URL back on the row.
-//   {action:"create", name?, maxPlayers?}   {action:"join", lobbyId}
-//   {action:"leave"}                        {action:"set_iso", iso}
-//   {action:"ready", ready}                 {action:"set_ai", count}   (host)
-//   {action:"start"}                        (host)
-//   {action:"find"}                         quick match: join oldest open or create
+// Quick-match + lobby writes (ADR-0004). The client never inserts/updates
+// matchmaking_queue, lobbies, or lobby_members directly; identity always
+// derives from the verified JWT. Match formation is entirely server-owned:
+// the game server's matchmaker (server/matchmaker.js) groups waiting queue
+// rows, forms lobbies, backfills bot lobby_members, and auto-launches by
+// flipping status to 'starting', which the game server's existing claim path
+// (ADR-0003) then picks up. This function only enrolls/cancels queue entries
+// and lets a seated member (human or, moot for bots since they never call
+// this function) adjust their own seat before launch.
+//
+//   {action:"quick_match", iso?}   enroll as a 'waiting' queue row (idempotent;
+//                                  a no-op success if already 'waiting' — does
+//                                  not reset enqueued_at, preserving FIFO order)
+//   {action:"cancel"}              delete the caller's 'waiting' row only (no-op
+//                                  if none, or if already 'matched' — use "leave"
+//                                  on the formed lobby in that case)
+//   {action:"set_iso", iso}        caller's own lobby_members.iso (unchanged)
+//   {action:"ready", ready}        caller's own lobby_members.ready (unchanged)
+//   {action:"leave"}               remove caller from any open/starting lobby
+//                                  (unchanged)
+//
+// REMOVED from the player path: "create", "join", "find" (lobby formation is
+// now server-owned by the matchmaker, not a host/browser flow), "set_ai"
+// (bots are matchmaker-inserted lobby_members, not a host-configured count),
+// and "start" as a client action (the server's auto-launch writes
+// status='starting' directly; there is no host to click Start).
 import {createClient} from "npm:@supabase/supabase-js@2";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
@@ -34,7 +50,9 @@ async function sweep(db: ReturnType<typeof createClient>) {
     await db.from("lobbies").update({status: "closed"}).eq("status", "open").lt("updated_at", stale);
 }
 
-// Pull the caller out of any open/starting lobby; transfer or close hosted rooms.
+// Pull the caller out of any open/starting lobby they're seated in (quick-
+// match lobbies are server-formed and host-less — see ADR-0004 — but this
+// also tolerates a legacy hosted row if one still exists).
 async function leaveAll(db: ReturnType<typeof createClient>, userId: string) {
     const {data: mine} = await db.from("lobby_members").select("lobby_id, lobbies!inner(id, host, status)")
         .eq("user_id", userId).in("lobbies.status", ["open", "starting"]);
@@ -45,31 +63,13 @@ async function leaveAll(db: ReturnType<typeof createClient>, userId: string) {
             .eq("lobby_id", m.lobby_id).order("joined_at");
         if (!rest?.length) {
             await db.from("lobbies").update({status: "closed"}).eq("id", m.lobby_id);
-        } else if (lob.host === userId) {
+        } else if (lob?.host && lob.host === userId) {
+            // Only legacy hosted lobbies have a host to reassign; quick-match
+            // lobbies never do (host is null), so this branch is inert for them.
             await db.from("lobbies").update({host: rest[0].user_id}).eq("id", m.lobby_id);
         }
         await touch(db, m.lobby_id);
     }
-}
-
-async function joinLobby(db: ReturnType<typeof createClient>, userId: string, lobbyId: string) {
-    const {data: lob} = await db.from("lobbies").select("*").eq("id", lobbyId).maybeSingle();
-    if (!lob || lob.status !== "open") return {error: "lobby is not open", status: 409};
-    const {data: members} = await db.from("lobby_members").select("slot").eq("lobby_id", lobbyId);
-    const taken = new Set((members ?? []).map((m) => m.slot));
-    if (taken.size + lob.ai_slots >= lob.max_players) return {error: "lobby is full", status: 409};
-    // lowest free slot; the unique constraint referees join races
-    for (let slot = 0; slot < lob.max_players; slot++) {
-        if (taken.has(slot)) continue;
-        const {error} = await db.from("lobby_members").insert({lobby_id: lobbyId, user_id: userId, slot});
-        if (!error) {
-            await touch(db, lobbyId);
-            return {lobbyId};
-        }
-        if (!/duplicate|unique/i.test(error.message)) return {error: error.message, status: 500};
-        taken.add(slot); // lost the race for this seat — try the next
-    }
-    return {error: "lobby is full", status: 409};
 }
 
 Deno.serve(async (req) => {
@@ -85,54 +85,45 @@ Deno.serve(async (req) => {
     await sweep(db);
 
     // Resolve the caller's current open/starting lobby + row once for the
-    // member-scoped actions below.
+    // member-scoped actions below (set_iso, ready, leave).
     const myLobby = async () => {
         const {data} = await db.from("lobby_members")
-            .select("lobby_id, slot, ready, iso, lobbies!inner(id, host, status, max_players, ai_slots)")
+            .select("lobby_id, slot, ready, iso, lobbies!inner(id, status)")
             .eq("user_id", user.id).in("lobbies.status", ["open", "starting"]).maybeSingle();
         if (!data) return null;
         const lob = Array.isArray(data.lobbies) ? data.lobbies[0] : data.lobbies;
         return {member: data, lobby: lob};
     };
 
-    if (body.action === "create") {
+    if (body.action === "quick_match") {
+        // Idempotent enroll: leave any stale lobby seat first so the caller
+        // is never double-booked, then upsert a 'waiting' row. If a 'waiting'
+        // row already exists this is a no-op success — enqueued_at is left
+        // untouched so the caller keeps their FIFO place in the matchmaker's
+        // grouping window (ADR-0004).
         await leaveAll(db, user.id);
-        const {data: prof} = await db.from("profiles").select("username").eq("id", user.id).single();
-        const name = (typeof body.name === "string" && body.name.trim().slice(0, 40)) || `${prof?.username ?? "Commander"}'s War`;
-        const maxPlayers = Number.isInteger(body.maxPlayers) && body.maxPlayers >= 2 && body.maxPlayers <= 16 ? body.maxPlayers : 8;
-        const {data: lob, error} = await db.from("lobbies")
-            .insert({host: user.id, name, max_players: maxPlayers}).select().single();
+        const iso = typeof body.iso === "string" && /^[A-Za-z]{2,3}$/.test(body.iso.trim())
+            ? body.iso.trim().toUpperCase().slice(0, 3)
+            : null;
+        const {data: existing} = await db.from("matchmaking_queue")
+            .select("user_id, status").eq("user_id", user.id).maybeSingle();
+        if (existing?.status === "waiting") return json({ok: true});
+        const {error} = await db.from("matchmaking_queue")
+            .upsert({user_id: user.id, iso, status: "waiting", enqueued_at: new Date().toISOString(), lobby_id: null});
         if (error) return json({error: error.message}, 500);
-        await db.from("lobby_members").insert({lobby_id: lob.id, user_id: user.id, slot: 0});
-        return json({ok: true, lobbyId: lob.id});
+        return json({ok: true});
     }
 
-    if (body.action === "join") {
-        if (typeof body.lobbyId !== "string") return json({error: "lobbyId required"}, 400);
-        await leaveAll(db, user.id);
-        const r = await joinLobby(db, user.id, body.lobbyId);
-        return r.error ? json({error: r.error}, r.status) : json({ok: true, lobbyId: r.lobbyId});
+    if (body.action === "cancel") {
+        // Safe no-op if the caller has no 'waiting' row (never queued, or
+        // already 'matched' — a matched caller must use "leave" instead).
+        await db.from("matchmaking_queue").delete().eq("user_id", user.id).eq("status", "waiting");
+        return json({ok: true});
     }
 
     if (body.action === "leave") {
         await leaveAll(db, user.id);
         return json({ok: true});
-    }
-
-    if (body.action === "find") {
-        await leaveAll(db, user.id);
-        const {data: open} = await db.from("lobbies").select("id, max_players, ai_slots")
-            .eq("status", "open").order("created_at").limit(20);
-        for (const lob of open ?? []) {
-            const r = await joinLobby(db, user.id, lob.id);
-            if (!r.error) return json({ok: true, lobbyId: lob.id, joined: true});
-        }
-        const {data: prof} = await db.from("profiles").select("username").eq("id", user.id).single();
-        const {data: lob, error} = await db.from("lobbies")
-            .insert({host: user.id, name: `${prof?.username ?? "Commander"}'s War`}).select().single();
-        if (error) return json({error: error.message}, 500);
-        await db.from("lobby_members").insert({lobby_id: lob.id, user_id: user.id, slot: 0});
-        return json({ok: true, lobbyId: lob.id, created: true});
     }
 
     const ctx = await myLobby();
@@ -150,32 +141,6 @@ Deno.serve(async (req) => {
     if (body.action === "ready") {
         await db.from("lobby_members").update({ready: !!body.ready}).eq("lobby_id", lobby.id).eq("user_id", user.id);
         await touch(db, lobby.id);
-        return json({ok: true});
-    }
-
-    if (body.action === "set_ai") {
-        if (lobby.host !== user.id) return json({error: "host only"}, 403);
-        const {count} = await db.from("lobby_members").select("*", {
-            count: "exact",
-            head: true
-        }).eq("lobby_id", lobby.id);
-        const maxAi = lobby.max_players - (count ?? 1);
-        const n = Number.isInteger(body.count) ? Math.max(0, Math.min(body.count, maxAi)) : 0;
-        await db.from("lobbies").update({ai_slots: n, updated_at: new Date().toISOString()}).eq("id", lobby.id);
-        return json({ok: true, aiSlots: n});
-    }
-
-    if (body.action === "start") {
-        if (lobby.host !== user.id) return json({error: "host only"}, 403);
-        if (lobby.status !== "open") return json({error: "already starting"}, 409);
-        const {data: members} = await db.from("lobby_members").select("user_id, ready").eq("lobby_id", lobby.id);
-        const humans = members ?? [];
-        if (humans.length + lobby.ai_slots < 2) return json({error: "need at least 2 players (add AI or wait for a friend)"}, 409);
-        const notReady = humans.filter((m) => m.user_id !== user.id && !m.ready);
-        if (notReady.length) return json({error: "everyone must ready up first"}, 409);
-        const {error} = await db.from("lobbies")
-            .update({status: "starting", updated_at: new Date().toISOString()}).eq("id", lobby.id).eq("status", "open");
-        if (error) return json({error: error.message}, 500);
         return json({ok: true});
     }
 

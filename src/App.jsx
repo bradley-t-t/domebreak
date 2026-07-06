@@ -18,7 +18,7 @@ import {fetchProfile, fetchStats, getSession, onAuth, reportMatch, signOut, touc
 import {connectMatch} from "./net/gameClient.js";
 import {supabase} from "./account/client.js";
 import MeBadge from "./ui/common/MeBadge.jsx";
-import MultiplayerScreen from "./ui/screens/MultiplayerScreen.jsx";
+import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 
 export default function App() {
@@ -269,7 +269,7 @@ export default function App() {
         } catch (e) {
             setNetStatus(null);
             setLobbyId(null);
-            setScreen("multiplayer");
+            setScreen("menu");
             console.warn("match connect failed", e);
         }
     };
@@ -310,7 +310,7 @@ export default function App() {
                 <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut}/>}
             {screen === "menu" &&
                 <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue}
-                           onMultiplayer={() => setScreen("multiplayer")}
+                           onPlay={() => setScreen("searching")}
                            onLoad={() => {
                                setSaveMode("load");
                                setOverlay("saveload");
@@ -318,17 +318,19 @@ export default function App() {
                            stats={accountStats} onSignOut={signOut}/>}
             {screen === "newgame" &&
                 <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")}/>}
-            {screen === "multiplayer" &&
-                <MultiplayerScreen onEnterLobby={(id) => {
-                    setLobbyId(id);
-                    setScreen("lobby");
-                }} onBack={() => setScreen("menu")}/>}
+            {screen === "searching" &&
+                <SearchingScreen reduceMotion={reduceMotion}
+                                  onMatched={(id) => {
+                                      setLobbyId(id);
+                                      setScreen("lobby");
+                                  }}
+                                  onCancel={() => setScreen("menu")}/>}
             {screen === "lobby" && lobbyId &&
                 <LobbyScreen lobbyId={lobbyId} me={accountProfile} connecting={netStatus === "connecting"}
                              onLaunch={joinMatch}
                              onLeft={() => {
                                  setLobbyId(null);
-                                 setScreen("multiplayer");
+                                 setScreen("menu");
                              }}/>}
             {screen === "playing" && world &&
                 <LiveGame key={session} world={world} net={netClient} globe={globe} keys={keys}

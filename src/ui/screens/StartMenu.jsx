@@ -11,7 +11,7 @@ export default function StartMenu({
                                       onContinue,
                                       onLoad,
                                       onSettings,
-                                      onMultiplayer,
+                                      onPlay,
                                       canContinue,
                                       profile,
                                       stats,
@@ -42,9 +42,9 @@ export default function StartMenu({
                     </div>
                 </div>
                 <div className="gd-menu-btns">
-                    {canContinue && <button className="gd-menu-btn primary" onClick={onContinue}>Continue</button>}
-                    <button className={`gd-menu-btn ${canContinue ? "" : "primary"}`} onClick={onNew}>New Game</button>
-                    <button className="gd-menu-btn" onClick={onMultiplayer}>Multiplayer</button>
+                    <button className="gd-menu-btn primary" onClick={onPlay}>Play</button>
+                    {canContinue && <button className="gd-menu-btn" onClick={onContinue}>Continue</button>}
+                    <button className="gd-menu-btn" onClick={onNew}>New Game</button>
                     <button className="gd-menu-btn" onClick={onLoad}>Load Game</button>
                     <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
                 </div>
