@@ -10,7 +10,19 @@
 import {LEADERSHIP} from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
-import {ensureHangar, launchFerry} from "./aircraft.js";
+import {ensureHangar, launchEscort, launchFerry} from "./aircraft.js";
+
+// One airstrip may only launch a ferry every LEADERSHIP.launchGapSec — a takeoff
+// queue, so a strip staggers its departures instead of scrambling its whole
+// fleet in a single tick. Also scrambles the ferry's fighter escort.
+function dispatchFerry(w, strip, capId, bunkerId, mode) {
+    if ((w.time - (strip._ferryAt ?? -Infinity)) < LEADERSHIP.launchGapSec) return null;
+    const ferry = launchFerry(w, strip, capId, bunkerId, mode);
+    if (!ferry) return null;
+    strip._ferryAt = w.time;
+    for (let i = 0; i < LEADERSHIP.escortsPerFerry; i++) launchEscort(w, strip, ferry.id, i);
+    return ferry;
+}
 
 // Orders a nation's living cities by evacuation priority: capital(s) first, then
 // by population descending. Shared by seeding and the evac controller so leaders
@@ -190,13 +202,15 @@ export function evacTick(w) {
         }
         const needsFerry = (c) => (c.leaders || 0) - (inbound.get(c.id) || 0) > 0;
         for (const s of strips) {
-            let slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
-            while (slots > 0 && (s.hangar?.transport || 0) > 0) {
-                const city = sites.find(needsFerry);
-                if (!city) break; // every city's leaders are already covered by inbound ferries
-                launchFerry(w, s, city.id, bunker.id, "shelter");
+            // At most one departure per strip per tick, gated by the takeoff-queue
+            // interval, so a strip fans its ferries out over time (up to
+            // transportsPerAirstrip airborne at once) instead of all at once.
+            const slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
+            if (slots <= 0 || (s.hangar?.transport || 0) <= 0) continue;
+            const city = sites.find(needsFerry);
+            if (!city) continue; // every city's leaders are already covered by inbound ferries
+            if (dispatchFerry(w, s, city.id, bunker.id, "shelter")) {
                 inbound.set(city.id, (inbound.get(city.id) || 0) + LEADERSHIP.perPlane);
-                slots--;
             }
         }
     }
@@ -227,21 +241,21 @@ function releaseAssign(w, n, bunker, strips, ferries, perStrip) {
         if (u.mission.mode === "release" && fill.has(u.mission.capId)) fill.set(u.mission.capId, fill.get(u.mission.capId) + LEADERSHIP.perPlane);
     }
     for (const s of strips) {
-        let slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
-        while (slots > 0 && (s.hangar?.transport || 0) > 0 && unclaimed > 0) {
-            let tgt = null, min = Infinity;
-            for (const c of targets) {
-                const f = fill.get(c.id);
-                if (f < min) {
-                    min = f;
-                    tgt = c;
-                }
+        // One queued departure per strip per tick (see dispatchFerry).
+        const slots = LEADERSHIP.transportsPerAirstrip - (perStrip.get(s.id) || 0);
+        if (slots <= 0 || (s.hangar?.transport || 0) <= 0 || unclaimed <= 0) continue;
+        let tgt = null, min = Infinity;
+        for (const c of targets) {
+            const f = fill.get(c.id);
+            if (f < min) {
+                min = f;
+                tgt = c;
             }
-            if (!tgt) break;
-            launchFerry(w, s, tgt.id, bunker.id, "release");
+        }
+        if (!tgt) continue;
+        if (dispatchFerry(w, s, tgt.id, bunker.id, "release")) {
             fill.set(tgt.id, fill.get(tgt.id) + LEADERSHIP.perPlane);
             unclaimed -= LEADERSHIP.perPlane;
-            slots--;
         }
     }
 }

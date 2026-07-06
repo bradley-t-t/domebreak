@@ -168,6 +168,67 @@ export function launchFerry(w, base, capId, bunkerId, mode = "shelter") {
     return jet;
 }
 
+// Scramble one escort fighter to shadow a leadership ferry. Draws from the
+// airstrip's patrol-fighter stock (the same type it would fly on CAP) and flies
+// a custom formation profile (flyEscort) — it never enters the patrol/attack
+// logic, so it just guards the ferry and returns to stock when the run ends.
+// Returns the escort, or null if no fighter stock remains.
+export function launchEscort(w, base, ferryId, idx) {
+    ensureHangar(w, base);
+    const ftype = PATROL_FIGHTER[base.type];
+    if (!ftype || (base.hangar[ftype] || 0) <= 0) return null;
+    base.hangar[ftype]--;
+    const ad = UNITS[ftype];
+    const jet = {
+        id: nextId(w, "u"), slot: base.slot, type: ftype,
+        lng: base.lng, lat: base.lat, hp: ad.hp, cooldown: 0, targetId: null, warhead: null,
+        baseId: base.id, phase: "escort", hdg: runwayAxis(base), alt: 1, vis: 0, fuel: Infinity,
+        mission: {role: "leadershipEscort", leadId: ferryId, homeId: base.id, idx: idx || 0},
+    };
+    w.units.push(jet);
+    return jet;
+}
+
+// Formation escort: hold a stand-off point off the leadership ferry until the run
+// ends (ferry lands/stows or is lost), then return to the home airstrip and stow
+// back into fighter stock. Pure flight — the combat loops skip escort-mission
+// units, so an escort never breaks formation to shoot.
+function flyEscort(w, u, def, dt) {
+    const m = u.mission;
+    const sp = def.airSpeed, tr = def.turnRate;
+    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
+    u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
+    if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    const lead = w.units.find((x) => x.id === m.leadId && x.hp > 0 && x.mission?.role === "leadershipFerry");
+    const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
+    if (lead) {
+        // Fan the escorts around the ferry by index so a flight spreads out, and
+        // match the ferry's altitude so they climb/descend with it on the pads.
+        const escorts = Math.max(1, LEADERSHIP.escortsPerFerry);
+        const ang = ((m.idx || 0) / escorts) * 2 * Math.PI + Math.PI / 2;
+        const fp = polarFrom(lead, LEADERSHIP.escortOffsetKm, ang);
+        u.alt = Math.max(0.35, lead.alt || 0);
+        const rng = dist(u, fp);
+        const speed = Math.min(sp, Math.max(sp * 0.35, rng * 1.4));
+        advance(u, bearingTo(u, fp), speed, tr * 2, dt);
+        return;
+    }
+    // Run over (ferry stowed or shot down): recover to the home strip and stow.
+    if (!home) {
+        u.hp = 0;
+        u.face = null;
+        return;
+    }
+    u.alt = 1;
+    if (dist(u, home) <= LEADERSHIP.arriveKm) {
+        const cap = hangarCapOf(home.type, u.type);
+        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
+        u.hp = 0; // stow into fighter stock
+        return;
+    }
+    advance(u, bearingTo(u, home), sp, tr, dt);
+}
+
 // Point-to-point leadership ferry, direction set by mission.mode. Flies a straight
 // line toward the current waypoint (climbing to cruise), sets down for a timed
 // load/unload, then flies the next leg, then home to stow. In "shelter" mode it
@@ -399,9 +460,10 @@ function flyRotary(w, u, def, base, dt) {
 }
 
 export function flyAircraft(w, u, def, dt) {
-    // Leadership ferries fly their own point-to-point profile, not the patrol
+    // Leadership ferries + their escorts fly their own profiles, not the patrol
     // pattern — handled entirely before the airbase/runway machinery below.
     if (u.mission?.role === "leadershipFerry") return flyFerry(w, u, def, dt);
+    if (u.mission?.role === "leadershipEscort") return flyEscort(w, u, def, dt);
     const base = w.units.find((b) => b.id === u.baseId && b.hp > 0);
     if (!base) {
         u.hp = 0;
