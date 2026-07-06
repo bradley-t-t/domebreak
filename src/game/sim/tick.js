@@ -112,14 +112,6 @@ function pickTarget(w, enemies) {
     return pool[pool.length - 1];
 }
 
-function aiSpot(w, slot, city) {
-    for (let k = 0; k < 10; k++) {
-        const lng = city.lng + (rand(w) - 0.5) * 2.4, lat = city.lat + (rand(w) - 0.5) * 2.4;
-        if (inTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
-    }
-    return null;
-}
-
 // Tech-gated unit types the AI will pursue once unlocked, in build priority.
 // Space Command HQ leads so its dependents become buildable; subs and modern
 // defenses follow. Purely a build-order preference over data-driven gates —
@@ -133,7 +125,7 @@ const AI_UNLOCK_BUILD_ORDER = [
 // the unit's own requiresTech/requiresUnit/maxCount (via queueUnit) plus AI
 // reserves: the pricey space platforms wait behind spaceHqReserve, subs behind
 // subReserve. Returns true if it queued something (caller should yield the tick).
-function aiBuildUnlocked(w, n, myCap) {
+function aiBuildUnlocked(w, n, myUnits, cities, front) {
     if (rand(w) >= AI_TUNING.unlockedBuildChance) return false;
     for (const type of AI_UNLOCK_BUILD_ORDER) {
         const def = UNITS[type];
@@ -141,7 +133,7 @@ function aiBuildUnlocked(w, n, myCap) {
         // Only chase units this nation has actually unlocked.
         if (def.requiresTech && !n.research.done.includes(def.requiresTech)) continue;
         // maxCount / already-satisfied: don't re-queue a one-off (e.g. spacehq).
-        const have = w.units.filter((u) => u.slot === n.slot && u.type === type && u.hp > 0).length + prodCount(n, "unit", type);
+        const have = myUnits.filter((u) => u.type === type).length + prodCount(n, "unit", type);
         if (def.maxCount && have >= def.maxCount) continue;
         if (unitLockReason(w, n.slot, type)) continue; // prereq (spacehq) not up yet
         // Reserve cushion: space platforms are the most expensive commitments.
@@ -150,9 +142,9 @@ function aiBuildUnlocked(w, n, myCap) {
         const reserve = isSpace ? AI_TUNING.spaceHqReserve : isSub ? AI_TUNING.subReserve : 0;
         const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
         if (n.points < cost + reserve) continue;
-        // Naval hulls launch from coastal water; land/space assets side near the
-        // capital like every other structure the AI raises.
-        const p = def.domain === "sea" ? aiSeaSpot(w, n.slot, myCap) : aiSpot(w, n.slot, myCap);
+        // aiPlace sites by role — sea hulls to coastal water, modern defenses over
+        // cities, space/command to the safe interior — and spreads same-role apart.
+        const p = aiPlace(w, n, type, myUnits, cities, front);
         if (!p) continue;
         if (queueUnit(w, n.slot, type, p.lng, p.lat).ok) return true;
     }
@@ -301,6 +293,145 @@ function diploDeclareWar(w, n, caps, alive) {
     declareWar(w, n.slot, rivals[rivals.length - 1][0]);
 }
 
+// --- Strategic placement (design/quick-specs/ai-strategic-placement-2026-07-06.md)
+// The AI sites each unit by role and spreads its forces across its cities rather
+// than piling everything onto the capital. All sampling uses the seeded rand(w).
+
+// Capital + population weighting used to rank anchor / protect targets.
+function cityValue(c) {
+    return (c.pop || 0) * (c.cap ? 1.5 : 1) + (c.cap ? 5e6 : 0);
+}
+
+// A nation's alive cities, most valuable first.
+function aiCities(w, slot) {
+    const out = [];
+    for (const c of w.cities) if (c.slot === slot && c.alive) out.push(c);
+    out.sort((a, b) => cityValue(b) - cityValue(a));
+    return out;
+}
+
+// High-value points a nation wants shielded: its cities plus its command assets
+// (leadership bunker, space HQ), which sit away from cities but must not be left
+// exposed. Value-sorted so callers take the most valuable uncovered one first.
+function protectPoints(w, slot, myUnits) {
+    const pts = [];
+    for (const c of w.cities) if (c.slot === slot && c.alive) pts.push({lng: c.lng, lat: c.lat, val: cityValue(c)});
+    for (const u of myUnits) if (u.type === "bunker" || u.type === "spacehq") pts.push({lng: u.lng, lat: u.lat, val: 8e6});
+    pts.sort((a, b) => b.val - a.val);
+    return pts;
+}
+
+// Is a point already inside a friendly defense's engagement envelope?
+function defenseCovers(w, myUnits, lng, lat) {
+    for (const u of myUnits) {
+        if (UNITS[u.type].kind !== "defense") continue;
+        if (haversine(u.lng, u.lat, lng, lat) <= defenseRange(w, u)) return true;
+    }
+    return false;
+}
+
+// The "front" a nation orients to: the nearest at-war enemy capital, or (in peace)
+// the nearest neighbour's capital so outward-facing builds still make sense. Enemy
+// capitals weigh closer so an active war wins the tie. null only if truly alone.
+function frontPos(w, n, caps) {
+    const a = caps[n.slot];
+    if (!a) return null;
+    let best = null, bd = Infinity;
+    for (const m of w.nations) {
+        if (m.slot === n.slot || !m.alive) continue;
+        const b = caps[m.slot];
+        if (!b) continue;
+        const d = haversine(a.lng, a.lat, b.lng, b.lat) * (n.relations[m.slot] === "war" ? 0.5 : 1);
+        if (d < bd) { bd = d; best = b; }
+    }
+    return best;
+}
+
+function farthestCity(cities, ref) {
+    if (!ref) return cities[0];
+    let best = cities[0], bd = -Infinity;
+    for (const c of cities) { const d = haversine(c.lng, c.lat, ref.lng, ref.lat); if (d > bd) { bd = d; best = c; } }
+    return best;
+}
+
+function nearestCity(cities, ref) {
+    if (!ref) return cities[0];
+    let best = cities[0], bd = Infinity;
+    for (const c of cities) { const d = haversine(c.lng, c.lat, ref.lng, ref.lat); if (d < bd) { bd = d; best = c; } }
+    return best;
+}
+
+function aiRole(def) {
+    if (def.kind === "defense") return "defense";
+    if (def.kind === "industry") return "industry";
+    if (def.kind === "offense") return "offense";
+    if (def.detect) return "sensor";
+    return "other";
+}
+
+// Would a spot crowd a live same-role unit inside spreadKm? Stops the AI stacking
+// two radars / two factories / two domes on the same ground.
+function crowdsSameRole(role, myUnits, lng, lat) {
+    for (const u of myUnits) {
+        if (aiRole(UNITS[u.type]) !== role) continue;
+        if (haversine(u.lng, u.lat, lng, lat) < AI_TUNING.spreadKm) return true;
+    }
+    return false;
+}
+
+// Sample a valid build spot around an anchor city — biased toward the front (sensors,
+// forward offense) or away into the interior (industry, command), and spread from
+// same-role units. Falls back to any valid nearby spot so a build is never dropped.
+function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
+    const cosLat = Math.max(0.2, Math.cos((anchor.lat * Math.PI) / 180));
+    let brng = null;
+    if (front && (toward || away)) {
+        brng = Math.atan2(front.lng - anchor.lng, front.lat - anchor.lat) + (away ? Math.PI : 0);
+    }
+    for (let ring = 0; ring < 5; ring++) {
+        const rDeg = 0.55 + ring * 0.5;
+        for (let k = 0; k < 6; k++) {
+            const ang = brng != null ? brng + (rand(w) - 0.5) * 1.6 : rand(w) * Math.PI * 2;
+            const lat = anchor.lat + Math.cos(ang) * rDeg;
+            const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
+            if (!inTerritory(w, slot, lng, lat)) continue;
+            if (placementBlocked(w, lng, lat, null)) continue;
+            if (crowdsSameRole(role, myUnits, lng, lat)) continue;
+            return {lng, lat};
+        }
+    }
+    // Spread constraint too tight for the room available — take any valid spot.
+    for (let k = 0; k < 12; k++) {
+        const lng = anchor.lng + (rand(w) - 0.5) * 2.2, lat = anchor.lat + (rand(w) - 0.5) * 2.2;
+        if (inTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
+    }
+    return null;
+}
+
+// Site a unit by role: defense over the most valuable uncovered protect-point,
+// sensors/forward-offense toward the front, industry/command in the safe interior.
+function aiPlace(w, n, type, myUnits, cities, front) {
+    const def = UNITS[type];
+    if (!cities.length) return null;
+    const role = aiRole(def);
+    const forward = role === "sensor" || (role === "offense" && def.range < 12000);
+    let anchor;
+    if (role === "defense") {
+        const pts = protectPoints(w, n.slot, myUnits);
+        anchor = pts.find((p) => !defenseCovers(w, myUnits, p.lng, p.lat)) || pts[0] || cities[0];
+    } else if (forward) {
+        anchor = nearestCity(cities, front);   // frontier — face the threat
+    } else if (role === "industry" || def.maxCount) {
+        anchor = farthestCity(cities, front);  // safe interior (also bunker / space HQ)
+    } else {
+        anchor = cities[0];
+    }
+    if (!anchor) return null;
+    if (def.domain === "sea") return aiSeaSpot(w, n.slot, anchor);
+    const away = role === "industry" || type === "bunker" || type === "spacehq";
+    return spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
+}
+
 function aiTick(w, dt) {
     // Index living units by nation once per tick so each AI scans only its own
     // forces (O(own units)), not the whole world's — the roster is now ~222 nations.
@@ -356,22 +487,34 @@ function aiTick(w, dt) {
         const net = netIncomeOf(w, n.slot);
         const lineBusy = (n.prod.current ? 1 : 0) + n.prod.queue.length;
         if (lineBusy >= AI_TUNING.queueMax) continue; // keep the line short — the AI plans, it doesn't hoard
+        // Strategic siting context, shared by every build this think: the nation's
+        // cities (value-sorted), the front it faces, and a role-aware placer.
+        const cities = aiCities(w, n.slot);
+        const front = frontPos(w, n, caps);
+        const place = (type) => aiPlace(w, n, type, myUnits, cities, front);
         // In the red, everything else waits — industry is the only way back out
         // (the same deficit gate the player lives under, enforced in queueUnit).
         if (net < 0) {
             if (n.points >= UNITS.factory.cost) {
-                const p = aiSpot(w, n.slot, myCap);
+                const p = place("factory");
                 if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat).ok) return;
             }
             continue;
         }
-        const domes = myUnits.filter((u) => u.type === "dome").length + prodCount(n, "unit", "dome");
-        if (domes === 0 && n.points >= UNITS.dome.cost) {
-            const p = aiSpot(w, n.slot, myCap);
+        // Build doctrine, in priority order. Every placement goes through aiPlace,
+        // which sites by role (defense over cities, sensors/offense toward the front,
+        // industry/command in the interior) and spreads same-role units apart.
+        const defenders = myUnits.filter((u) => UNITS[u.type].kind === "defense").length
+            + prodCount(n, "unit", "dome") + prodCount(n, "unit", "battery");
+        const protectN = protectPoints(w, n.slot, myUnits).length;
+        const defenseTarget = Math.min(AI_TUNING.defenseMax, Math.max(1, Math.round(protectN * AI_TUNING.defensePerPoint)));
+
+        // 1. Cover the capital first — never leave the heart of the nation open.
+        if (defenders === 0 && n.points >= UNITS.dome.cost) {
+            const p = place("dome");
             if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat).ok) return;
         }
-        // Magazines are fed through the same line as everything else — warheads
-        // cost the AI the same points and production time they cost the player.
+        // 2. Warheads — fed through the same line, same cost/time as the player.
         const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense") || prodCount(n, "unit", "silo") > 0 || prodCount(n, "unit", "launcher") > 0;
         const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
         if (hasOffense && stocked("standard") < AI_TUNING.stdStockTarget && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
@@ -380,31 +523,55 @@ function aiTick(w, dt) {
         if (hasOffense && enemies.length && stocked("thermo") < AI_TUNING.thermoStockTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
             if (queueAmmo(w, n.slot, "thermo").ok) return;
         }
+        // 3. Early-warning radar — spread across the frontier for coverage.
         const radars = myUnits.filter((u) => u.type === "radar").length + prodCount(n, "unit", "radar");
-        if (domes > 0 && radars === 0 && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
-            const p = aiSpot(w, n.slot, myCap);
+        const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
+        if (defenders > 0 && radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
+            const p = place("radar");
             if (p && queueUnit(w, n.slot, "radar", p.lng, p.lat).ok) return;
         }
-        const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");
-        if (radars > 0 && oths === 0 && n.points >= UNITS.oth.cost + AI_TUNING.othReserve) {
-            const p = aiSpot(w, n.slot, myCap);
-            if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat).ok) return;
-        }
-        // Grow the economy alongside the arsenal — a few factories keep the AI solvent.
+        // 4. Industry — build the economy early (safe interior, factories spread) so
+        // the nation can actually afford the rest of its doctrine.
         const industry = myUnits.filter((u) => UNITS[u.type].kind === "industry").length + prodCount(n, "unit", "factory");
-        if (domes > 0 && industry < AI_TUNING.industryTarget && n.points >= UNITS.factory.cost + AI_TUNING.factoryReserve) {
-            const p = aiSpot(w, n.slot, myCap);
+        if (defenders > 0 && industry < AI_TUNING.industryTarget && n.points >= UNITS.factory.cost + AI_TUNING.factoryReserve) {
+            const p = place("factory");
             if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat).ok) return;
         }
-        // Build the units its completed techs have unlocked. Space assets need a
-        // standing Space Command HQ first — the AI raises that (and any other
-        // requiresUnit prereq) before the assets that depend on it. Reserves keep
-        // it from spending itself dry on the expensive endgame hulls/platforms.
-        if (aiBuildUnlocked(w, n, myCap)) return;
+        // 5. Leadership bunker — one hardened command node, deep in the interior. A
+        // solvent nation (positive net income) banks toward it before lesser builds
+        // so command actually gets stood up; a nation with no spare income skips it
+        // and keeps developing — no freeze. It becomes a protect-point, so the
+        // defense-expansion below shields it too.
+        const hasBunker = myUnits.some((u) => u.type === "bunker") || prodCount(n, "unit", "bunker") > 0;
+        const wantBunker = !hasBunker && cities.length >= AI_TUNING.bunkerMinCities && defenders > 0;
+        if (wantBunker) {
+            if (n.points >= UNITS.bunker.cost + AI_TUNING.bunkerReserve) {
+                const p = place("bunker");
+                if (p && queueUnit(w, n.slot, "bunker", p.lng, p.lat).ok) return;
+            } else if (net > 0) {
+                continue; // income positive — bank toward the bunker before lesser builds
+            }
+        }
+        // 6. Extend the shield — more air defense out to the target, each dome aimed
+        // (via aiPlace) at the most valuable point not yet inside a friendly envelope.
+        if (defenders < defenseTarget && n.points >= UNITS.dome.cost) {
+            const p = place("dome");
+            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat).ok) return;
+        }
+        // 7. One over-the-horizon array for strategic warning (safe interior).
+        const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");
+        if (radars > 0 && oths === 0 && n.points >= UNITS.oth.cost + AI_TUNING.othReserve) {
+            const p = place("oth");
+            if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat).ok) return;
+        }
+        // 8. Tech-gated unlocked units (space HQ, subs, modern defenses…), by role.
+        if (aiBuildUnlocked(w, n, myUnits, cities, front)) return;
+        // 9. Deeper research.
         if (aiResearch(w, n)) return;
+        // 10. Offense — forward toward the front, once at war.
         if (!enemies.length) continue;
         if (n.points >= UNITS.silo.cost + AI_TUNING.siloReserve && net > AI_TUNING.siloMinNet) {
-            const p = aiSpot(w, n.slot, myCap);
+            const p = place("silo");
             if (p) queueUnit(w, n.slot, "silo", p.lng, p.lat);
         }
     }
