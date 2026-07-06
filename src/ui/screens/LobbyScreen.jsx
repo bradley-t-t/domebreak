@@ -10,7 +10,11 @@ import {GREAT_POWERS} from "../../game/sim/newGame.js";
 // launch — the server auto-launches once every member is ready (or on its
 // own lobby-ready timeout), per adr-004.
 export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft}) {
-    const [lobby, setLobby] = useState(null);
+    // undefined = initial fetch still in flight, null = fetched and gone/closed,
+    // object = loaded. The distinction matters: treating the initial `undefined`
+    // as "gone" would fire onLeft() on mount — before fetchLobby() resolves —
+    // and bounce the player straight back to the menu the instant they match.
+    const [lobby, setLobby] = useState(undefined);
     const [revertErr, setRevertErr] = useState(false);
     const [leaving, setLeaving] = useState(false);
     // Guards so realtime's repeated callbacks can never double-fire the
@@ -20,12 +24,13 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
     const prevStatusRef = useRef(null);
 
     useEffect(() => {
-        const refresh = () => fetchLobby(lobbyId).then(setLobby);
+        const refresh = () => fetchLobby(lobbyId).then((l) => setLobby(l ?? null));
         refresh();
         return watchLobby(lobbyId, refresh);
     }, [lobbyId]);
 
     useEffect(() => {
+        if (lobby === undefined) return; // still loading — not "gone", don't bounce
         if (!lobby) {
             if (!leftRef.current) {
                 leftRef.current = true;
@@ -50,6 +55,16 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
         }
     }, [lobby, onLaunch, onLeft]);
 
+    if (lobby === undefined) {
+        return (
+            <div className="gd-menu-screen">
+                <div className="gd-menu-bg"/>
+                <div className="gd-menu-inner gd-lobby">
+                    <h1 className="gd-menu-title sm">Entering War Room…</h1>
+                </div>
+            </div>
+        );
+    }
     if (!lobby) return null;
 
     if (connecting) {
