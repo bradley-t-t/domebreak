@@ -1145,8 +1145,10 @@ export default function LiveGame({
                 <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
                 <NewsTicker world={w} mySlot={mySlot}/>
+                {/* Flowed in the top stack (not absolutely pinned) so it always
+                    sits below the HUD + ticker instead of overlapping them. */}
+                {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             </div>
-            {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}

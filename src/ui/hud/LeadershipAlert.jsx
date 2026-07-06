@@ -28,7 +28,7 @@ export default function LeadershipAlert({world, api, mySlot}) {
         const lost = pctOf(s.lost);
         return (
             <div className={cn(
-                "absolute top-[108px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 max-w-[min(560px,78vw)] py-2.5 px-3.5 rounded-[var(--radius)] bg-panel [backdrop-filter:blur(10px)] shadow-[var(--shadow)] text-text",
+                "relative z-[8] flex items-center gap-3 max-w-[min(560px,78vw)] py-2.5 px-3.5 rounded-[var(--radius)] bg-panel [backdrop-filter:blur(10px)] shadow-[var(--shadow)] text-text",
                 "border border-[rgba(244,192,42,0.45)]"
             )} role="status" aria-live="polite">
                 <div className="text-xl leading-none text-red flex-none text-[#f4c02a]">⬢</div>
