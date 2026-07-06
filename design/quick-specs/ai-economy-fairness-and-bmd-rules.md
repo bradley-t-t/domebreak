@@ -1,4 +1,10 @@
-# AI Economy Fairness + BMD Engagement Rules
+<h1 align="center">AI Economy Fairness + BMD Engagement Rules</h1>
+
+<p align="center">
+  <b>The AI buys its warheads on the player's own production line, and fighters can no longer intercept ballistic missiles.</b>
+</p>
+
+<br />
 
 Two rule changes, engine-side (`src/game/sim/tick.js`).
 

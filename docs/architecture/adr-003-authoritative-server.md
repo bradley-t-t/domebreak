@@ -1,4 +1,10 @@
-# ADR-0003: Authoritative Game Server
+<h1 align="center">ADR-0003: Authoritative Game Server</h1>
+
+<p align="center">
+  <b>A single authoritative Node server reuses the deterministic engine, claims lobbies over outbound Realtime, and streams full-world snapshots that always win.</b>
+</p>
+
+<br />
 
 ## Status
 
@@ -28,7 +34,7 @@ client runs local prediction against the identical engine `step` for smoothness 
 ## Engine Compatibility
 
 | Field                     | Value                                                                                                                                                                                                                                                                                                                       |
-|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                                                                                              |
 | **Domain**                | Networking / Core simulation (authoritative server, snapshot sync) — reuses the simulation, does not modify it                                                                                                                                                                                                              |
 | **Knowledge Risk**        | LOW — Node WebSocket servers, Supabase Realtime subscriptions with the service-role key, and JSON snapshot broadcast are all stable, well-documented patterns                                                                                                                                                               |
@@ -39,7 +45,7 @@ client runs local prediction against the identical engine `step` for smoothness 
 ## ADR Dependencies
 
 | Field             | Value                                                                                                                                                                                                                                                                                 |
-|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Depends On**    | ADR-0001 (Supabase Accounts) — reuses its JWT-verification pattern and its Supabase project; this ADR adds tables/functions to the same project rather than a new one                                                                                                                 |
 | **Enables**       | `design/gdd/multiplayer-matchmaking-social.md` (this ADR is its technical backing); a future delta-encoding ADR; a future server-side fog-of-war filtering ADR                                                                                                                        |
 | **Blocks**        | Any story implementing lobby `start`/game-server claim/snapshot broadcast — none of that can be built until this ADR is Accepted                                                                                                                                                      |
@@ -372,7 +378,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 ## Risks
 
 | Risk                                                                                       | Probability               | Impact                                                                                                                    | Mitigation                                                                                                                                                                                                                                                                |
-|--------------------------------------------------------------------------------------------|---------------------------|---------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | Trusted-client fog-of-war compromise is exploited (a modified client reads hidden data)    | Medium                    | Low at current stage (private lobbies among known players); Medium if this mode is later exposed to strangers/ranked play | Documented explicitly as accepted for this version; server-side per-recipient snapshot filtering is tracked as required future work before any public/ranked/leaderboard-relevant mode ships                                                                              |
 | Sunday host (Raspberry Pi 5) goes offline or loses power                                   | Low–Medium                | High for any in-progress match — no failover server exists today                                                          | The 30s "stuck in `starting`" client-side watchdog (per the GDD) surfaces this gracefully for matches that haven't started; in-progress matches have no current failover — accepted at solo-dev scale, flagged as a future high-availability concern if online play grows |
 | Full-snapshot bandwidth becomes a real bottleneck at higher seat counts (approaching 16)   | Low now, rises with scale | Medium — degraded snapshot rate or connection drops under load                                                            | Snapshot rate (2 Hz) and tick rate (10 Hz) are both tuning knobs (per the GDD); delta encoding is the documented escape hatch once real data justifies the added complexity                                                                                               |
@@ -382,7 +388,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 ## Performance Implications
 
 | Metric                  | Before                           | Expected After                                                                                                           | Budget                                                                                                                                         |
-|-------------------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | CPU (frame time)        | n/a (no live game server exists) | Server: one `step(world, dt)` call per tick at 10 Hz per active match, same cost profile as a client's own tick          | Must stay well under the 100ms tick budget per active match on the Pi 5; exact multi-match headroom to be measured, not assumed                |
 | Memory                  | n/a                              | One `world` object per active match held server-side (same shape/size as a client's in-memory world)                     | Negligible per match at current expected match counts (solo-dev scale, not many concurrent matches)                                            |
 | Load Time               | n/a                              | Match assembly (`createWorld` + AI draft) on lobby claim should complete well under the 30s client-side "stuck" watchdog | Comfortably < 30s; typical `createWorld` cost is already sub-second in single-player                                                           |
@@ -443,7 +449,7 @@ lobby/game-server schema this ADR introduces.
 ## GDD Requirements Addressed
 
 | GDD Document                                   | System                             | Requirement                                                                                                                            | How This ADR Satisfies It                                                                                                                                                                                                       |
-|------------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "An authoritative Node game server... imports the same engine code the client uses... spins up a match instance from the lobby config" | The game server imports `src/game/engine.js` unmodified and calls `createWorld(setup)` from claimed `lobbies`/`lobby_members` data, per the Decision/Architecture sections above.                                               |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "gd-lobby 'start' only sets lobby status='starting'; the game server holds a Realtime subscription... claims 'starting' rows"          | Directly implemented as the claim mechanism described in Decision/Key Interfaces — an outbound-only subscription, never an inbound call from an edge function.                                                                  |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "whitelists commands... forcing the sender's own slot"                                                                                 | The command whitelist and slot-forcing rule are specified as a mandatory Implementation Guideline and a Key Interface (`ClientCommand`) above.                                                                                  |

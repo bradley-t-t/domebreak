@@ -1,4 +1,10 @@
-# City Vitality
+<h1 align="center">City Vitality</h1>
+
+<p align="center">
+  <b>A city's health ratio scales its population, economy, and industry, so damage erodes a nation's war machine instead of merely counting kills.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -105,3 +111,9 @@ Starting tuning values: `incomeBase 1.5`, `incomeGdpCoef 4`, `fallbackBase 2`,
    cap it succeeds (unit-tested).
 5. In-app: damaged cities show a reddening halo on the map and an hp bar in their probe;
    destroying a city raises a toast; the production panel shows current/cap industry.
+
+<br />
+
+<p align="center">
+  <sub>Every warhead that lands bleeds a nation's war machine, not just its kill count.</sub>
+</p>

@@ -1,4 +1,10 @@
-# GDD: Naval — Submarines, ASW & Logistics
+<h1 align="center">Naval — Submarines, ASW & Logistics</h1>
+
+<p align="center">
+  <b>Four tech-gated hulls turn the sea into a cat-and-mouse hunt, with submarines revealed only by ASW sonar in range.</b>
+</p>
+
+<br />
 
 ## 1. Overview
 
@@ -84,3 +90,9 @@ amphibs, and keep a battle group on-station indefinitely with an oiler.
 - `sonarMult` defaults to 1 in `createWorld` and is scaled only by det techs.
 - (Phase 2) A submarine stays out of an enemy's `visUnits` under radar-only
   coverage and appears only under ASW coverage.
+
+<br />
+
+<p align="center">
+  <sub>Slip a hunter-killer through the radar net; hide your boomer in deep water where no strike can reach it.</sub>
+</p>

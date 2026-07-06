@@ -1,4 +1,10 @@
-# Attract Mode, Boot Splash & Menu Identity
+<h1 align="center">Attract Mode, Boot Splash & Menu Identity</h1>
+
+<p align="center">
+  <b>A two-card publisher splash giving way to login and menu screens staged over a live, self-playing AI war.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -64,3 +70,9 @@ orchestration of a throwaway world.
 - No pointer interaction reaches the background map from menu or login.
 - With reduced motion enabled, no sim mounts and no splash fades play.
 - `npm run lint` 0 errors; `npm run build` passes; real gameplay unaffected.
+
+<br />
+
+<p align="center">
+  <sub>The world is already at war before you ever touch it — signing in is taking command mid-crisis.</sub>
+</p>

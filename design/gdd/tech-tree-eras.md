@@ -1,4 +1,10 @@
-# GDD: Tech Tree — Cold War → Modern → Space Age
+<h1 align="center">Tech Tree — Cold War → Modern → Space Age</h1>
+
+<p align="center">
+  <b>Five doctrine tracks climb twelve tiers from Cold War arsenals to Space Age orbital weapons, each tech slower and costlier than the last.</b>
+</p>
+
+<br />
 
 ## 1. Overview
 
@@ -94,3 +100,9 @@ these; `chain()` applies them as defaults. A per-tech `cost`/`time` override win
 - Cost/time strictly increase per tier and match the sampled values above.
 - All `apply` functions reference only fields defaulted in `createWorld`.
 - `npm run lint` clean for `constants.js` and `engine.js`.
+
+<br />
+
+<p align="center">
+  <sub>Out-research a rival and command the orbit; fall behind and fight a modern war with obsolete kit.</sub>
+</p>
