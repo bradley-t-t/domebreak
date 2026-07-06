@@ -807,6 +807,18 @@ input {
     text-overflow: ellipsis;
 }
 
+/* ×N count badge for a collapsed run of identical orders. */
+.gd-prodbar-mult {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: var(--text);
+}
+
 /* Progress wash behind the building item's content. */
 .gd-prodbar-fill {
     position: absolute;
@@ -819,14 +831,19 @@ input {
     pointer-events: none;
 }
 
+/* Cancel affordance: reserved space at rest (no layout shift), revealed red on
+   hover. Kept invisible otherwise so a collapsed pill reads cleanly as "ICBM ×12"
+   without a second stray × sitting next to the count badge. */
 .gd-prodbar-x {
-    color: var(--faint);
+    color: var(--danger);
     font-size: 12px;
     line-height: 1;
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out);
 }
 
 .gd-prodbar-item:hover .gd-prodbar-x {
-    color: var(--danger);
+    opacity: 1;
 }
 
 /* Narrow windows: lift the line clear of the right-anchored layer bar. */
