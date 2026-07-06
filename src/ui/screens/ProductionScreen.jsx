@@ -237,7 +237,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     return (
         <ScreenFrame title="PRODUCTION" subtitle="Arsenal & national build line" bare onClose={onClose}>
             <div className="gd-prod grid grid-cols-[236px_minmax(0,1fr)_304px] h-full">
-                <aside className="gd-prod-rail flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
+                <aside className="gd-prod-rail gd-scroll flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
                     <div className="gd-prod-bank flex flex-col gap-px py-3 px-3.5 bg-sunk border border-line rounded">
                         <span className="gd-prod-bank-l text-[9px] tracking-[1.5px] uppercase text-faint">Treasury</span>
                         <span className="gd-prod-bank-v font-mono text-[22px] font-bold text-gold">◆ {Math.floor(points)}</span>
@@ -271,7 +271,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     </nav>
                 </aside>
 
-                <main className="gd-prod-main overflow-auto py-5 px-[22px] flex flex-col gap-[22px]">
+                <main className="gd-prod-main gd-scroll overflow-auto py-5 px-[22px] flex flex-col gap-[22px]">
                     {placing && <div className="gd-prod-placing text-[11px] leading-[1.4] text-text py-2.5 px-3 border border-gold-line rounded-sm bg-[rgba(245,197,49,0.07)]">
                         Placing <b>{unitLabel(placing, me?.iso)}</b> — click {UNITS[placing].coastal ? "your coastline" : UNITS[placing].domain === "sea" ? "your coastal waters" : "your territory"} to
                         site it. Hold <b>Shift</b> to place several.
@@ -283,7 +283,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <aside className="gd-prod-queue flex flex-col p-[18px] overflow-hidden bg-panel border-l border-line-soft">
                     <h3 className="gd-queue-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim">Build Queue {(cur ? 1 : 0) + queue.length > 0 &&
                         <span className="font-mono text-[10px] text-faint">{(cur ? 1 : 0) + queue.length}</span>}</h3>
-                    <div className="gd-queue-list flex flex-col gap-1.5 overflow-auto" aria-live="polite" aria-label="National build queue">
+                    <div className="gd-queue-list gd-scroll flex flex-col gap-1.5 overflow-auto" aria-live="polite" aria-label="National build queue">
                         {!cur && queue.length === 0 && <div className="gd-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line is idle. Pick a system to
                             build it.</div>}
                         {cur && (

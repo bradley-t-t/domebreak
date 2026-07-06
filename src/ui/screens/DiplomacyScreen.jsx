@@ -65,7 +65,7 @@ export default function DiplomacyScreen({world, api, mySlot, onClose}) {
                        onChange={(e) => setQ(e.target.value)}
                        aria-label="Search all powers by name"/>
 
-                <div className="flex-1 overflow-auto flex flex-col" role="table">
+                <div className="gd-scroll flex-1 overflow-auto flex flex-col" role="table">
                     <div className={cn(rowGrid, "sticky top-0 z-[1] bg-panel-solid border-b border-line text-[9px] tracking-[1.2px] uppercase text-faint")} role="row">
                         <span className="text-right font-mono text-xs text-faint" role="columnheader">Rank</span>
                         <span role="columnheader">Power</span><span role="columnheader">Seat</span>

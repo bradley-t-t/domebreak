@@ -405,7 +405,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         <div className="font-mono text-[11px] tracking-[2px] uppercase text-dim px-3 py-2.5 border-b border-line-soft">
                             Research Queue
                         </div>
-                        <ul className="list-none m-0 p-1.5 overflow-y-auto flex flex-col gap-1">
+                        <ul className="gd-scroll list-none m-0 p-1.5 overflow-y-auto flex flex-col gap-1">
                             {rr.current && (() => {
                                 const t = TECHS[rr.current.id];
                                 if (!t) return null;
