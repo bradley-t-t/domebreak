@@ -1,4 +1,10 @@
-# ADR-0002: Desktop-First Distribution & File-Based Local Saves
+<h1 align="center">ADR-0002: Desktop-First Distribution &amp; File-Based Local Saves</h1>
+
+<p align="center">
+  <b>GoldenDome ships only as a packaged desktop app and stores every save as a local file that never leaves the machine.</b>
+</p>
+
+<br />
 
 ## Status
 
@@ -28,7 +34,7 @@ carries only profile, stats, and match reports, never world state.
 ## Engine Compatibility
 
 | Field                     | Value                                                                                                                                                                               |
-|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                      |
 | **Domain**                | Platform / Persistence (distribution shell, save storage) — no simulation change                                                                                                    |
 | **Knowledge Risk**        | LOW — Electron IPC, `contextBridge`, and JSON-file persistence are stable, well-documented patterns                                                                                 |
@@ -39,7 +45,7 @@ carries only profile, stats, and match reports, never world state.
 ## ADR Dependencies
 
 | Field             | Value                                                                                            |
-|-------------------|--------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Depends On**    | None (complements ADR-0001, which scopes what the backend may store)                             |
 | **Enables**       | A future cloud-save-sync ADR, which would have to explicitly supersede this ADR's no-sync stance |
 | **Blocks**        | Any release/packaging story — releases must produce Electron packages, never a public web deploy |
@@ -173,7 +179,7 @@ requires a superseding ADR.
 ## GDD Requirements Addressed
 
 | GDD System            | Requirement                                                                                | How This ADR Addresses It                                                           |
-|-----------------------|--------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| :--- | :--- | :--- |
 | accounts-and-stats.md | Lifetime stats live in the cloud, "not something a save file or a cleared cache can erase" | Draws the inverse boundary: world saves are local files, never mingled with backend |
 | accounts-and-stats.md | Desktop persists the auth session in the machine-local data folder alongside saves         | Pins that folder's layout, location, and owner-only permissions                     |
 

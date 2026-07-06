@@ -1,4 +1,10 @@
-# ADR-0001: Supabase Accounts & Player Stats
+<h1 align="center">ADR-0001: Supabase Accounts & Player Stats</h1>
+
+<p align="center">
+  <b>A dedicated Supabase project and a single JWT-verified edge function make player stats impossible to forge.</b>
+</p>
+
+<br />
 
 ## Status
 
@@ -28,7 +34,7 @@ key; they never write directly to `profiles` or `matches`.
 ## Engine Compatibility
 
 | Field                     | Value                                                                                                                                                                                                                                            |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                   |
 | **Domain**                | Networking / Persistence (accounts, stats) — pure client+cloud addition, not a simulation change                                                                                                                                                 |
 | **Knowledge Risk**        | LOW — Supabase Auth, Postgres RLS, and Deno edge functions are all stable, well-documented patterns                                                                                                                                              |
@@ -49,7 +55,7 @@ observer of outcomes, not a participant in the simulation.
 ## ADR Dependencies
 
 | Field             | Value                                                                                                                                                                                                                                                                                   |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Depends On**    | None — this is a foundational infrastructure decision                                                                                                                                                                                                                                   |
 | **Enables**       | `design/gdd/accounts-and-stats.md` (this ADR is its technical backing); future leaderboard/social features that need a stable player identity                                                                                                                                           |
 | **Blocks**        | Nothing open — all dependent implementation shipped with this ADR                                                                                                                                                                                                                       |
@@ -288,7 +294,7 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 ## Risks
 
 | Risk                                                                                     | Probability          | Impact                                                      | Mitigation                                                                                                                                                                                                                     |
-|------------------------------------------------------------------------------------------|----------------------|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | Service-role key leaked into a client bundle by mistake                                  | Low                  | Critical — would allow arbitrary writes/reads bypassing RLS | Service key only ever used inside the `gd-account` Deno edge function runtime; never referenced by any file under `src/` or bundled by Vite. Code review should grep for the service key env var name in any client-side diff. |
 | Autoconfirm signup abused for account-farming or email-not-owned signups                 | Low at current scale | Low now, Medium if public multiplayer ships                 | Revisit before public launch — add email verification or rate-limit signups at that point; tracked as a follow-up decision, not blocking today.                                                                                |
 | Edge function cold-start latency makes `report_match` visibly slow                       | Low                  | Low — reporting is fire-and-forget, not user-facing         | Fire-and-forget design already absorbs this; no UI waits on the call.                                                                                                                                                          |
@@ -297,7 +303,7 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 ## Performance Implications
 
 | Metric                  | Before                                 | Expected After                                                                                                                                      | Budget                                                                                          |
-|-------------------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | CPU (frame time)        | n/a                                    | n/a — no engine-tick involvement                                                                                                                    | n/a                                                                                             |
 | Memory                  | n/a                                    | Negligible — one Supabase client instance, one session object                                                                                       | n/a                                                                                             |
 | Load Time               | Instant start menu (no account system) | Session restore from local storage/`userData` file must complete before the start menu renders; must not add a network round-trip on the happy path | < 100ms to attempt local restore; network calls (login, `touch`) do not block menu-shell render |
@@ -345,7 +351,7 @@ accounts schema.
 ## GDD Requirements Addressed
 
 | GDD Document                       | System                  | Requirement                                                                                                                                        | How This ADR Satisfies It                                                                                                                                                                                                    |
-|------------------------------------|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "The client never writes stats directly — every mutation flows through a server-side edge function that trusts only the caller's verified session" | `gd-account` derives `user_id` exclusively from the verified JWT via `auth.getUser()`, then writes with the service-role key; the request body's contents never influence write identity.                                    |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "Duplicate username at signup... account creation never fails on a taken name"                                                                     | `handle_new_user` trigger catches `unique_violation` and retries with the `<truncated>_<id8>` fallback shape inside the same transaction.                                                                                    |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "A player can only ever see their own profile and match rows"                                                                                      | RLS policies `read_own_profile` and `read_own_matches` scope `select` to `auth.uid()`; the `player_stats` view is declared `security_invoker` so it cannot be used to bypass those policies.                                 |

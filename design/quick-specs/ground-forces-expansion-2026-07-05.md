@@ -1,4 +1,10 @@
-# Quick Design Spec: Ground Forces Expansion
+<h1 align="center">Ground Forces Expansion</h1>
+
+<p align="center">
+  <b>Adds the fourth combat domain — ground forces that march over land and deliver close-range conventional strikes against land targets only.</b>
+</p>
+
+<br />
 
 **Type**: New Small System (borderline — occupation mechanics explicitly deferred, see Phase 2)
 **Scope**: Adds a land-warfare unit roster (Infantry, Artillery, Tank Battalion, Attack/Transport
@@ -65,7 +71,7 @@ All values live in `src/game/data/constants.js` (UNITS entries / HANGAR_SPEC / P
 never hardcoded in systems — per repo standards.
 
 | Unit                 | cost | build s | hp  | upkeep | landSpeed/airSpeed | range km | dmg | reload s | fireCost |
-|----------------------|------|---------|-----|--------|--------------------|----------|-----|----------|----------|
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | Army Base            | 480  | 20      | 85  | 1      | —                  | 60       | —   | —        | —        |
 | Leadership Bunker    | 650  | 32      | 220 | 0.5    | —                  | —        | —   | —        | —        |
 | Infantry             | 110  | 7       | 75  | 0.8    | 18                 | 250      | 14  | 2.2      | 6        |

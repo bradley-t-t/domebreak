@@ -1,4 +1,10 @@
-# ADR-001: Tech-Gated Units
+<h1 align="center">ADR-001: Tech-Gated Units</h1>
+
+<p align="center">
+  <b>Techs unlock units through a paired <code>unlocks</code>/<code>requiresTech</code> data contract enforced by a single <code>queueUnit</code> guard.</b>
+</p>
+
+<br />
 
 ## Status
 
@@ -28,7 +34,7 @@ standing `Space Command HQ` via `requiresUnit`.
 ## Engine Compatibility
 
 | Field                     | Value                                                                 |
-|---------------------------|-----------------------------------------------------------------------|
+| :--- | :--- |
 | **Engine**                | GoldenDome custom real-time tick engine (this repo's own JS)          |
 | **Domain**                | Core / Scripting (production + research systems)                      |
 | **Knowledge Risk**        | LOW — no third-party engine API; all in-repo code                     |
@@ -39,7 +45,7 @@ standing `Space Command HQ` via `requiresUnit`.
 ## ADR Dependencies
 
 | Field             | Value                                                                         |
-|-------------------|-------------------------------------------------------------------------------|
+| :--- | :--- |
 | **Depends On**    | None                                                                           |
 | **Enables**       | Naval subs/ASW and space-asset units; deeper AI build logic                    |
 | **Blocks**        | Phase-2 engine/production work (the `requiresTech` guard) cannot start until this is Accepted |
@@ -160,14 +166,14 @@ unit:  { ..., requiresTech?: string /* techId */, requiresUnit?: string /* unitT
 ## Risks
 
 | Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
+| :--- | :--- | :--- | :--- |
 | `unlocks`/`requiresTech` drift out of sync | Low | Med | Data-contract self-check + this ADR's invariant |
 | Space assets buildable without HQ | Low | Med | `requiresUnit` guard in `queueUnit` |
 
 ## Performance Implications
 
 | Metric           | Before | Expected After | Budget |
-|------------------|--------|----------------|--------|
+| :--- | :--- | :--- | :--- |
 | CPU (frame time) | n/a    | +1 array `.includes` per queue action (not per tick) | negligible |
 
 ## Migration Plan
@@ -190,7 +196,7 @@ guard from `queueUnit`; units revert to unconditionally buildable.
 ## GDD Requirements Addressed
 
 | GDD Document                   | System    | Requirement                                              | How This ADR Satisfies It                              |
-|--------------------------------|-----------|----------------------------------------------------------|--------------------------------------------------------|
+| :--- | :--- | :--- | :--- |
 | `design/gdd/tech-tree-eras.md` | Tech Tree | "Completing a tech unlocks a new buildable unit"         | `unlocks`/`requiresTech` pairing enforced in `queueUnit` |
 | `design/gdd/naval-subs-asw.md` | Naval     | "Subs and logistics ships gate on economy/command techs" | Naval units carry `requiresTech` matching those techs   |
 
