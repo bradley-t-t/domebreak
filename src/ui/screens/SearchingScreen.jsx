@@ -85,21 +85,27 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
                             <span/>
                             <span/>
                         </div>
-                        <p className="gd-searching-label">Searching for commanders…</p>
-                        <p className="gd-searching-elapsed">{mm}:{ss}</p>
-                        {err && <p className="gd-friends-err">{err}</p>}
-                        <button className="gd-btn block mt" disabled={busy} onClick={doCancel}>
+                        <div role="status" aria-live="polite">
+                            <p className="gd-searching-label">Searching for commanders…</p>
+                            <p className="gd-searching-elapsed" aria-label={`Elapsed time ${mm} minutes ${ss} seconds`}>{mm}:{ss}</p>
+                        </div>
+                        <div aria-live="assertive">
+                            {err && <p className="gd-friends-err">{err}</p>}
+                        </div>
+                        <button className="gd-btn block mt" disabled={busy} onClick={doCancel}
+                                aria-label="Cancel matchmaking search">
                             {busy ? "Cancelling…" : "Cancel"}
                         </button>
                     </>
                 ) : (
                     <>
-                        <p className="gd-searching-label">Couldn't find a match — try again.</p>
+                        <p className="gd-searching-label" role="status" aria-live="polite">Couldn't find a match — try again.</p>
                         <div className="gd-row mt">
                             <button className="gd-btn primary" disabled={busy} onClick={doRetry}>
                                 {busy ? "Retrying…" : "Retry"}
                             </button>
-                            <button className="gd-btn" disabled={busy} onClick={doCancel}>
+                            <button className="gd-btn" disabled={busy} onClick={doCancel}
+                                    aria-label="Cancel matchmaking search">
                                 Cancel
                             </button>
                         </div>
