@@ -2,6 +2,8 @@ import {useEffect, useState} from "react";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {DEFAULT_KEYS, KEY_ACTIONS, keyLabel, keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {useModal} from "../hooks/useModal.js";
+import {button, card, miniButton, overlay, menuTitle} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 export default function SettingsPanel({settings, onChange, onClose}) {
     const set = (k, v) => onChange({...settings, [k]: v});
@@ -41,61 +43,83 @@ export default function SettingsPanel({settings, onChange, onClose}) {
     const groups = [...new Set(KEY_ACTIONS.map((a) => a.group))];
 
     return (
-        <div className="gd-overlay center" onClick={onClose}>
-            <div className="gd-card gd-settings" ref={cardRef} tabIndex={-1}
+        <div className={overlay({placement: "center"})} onClick={onClose}>
+            <div className={cn(card(), "gd-settings max-h-[88vh] overflow-y-auto")} ref={cardRef} tabIndex={-1}
                  onClick={(e) => e.stopPropagation()}>
-                <div className="gd-menu-title sm">Settings</div>
-                <div className="gd-set-row"><span>Default Speed</span>
-                    <div className="gd-seg" role="radiogroup"
+                <div className={menuTitle({sm: true})}>Settings</div>
+                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default Speed</span>
+                    <div className="gd-seg flex gap-1" role="radiogroup"
                          aria-label="Default speed">{GAME_SPEEDS.map((s) => <button key={s} role="radio"
                                                                             aria-checked={settings.speed === s}
-                                                                            className={settings.speed === s ? "active" : ""}
+                                                                            className={cn(
+                                                                                "min-w-[40px] py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
+                                                                                settings.speed === s && "active bg-gold text-gold-contrast border-transparent"
+                                                                            )}
                                                                             onClick={() => set("speed", s)}>{s}×</button>)}</div>
                 </div>
-                <div className="gd-set-row"><span>Default View</span>
-                    <div className="gd-seg" role="radiogroup" aria-label="Default view">
-                        <button className={settings.globe ? "active" : ""} role="radio" aria-checked={settings.globe}
+                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default View</span>
+                    <div className="gd-seg flex gap-1" role="radiogroup" aria-label="Default view">
+                        <button className={cn(
+                            "min-w-[40px] py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
+                            settings.globe && "active bg-gold text-gold-contrast border-transparent"
+                        )} role="radio" aria-checked={settings.globe}
                                 onClick={() => set("globe", true)}>Globe
                         </button>
-                        <button className={!settings.globe ? "active" : ""} role="radio" aria-checked={!settings.globe}
+                        <button className={cn(
+                            "min-w-[40px] py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
+                            !settings.globe && "active bg-gold text-gold-contrast border-transparent"
+                        )} role="radio" aria-checked={!settings.globe}
                                 onClick={() => set("globe", false)}>Flat
                         </button>
                     </div>
                 </div>
-                <div className="gd-set-row"><span>Music Volume</span>
-                    <div className="gd-set-slider"><input type="range" min="0" max="100" aria-label="Music volume"
+                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Music Volume</span>
+                    <div className="gd-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Music volume"
+                                                          className="w-[120px] accent-gold"
                                                           value={Math.round((settings.musicVol ?? 0.5) * 100)}
                                                           onChange={(e) => set("musicVol", +e.target.value / 100)}/><b>{Math.round((settings.musicVol ?? 0.5) * 100)}%</b>
                     </div>
                 </div>
-                <div className="gd-set-row"><span>Effects Volume</span>
-                    <div className="gd-set-slider"><input type="range" min="0" max="100" aria-label="Effects volume"
+                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Effects Volume</span>
+                    <div className="gd-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Effects volume"
+                                                          className="w-[120px] accent-gold"
                                                           value={Math.round((settings.sfxVol ?? 0.8) * 100)}
                                                           onChange={(e) => set("sfxVol", +e.target.value / 100)}/><b>{Math.round((settings.sfxVol ?? 0.8) * 100)}%</b>
                     </div>
                 </div>
-                <div className="gd-set-row"><span>Reduce Motion</span>
-                    <button className={`gd-toggle ${settings.reduceMotion ? "on" : ""}`}
+                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Reduce Motion</span>
+                    <button className={cn(
+                        "gd-toggle w-11 h-6 rounded border border-line bg-btn-bg relative",
+                        settings.reduceMotion && "on bg-gold-soft border-[rgba(244,192,42,0.4)]"
+                    )}
                             aria-pressed={settings.reduceMotion} aria-label="Reduce motion"
-                            onClick={() => set("reduceMotion", !settings.reduceMotion)}><span/></button>
+                            onClick={() => set("reduceMotion", !settings.reduceMotion)}>
+                        <span className={cn(
+                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-gd",
+                            settings.reduceMotion && "translate-x-5 bg-gold"
+                        )}/>
+                    </button>
                 </div>
 
-                <div className="gd-set-head">
+                <div className="gd-set-head flex items-center justify-between gap-3 mt-[22px] mb-1.5 pt-4 border-t border-line font-mono text-xs tracking-[0.08em] uppercase text-faint">
                     <span>Controls</span>
-                    <button className="gd-mini" onClick={() => {
+                    <button className={miniButton()} onClick={() => {
                         setCapturing(null);
                         set("keys", {...DEFAULT_KEYS});
                     }}>Reset to Defaults
                     </button>
                 </div>
-                <div className="gd-keybinds">
+                <div className="gd-keybinds flex flex-col gap-2.5">
                     {groups.map((g) => (
                         <div key={g} className="gd-keygroup">
-                            <div className="gd-keygroup-h">{g}</div>
+                            <div className="gd-keygroup-h font-mono text-[10.5px] tracking-[0.1em] uppercase text-faint mt-2 mb-0.5">{g}</div>
                             {KEY_ACTIONS.filter((a) => a.group === g).map((a) => (
-                                <div key={a.id} className="gd-set-row gd-keyrow">
+                                <div key={a.id} className="gd-set-row gd-keyrow flex items-center justify-between gap-3.5 my-1.5 text-sm text-dim">
                                     <span>{a.label}</span>
-                                    <button className={`gd-key ${capturing === a.id ? "capturing" : ""}`}
+                                    <button className={cn(
+                                        "gd-key min-w-[92px] py-1.5 px-2.5 border border-line bg-btn-bg text-text rounded font-mono text-xs text-center",
+                                        capturing === a.id && "capturing border-gold bg-gold-soft text-gold"
+                                    )}
                                             aria-live={capturing === a.id ? "polite" : undefined}
                                             aria-busy={capturing === a.id ? "true" : undefined}
                                             onClick={() => setCapturing((c) => (c === a.id ? null : a.id))}>
@@ -106,9 +130,9 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                         </div>
                     ))}
                 </div>
-                <div className="gd-menu-hint">Esc — Cancel / Menu · 1–5 — Jump to speed level (fixed)</div>
+                <div className="gd-menu-hint mt-3.5 font-mono text-[11px] text-dim tracking-[0.02em]">Esc — Cancel / Menu · 1–5 — Jump to speed level (fixed)</div>
 
-                <button className="gd-btn primary block" onClick={onClose}>Done
+                <button className={cn(button({variant: "primary"}), "block")} onClick={onClose}>Done
                 </button>
             </div>
         </div>

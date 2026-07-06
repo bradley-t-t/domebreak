@@ -41,11 +41,12 @@ export default function CountryLabels({map, labels}) {
         let size = Math.max(9, Math.min(30, (10 + L.w * 6) * (0.72 + (z - 1) * 0.13)));
         if (!L.combat) size *= 0.78;
         out.push(
-            <div key={L.iso} className={`gd-clabel ${L.mine ? "mine" : ""} ${L.combat ? "" : "neutral"}`}
+            <div key={L.iso}
+                 className={`absolute -translate-x-1/2 -translate-y-1/2 font-display font-bold tracking-[0.5px] whitespace-nowrap [text-shadow:0_0_6px_#060708,0_0_3px_#060708,0_1px_2px_#000] ${L.mine ? "text-gold" : L.combat ? "text-[#f2f4f6]" : "font-medium tracking-[0.3px] text-[#878e97] [text-shadow:0_1px_2px_#000]"}`}
                  style={{left: p.x, top: p.y, fontSize: size, opacity: fade * (L.mine ? 1 : L.combat ? 0.85 : 0.38)}}>
                 {L.name}
             </div>
         );
     }
-    return <div className="gd-clabels">{out}</div>;
+    return <div className="absolute inset-0 pointer-events-none z-2">{out}</div>;
 }

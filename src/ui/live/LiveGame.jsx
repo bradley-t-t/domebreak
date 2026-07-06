@@ -16,6 +16,8 @@ import PinnedBar from "../hud/PinnedBar.jsx";
 import Flag from "../common/Flag.jsx";
 import {Layer, Marker, Source} from "react-map-gl/maplibre";
 import {useGameSession} from "../hooks/useGameSession.js";
+import {button, miniButton, iconButton, overlay, card, sub} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 import TechTree from "../screens/TechTree.jsx";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
@@ -1050,7 +1052,7 @@ export default function LiveGame({
                 </Source>
 
                 {selectedCity && <Marker longitude={selectedCity.lng} latitude={selectedCity.lat} anchor="center">
-                    <div className="gd-city-sel"/>
+                    <div className="w-4 h-4 rounded-full border-[1.5px] border-[rgba(255,255,255,0.75)] shadow-[0_0_6px_rgba(255,255,255,0.3)]"/>
                 </Marker>}
                 {visUnits.map((u) => {
                     const def = UNITS[u.type];
@@ -1072,7 +1074,10 @@ export default function LiveGame({
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
                                 offset={air ? [0, -alt * 30] : undefined}>
                             <div
-                                className={`gd-unit ${u.slot === mySlot ? "mine" : "enemy"} ${u.id === selUnit ? "sel" : ""}`}
+                                className={cn(
+                                    "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--gd-unit-opacity,1)",
+                                    u.id === selUnit && "scale-[1.35] transition-transform duration-[140ms] ease-out-gd"
+                                )}
                                 title={labelOf(u.type, u.slot)}
                                 aria-label={`${labelOf(u.type, u.slot)} — ${nationName(u.slot)}`}
                                 onClick={(e) => onUnitClick(u, e)}
@@ -1091,7 +1096,7 @@ export default function LiveGame({
                                     y: e.clientY
                                 } : h))}
                                 onMouseLeave={() => setHover((h) => (h && h.kind === "unit" && h.id === u.id ? null : h))}>
-              <span className="gd-unit-icon" style={Object.keys(iconStyle).length ? iconStyle : undefined}>
+              <span className="inline-flex transition-transform duration-[170ms] ease-linear" style={Object.keys(iconStyle).length ? iconStyle : undefined}>
                 <UnitIcon name={iconName} color={teamColor(u.slot)} size={air ? 16 : 22}/>
               </span>
                             </div>
@@ -1112,13 +1117,13 @@ export default function LiveGame({
                       aircraft={visUnits.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)} tick={w.time}/>
             <CountryLabels map={mapRef.current} labels={labels}/>
 
-            <div className="gd-topbtns">
+            <div className="absolute top-[14px] right-4 z-6 flex gap-2">
                 <AmmoBar nation={myNation}/>
-                <button className="gd-iconbtn" onClick={onToggleGlobe} title="Globe / Flat view"
+                <button className={iconButton()} onClick={onToggleGlobe} title="Globe / Flat view"
                         aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>
-                <button className="gd-iconbtn" onClick={() => setHelpOpen(true)} title="Controls (?)"
+                <button className={iconButton()} onClick={() => setHelpOpen(true)} title="Controls (?)"
                         aria-label="Show controls reference">?</button>
-                <button className="gd-iconbtn" onClick={onPause} title="Menu (Esc)"
+                <button className={iconButton()} onClick={onPause} title="Menu (Esc)"
                         aria-label="Open pause menu">☰</button>
                 {meBadge}
             </div>
@@ -1126,7 +1131,7 @@ export default function LiveGame({
             {/* Top command bar + news ticker share one centred lane that reserves
                 gutters for the left nation panel and the right corner controls, so
                 the bar can never crowd the globe/help/menu buttons. */}
-            <div className="gd-tophud">
+            <div className="absolute top-4 left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none max-[1300px]:left-4 max-[1300px]:right-4 [&>*]:pointer-events-auto">
                 <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
                 <NewsTicker world={w} mySlot={mySlot}/>
@@ -1148,11 +1153,11 @@ export default function LiveGame({
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
 
             {moving && <div
-                className="gd-move-hint" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
-                <button className="gd-mini" onClick={() => setMoving(null)}>Cancel</button>
+                className="absolute top-[84px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
+                <button className={miniButton()} onClick={() => setMoving(null)}>Cancel</button>
             </div>}
-            {disembarkId && <div className="gd-move-hint" role="status" aria-live="polite">Landing — click a coastal point inside your territory.
-                <button className="gd-mini" onClick={() => setDisembarkId(null)}>Cancel</button>
+            {disembarkId && <div className="absolute top-[84px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">Landing — click a coastal point inside your territory.
+                <button className={miniButton()} onClick={() => setDisembarkId(null)}>Cancel</button>
             </div>}
 
             {selectedUnit && !w.over && (
@@ -1173,9 +1178,9 @@ export default function LiveGame({
                 const left = hover.x + 18 > window.innerWidth - 250 ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 190);
                 return (
-                    <div className="gd-probe" style={{left, top}} aria-hidden="true">
-                        <div className="gd-probe-h">{iso ? <Flag iso={iso}/> : null}<span>{name}</span></div>
-                        <div className="gd-detail-grid">
+                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[gdPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
+                        <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{iso ? <Flag iso={iso}/> : null}<span>{name}</span></div>
+                        <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
                             {nation ? (<>
                                 <div>
                                     <span>Status</span><b>{nation.slot === mySlot ? "Yours" : relation(nation.slot) === "war" ? "At War" : "At Peace"}</b>
@@ -1197,13 +1202,13 @@ export default function LiveGame({
                 const left = flip ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 200);
                 return (
-                    <div className="gd-probe" style={{left, top}} aria-hidden="true">
+                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[gdPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
                         {hover.kind === "unit" ? (<>
-                            <div className="gd-probe-h"><UnitIcon name={UNIT_ICON[hoverEnt.type]}
+                            <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]"><UnitIcon name={UNIT_ICON[hoverEnt.type]}
                                                                   color={teamColor(hoverEnt.slot)}
                                                                   size={16}/><span>{labelOf(hoverEnt.type, hoverEnt.slot)}</span>
                             </div>
-                            <div className="gd-detail-grid">
+                            <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
                                 <div><span>Owner</span><b>{nationName(hoverEnt.slot)}</b></div>
                                 <div><span>Class</span><b>{UNITS[hoverEnt.type].kind}</b></div>
                                 {UNITS[hoverEnt.type].kind === "industry" ? (<>
@@ -1230,10 +1235,10 @@ export default function LiveGame({
                                 <div><span>Target</span><b>{hoverEnt.targetId ? "Engaged" : "—"}</b></div>
                             </div>
                         </>) : (<>
-                            <div className="gd-probe-h"><span className="gd-slot-dot"
+                            <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]"><span className="w-2.5 h-2.5 rounded-full flex-none"
                                                               style={{background: teamColor(hoverEnt.slot)}}/><span>{hoverEnt.name}{hoverEnt.cap ? " ★" : ""}</span>
                             </div>
-                            <div className="gd-detail-grid">
+                            <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
                                 <div><span>Nation</span><b>{nationName(hoverEnt.slot)}</b></div>
                                 <div><span>State</span><b>{hoverEnt.state || "—"}</b></div>
                                 <div><span>Population</span><b>{fmtPop(hoverEnt.pop * vitalityOf(hoverEnt))}</b></div>
@@ -1250,11 +1255,11 @@ export default function LiveGame({
                                     // and roughly how long the hazard lingers.
                                     const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
                                     if (fo.remain <= 0) return null;
-                                    return <div><span>Fallout</span><b className="gd-contam">☢ −{(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~{Math.ceil(fo.remain)}s</b></div>;
+                                    return <div><span>Fallout</span><b className="text-[#a6ff5c]">☢ −{(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~{Math.ceil(fo.remain)}s</b></div>;
                                 })()}
                             </div>
-                            <div className="gd-hp-bar gd-city-hp">
-                                <i className={vitalityOf(hoverEnt) <= 0.35 ? "low" : ""}
+                            <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mt-2">
+                                <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd", vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good")}
                                    style={{width: `${Math.round(vitalityOf(hoverEnt) * 100)}%`}}/>
                             </div>
                         </>)}
@@ -1262,25 +1267,36 @@ export default function LiveGame({
                 );
             })()}
 
-            {err && <div className={`gd-toast ${err.kind}`} role="alert"
+            {err && <div className={cn(
+                "absolute bottom-[122px] left-1/2 -translate-x-1/2 z-6 bg-[rgba(14,16,19,0.92)] border border-line-soft text-text py-[9px] px-[18px] rounded text-[12.5px] tracking-[0.3px] pointer-events-none backdrop-blur-[8px] shadow-sm motion-safe:animate-[gdPop_200ms_var(--ease-out)]",
+                err.kind === "err" && "bg-[rgba(224,87,79,0.14)] border-danger text-[#ffd7dd]",
+                err.kind === "warn" && "bg-[rgba(140,255,58,0.12)] border-[rgba(140,255,58,0.55)] text-[#d6ff9e]"
+            )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {w.over && (
-                <div className="gd-overlay center" role="dialog" aria-modal="true" aria-labelledby="gd-outcome-title">
-                    <div className="gd-card wide gd-pop">
+                <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="gd-outcome-title">
+                    <div className={cn(card({size: "wide"}), "motion-safe:animate-[gdPop_240ms_var(--ease-out)]")}>
                         <div id="gd-outcome-title"
-                            className={`gd-outcome ${w.winnerSlot === mySlot ? "win" : w.winnerSlot === null ? "draw" : "loss"}`}>{w.winnerSlot === mySlot ? "Victory" : w.winnerSlot === null ? "Annihilation" : "Defeated"}</div>
-                        <p className="gd-sub">{w.winnerSlot === mySlot ? "You are the last power standing." : "The war is over."}</p>
-                        <button className="gd-btn primary" onClick={onPause}>Menu</button>
+                            className={cn(
+                                "font-display text-[40px] font-bold tracking-[4px] uppercase text-center mb-3",
+                                w.winnerSlot === mySlot ? "text-good [text-shadow:0_0_26px_rgba(62,227,139,0.55)]"
+                                    : w.winnerSlot === null ? "text-dim" : "text-danger [text-shadow:0_0_24px_rgba(255,91,110,0.5)]"
+                            )}>{w.winnerSlot === mySlot ? "Victory" : w.winnerSlot === null ? "Annihilation" : "Defeated"}</div>
+                        <p className={sub()}>{w.winnerSlot === mySlot ? "You are the last power standing." : "The war is over."}</p>
+                        <button className={cn(button({variant: "primary"}), "w-full")} onClick={onPause}>Menu</button>
                     </div>
                 </div>
             )}
 
-            <div className={`gd-boot ${booting ? "" : "gone"}`} aria-hidden={!booting}>
-                <div className="gd-boot-inner">
-                    {myNation?.iso && <Flag iso={myNation.iso} className="gd-boot-flag"/>}
-                    <div className="gd-boot-title">{myNation?.name || "Command"}</div>
-                    <div className="gd-boot-sub">Establishing theater command</div>
-                    <div className="gd-boot-bar"><i/></div>
+            <div className={cn(
+                "absolute inset-0 z-60 grid place-items-center [background:radial-gradient(120%_120%_at_50%_42%,#0b0e13_0%,#05070b_72%)] transition-opacity duration-[520ms] ease-out-gd",
+                !booting && "opacity-0 pointer-events-none"
+            )} aria-hidden={!booting}>
+                <div className="text-center motion-safe:animate-[gdRowIn_500ms_var(--ease-out)_both]">
+                    {myNation?.iso && <Flag iso={myNation.iso} className="text-[30px] rounded-[3px] shadow-[0_6px_20px_-8px_rgba(0,0,0,0.7)]"/>}
+                    <div className="mt-4 font-display text-[26px] font-bold tracking-[8px] uppercase text-text">{myNation?.name || "Command"}</div>
+                    <div className="mt-2 font-mono text-[11px] tracking-[3px] uppercase text-dim">Establishing theater command</div>
+                    <div className="gd-boot-bar w-[190px] h-0.5 mt-[22px] mx-auto bg-[rgba(255,255,255,0.08)] rounded-[2px] overflow-hidden"><i/></div>
                 </div>
             </div>
         </>

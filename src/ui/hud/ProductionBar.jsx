@@ -1,7 +1,6 @@
 import UnitIcon from "../common/UnitIcon.jsx";
 import {UNIT_ICON, unitLabel, UNITS, WARHEADS} from "../../game/engine.js";
 import {DEFAULT_BUILD_TIME, WARHEAD_ICON} from "../../game/data/constants.js";
-import "./ProductionBar.css";
 
 // The national production line, docked bottom-center over the map: the item on
 // the line with live progress, then everything queued behind it in order. Click
@@ -34,39 +33,48 @@ export default function ProductionBar({world, api, mySlot}) {
         }
     });
     return (
-        <div className="gd-prodbar">
-            <span className="gd-prodbar-t">Production</span>
+        <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-5 flex items-center gap-[6px] max-w-[min(620px,52vw)] bg-panel border border-line rounded-lg px-[10px] py-[7px] shadow overflow-x-auto backdrop-blur-[12px] motion-safe:animate-[gdPop_220ms_var(--ease-out)] max-[1180px]:bottom-[76px]">
+            <span
+                className="font-display text-[9px] tracking-[1.5px] uppercase text-faint mr-1 whitespace-nowrap">Production</span>
             {/* Polite live region: re-announces only when the item on the line
                 changes identity, so a new build start is spoken without narrating
                 every percentage tick. */}
-            <span className="gd-sr-only" aria-live="polite">
+            <span className="sr-only" aria-live="polite">
                 {cur ? `Now building ${label(cur.item)}` : ""}
             </span>
             {cur && (
-                <button className="gd-prodbar-item building"
-                        style={cur.item.kind === "ammo" ? {"--flame": WARHEADS[cur.item.type].flame} : undefined}
-                        role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}
-                        aria-label={`Building ${label(cur.item)} — ${pct}%, ${eta}s remaining. Click to cancel for a refund.`}
-                        title={`${label(cur.item)} — building. Click to cancel for a refund.`}
-                        onClick={() => api.cancelProd(-1)}>
-                    <i className="gd-prodbar-fill" style={{width: `${pct}%`}}/>
+                <button
+                    className="relative overflow-hidden flex items-center gap-[6px] px-[9px] py-[5px] bg-btn-bg border border-gold-line rounded-sm text-text text-[11px] whitespace-nowrap cursor-pointer"
+                    style={cur.item.kind === "ammo" ? {"--flame": WARHEADS[cur.item.type].flame} : undefined}
+                    role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}
+                    aria-label={`Building ${label(cur.item)} — ${pct}%, ${eta}s remaining. Click to cancel for a refund.`}
+                    title={`${label(cur.item)} — building. Click to cancel for a refund.`}
+                    onClick={() => api.cancelProd(-1)}>
+                    <i className="absolute left-0 top-0 bottom-0 bg-[var(--flame,var(--gold-soft))] opacity-[0.22] transition-[width] duration-300 ease-out-gd pointer-events-none"
+                       style={{width: `${pct}%`}}/>
                     <UnitIcon name={icon(cur.item)} size={14}/>
-                    <span className="gd-prodbar-name">{label(cur.item)}</span>
-                    <b>{pct}%</b>
-                    <span className="gd-prodbar-eta">{eta}s</span>
+                    <span
+                        className="relative z-1 max-w-[130px] overflow-hidden text-ellipsis">{label(cur.item)}</span>
+                    <b className="relative z-1 font-mono text-[10.5px]">{pct}%</b>
+                    <span
+                        className="relative z-1 font-mono text-[9.5px] text-faint tracking-[0.3px]">{eta}s</span>
                 </button>
             )}
             {groups.map((g) => (
-                <button key={g.firstIndex} className="gd-prodbar-item"
+                <button key={g.firstIndex}
+                        className="group relative overflow-hidden flex items-center gap-[6px] px-[9px] py-[5px] bg-btn-bg border border-line rounded-sm text-dim text-[11px] whitespace-nowrap cursor-pointer hover:text-text hover:border-line-soft"
                         style={g.item.kind === "ammo" ? {"--flame": WARHEADS[g.item.type].flame} : undefined}
                         title={g.count > 1
                             ? `${label(g.item)} ×${g.count} queued · ${time(g.item)}s each. Click to cancel one for a refund.`
                             : `${label(g.item)} · ${time(g.item)}s on the line. Click to cancel for a refund.`}
                         onClick={() => api.cancelProd(g.lastIndex)}>
                     <UnitIcon name={icon(g.item)} size={14}/>
-                    <span className="gd-prodbar-name">{label(g.item)}</span>
-                    {g.count > 1 && <b className="gd-prodbar-mult">×{g.count}</b>}
-                    <span className="gd-prodbar-x">×</span>
+                    <span className="max-w-[130px] overflow-hidden text-ellipsis">{label(g.item)}</span>
+                    {g.count > 1 && <b
+                        className="flex-none font-mono text-[10px] leading-none px-[5px] py-0.5 rounded-full bg-gold-soft text-text">×{g.count}</b>}
+                    <span
+                        className="text-danger text-xs leading-none opacity-0 transition-opacity duration-[120ms] ease-out-gd group-hover:opacity-100">×</span>
                 </button>
             ))}
         </div>

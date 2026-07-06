@@ -1,5 +1,7 @@
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {useModal} from "../hooks/useModal.js";
+import {button, card, iconButton, overlay, menuTitle} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 // In-game command reference. Reads the live key bindings so rebinds show through,
 // and lays out every control the map surface responds to — including the ones
@@ -10,16 +12,21 @@ import {useModal} from "../hooks/useModal.js";
 // A single keycap. `mouse` renders a wider, sentence-case pill for pointer
 // actions (L-Click, Scroll) so they read apart from keyboard keys.
 function Key({children, mouse}) {
-    return <span className={`gd-kbd${mouse ? " mouse" : ""}`}>{children}</span>;
+    return (
+        <span className={cn(
+            "gd-kbd min-w-[22px] h-[23px] py-0 px-[7px] inline-flex items-center justify-center border border-line border-b-2 bg-btn-bg text-text rounded-sm font-mono text-[11.5px] leading-none whitespace-nowrap",
+            mouse && "mouse text-dim text-[10.5px] tracking-[0.01em]"
+        )}>{children}</span>
+    );
 }
 
 // Render a row's key list: keycaps joined by "+" (chord) or a thin separator.
 function Keys({combo, chord}) {
     return (
-        <span className="gd-ctrl-keys">
+        <span className="gd-ctrl-keys flex items-center gap-[3px] shrink-0">
             {combo.map((k, i) => (
-                <span key={i} className="gd-kbd-wrap">
-                    {i > 0 && <span className={chord ? "gd-kbd-plus" : "gd-kbd-sep"}>{chord ? "+" : ""}</span>}
+                <span key={i} className="gd-kbd-wrap inline-flex items-center gap-[3px]">
+                    {i > 0 && <span className={chord ? "gd-kbd-plus text-faint text-[11px]" : "gd-kbd-sep w-0.5"}>{chord ? "+" : ""}</span>}
                     <Key mouse={k.mouse}>{k.label}</Key>
                 </span>
             ))}
@@ -79,31 +86,32 @@ export default function ControlsOverlay({keys, onClose}) {
     ];
 
     return (
-        <div className="gd-overlay center" onClick={onClose}>
-            <div className="gd-card gd-controls" role="dialog" aria-modal="true" aria-labelledby="gd-controls-title"
+        <div className={overlay({placement: "center"})} onClick={onClose}>
+            <div className={cn(card(), "gd-controls w-[min(760px,94vw)] max-h-[88vh] overflow-y-auto text-left")}
+                 role="dialog" aria-modal="true" aria-labelledby="gd-controls-title"
                  tabIndex={-1} ref={ref} onClick={(e) => e.stopPropagation()}>
-                <div className="gd-controls-head">
+                <div className="gd-controls-head flex items-start justify-between gap-3 mb-1.5">
                     <div>
-                        <div className="gd-menu-title sm" id="gd-controls-title">Controls</div>
-                        <div className="gd-controls-sub">Command reference · rebind keys in Settings</div>
+                        <div className={menuTitle({sm: true})} id="gd-controls-title">Controls</div>
+                        <div className="gd-controls-sub font-mono text-[11px] tracking-[0.02em] text-dim mt-1">Command reference · rebind keys in Settings</div>
                     </div>
-                    <button className="gd-iconbtn" onClick={onClose} title="Close (Esc)" aria-label="Close controls">✕
+                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close controls">✕
                     </button>
                 </div>
-                <div className="gd-controls-grid">
+                <div className="gd-controls-grid grid grid-cols-1 sm:grid-cols-2 gap-x-[34px] gap-y-1 my-3 mb-5">
                     {groups.map((g) => (
-                        <div className="gd-ctrl-group" key={g.h}>
-                            <div className="gd-ctrl-group-h">{g.h}</div>
+                        <div className="gd-ctrl-group [break-inside:avoid]" key={g.h}>
+                            <div className="gd-ctrl-group-h font-mono text-[10.5px] tracking-[0.1em] uppercase text-faint mt-3.5 mb-1.5 pb-[5px] border-b border-line">{g.h}</div>
                             {g.rows.map((r) => (
-                                <div className="gd-ctrl-row" key={r.label}>
-                                    <span className="gd-ctrl-lbl">{r.label}</span>
+                                <div className="gd-ctrl-row flex items-center justify-between gap-3 py-[5px] text-[13px] text-dim" key={r.label}>
+                                    <span className="gd-ctrl-lbl min-w-0">{r.label}</span>
                                     <Keys combo={r.combo} chord={r.chord ?? false}/>
                                 </div>
                             ))}
                         </div>
                     ))}
                 </div>
-                <button className="gd-btn primary block" onClick={onClose}>Done</button>
+                <button className={cn(button({variant: "primary"}), "block")} onClick={onClose}>Done</button>
             </div>
         </div>
     );

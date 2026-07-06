@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {TECHS, unitLabel} from "../../game/data/constants.js";
+import {cn} from "../lib/cn.js";
 
 // Turn one engine event into a headline, or null to ignore it. Kept high-signal:
 // nukes, kills, construction, declarations, ceasefires, breakthroughs, and
@@ -109,24 +110,44 @@ export default function NewsTicker({world, mySlot}) {
         return () => cancelAnimationFrame(raf);
     }, [hasNews]);
 
+    const toneClass = {
+        info: "",
+        good: "text-text",
+        alert: "",
+        danger: "text-[#f0a39d]",
+    };
+    const dotToneClass = {
+        info: "bg-faint",
+        good: "bg-text",
+        alert: "bg-[#d79a3f]",
+        danger: "bg-red shadow-[0_0_5px_rgba(224,87,79,0.8)]",
+    };
+
     return (
-        <div className="gd-ticker" aria-label="News feed" aria-live="polite">
-            <span className="gd-ticker-tag">Live Wire</span>
-            <div className="gd-ticker-window">
+        <div
+            className="gd-ticker z-4 flex items-stretch w-[min(720px,100%)] h-7 bg-panel-2 border border-line rounded shadow overflow-hidden pointer-events-auto motion-safe:animate-[gdDropInY_340ms_var(--ease-drawer)] max-[900px]:hidden"
+            aria-label="News feed" aria-live="polite">
+            <span
+                className="gd-ticker-tag flex items-center gap-[6px] px-[11px] text-[9.5px] tracking-[1px] uppercase text-faint bg-panel border-r border-line flex-none">Live Wire</span>
+            <div className="relative flex-1 overflow-hidden flex items-center">
                 {hasNews ? (
-                    <div className="gd-ticker-track" ref={trackRef}>
+                    <div className="inline-flex flex-nowrap whitespace-nowrap will-change-transform" ref={trackRef}>
                         {[0, 1].map((copy) => (
-                            <div className="gd-ticker-run" key={copy} ref={copy === 0 ? runRef : null} aria-hidden={copy === 1}>
+                            <div className={cn("inline-flex flex-nowrap", copy === 1 && "motion-reduce:hidden")}
+                                 key={copy} ref={copy === 0 ? runRef : null} aria-hidden={copy === 1}>
                                 {items.map((it, i) => (
-                                    <span className={`gd-ticker-item ${it.tone}`} key={`${copy}-${it.id}-${i}`}>
-                                        <span className="gd-ticker-dot"/>{it.text}
+                                    <span
+                                        className={cn("inline-flex items-center gap-2 px-[22px] text-xs text-text whitespace-nowrap", toneClass[it.tone])}
+                                        key={`${copy}-${it.id}-${i}`}>
+                                        <span
+                                            className={cn("w-[5px] h-[5px] rounded-full bg-faint flex-none", dotToneClass[it.tone])}/>{it.text}
                                     </span>
                                 ))}
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <span className="gd-ticker-idle">Monitoring global activity…</span>
+                    <span className="px-4 text-xs text-faint">Monitoring global activity…</span>
                 )}
             </div>
         </div>

@@ -2,6 +2,7 @@
 // Skippable at any moment (click or any key) and honors reduced motion with
 // instant cuts instead of fades.
 import {useEffect, useRef, useState} from "react";
+import {cn} from "../lib/cn.js";
 
 const LOGO_MS = 2600;
 const CREDIT_MS = 2300;
@@ -32,20 +33,28 @@ export default function SplashSequence({reduceMotion, onDone}) {
         };
     }, []);
 
+    const cardCls = cn(
+        "text-center motion-reduce:animate-none",
+        reduceMotion ? "animate-none" : "animate-[gdSplashIn_700ms_var(--ease-out-gd)_both]"
+    );
     return (
-        <div className={`gd-splash ${step === 0 ? "light" : "dark"} ${reduceMotion ? "still" : ""}`}>
+        <div className={cn(
+            "fixed inset-0 z-[1000] grid place-items-center cursor-pointer",
+            step === 0 ? "bg-[#f4f6f8]" : "bg-[#05080f]"
+        )}>
             {step === 0 ? (
-                <div className="gd-splash-card" key="logo">
-                    <img className="gd-splash-logo" src="/brand/taylorurl-logo.png" alt="TaylorURL"/>
-                    <div className="gd-splash-sub">A TAYLORURL GAME</div>
+                <div className={cardCls} key="logo">
+                    <img className="w-[min(340px,64vw)] block mx-auto [margin:-74px_auto_-84px]" src="/brand/taylorurl-logo.png" alt="TaylorURL"/>
+                    <div className="mt-0.5 font-display text-xs font-semibold tracking-[5px] text-[#6a7280]">A TAYLORURL GAME</div>
                 </div>
             ) : (
-                <div className="gd-splash-card" key="credit">
-                    <div className="gd-splash-madeby">MADE SOLO BY</div>
-                    <div className="gd-splash-name">TRENTON TAYLOR</div>
+                <div className={cardCls} key="credit">
+                    <div className="font-display text-xs font-semibold tracking-[6px] text-dim">MADE SOLO BY</div>
+                    <div className="mt-2.5 font-display text-[34px] font-bold tracking-[10px] text-text [text-shadow:var(--glow-gold)]">TRENTON TAYLOR</div>
                 </div>
             )}
-            <div className="gd-splash-skip" role="button" tabIndex={0} aria-label="Skip intro"
+            <div className="absolute bottom-5 left-0 right-0 text-center font-mono text-[10px] tracking-[2px] text-[rgba(128,136,148,0.55)]"
+                 role="button" tabIndex={0} aria-label="Skip intro"
                  onClick={finish}
                  onKeyDown={(e) => {
                      if (e.key === "Enter" || e.key === " ") {

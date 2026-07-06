@@ -314,8 +314,8 @@ function AttractWorld({data, onOver, framed}) {
                     return (
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
                                 offset={air ? [0, -alt * 30] : undefined}>
-                            <div className="gd-unit enemy">
-                                <span className="gd-unit-icon"
+                            <div className="grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--gd-unit-opacity,1)">
+                                <span className="inline-flex transition-transform duration-[170ms] ease-linear"
                                       style={Object.keys(iconStyle).length ? iconStyle : undefined}>
                                     <UnitIcon name={UNIT_ICON[u.type]} color={factionColor(u.slot)} size={air ? 16 : 22}/>
                                 </span>
@@ -335,7 +335,7 @@ function AttractWorld({data, onOver, framed}) {
                       interceptors={w.interceptors}
                       aircraft={w.units.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)}
                       tick={w.time}/>
-            <div className="gd-attract-ticker">
+            <div className="absolute left-0 right-0 bottom-[14px] z-2 text-center font-mono text-[10px] tracking-[2.5px] text-faint [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]">
                 LIVE SIMULATION · {wars.size} FRONTS · {counts.strikes} STRIKES · {counts.intercepts} INTERCEPTS
             </div>
         </>
@@ -347,10 +347,10 @@ export default function AttractSim({data, framed}) {
     const [gen, setGen] = useState(0);
     if (!data) return null;
     return (
-        <div className="gd-attract" aria-hidden="true">
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
             <AttractWorld key={gen} data={data} framed={framed}
                           onOver={() => setTimeout(() => setGen((g) => g + 1), 4000)}/>
-            <div className="gd-attract-shade"/>
+            <div className="absolute inset-0 bg-[rgba(4,6,9,0.22)]"/>
         </div>
     );
 }

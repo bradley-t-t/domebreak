@@ -2,27 +2,30 @@
 // same centered-rectangle chrome as the research tree: header with title + close,
 // scrollable body, optional footer hint. Esc closes.
 import {useModal} from "../hooks/useModal.js";
+import {iconButton} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 export default function ScreenFrame({title, subtitle, onClose, children, foot, wide, bare, head}) {
     const ref = useModal(onClose);
 
     return (
-        <div className="gd-screen" ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
+        <div className="gd-screen absolute inset-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both]"
+             ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
              aria-labelledby="gd-screenframe-title">
-            <div className="gd-screen-head">
-                <span className="gd-screen-title" id="gd-screenframe-title">{title}</span>
-                {subtitle && <span className="gd-screen-sub">{subtitle}</span>}
+            <div className="flex items-baseline gap-[14px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
+                <span className="font-display font-bold text-[15px] tracking-[4px] text-text" id="gd-screenframe-title">{title}</span>
+                {subtitle && <span className="font-mono text-[11px] tracking-[1px] text-dim">{subtitle}</span>}
                 {head}
-                <button className="gd-iconbtn gd-screen-close" onClick={onClose} title="Close (Esc)"
+                <button className={cn(iconButton(), "ml-auto self-center")} onClick={onClose} title="Close (Esc)"
                         aria-label="Close">✕
                 </button>
             </div>
             {bare
-                ? <div className="gd-screen-body bare">{children}</div>
-                : <div className="gd-screen-body">
-                    <div className={`gd-screen-inner ${wide ? "wide" : ""}`}>{children}</div>
+                ? <div className="flex-1 block p-0 overflow-hidden">{children}</div>
+                : <div className="flex-1 overflow-auto p-[22px] flex justify-center">
+                    <div className={cn("w-full max-w-[480px]", wide && "max-w-[960px]")}>{children}</div>
                 </div>}
-            {foot && <div className="gd-screen-foot">{foot}</div>}
+            {foot && <div>{foot}</div>}
         </div>
     );
 }

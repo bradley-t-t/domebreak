@@ -9,6 +9,9 @@
   code, no third-party game engine
 - **Language**: JavaScript (ES modules), JSX for UI components
 - **Rendering**: React 19 + MapLibre GL world map (`src/map/`), SVG unit icons, CSS-mask icon tinting
+- **Styling**: Tailwind CSS v4, utility-first (ADR-0005). One stylesheet only — `src/index.css` (`@import "tailwindcss"`,
+  `:root` tokens, `@theme` mapping, `@layer vfx` for irreducible keyframe/procedural art, and an unlayered `.gd-card`
+  paper re-theme). Shared control vocabulary in `src/ui/lib/variants.js` (cva); `cn()` in `src/ui/lib/cn.js`.
 - **Physics**: None — geodesic kinematics in `src/game/geo/` (haversine, great-circle interpolation)
 
 ## Input & Platform
@@ -51,11 +54,21 @@
 
 <!-- Add patterns that should never appear in this project's codebase -->
 
-- [None configured yet — add as architectural decisions are made]
+- **No hand-written component `.css` files** (ADR-0005). All styling is Tailwind utilities on components; the only
+  stylesheet is `src/index.css`. Genuinely irreducible CSS (keyframe VFX, `::-webkit-scrollbar`, global `html/body/#root`
+  base) lives in `index.css`, never in a per-component file.
+- **No runtime string concatenation of Tailwind class fragments** — the JIT engine only sees literal class strings.
+  Build conditional classes with `cn()` / `class-variance-authority`, using full literal strings per branch.
+- **No hardcoded tuning values in systems code** — gameplay numbers stay data-driven (`constants.js` / `settings.js`).
 
 ## Allowed Libraries / Addons
 
 <!-- Add approved third-party dependencies here -->
+
+- **Styling / UI** (ADR-0005): `tailwindcss` + `@tailwindcss/vite` (v4), `clsx`, `tailwind-merge`,
+  `class-variance-authority`, `tailwindcss-animate`, `lucide-react` (UI chrome icons), `@radix-ui/*`
+  (Dialog/DropdownMenu/ContextMenu/Popover/Tooltip), `motion` (framer-motion).
+- **Data-viz**: `recharts` (post-match, career-stats, economy surfaces).
 
 - [None configured yet — add as dependencies are approved]
 
