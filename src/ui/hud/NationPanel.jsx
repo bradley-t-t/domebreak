@@ -119,7 +119,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                 <div
                     className="px-3 pt-[9px] pb-[5px] text-[9.5px] tracking-[1px] uppercase text-faint">Territories
                 </div>
-                <div className="flex-1 overflow-y-auto px-[6px] pb-2">
+                <div className="gd-scroll flex-1 overflow-y-auto px-[6px] pb-2">
                     {view.rows.map((c) => {
                         const st = statusOf(c);
                         const v = vitalityOf(c);
