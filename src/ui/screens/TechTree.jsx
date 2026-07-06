@@ -139,7 +139,10 @@ export default function TechTree({world, api, mySlot, onClose}) {
     const dragRef = useRef(null);
     const [cam, setCam] = useState({x: 0, y: 0, k: 1});
     const [eased, setEased] = useState(false);
-    const [queueOpen, setQueueOpen] = useState(false);
+    // The research dock is shown by default so the current project + queue are
+    // always visible inside the tree; the header button collapses it for a clear
+    // view of the atlas.
+    const [queueOpen, setQueueOpen] = useState(true);
 
     const viewSize = () => {
         const el = viewRef.current;
@@ -242,12 +245,12 @@ export default function TechTree({world, api, mySlot, onClose}) {
                 {rr.current && <span className="gd-tt-current">
                     {TECHS[rr.current.id].name} · {Math.floor((rr.current.progress ?? 0) * 100)}%
                 </span>}
-                {rr.queue.length > 0 && (
+                {(rr.current || rr.queue.length > 0) && (
                     <button className={`gd-tt-queuebtn ${queueOpen ? "on" : ""}`}
                             onClick={() => setQueueOpen((v) => !v)}
                             aria-expanded={queueOpen} aria-controls="gd-tt-queue-panel"
-                            title="Show the research queue">
-                        Queue ({rr.queue.length})
+                            title={queueOpen ? "Hide the research queue" : "Show the research queue"}>
+                        {queueOpen ? "Hide Queue" : `Queue${rr.queue.length ? ` (${rr.queue.length})` : ""}`}
                     </button>
                 )}
                 <div className="gd-tt-zoom" role="group" aria-label="Zoom">
@@ -336,11 +339,30 @@ export default function TechTree({world, api, mySlot, onClose}) {
                 </div>
                 <div className="gd-tt-vignette" aria-hidden="true"/>
 
-                {queueOpen && rr.queue.length > 0 && (
+                {queueOpen && (rr.current || rr.queue.length > 0) && (
                     <div className="gd-tt-queue-panel" id="gd-tt-queue-panel"
                          role="region" aria-label="Research queue">
                         <div className="gd-tt-queue-head">Research Queue</div>
                         <ul className="gd-tt-queue-list">
+                            {rr.current && (() => {
+                                const t = TECHS[rr.current.id];
+                                if (!t) return null;
+                                const glyph = TECH_PATHS.find((p) => p.id === t.path)?.glyph;
+                                const pct = Math.floor((rr.current.progress ?? 0) * 100);
+                                return (
+                                    <li key="__current">
+                                        <div className="gd-tt-queue-row current"
+                                             aria-label={`Now researching ${t.name}, ${pct} percent complete.`}>
+                                            <i className="gd-tt-queue-fill" style={{width: `${pct}%`}}
+                                               aria-hidden="true"/>
+                                            <span className="gd-tt-queue-pos" aria-hidden="true">▶</span>
+                                            <span className="gd-tt-queue-glyph" aria-hidden="true">{glyph}</span>
+                                            <span className="gd-tt-queue-name">{t.name}</span>
+                                            <span className="gd-tt-queue-cost">{pct}%</span>
+                                        </div>
+                                    </li>
+                                );
+                            })()}
                             {rr.queue.map((qid, i) => {
                                 const t = TECHS[qid];
                                 if (!t) return null;
@@ -358,6 +380,9 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                     </li>
                                 );
                             })}
+                            {!rr.queue.length && (
+                                <li className="gd-tt-queue-empty">Queue a tech to line it up next.</li>
+                            )}
                         </ul>
                     </div>
                 )}
