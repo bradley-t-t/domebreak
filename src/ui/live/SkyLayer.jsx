@@ -127,9 +127,9 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
 
     return (
         <>
-            <svg className="gd-sky">{trails.map((t) => <g key={t.id}>{seg(t.pts, t.color, t.width)}</g>)}</svg>
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-2">{trails.map((t) => <g key={t.id}>{seg(t.pts, t.color, t.width)}</g>)}</svg>
             {heads.map((h) => (
-                <div key={h.id} className={`gd-sky-sprite ${h.sub ? "sub" : ""}`} style={{
+                <div key={h.id} className={`absolute pointer-events-none z-3 will-change-transform ${h.sub ? "sub" : ""}`} style={{
                     left: h.x,
                     top: h.y,
                     transform: `translate(-50%,-50%) rotate(${h.deg}deg)${h.sub ? " scale(0.6)" : ""}`,

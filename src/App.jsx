@@ -20,6 +20,7 @@ import {supabase} from "./account/client.js";
 import MeBadge from "./ui/common/MeBadge.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
+import {menuButton} from "./ui/lib/variants.js";
 
 export default function App() {
     const [screen, setScreen] = useState("menu");
@@ -300,16 +301,18 @@ export default function App() {
     // Login is required — no offline bypass. Loading shows a minimal splash;
     // signed-out renders the gate in place of every other screen.
     if (authStatus === "loading") {
-        return <div className="gd-app">{splash}
-            <div className="gd-connecting"><span>Connecting…</span></div>
+        return <div className="relative z-[1] flex flex-col h-full">{splash}
+            <div className="absolute inset-0 grid place-items-center bg-bg">
+                <span className="font-display tracking-[6px] uppercase text-[13px] text-dim animate-[gdRowIn_400ms_var(--ease-out)_both]">Connecting…</span>
+            </div>
         </div>;
     }
     if (authStatus === "signedOut") {
-        return <div className="gd-app">{attract}<LoginScreen/>{splash}</div>;
+        return <div className="relative z-[1] flex flex-col h-full">{attract}<LoginScreen/>{splash}</div>;
     }
 
     return (
-        <div className="gd-app">
+        <div className="relative z-[1] flex flex-col h-full">
             {attract}
             {splash}
             {screen !== "playing" &&
@@ -346,8 +349,8 @@ export default function App() {
                           meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
                                             players={netClient?.players}/>}/>}
             {netStatus === "lost" && screen === "playing" &&
-                <div className="gd-netlost">CONNECTION LOST — the war goes on without you.
-                    <button className="gd-menu-btn" onClick={quitToMenu}>Return to Menu</button>
+                <div className="gd-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[gdPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
+                    <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>
                 </div>}
 
             {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => {

@@ -1,5 +1,7 @@
 import {useState} from "react";
 import {signIn, signUp} from "../../account/api.js";
+import {button, card, input, label} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 // Full-screen auth gate — same brand shell as StartMenu, swapped for a form.
 // No navigation here: App's onAuth subscription takes over once the session
@@ -51,34 +53,37 @@ export default function LoginScreen() {
     };
 
     return (
-        <div className="gd-menu-screen">
-            <div className="gd-menu-bg"/>
-            <div className="gd-menu-inner">
-                <h1 className="gd-menu-title">GOLDEN<span>DOME</span></h1>
-                <p className="gd-menu-tag">Global Missile Command</p>
-                <form className="gd-card gd-login" onSubmit={submit} aria-labelledby="gd-login-title">
-                    <div className="gd-menu-title sm" id="gd-login-title">{mode === "signin" ? "Sign In" : "Create Account"}</div>
-                    <label className="gd-label" htmlFor="gd-login-email">Email</label>
-                    <input id="gd-login-email" className="gd-input" type="email" autoComplete="email" value={email}
+        <div className="absolute inset-0 z-10 grid place-items-center overflow-auto p-6">
+            <div className="absolute inset-0 -z-1 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)]"/>
+            <div className="text-center animate-[gdRowIn_400ms_var(--ease-out-gd)_both] pt-[38px] px-[46px] pb-[26px] border border-line-soft rounded backdrop-blur-[10px] [backdrop-filter:blur(10px)_saturate(1.15)] bg-[rgba(7,9,13,0.48)] shadow-[0_30px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <h1 className="text-[58px] font-bold tracking-[14px] uppercase m-0 text-dim">
+                    GOLDEN<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">DOME</span>
+                </h1>
+                <p className="text-dim tracking-[3px] uppercase text-[13px] mt-1 mb-[34px]">Global Missile Command</p>
+                <form className={cn(card(), "text-left mt-[22px] w-[min(360px,94vw)]")} onSubmit={submit} aria-labelledby="gd-login-title">
+                    <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim" id="gd-login-title">{mode === "signin" ? "Sign In" : "Create Account"}</div>
+                    <label className={label()} htmlFor="gd-login-email">Email</label>
+                    <input id="gd-login-email" className={input()} type="email" autoComplete="email" value={email}
                            onChange={(e) => setEmail(e.target.value)} disabled={busy}
                            aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
                     {mode === "signup" && <>
-                        <label className="gd-label mt" htmlFor="gd-login-username">Username</label>
-                        <input id="gd-login-username" className="gd-input" maxLength={24} autoComplete="username"
+                        <label className={cn(label(), "mt-4")} htmlFor="gd-login-username">Username</label>
+                        <input id="gd-login-username" className={input()} maxLength={24} autoComplete="username"
                                value={username} onChange={(e) => setUsername(e.target.value)} disabled={busy}/>
                     </>}
-                    <label className="gd-label mt" htmlFor="gd-login-password">Password</label>
-                    <input id="gd-login-password" className="gd-input" type="password"
+                    <label className={cn(label(), "mt-4")} htmlFor="gd-login-password">Password</label>
+                    <input id="gd-login-password" className={input()} type="password"
                            autoComplete={mode === "signin" ? "current-password" : "new-password"}
                            value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy}
                            aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
                     <div aria-live="assertive">
-                        {error && <p className="gd-login-err" id="gd-login-err">{error}</p>}
+                        {error && <p className="text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm px-3 py-2 text-[12.5px] mt-3.5 mb-0" id="gd-login-err">{error}</p>}
                     </div>
-                    <button className="gd-btn primary block gd-login-submit" type="submit" disabled={!canSubmit}>
+                    <button className={cn(button({variant: "primary"}), "block w-full mt-[18px]")} type="submit" disabled={!canSubmit}>
                         {busy ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
                     </button>
-                    <button className="gd-login-toggle" type="button" onClick={toggleMode} disabled={busy}>
+                    <button className="block w-full mt-3 bg-none border-none text-dim text-xs tracking-[0.3px] underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed enabled:hover:text-text"
+                            type="button" onClick={toggleMode} disabled={busy}>
                         {mode === "signin" ? "Need an account? Create one" : "Already have an account? Sign in"}
                     </button>
                 </form>

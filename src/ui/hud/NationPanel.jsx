@@ -10,6 +10,7 @@ import {
 } from "../../game/engine.js";
 import {fmtNet, fmtPop} from "../common/format.js";
 import Flag from "../common/Flag.jsx";
+import {cn} from "../lib/cn.js";
 
 // A territory's readiness band from its city vitality (hp share). Drives the
 // status pill colour and label; a dead holding reads "Lost".
@@ -54,74 +55,95 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
     if (!myNation) return null;
     const indFrac = view.indCap > 0 ? Math.min(1, view.indCount / view.indCap) : 0;
 
+    const pillClass = {
+        secure: "text-dim border-line",
+        strained: "text-[#d79a3f] border-[rgba(215,154,63,0.5)]",
+        critical: "text-red border-[rgba(224,87,79,0.5)]",
+        lost: "text-faint border-line",
+    };
+
     return (
-        <aside className={`gd-natpanel ${collapsed ? "collapsed" : ""}`} aria-label="Nation status">
-            <div className="gd-natpanel-head">
-                <Flag iso={myNation.iso} className="gd-natpanel-flag"/>
-                <div className="gd-natpanel-id">
-                    <span className="gd-natpanel-name">{myNation.name}</span>
-                    <span className="gd-natpanel-tag">Your Command</span>
+        <aside
+            className={cn("absolute top-4 left-4 z-5 w-[246px] max-h-[calc(100vh-132px)] flex flex-col bg-panel border border-line rounded-lg shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto overflow-hidden motion-safe:animate-[gdDropIn_300ms_var(--ease-drawer)]", collapsed && "w-[246px]")}
+            aria-label="Nation status">
+            <div className="flex items-center gap-[10px] px-3 py-[11px] border-b border-hair">
+                <Flag iso={myNation.iso} className="w-[26px] h-[18px] rounded-sm shadow-[0_0_0_1px_var(--line)] flex-none"/>
+                <div className="flex flex-col leading-[1.15] min-w-0 flex-1">
+                    <span
+                        className="font-display text-[15px] font-bold text-text whitespace-nowrap overflow-hidden text-ellipsis">{myNation.name}</span>
+                    <span className="text-[9.5px] tracking-[1px] uppercase text-faint">Your Command</span>
                 </div>
-                <button className="gd-natpanel-collapse" onClick={() => setCollapsed((v) => !v)}
-                        title={collapsed ? "Expand" : "Collapse"}
-                        aria-label={collapsed ? "Expand nation panel" : "Collapse nation panel"}>
+                <button
+                    className="w-6 h-6 border border-line rounded-sm bg-transparent text-dim text-[11px] flex-none transition-[border-color,color] duration-150 ease-out-gd hover:text-text hover:border-line-soft"
+                    onClick={() => setCollapsed((v) => !v)}
+                    title={collapsed ? "Expand" : "Collapse"}
+                    aria-label={collapsed ? "Expand nation panel" : "Collapse nation panel"}>
                     {collapsed ? "▸" : "▾"}
                 </button>
             </div>
 
             {!collapsed && <>
-                <div className="gd-natpanel-stats">
-                    <div className="gd-natpanel-stat">
-                        <span className="gd-natpanel-sl">Population</span>
-                        <span className="gd-natpanel-sv">{fmtPop(view.pop)}</span>
+                <div className="grid grid-cols-2 gap-px bg-hair border-b border-hair">
+                    <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Population</span>
+                        <span className="font-display text-[15px] font-semibold text-text">{fmtPop(view.pop)}</span>
                     </div>
-                    <div className="gd-natpanel-stat">
-                        <span className="gd-natpanel-sl">GDP</span>
-                        <span className="gd-natpanel-sv">${view.gdp.toFixed(2)}T</span>
+                    <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">GDP</span>
+                        <span className="font-display text-[15px] font-semibold text-text">${view.gdp.toFixed(2)}T</span>
                     </div>
-                    <div className="gd-natpanel-stat">
-                        <span className="gd-natpanel-sl">Net</span>
-                        <span className={`gd-natpanel-sv ${view.net < 0 ? "neg" : "pos"}`}>{fmtNet(view.net, 1)}/s</span>
+                    <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Net</span>
+                        <span
+                            className={cn("font-display text-[15px] font-semibold text-text", view.net < 0 && "text-red")}>{fmtNet(view.net, 1)}/s</span>
                     </div>
-                    <div className="gd-natpanel-stat">
-                        <span className="gd-natpanel-sl">Territories</span>
-                        <span className="gd-natpanel-sv">{view.heldCount}<span
-                            className="gd-natpanel-of">/{view.totalCount}</span></span>
-                    </div>
-                </div>
-
-                <div className="gd-natpanel-ind">
-                    <div className="gd-natpanel-ind-top">
-                        <span className="gd-natpanel-sl">Industry</span>
-                        <span className="gd-natpanel-ind-v">{view.indCount}<span
-                            className="gd-natpanel-of">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
-                    </div>
-                    <div className="gd-natpanel-bar">
-                        <div className="gd-natpanel-bar-fill" style={{width: `${indFrac * 100}%`}}/>
+                    <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Territories</span>
+                        <span className="font-display text-[15px] font-semibold text-text">{view.heldCount}<span
+                            className="text-faint font-normal text-xs">/{view.totalCount}</span></span>
                     </div>
                 </div>
 
-                <div className="gd-natpanel-terr-h">Territories</div>
-                <div className="gd-natpanel-terr">
+                <div className="px-3 py-[10px] border-b border-hair">
+                    <div className="flex items-baseline justify-between mb-[6px]">
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Industry</span>
+                        <span className="font-display text-[12.5px] text-dim">{view.indCount}<span
+                            className="text-faint font-normal text-xs">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
+                    </div>
+                    <div className="h-[5px] rounded-[3px] bg-hair overflow-hidden">
+                        <div className="h-full rounded-[3px] bg-linear-to-r from-dim to-text transition-[width] duration-[400ms] ease-out-gd"
+                             style={{width: `${indFrac * 100}%`}}/>
+                    </div>
+                </div>
+
+                <div
+                    className="px-3 pt-[9px] pb-[5px] text-[9.5px] tracking-[1px] uppercase text-faint">Territories
+                </div>
+                <div className="flex-1 overflow-y-auto px-[6px] pb-2">
                     {view.rows.map((c) => {
                         const st = statusOf(c);
                         const v = vitalityOf(c);
                         return (
-                            <button key={c.id} className={`gd-terr-row ${c.alive ? "" : "dead"}`}
+                            <button key={c.id}
+                                    className={cn("flex items-center justify-between gap-2 w-full px-2 py-[7px] border-none rounded-sm bg-transparent text-left cursor-pointer transition-[background] duration-150 ease-out-gd hover:bg-hair", !c.alive && "opacity-55")}
                                     onClick={() => onFocus?.(c)} title={`Focus ${c.name}`}>
-                                <span className="gd-terr-main">
-                                    <span className="gd-terr-name">{c.cap ? "★ " : ""}{c.name}</span>
-                                    {c.state && <span className="gd-terr-state">{c.state}</span>}
+                                <span className="flex flex-col leading-[1.2] min-w-0">
+                                    <span
+                                        className="text-[12.5px] text-text whitespace-nowrap overflow-hidden text-ellipsis max-w-[132px]">{c.cap ? "★ " : ""}{c.name}</span>
+                                    {c.state && <span
+                                        className="text-[10px] text-faint whitespace-nowrap overflow-hidden text-ellipsis max-w-[132px]">{c.state}</span>}
                                 </span>
-                                <span className="gd-terr-meta">
-                                    <span className="gd-terr-pop">{c.alive ? fmtPop((c.pop || 0) * v) : "—"}</span>
-                                    <span className={`gd-terr-pill ${st.key}`}>{st.label}</span>
+                                <span className="flex flex-col items-end gap-[3px] flex-none">
+                                    <span
+                                        className="font-display text-[11.5px] text-dim">{c.alive ? fmtPop((c.pop || 0) * v) : "—"}</span>
+                                    <span
+                                        className={cn("text-[9px] tracking-[0.4px] uppercase px-[6px] py-px rounded-full border border-line text-dim", pillClass[st.key])}>{st.label}</span>
                                 </span>
                             </button>
                         );
                     })}
                     {view.rows.length === 0 &&
-                        <div className="gd-terr-empty">No territories held.</div>}
+                        <div className="px-3 py-3 text-center text-faint text-xs">No territories held.</div>}
                 </div>
             </>}
         </aside>

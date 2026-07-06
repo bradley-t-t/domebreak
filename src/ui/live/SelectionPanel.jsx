@@ -5,7 +5,8 @@
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
 import {armamentOf, FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
-import "./SelectionPanel.css";
+import {button} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 export default function SelectionPanel({
                                            selectedUnit,
@@ -29,41 +30,41 @@ export default function SelectionPanel({
     // fire (ICBM / Hypersonic Glide Vehicle) as a plain armament line.
     const armament = armamentOf(selectedUnit.type);
     return (
-        <div className="gd-selpanel">
-            <div className="gd-selname"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
+        <div className="gd-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdPop_220ms_var(--ease-out)]">
+            <div className="font-display font-bold text-[15px] flex items-center gap-2"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
                                                   size={18}/>{labelOf(selectedUnit.type, selectedUnit.slot)}
             </div>
-            <div className="gd-seltags">
-                <span className="gd-seltag">{def.kind}</span>
-                {def.domain === "sea" ? <span className="gd-seltag">Naval</span> : null}
-                {def.airSpeed ? <span className="gd-seltag">Aircraft</span> : null}
-                {def.detect ? <span className="gd-seltag">Sensor</span> : null}
-                {def.wing ? <span className="gd-seltag">Airbase</span> : null}
+            <div className="flex flex-wrap gap-[5px] mt-[7px]">
+                <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">{def.kind}</span>
+                {def.domain === "sea" ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Naval</span> : null}
+                {def.airSpeed ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Aircraft</span> : null}
+                {def.detect ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Sensor</span> : null}
+                {def.wing ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Airbase</span> : null}
             </div>
-            {(def.desc || def.hint) && <p className="gd-seldesc">{def.desc || def.hint}</p>}
-            <div className="gd-hp">
-                <div className="gd-hp-row"><span>Integrity</span><b>{Math.round(selectedUnit.hp)}/{def.hp}</b>
+            {(def.desc || def.hint) && <p className="text-[11.5px] leading-[1.5] text-dim mt-[9px] mb-0">{def.desc || def.hint}</p>}
+            <div className="mt-[11px]">
+                <div className="flex justify-between items-baseline mb-1"><span className="text-[10px] tracking-[0.5px] uppercase text-faint">Integrity</span><b className="text-xs font-mono">{Math.round(selectedUnit.hp)}/{def.hp}</b>
                 </div>
-                <div className="gd-hp-bar" role="progressbar" aria-label="Integrity"
+                <div className="h-[3px] bg-line rounded-[2px] overflow-hidden" role="progressbar" aria-label="Integrity"
                      aria-valuenow={Math.round(hpFrac * 100)} aria-valuemin={0} aria-valuemax={100}>
-                    <i className={hpFrac <= 0.35 ? "low" : ""}
+                    <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd", hpFrac <= 0.35 ? "bg-danger" : "bg-good")}
                        style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
             </div>
-            <div className="gd-detail-grid gd-selstats">
+            <div className="gd-detail-grid mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
                 {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
             </div>
-            {armament && <p className="gd-sel-armament">Armament: {armament}</p>}
+            {armament && <p className="font-mono text-[11px] tracking-[0.4px] text-dim mt-0 mb-2">Armament: {armament}</p>}
             {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
-                ? <button className="gd-btn" onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
-                : <button className={`gd-btn ${moving === selectedUnit.id ? "primary" : ""}`} onClick={() => {
+                ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
+                : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
                     setMoving(moving === selectedUnit.id ? null : selectedUnit.id);
                     setPlacing(null);
                 }}>{moving === selectedUnit.id ? "Pick a Destination…" : "Set Sail"}</button>)}
             {UNITS[selectedUnit.type].wing && (() => {
                 return (
-                    <div className="gd-wing">
-                        <div className="gd-wing-head">Hangar</div>
-                        <div className="gd-wing-list">
+                    <div className="my-1 mb-[10px]">
+                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Hangar</div>
+                        <div className="flex flex-col gap-1 mb-2">
                             {[...new Set(UNITS[selectedUnit.type].wing)].map((at) => {
                                 const cap = hangarCapOf(selectedUnit.type, at);
                                 const stock = selectedUnit.hangar?.[at] ?? 0;
@@ -71,15 +72,15 @@ export default function SelectionPanel({
                                 const total = hangarCount(w, myNation, selectedUnit.id, at);
                                 const full = total >= cap;
                                 return (
-                                    <div key={at} className="gd-wing-row"
+                                    <div key={at} className="group flex items-center gap-2 py-1.5 px-2 bg-btn-bg border border-line rounded-sm"
                                          title={`${labelOf(at, mySlot)} · ◆ ${UNITS[at].cost} · ${UNITS[at].buildTime}s${airborne ? ` · ${airborne} Airborne` : ""}`}>
                                         <UnitIcon name={UNIT_ICON[at]} color={teamColor(mySlot)} size={14}/>
-                                        <span className="gd-wing-name">{labelOf(at, mySlot)}</span>
-                                        {airborne > 0 && <span className="gd-wing-air">{airborne}▲</span>}
-                                        <span className="gd-wing-count">{stock}/{cap}</span>
+                                        <span className="flex-1 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{labelOf(at, mySlot)}</span>
+                                        {airborne > 0 && <span className="font-mono text-[10px] text-text bg-[rgba(255,255,255,0.08)] border border-line rounded-full px-1.5 leading-[15px]">{airborne}▲</span>}
+                                        <span className="font-mono text-[11px] text-dim">{stock}/{cap}</span>
                                         {!full &&
-                                            <span className="gd-wing-x5" aria-hidden="true">⇧×5</span>}
-                                        <button className="gd-wing-add" disabled={full}
+                                            <span className="font-mono text-[9px] tracking-[0.5px] text-faint opacity-60 transition-[opacity,color] duration-[140ms] ease-out-gd group-hover:opacity-100 group-hover:text-dim" aria-hidden="true">⇧×5</span>}
+                                        <button className="w-[22px] h-[22px] grid place-items-center text-sm leading-none text-text bg-transparent border border-line rounded-sm transition-[background,color,border-color] duration-[120ms] ease-out-gd enabled:hover:bg-text enabled:hover:text-panel-solid enabled:hover:border-text disabled:opacity-35 disabled:cursor-default" disabled={full}
                                                 aria-label={full ? `${labelOf(at, mySlot)} hangar full` : `Order ${labelOf(at, mySlot)} — ${UNITS[at].cost} points, ${UNITS[at].buildTime}s. Shift-click orders five.`}
                                                 title={full ? "The hangar is at capacity for that type." : `Order one — ◆ ${UNITS[at].cost}, ${UNITS[at].buildTime}s on the line. Shift-click: ×5.`}
                                                 onClick={(e) => {
@@ -107,29 +108,33 @@ export default function SelectionPanel({
                             const queuedHere = (myNation?.prod?.queue || []).filter((it) => it.forBase === selectedUnit.id);
                             if (!curHere && queuedHere.length === 0) return null;
                             return (
-                                <div className="gd-wing-prod">
+                                <div className="my-2 pt-[7px] border-t border-line-soft flex flex-col gap-[5px]">
                                     {curHere && <>
-                                        <div className="gd-wing-prod-row">
+                                        <div className="flex items-center justify-between text-[10.5px] text-text">
                                             <span>Building {labelOf(curHere.item.type, mySlot)}</span>
-                                            <b>{Math.round(curHere.progress * 100)}%</b>
+                                            <b className="font-mono font-semibold">{Math.round(curHere.progress * 100)}%</b>
                                         </div>
-                                        <div className="gd-ammo-bar"><i
+                                        <div className="h-[3px] bg-line rounded-[2px] overflow-hidden"><i
+                                            className="block h-full bg-[var(--flame,#ff8a1a)]"
                                             style={{width: `${Math.round(curHere.progress * 100)}%`}}/></div>
                                     </>}
-                                    {queuedHere.length > 0 && <div className="gd-wing-prod-row dim">
-                                        <span>In Queue</span><b>{queuedHere.map((it) => labelOf(it.type, mySlot)).join(", ")}</b>
+                                    {queuedHere.length > 0 && <div className="flex items-center justify-between text-[10.5px] text-dim">
+                                        <span>In Queue</span><b className="font-mono font-semibold">{queuedHere.map((it) => labelOf(it.type, mySlot)).join(", ")}</b>
                                     </div>}
                                 </div>
                             );
                         })()}
-                        <div className="gd-wing-head">Fighter Patrol</div>
-                        <p className="gd-patrol-summary">
+                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Fighter Patrol</div>
+                        <p className="mt-0 mb-1.5 font-mono text-[10px] tracking-[0.6px] text-dim">
                             {(selectedUnit.patrolSize || 0) === 0 ? "Patrol Stood Down" : `${selectedUnit.patrolSize}-Ship CAP`}
                             {" · "}AWACS {selectedUnit.awacsPatrol ? "On" : "Off"}
                         </p>
-                        <div className="gd-seg gd-patrol-seg">
+                        <div className="flex gap-1 mb-2">
                             {PATROL_SIZES.map((n) => (
-                                <button key={n} className={(selectedUnit.patrolSize || 0) === n ? "active" : ""}
+                                <button key={n} className={cn(
+                                    "flex-1 min-w-10 py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
+                                    (selectedUnit.patrolSize || 0) === n && "bg-gold text-gold-contrast border-transparent"
+                                )}
                                         aria-pressed={(selectedUnit.patrolSize || 0) === n}
                                         aria-label={n === 0 ? "Stand patrol down" : `Keep a ${n}-ship patrol on station`}
                                         title={n === 0 ? "Stand the patrol down." : `Keep a ${n}-ship on station.`}
@@ -137,7 +142,7 @@ export default function SelectionPanel({
                             ))}
                         </div>
                         {hangarCapOf(selectedUnit.type, "awacs") > 0 && (
-                            <button className={`gd-btn ${selectedUnit.awacsPatrol ? "primary" : ""}`}
+                            <button className={cn(button({variant: selectedUnit.awacsPatrol ? "primary" : "default"}), "w-full")}
                                     aria-pressed={!!selectedUnit.awacsPatrol}
                                     disabled={!selectedUnit.awacsPatrol && (selectedUnit.hangar?.awacs ?? 0) === 0 && w.units.filter((x) => x.baseId === selectedUnit.id && x.type === "awacs" && x.hp > 0).length === 0}
                                     title={(selectedUnit.hangar?.awacs ?? 0) === 0 ? "No AWACS available — order one above." : "A wide surveillance orbit over the base."}
@@ -152,26 +157,29 @@ export default function SelectionPanel({
                         arsenal (silo, launcher, etc.). Conventional units — tanks, aircraft,
                         ships — fire their own munitions and get no warhead picker. */}
                     {UNITS[selectedUnit.type].warheads && (
-                        <div className="gd-wh-row">
+                        <div className="flex gap-[5px] my-1 mb-[10px]">
                             {WARHEAD_ORDER.map((k) => {
                                 const wh = WARHEADS[k];
                                 const stock = myNation?.ammo?.[k] || 0;
                                 const cur = (selectedUnit.warhead || "standard") === k;
-                                return <button key={k} className={`gd-wh-chip ${cur ? "on" : ""}`}
+                                return <button key={k} className={cn(
+                                    "flex-1 flex items-center justify-center gap-1 font-mono text-[10.5px] py-[5px] px-1 border border-line bg-transparent text-dim rounded-sm [&_b]:text-text [&_b]:font-bold",
+                                    cur && "border-[var(--flame,#ff8a1a)] text-text bg-[color-mix(in_srgb,var(--flame,#ff8a1a)_14%,transparent)]"
+                                )}
                                                style={{["--flame"]: wh.flame}}
                                                aria-pressed={cur}
                                                aria-label={`${wh.name} — ${stock} in stock`}
                                                title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
                                                onClick={() => api.setWarhead(selectedUnit.id, k)}><span
-                                    className="gd-wh-dot"/>{wh.short}<b>{stock}</b></button>;
+                                    className="w-[7px] h-[7px] rounded-full bg-[var(--flame,#ff8a1a)] shadow-[0_0_6px_var(--flame,#ff8a1a)]"/>{wh.short}<b>{stock}</b></button>;
                             })}
                         </div>
                     )}
                     {selectedUnit.targetId
                         ?
-                        <button className="gd-btn" onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold
+                        <button className={button()} onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold
                             fire</button>
-                        : <button className={`gd-btn ${attackMode ? "primary" : ""}`}
+                        : <button className={button({variant: attackMode ? "primary" : "default"})}
                                   onClick={() => setAttackMode((v) => !v)}>{attackMode ? "Pick a Target…" : "Command Attack"}</button>}
                 </>
             )}

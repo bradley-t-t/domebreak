@@ -1,6 +1,8 @@
 import {useMemo, useState} from "react";
 import Flag from "../common/Flag.jsx";
 import {GREAT_POWERS} from "../../game/sim/newGame.js";
+import {button, card, chip, input, label, row} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 // Nation select: claim the ONE country you command. Every other country on the map
 // (all ~222) is a live AI nation, so there is no opponent roster to pick — the great
@@ -19,65 +21,71 @@ export default function NewGame({data, onStart, onBack, settings}) {
             !GREAT_POWERS.includes(c.iso) && (c.name.toLowerCase().includes(needle) || c.iso.toLowerCase() === needle)).slice(0, 40);
     }, [data, q]);
     const sel = data?.countries.find((c) => c.iso === iso);
+    const countryRow = (active) => cn(
+        "flex items-center gap-2.5 px-2.5 py-2 rounded border text-left text-text",
+        active ? "border-gold-line bg-gold-soft" : "border-transparent bg-transparent hover:bg-black/[0.06]"
+    );
     return (
-        <div className="gd-menu-screen">
-            <div className="gd-menu-bg"/>
-            <div className="gd-newgame gd-card">
-                <div className="gd-menu-title sm">New Game</div>
-                {!data && <p className="gd-sub">Loading world data…</p>}
-                <label className="gd-label" htmlFor="gd-newgame-name">Commander Name</label>
-                <input id="gd-newgame-name" className="gd-input" value={name} maxLength={24}
+        <div className="absolute inset-0 z-10 grid place-items-center overflow-auto p-6">
+            <div className="absolute inset-0 -z-1 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)]"/>
+            <div className={cn(card(), "gd-newgame w-[min(460px,94vw)] text-left max-h-[90vh] overflow-auto")}>
+                <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim">New Game</div>
+                {!data && <p className="text-dim m-0 mb-5 text-sm leading-[1.5]">Loading world data…</p>}
+                <label className={label()} htmlFor="gd-newgame-name">Commander Name</label>
+                <input id="gd-newgame-name" className={input()} value={name} maxLength={24}
                        onChange={(e) => setName(e.target.value)}/>
-                <label className="gd-label mt" id="gd-newgame-nation-label">Choose Your Nation — Every Other Country Is
+                <label className={cn(label(), "mt-4")} id="gd-newgame-nation-label">Choose Your Nation — Every Other Country Is
                     a Live AI {sel &&
-                        <span className="gd-chip subtle"><Flag iso={sel.iso}/> {sel.name}</span>}</label>
-                <div className="gd-country-list" role="list" aria-labelledby="gd-newgame-nation-label">
+                        <span className={chip({subtle: true})}><Flag iso={sel.iso}/> {sel.name}</span>}</label>
+                <div className="gd-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
+                     role="list" aria-labelledby="gd-newgame-nation-label">
                     {!GREAT_POWERS.includes(iso) && sel && (
-                        <button className="gd-country active" role="listitem" onClick={() => setIso(sel.iso)}
+                        <button className={countryRow(true)} role="listitem" onClick={() => setIso(sel.iso)}
                                 aria-label={`${sel.name} — you`}>
-                            <span className="gd-flag"><Flag iso={sel.iso}/></span>
-                            <span className="gd-country-name">{sel.name}</span>
-                            <span className="gd-roster-badge you">You</span>
+                            <span className="text-lg w-[22px]"><Flag iso={sel.iso}/></span>
+                            <span className="flex-1 text-sm whitespace-nowrap overflow-hidden text-ellipsis">{sel.name}</span>
+                            <span className="flex-none min-w-[34px] text-center font-display text-[10px] font-bold tracking-[1px] uppercase px-2 py-[3px] rounded-sm border border-ink bg-ink text-white">You</span>
                         </button>
                     )}
                     {powers.map((c) => (
-                        <button key={c.iso} className={`gd-country ${iso === c.iso ? "active" : ""}`}
+                        <button key={c.iso} className={countryRow(iso === c.iso)}
                                 role="listitem" onClick={() => setIso(c.iso)}
                                 aria-label={`${c.name}${iso === c.iso ? " — you" : ""}`}>
-                            <span className="gd-flag"><Flag iso={c.iso}/></span>
-                            <span className="gd-country-name">{c.name}</span>
-                            <span className="gd-country-meta">{c.count}</span>
-                            {iso === c.iso && <span className="gd-roster-badge you">You</span>}
+                            <span className="text-lg w-[22px]"><Flag iso={c.iso}/></span>
+                            <span className="flex-1 text-sm whitespace-nowrap overflow-hidden text-ellipsis">{c.name}</span>
+                            <span className="font-mono text-xs text-dim">{c.count}</span>
+                            {iso === c.iso && <span className="flex-none min-w-[34px] text-center font-display text-[10px] font-bold tracking-[1px] uppercase px-2 py-[3px] rounded-sm border border-ink bg-ink text-white">You</span>}
                         </button>
                     ))}
                 </div>
-                <label className="gd-label mt" htmlFor="gd-newgame-search">Or Search Any Nation</label>
-                <input id="gd-newgame-search" className="gd-input" placeholder="Search countries…" value={q}
+                <label className={cn(label(), "mt-4")} htmlFor="gd-newgame-search">Or Search Any Nation</label>
+                <input id="gd-newgame-search" className={input()} placeholder="Search countries…" value={q}
                        onChange={(e) => setQ(e.target.value)}/>
                 {searchList.length > 0 && (
-                    <div className="gd-country-list" role="list" style={{maxHeight: "18vh"}}>
+                    <div className="gd-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
+                         role="list" style={{maxHeight: "18vh"}}>
                         {searchList.map((c) => (
-                            <button key={c.iso} className={`gd-country ${iso === c.iso ? "active" : ""}`}
+                            <button key={c.iso} className={countryRow(iso === c.iso)}
                                     role="listitem" aria-label={`${c.name} — you`}
                                     onClick={() => {
                                         setIso(c.iso);
                                         setQ("");
                                     }}>
-                                <span className="gd-flag"><Flag iso={c.iso}/></span>
-                                <span className="gd-country-name">{c.name}</span>
-                                <span className="gd-country-meta">{c.count}</span>
+                                <span className="text-lg w-[22px]"><Flag iso={c.iso}/></span>
+                                <span className="flex-1 text-sm whitespace-nowrap overflow-hidden text-ellipsis">{c.name}</span>
+                                <span className="font-mono text-xs text-dim">{c.count}</span>
                             </button>
                         ))}
                     </div>
                 )}
                 {sel && (
-                    <p className="gd-menu-hint">
+                    <p className="mt-3.5 font-mono text-[11px] text-dim tracking-[0.02em]">
                         Every other country is a live AI · {settings?.speed ?? 1}&times; · {(settings?.globe ?? true) ? "Globe" : "Flat"} view
                     </p>
                 )}
-                <div className="gd-row" style={{marginTop: 14}}>
-                    <button className="gd-btn" onClick={onBack}>Back</button>
-                    <button className="gd-btn primary" disabled={!sel}
+                <div className={row()} style={{marginTop: 14}}>
+                    <button className={button()} onClick={onBack}>Back</button>
+                    <button className={button({variant: "primary"})} disabled={!sel}
                             onClick={() => onStart(iso, name || "Commander")}>Start War
                     </button>
                 </div>

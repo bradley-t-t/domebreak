@@ -2,6 +2,8 @@ import {useEffect, useRef, useState} from "react";
 import Flag from "../common/Flag.jsx";
 import {fetchLobby, leaveLobby, setLobbyIso, setReady, watchLobby} from "../../account/lobby.js";
 import {GREAT_POWERS} from "../../game/sim/newGame.js";
+import {button, menuScreen, menuBg, menuInner, menuTitle} from "../lib/variants.js";
+import {cn} from "../lib/cn.js";
 
 // War-room lobby: shows the roster (humans and server-simulated bots,
 // rendered identically — is_bot is never surfaced), lets the local player
@@ -57,10 +59,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
 
     if (lobby === undefined) {
         return (
-            <div className="gd-menu-screen">
-                <div className="gd-menu-bg"/>
-                <div className="gd-menu-inner gd-lobby">
-                    <h1 className="gd-menu-title sm">Entering War Room…</h1>
+            <div className={menuScreen()}>
+                <div className={menuBg()}/>
+                <div className={cn(menuInner(), "w-[min(620px,94vw)] text-left")}>
+                    <h1 className={menuTitle({sm: true})}>Entering War Room…</h1>
                 </div>
             </div>
         );
@@ -69,10 +71,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
 
     if (connecting) {
         return (
-            <div className="gd-menu-screen">
-                <div className="gd-menu-bg"/>
-                <div className="gd-menu-inner gd-lobby">
-                    <h1 className="gd-menu-title sm">Contacting War Server…</h1>
+            <div className={menuScreen()}>
+                <div className={menuBg()}/>
+                <div className={cn(menuInner(), "w-[min(620px,94vw)] text-left")}>
+                    <h1 className={menuTitle({sm: true})}>Contacting War Server…</h1>
                 </div>
             </div>
         );
@@ -91,38 +93,49 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
     };
 
     return (
-        <div className="gd-menu-screen">
-            <div className="gd-menu-bg"/>
-            <div className="gd-menu-inner gd-lobby">
-                <h1 className="gd-menu-title sm">War Room</h1>
-                {revertErr && <p className="gd-friends-err">War server unreachable — try again.</p>}
+        <div className={menuScreen()}>
+            <div className={menuBg()}/>
+            <div className={cn(menuInner(), "w-[min(620px,94vw)] text-left")}>
+                <h1 className={menuTitle({sm: true})}>War Room</h1>
+                {revertErr && <p className="gd-friends-err text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm py-2 px-3 text-[12.5px] mt-2.5">War server unreachable — try again.</p>}
 
-                <div className="gd-lobby-members" role="list" aria-label="War room roster">
+                <div className="gd-lobby-members flex flex-col gap-1.5 max-h-[42vh] overflow-auto mt-1.5" role="list" aria-label="War room roster">
                     {members.map((m) => {
                         const own = me?.id === m.userId;
                         const rowLabel = `Slot ${m.slot + 1} — ${m.username || "Commander"} — ${m.iso || "no nation chosen"} — ${m.ready ? "ready" : "not ready"}`;
                         return (
-                            <div key={m.userId ?? `bot-${m.slot}`} className={`gd-lobby-row ${m.ready ? "ready" : ""}`}
+                            <div key={m.userId ?? `bot-${m.slot}`}
+                                 className={cn(
+                                     "gd-lobby-row flex items-center gap-2.5 py-[9px] px-3 bg-btn-bg border border-line rounded-sm transition-[border-color,background] duration-150 ease-out-gd [animation:gdRowIn_220ms_var(--ease-out)_both]",
+                                     m.ready && "ready border-gold-line bg-gold-soft"
+                                 )}
                                  role="listitem" aria-label={rowLabel}>
-                                <span className="gd-lobby-slot">{m.slot + 1}</span>
+                                <span className="gd-lobby-slot font-mono text-[11px] text-faint w-4 text-center shrink-0">{m.slot + 1}</span>
                                 <Flag iso={m.iso}/>
-                                <span className="gd-lobby-name">{m.username}</span>
+                                <span className="gd-lobby-name flex-1 text-[13px] whitespace-nowrap overflow-hidden text-ellipsis">{m.username}</span>
                                 {own ? (
-                                    <select className="gd-lobby-select" value={m.iso || ""}
+                                    <select className="gd-lobby-select bg-sunk border border-line text-text rounded-sm px-2 py-[5px] text-xs font-mono outline-none transition-[border-color,box-shadow] duration-150 ease-out-gd focus-visible:border-text focus-visible:shadow-[0_0_0_3px_var(--gold-soft)]"
+                                            value={m.iso || ""}
                                             onChange={(e) => setLobbyIso(e.target.value)}
                                             aria-label="Choose nation">
                                         {!m.iso && <option value="" disabled>Choose…</option>}
                                         {GREAT_POWERS.map((iso) => <option key={iso} value={iso}>{iso}</option>)}
                                     </select>
-                                ) : <span className="gd-lobby-select-static">{m.iso || "…"}</span>}
+                                ) : <span className="gd-lobby-select-static font-mono text-xs text-dim px-2 py-[5px]">{m.iso || "…"}</span>}
                                 {own ? (
-                                    <button className={`gd-lobby-ready ${m.ready ? "on" : ""}`}
+                                    <button className={cn(
+                                        "gd-lobby-ready font-display text-[10.5px] font-bold tracking-[1px] uppercase py-1.5 px-2.5 rounded-sm border border-line bg-btn-bg text-dim shrink-0 transition-[border-color,background,color] duration-150 ease-out-gd",
+                                        m.ready && "on border-gold-line bg-gold text-gold-contrast"
+                                    )}
                                             aria-pressed={m.ready}
                                             onClick={() => setReady(!m.ready)}>
                                         {m.ready ? "Ready" : "Not Ready"}
                                     </button>
                                 ) : (
-                                    <span className={`gd-lobby-ready-dot ${m.ready ? "on" : ""}`}
+                                    <span className={cn(
+                                        "gd-lobby-ready-dot w-2.5 h-2.5 rounded-full bg-faint shrink-0",
+                                        m.ready && "on bg-gold shadow-[0_0_8px_var(--gold)]"
+                                    )}
                                           aria-label={m.ready ? "Ready" : "Not ready"}
                                           title={m.ready ? "Ready" : "Not ready"}/>
                                 )}
@@ -131,13 +144,13 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft})
                     })}
                 </div>
 
-                <div className="gd-lobby-force">
+                <div className="gd-lobby-force font-mono text-[11.5px] text-dim mt-3 text-center">
                     {humans} commanders · {bots} more joining
                 </div>
 
-                <p className="gd-lobby-hint">War begins when all commanders are ready.</p>
+                <p className="gd-lobby-hint text-center text-faint text-xs mt-3.5">War begins when all commanders are ready.</p>
 
-                <button className="gd-btn block mt" disabled={leaving} onClick={doLeave}>
+                <button className={cn(button(), "block mt-4")} disabled={leaving} onClick={doLeave}>
                     {leaving ? "Leaving…" : "Leave"}
                 </button>
             </div>
