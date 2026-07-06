@@ -134,6 +134,22 @@ export const DIPLOMACY = {
     dominationPopFrac: 0.5,
 };
 
+// Leadership continuity (see design/gdd/leadership.md). Each nation's national
+// command is a pool of `startTokens` leader tokens seeded on its capital(s);
+// Leadership% = (startTokens - lost) / startTokens. Tokens are airlifted to the
+// Leadership Bunker by transport ferries when war exposes them. All values are
+// data-driven tuning knobs — no leadership number is hardcoded in systems code.
+export const LEADERSHIP = {
+    startTokens: 12,            // leader tokens per nation (also the Leadership% denominator)
+    perPlane: 3,                // tokens a transport carries per ferry trip
+    loadSec: 4,                 // ground delay loading leaders at a capital
+    unloadSec: 4,               // ground delay unloading at the bunker
+    transportsPerCapital: 2,    // concurrent ferry transports worked per capital
+    arriveKm: 12,               // distance to count a ferry "arrived" at a waypoint
+    commandFloor: 0.5,          // national output multiplier at 0% Leadership (1.0 at 100%)
+    penalizeResearch: true,     // scale research speed by the command factor too
+};
+
 export const UNITS = {
     battery: {
         label: "SAM Battery",

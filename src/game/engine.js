@@ -4,6 +4,7 @@
 // focused modules it now lives in (constants/queries/production/aircraft/
 // combat/tick) so existing importers keep working unchanged.
 import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, colorForSlot} from "./data/constants.js";
+import {distributeLeadership} from "./sim/leadership.js";
 
 // Builds a fresh world from a match setup: {mySlot, seed, nations: [{slot,
 // name, iso, isAi, gdp}], cities: [{id, slot, name, state, cap, pop, econ,
@@ -59,6 +60,9 @@ export function createWorld(setup) {
         maxHp: c.cap ? CAPITAL_HP : CITY_HP,
         alive: true
     }));
+    // Seed national leadership: leader tokens onto each nation's capital(s), plus
+    // the per-nation lead pool / command multiplier the economy and evac read.
+    distributeLeadership(nations, cities);
     return {
         time: 0,
         speed: 1,
@@ -169,6 +173,14 @@ export {
 } from "./sim/production.js";
 
 export {hangarCapOf} from "./sim/aircraft.js";
+
+export {
+    shelterLeadership,
+    leadershipStatus,
+    leadershipPct,
+    commandFactor,
+    bunkerOf,
+} from "./sim/leadership.js";
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 

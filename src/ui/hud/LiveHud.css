@@ -15,3 +15,100 @@
     border-radius: var(--radius-sm);
     padding: 2px 5px;
 }
+
+/* Persistent leadership prompt / evacuation readout. A centred banner under the
+   top bar — the warn variant is a non-dismissing call to action (Shelter
+   Leadership); the evac variant is a passive progress line. */
+.gd-lead-alert {
+    position: absolute;
+    top: 108px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(560px, 78vw);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+    color: var(--text);
+}
+
+.gd-lead-alert.warn {
+    border: 1px solid var(--red);
+    animation: gd-lead-pulse 1.8s ease-in-out infinite;
+}
+
+.gd-lead-alert.evac {
+    border: 1px solid rgba(244, 192, 42, 0.45);
+}
+
+@keyframes gd-lead-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224, 87, 79, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(224, 87, 79, 0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-lead-alert.warn { animation: none; }
+}
+
+.gd-lead-icon {
+    font-size: 20px;
+    line-height: 1;
+    color: var(--red);
+    flex: 0 0 auto;
+}
+
+.gd-lead-alert.evac .gd-lead-icon {
+    color: var(--amber, #f4c02a);
+}
+
+.gd-lead-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.gd-lead-title {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+
+.gd-lead-text {
+    font-size: 12px;
+    color: var(--muted, #aab1ba);
+    line-height: 1.35;
+}
+
+.gd-lead-hint {
+    margin-top: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--amber, #f4c02a);
+}
+
+.gd-lead-btn {
+    flex: 0 0 auto;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    color: var(--ink);
+    background: var(--red);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.gd-lead-btn:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.gd-lead-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

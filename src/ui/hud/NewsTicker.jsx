@@ -32,6 +32,16 @@ export function headline(e, world, mySlot) {
             if (e.tgtSlot === mySlot && (!e.seen || e.seen.includes(mySlot)))
                 return {tone: "danger", text: `Inbound — ${nn(e.slot)} missile tracking your territory`};
             return null;
+        case "leadership": {
+            const mine = e.slot === mySlot;
+            const n = e.lost || 0;
+            const noun = `${n} ${n === 1 ? "leader" : "leaders"}`;
+            let where;
+            if (e.bunker) where = "the bunker falls — sheltered leadership lost";
+            else if (e.cityId) where = `${world.cities.find((x) => x.id === e.cityId)?.name || "the capital"} — ${noun} killed`;
+            else where = `an evac convoy is downed — ${noun} lost`;
+            return {tone: mine ? "danger" : "alert", text: mine ? `Leadership lost: ${where}` : `${nn(e.slot)} leadership decapitated — ${noun}`};
+        }
         default:
             return null;
     }

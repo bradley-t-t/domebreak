@@ -6,6 +6,7 @@ import LayerBar from "../hud/LayerBar.jsx";
 import ProductionBar from "../hud/ProductionBar.jsx";
 import NationPanel from "../hud/NationPanel.jsx";
 import NewsTicker from "../hud/NewsTicker.jsx";
+import LeadershipAlert from "../hud/LeadershipAlert.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
@@ -1131,6 +1132,7 @@ export default function LiveGame({
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
                 <NewsTicker world={w} mySlot={mySlot}/>
             </div>
+            {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
