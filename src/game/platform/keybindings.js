@@ -19,6 +19,8 @@ export const KEY_ACTIONS = [
     {id: "panLeft", label: "Pan Camera Left", group: "Camera"},
     {id: "panDown", label: "Pan Camera Down", group: "Camera"},
     {id: "panRight", label: "Pan Camera Right", group: "Camera"},
+    {id: "zoomIn", label: "Zoom In", group: "Camera"},
+    {id: "zoomOut", label: "Zoom Out", group: "Camera"},
 ];
 
 // Default binding for each action (KeyboardEvent.code values).
@@ -33,6 +35,8 @@ export const DEFAULT_KEYS = {
     panLeft: "KeyA",
     panDown: "KeyS",
     panRight: "KeyD",
+    zoomIn: "KeyZ",
+    zoomOut: "KeyX",
 };
 
 // Saved bindings merged over the defaults, so actions added in later versions
