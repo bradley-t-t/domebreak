@@ -149,9 +149,11 @@ export default function App() {
         reportedRef.current = false;
     };
 
-    const onStart = (iso, name, aiIsos) => {
+    const onStart = (iso, name) => {
         if (!data) return;
-        const setup = buildSetup(data, iso, aiIsos, Math.floor(Math.random() * 1e9));
+        // Full world: the player claims `iso`, every other country becomes a live AI
+        // nation (buildSetup with no explicit roster enumerates the whole dataset).
+        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9));
         const w = createWorld(setup);
         w.speed = settings.speed;
         w.paused = false;

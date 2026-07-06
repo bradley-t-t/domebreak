@@ -1,6 +1,6 @@
 // Builds a single-player match setup from the bundled state-level city data.
-// Player is slot 0; opponents are drawn from the great powers.
-import {GDP_FALLBACK_T, GDP_T, MAX_SLOTS, REAL_POP} from "../data/constants.js";
+// Player is slot 0; every other country on the map is a live AI nation.
+import {GDP_FALLBACK_T, GDP_T, REAL_POP} from "../data/constants.js";
 
 let _data = null;
 
@@ -18,12 +18,25 @@ export async function loadGameData() {
 // Default AI opponent roster offered on the New Game screen, in display order.
 export const GREAT_POWERS = ["US", "RU", "CN", "IN", "GB", "FR", "DE", "JP", "BR", "KR", "IR", "TR", "SA", "PK", "CA", "AU"];
 
-// The player claims one country; `aiIsos` is the explicit roster of countries
-// populated by AIs. Anything left unselected stays a neutral backdrop nation.
+// The player claims one country; every other country becomes a live AI nation.
+// When `aiIsos` is null/undefined the roster is the WHOLE WORLD — every ISO in the
+// dataset with cities, ordered by GDP (descending) then ISO so slot→nation is
+// deterministic for a given dataset (required for saves, replays, and the seeded
+// diplomacy). An explicit `aiIsos` array still selects a curated cast (the menu
+// attract sim uses this for a cheap handful of great powers). There are no neutral
+// backdrop nations anymore — an unselected country simply doesn't exist as a
+// nation only in the curated path.
 export function buildSetup(data, playerIso, aiIsos, seed) {
-    const others = (aiIsos || []).filter((i) => i !== playerIso && data.cities[i]?.length);
-    const chosen = [playerIso, ...others].slice(0, MAX_SLOTS)
-        .filter((iso) => data.cities[iso]?.length);
+    let chosen;
+    if (aiIsos == null) {
+        const rest = Object.keys(data.cities)
+            .filter((iso) => iso !== playerIso && data.cities[iso]?.length)
+            .sort((a, b) => (GDP_T[b] || GDP_FALLBACK_T) - (GDP_T[a] || GDP_FALLBACK_T) || (a < b ? -1 : a > b ? 1 : 0));
+        chosen = (data.cities[playerIso]?.length ? [playerIso] : []).concat(rest);
+    } else {
+        const others = aiIsos.filter((i) => i !== playerIso && data.cities[i]?.length);
+        chosen = [playerIso, ...others].filter((iso) => data.cities[iso]?.length);
+    }
     const nations = [], cities = [];
     chosen.forEach((iso, slot) => {
         const cn = data.countries.find((c) => c.iso === iso);
