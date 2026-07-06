@@ -8,6 +8,21 @@ export const SLOT_COLOR = {
     12: "#e05a9c", 13: "#5ad1e0", 14: "#d98cff", 15: "#ffd05a",
 };
 export const MAX_SLOTS = 16;
+
+// Distinct per-nation colors. Slots 0–15 use the hand-tuned palette above; every
+// slot beyond it (the full-world roster runs to ~222 live nations) gets a
+// deterministic color via golden-angle hue spacing, so adjacent slots stay
+// tellable apart wherever nations are enumerated with a color chip. The player
+// (slot 0) is always white. Data, not chrome — it lives here with the palette.
+export const COLOR_S = 68, COLOR_L = 62;
+
+export function colorForSlot(slot) {
+    const hand = SLOT_COLOR[slot];
+    if (hand) return hand;
+    const hue = (slot * 137.508) % 360;
+    return `hsl(${hue.toFixed(1)}, ${COLOR_S}%, ${COLOR_L}%)`;
+}
+
 // Simulation speed multipliers, slowest → fastest. Shared by the HUD, settings, and hotkeys.
 export const GAME_SPEEDS = [0.5, 1, 2, 4, 10];
 
@@ -89,6 +104,34 @@ export const AI_TUNING = {
     // cushion before committing to the Space Command HQ prerequisite.
     researchDepthTarget: 12, deepReserve: 300, deepTierGate: 8,
     unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
+};
+
+// Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
+// in sim/tick.js. Every country on the map is a live AI nation; these knobs govern
+// how wars start and end between them, how hard distant peaceful nations are
+// throttled, the fielding cap that bounds the global unit count, and the player's
+// domination-victory threshold. All diplomacy rolls use the seeded rand(w), so the
+// entire world history is reproducible from (seed, playerIso).
+export const DIPLOMACY = {
+    // War/peace rhythm.
+    thinkMin: 12, thinkSpan: 10,     // seconds between a nation's diplomacy evaluations
+    warRangeKm: 4200,                // max capital-to-capital distance for a war to start
+    maxWars: 2,                      // simultaneous wars a nation will sustain
+    declareChance: 0.35,             // odds per diplo tick an eligible nation opens a war
+    playerGraceSec: 45,              // opening window before AIs may declare on the player
+    wGdp: 0.6, wWeak: 0.8,           // rival weighting exponents: prefer wealthier / weaker
+    wMin: 0.15, wMax: 8,             // clamp on any single rival's selection weight
+    peaceLossThreshold: 0.35,        // sue for peace below this surviving-city fraction
+    minWarSec: 90,                   // minimum war duration before a random ceasefire
+    peaceChance: 0.06,               // odds per diplo tick of a ceasefire once past minWarSec
+    // Level-of-detail: a nation at war or within activeRangeKm of the player runs its
+    // build/attack AI (aiTick) at the normal cadence; everyone else runs on the slow
+    // idle cadence — bounding heavy AI work to the action actually on the map.
+    activeRangeKm: 4200,
+    idleThinkMin: 20, idleThinkSpan: 20,
+    aiUnitCap: 22,                   // max live units an AI nation fields (interception-loop bound)
+    // Player victory: hold at least this share of surviving world population.
+    dominationPopFrac: 0.5,
 };
 
 export const UNITS = {

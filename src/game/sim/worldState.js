@@ -2,7 +2,15 @@
 // the deterministic PRNG, and monotonic id allocation. Never exported from the
 // public engine facade — internal plumbing only.
 
-export const nationOf = (w, slot) => w.nations.find((n) => n.slot === slot);
+// Slots are assigned 0..N-1 in array order at setup, so nations[slot] is the
+// nation almost always — an O(1) hit that matters now the roster is the whole
+// world (~222 nations) and this is called deep inside the tick's hot loops. Falls
+// back to a linear scan if the ordering ever fails to hold (e.g. a legacy save).
+export const nationOf = (w, slot) => {
+    const direct = w.nations[slot];
+    if (direct && direct.slot === slot) return direct;
+    return w.nations.find((n) => n.slot === slot);
+};
 
 export function rand(world) {
     let a = world._r | 0;

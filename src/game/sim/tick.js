@@ -7,6 +7,7 @@ import {
     DEFAULT_BUILD_TIME,
     DEFAULT_HIT_PROB,
     DEFAULT_RELOAD,
+    DIPLOMACY,
     FALLOUT,
     HANGAR_SPEC,
     INTERCEPT_CAP,
@@ -35,7 +36,7 @@ import {
 } from "./queries.js";
 import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
-import {canQueue, commandAttack, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
 import {isSea} from "../geo/seaRoute.js";
 
@@ -171,23 +172,169 @@ function aiSeaSpot(w, slot, city) {
     return null;
 }
 
+// Static capital position per slot, cached on the world. Capitals never move, so
+// this is built once (the flagged capital city, else the nation's first city) and
+// reused by diplomacy (rival reachability) and the aiTick level-of-detail check.
+function capPositions(w) {
+    if (w._capPos) return w._capPos;
+    const caps = {};
+    for (const c of w.cities) {
+        const cur = caps[c.slot];
+        if (!cur || (c.cap && !cur.cap)) caps[c.slot] = {lng: c.lng, lat: c.lat, cap: !!c.cap};
+    }
+    w._capPos = caps;
+    return caps;
+}
+
+// Total cities a slot started with (baseline for the sue-for-peace loss ratio).
+// Static — every city is alive at setup — so it's computed once and cached.
+function startCityCounts(w) {
+    if (w._startCities) return w._startCities;
+    const m = {};
+    for (const c of w.cities) m[c.slot] = (m[c.slot] || 0) + 1;
+    w._startCities = m;
+    return m;
+}
+
+// Living-city count per slot right now — one pass, reused across a diplomacy round.
+function aliveCityCounts(w) {
+    const m = new Map();
+    for (const c of w.cities) if (c.alive) m.set(c.slot, (m.get(c.slot) || 0) + 1);
+    return m;
+}
+
+// How many wars a nation is currently fighting.
+function warCount(n) {
+    let k = 0;
+    for (const s in n.relations) if (n.relations[s] === "war") k++;
+    return k;
+}
+
+// True when a nation is "hot" — at war, or its capital sits within activeRangeKm of
+// the player's. Hot nations run aiTick at full cadence; the rest idle-throttle.
+function nearPlayer(w, n, caps) {
+    const a = caps[n.slot], p = caps[w.mySlot];
+    if (!a || !p) return false;
+    return haversine(a.lng, a.lat, p.lng, p.lat) <= DIPLOMACY.activeRangeKm;
+}
+
+// Deeper research: push tracks toward researchDepthTarget. Modern/Space tiers
+// (>= deepTierGate) cost far more, so they demand the deeper points cushion before
+// the AI commits. Returns true if it enqueued something (caller yields the tick).
+function aiResearch(w, n) {
+    if (n.research.current || n.research.queue.length) return false;
+    const avail = Object.keys(TECHS).filter((t) => canQueue(n, t) && TECHS[t].tier <= AI_TUNING.researchDepthTarget);
+    const affordable = avail.filter((t) => {
+        const reserve = TECHS[t].tier >= AI_TUNING.deepTierGate ? AI_TUNING.deepReserve : AI_TUNING.researchMinPoints;
+        return n.points >= TECHS[t].cost + reserve;
+    });
+    if (affordable.length && rand(w) < AI_TUNING.researchChance) {
+        enqueueResearch(w, n.slot, affordable[Math.floor(rand(w) * affordable.length)]);
+        return true;
+    }
+    return false;
+}
+
+// AI diplomacy — the living world. On each nation's staggered _diplo cadence it may
+// sue for peace (losing badly, or a random ceasefire once a war is old enough) and
+// may open a fresh war on a reachable rival, weighted toward wealthy/weak targets.
+// Every roll uses the seeded rand(w), so the whole diplomatic history is
+// reproducible from (seed, playerIso). Cheap timers run every tick; the O(N) rival
+// scan only fires on the few nations whose cadence elapses this tick.
+function diploTick(w, dt) {
+    let firing = null;
+    for (const n of w.nations) {
+        if (!n.isAi || !n.alive) continue;
+        if (n._diplo == null) n._diplo = DIPLOMACY.thinkMin + rand(w) * DIPLOMACY.thinkSpan;
+        n._diplo -= dt;
+        if (n._diplo > 0) continue;
+        n._diplo = DIPLOMACY.thinkMin + rand(w) * DIPLOMACY.thinkSpan;
+        (firing || (firing = [])).push(n);
+    }
+    if (!firing) return;
+    const caps = capPositions(w);
+    const alive = aliveCityCounts(w);
+    const start = startCityCounts(w);
+    for (const n of firing) {
+        diploMakePeace(w, n, alive, start);
+        diploDeclareWar(w, n, caps, alive);
+    }
+}
+
+function diploMakePeace(w, n, alive, start) {
+    const frac = (alive.get(n.slot) || 0) / (start[n.slot] || 1);
+    const losing = frac < DIPLOMACY.peaceLossThreshold;
+    for (const s in n.relations) {
+        if (n.relations[s] !== "war") continue;
+        const foe = +s;
+        const age = w.time - (n._warStart?.[foe] ?? 0);
+        if (losing || (age > DIPLOMACY.minWarSec && rand(w) < DIPLOMACY.peaceChance)) makePeace(w, n.slot, foe);
+    }
+}
+
+function diploDeclareWar(w, n, caps, alive) {
+    if (warCount(n) >= DIPLOMACY.maxWars) return;
+    if (rand(w) >= DIPLOMACY.declareChance) return;
+    const capA = caps[n.slot];
+    if (!capA) return;
+    const gdpA = Math.max(0.1, n.gdp || 0.1), cA = Math.max(1, alive.get(n.slot) || 0);
+    const rivals = [];
+    let total = 0;
+    for (const m of w.nations) {
+        if (m.slot === n.slot || !m.alive || n.relations[m.slot] === "war") continue;
+        // The player gets an opening grace window before any AI may declare on them.
+        if (!m.isAi && w.time < DIPLOMACY.playerGraceSec) continue;
+        const capB = caps[m.slot];
+        if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.warRangeKm) continue;
+        const gdpB = Math.max(0.1, m.gdp || 0.1), cB = Math.max(1, alive.get(m.slot) || 0);
+        let weight = Math.pow(gdpB / gdpA, DIPLOMACY.wGdp) * Math.pow(cA / cB, DIPLOMACY.wWeak);
+        weight = Math.min(DIPLOMACY.wMax, Math.max(DIPLOMACY.wMin, weight));
+        rivals.push([m.slot, weight]);
+        total += weight;
+    }
+    if (!rivals.length || total <= 0) return;
+    let r = rand(w) * total;
+    for (const [slot, weight] of rivals) {
+        r -= weight;
+        if (r <= 0) return void declareWar(w, n.slot, slot);
+    }
+    declareWar(w, n.slot, rivals[rivals.length - 1][0]);
+}
+
 function aiTick(w, dt) {
+    // Index living units by nation once per tick so each AI scans only its own
+    // forces (O(own units)), not the whole world's — the roster is now ~222 nations.
+    const unitsBySlot = new Map();
+    for (const u of w.units) {
+        if (u.hp <= 0) continue;
+        let arr = unitsBySlot.get(u.slot);
+        if (!arr) unitsBySlot.set(u.slot, arr = []);
+        arr.push(u);
+    }
+    const caps = capPositions(w);
     for (const n of w.nations) {
         if (!n.isAi || !n.alive) continue;
         n._ai -= dt;
         if (n._ai > 0) continue;
-        n._ai = AI_TUNING.thinkMin + rand(w) * AI_TUNING.thinkSpan;
+        // Level-of-detail: hot nations (at war, or with a capital near the player's)
+        // think at the normal cadence; the rest idle-throttle, so heavy AI work
+        // tracks the action on the map rather than the size of the roster.
+        const active = warCount(n) > 0 || nearPlayer(w, n, caps);
+        n._ai = active
+            ? AI_TUNING.thinkMin + rand(w) * AI_TUNING.thinkSpan
+            : DIPLOMACY.idleThinkMin + rand(w) * DIPLOMACY.idleThinkSpan;
         ensureProd(n);
+        const myUnits = unitsBySlot.get(n.slot) || [];
         const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
         // A launcher stuck on an empty magazine falls back to whatever's stocked.
-        for (const u of w.units) {
-            if (u.slot !== n.slot || u.hp <= 0 || UNITS[u.type].kind !== "offense") continue;
+        for (const u of myUnits) {
+            if (UNITS[u.type].kind !== "offense") continue;
             const wh = u.warhead || "standard";
             if (!(n.ammo[wh] > 0) && (n.ammo.standard || 0) > 0) u.warhead = "standard";
         }
         // Units come off the production line idle — point one at a target per tick.
         if (enemies.length) {
-            const idle = w.units.find((u) => u.slot === n.slot && u.hp > 0 && !u.targetId && UNITS[u.type].kind === "offense");
+            const idle = myUnits.find((u) => !u.targetId && UNITS[u.type].kind === "offense");
             if (idle) {
                 const tgt = pickTarget(w, enemies);
                 if (tgt) {
@@ -199,6 +346,13 @@ function aiTick(w, dt) {
         }
         const myCap = w.cities.find((c) => c.slot === n.slot && c.alive);
         if (!myCap) continue;
+        // Fielding cap — a nation at its unit ceiling stops adding units and only
+        // researches further, keeping the global unit count (and the interception
+        // loop with it) bounded no matter how many nations are simultaneously at war.
+        if (myUnits.length >= DIPLOMACY.aiUnitCap) {
+            aiResearch(w, n);
+            continue;
+        }
         const net = netIncomeOf(w, n.slot);
         const lineBusy = (n.prod.current ? 1 : 0) + n.prod.queue.length;
         if (lineBusy >= AI_TUNING.queueMax) continue; // keep the line short — the AI plans, it doesn't hoard
@@ -211,14 +365,14 @@ function aiTick(w, dt) {
             }
             continue;
         }
-        const domes = w.units.filter((u) => u.slot === n.slot && u.type === "dome").length + prodCount(n, "unit", "dome");
+        const domes = myUnits.filter((u) => u.type === "dome").length + prodCount(n, "unit", "dome");
         if (domes === 0 && n.points >= UNITS.dome.cost) {
             const p = aiSpot(w, n.slot, myCap);
             if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat).ok) return;
         }
         // Magazines are fed through the same line as everything else — warheads
         // cost the AI the same points and production time they cost the player.
-        const hasOffense = w.units.some((u) => u.slot === n.slot && u.hp > 0 && UNITS[u.type].kind === "offense") || prodCount(n, "unit", "silo") > 0 || prodCount(n, "unit", "launcher") > 0;
+        const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense") || prodCount(n, "unit", "silo") > 0 || prodCount(n, "unit", "launcher") > 0;
         const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
         if (hasOffense && stocked("standard") < AI_TUNING.stdStockTarget && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
             if (queueAmmo(w, n.slot, "standard").ok) return;
@@ -226,18 +380,18 @@ function aiTick(w, dt) {
         if (hasOffense && enemies.length && stocked("thermo") < AI_TUNING.thermoStockTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
             if (queueAmmo(w, n.slot, "thermo").ok) return;
         }
-        const radars = w.units.filter((u) => u.slot === n.slot && u.type === "radar").length + prodCount(n, "unit", "radar");
+        const radars = myUnits.filter((u) => u.type === "radar").length + prodCount(n, "unit", "radar");
         if (domes > 0 && radars === 0 && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
             const p = aiSpot(w, n.slot, myCap);
             if (p && queueUnit(w, n.slot, "radar", p.lng, p.lat).ok) return;
         }
-        const oths = w.units.filter((u) => u.slot === n.slot && u.type === "oth").length + prodCount(n, "unit", "oth");
+        const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");
         if (radars > 0 && oths === 0 && n.points >= UNITS.oth.cost + AI_TUNING.othReserve) {
             const p = aiSpot(w, n.slot, myCap);
             if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat).ok) return;
         }
         // Grow the economy alongside the arsenal — a few factories keep the AI solvent.
-        const industry = w.units.filter((u) => u.slot === n.slot && UNITS[u.type].kind === "industry").length + prodCount(n, "unit", "factory");
+        const industry = myUnits.filter((u) => UNITS[u.type].kind === "industry").length + prodCount(n, "unit", "factory");
         if (domes > 0 && industry < AI_TUNING.industryTarget && n.points >= UNITS.factory.cost + AI_TUNING.factoryReserve) {
             const p = aiSpot(w, n.slot, myCap);
             if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat).ok) return;
@@ -247,20 +401,7 @@ function aiTick(w, dt) {
         // requiresUnit prereq) before the assets that depend on it. Reserves keep
         // it from spending itself dry on the expensive endgame hulls/platforms.
         if (aiBuildUnlocked(w, n, myCap)) return;
-        // Deeper research: keep pushing tracks toward researchDepthTarget. Modern/
-        // Space tiers (>= deepTierGate) cost far more, so they demand the deeper
-        // points cushion before the AI commits.
-        if (!n.research.current && !n.research.queue.length) {
-            const avail = Object.keys(TECHS).filter((t) => canQueue(n, t) && TECHS[t].tier <= AI_TUNING.researchDepthTarget);
-            const affordable = avail.filter((t) => {
-                const reserve = TECHS[t].tier >= AI_TUNING.deepTierGate ? AI_TUNING.deepReserve : AI_TUNING.researchMinPoints;
-                return n.points >= TECHS[t].cost + reserve;
-            });
-            if (affordable.length && rand(w) < AI_TUNING.researchChance) {
-                enqueueResearch(w, n.slot, affordable[Math.floor(rand(w) * affordable.length)]);
-                return;
-            }
-        }
+        if (aiResearch(w, n)) return;
         if (!enemies.length) continue;
         if (n.points >= UNITS.silo.cost + AI_TUNING.siloReserve && net > AI_TUNING.siloMinNet) {
             const p = aiSpot(w, n.slot, myCap);
@@ -359,6 +500,19 @@ export function step(w, dt) {
         }
     }
 
+    // Index live defenses by the nation they protect. A battery only ever engages
+    // ordnance inbound on its own nation (the inboundSlot gate below), so each
+    // projectile need only test that nation's defenders — this bounds the loop by
+    // per-nation unit count instead of scanning the world's entire unit list every
+    // projectile (was O(projectiles × all units), the hot loop at full-world scale).
+    const defBySlot = new Map();
+    for (const d of w.units) {
+        if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
+        let arr = defBySlot.get(d.slot);
+        if (!arr) defBySlot.set(d.slot, arr = []);
+        arr.push(d);
+    }
+
     for (const p of w.projectiles) {
         p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
         p.progress = Math.min(1, p.travelled / (p.dist || 1));
@@ -379,12 +533,11 @@ export function step(w, dt) {
         // actually inbound on the defender's own nation is engaged — missiles
         // transiting past a third party are not their problem.
         const inboundSlot = findTarget(w, p.targetId)?.slot;
-        for (const d of w.units) {
-            if (d.hp <= 0 || UNITS[d.type].kind !== "defense") continue;
+        const defenders = inboundSlot == null ? null : defBySlot.get(inboundSlot);
+        if (defenders) for (const d of defenders) {
             // Fighters kill what flies in the air column — not ballistic reentry
             // vehicles screaming down from space. BMD stays with ground/sea defenses.
             if (UNITS[d.type].airSpeed && UNITS[p.type]?.ballistic) continue;
-            if (inboundSlot == null || inboundSlot !== d.slot) continue;
             if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || !airborne(d)) continue;
             // Engage only within the battery's annulus: inside defenseRange (outer
             // reach) but outside defenseMinRange (the keep-out gap for area ABMs
@@ -477,14 +630,19 @@ export function step(w, dt) {
     w._det = (w._det || 0) + dt;
     if (w._det >= 0.25) {
         w._det = 0;
+        // Sensor coverage is entirely unit-derived (sensorsOf), so only nations that
+        // actually field units can hold a track — skip the rest of the ~222-nation
+        // roster on both the build and the per-projectile test.
+        const slotsWithUnits = new Set();
+        for (const u of w.units) if (u.hp > 0) slotsWithUnits.add(u.slot);
         const sensors = {};
-        for (const n of w.nations) if (n.alive) sensors[n.slot] = sensorsOf(w, n.slot);
+        for (const n of w.nations) if (n.alive && slotsWithUnits.has(n.slot)) sensors[n.slot] = sensorsOf(w, n.slot);
         for (const p of w.projectiles) {
             if (p._dead) continue;
             if (!p.seenBy) p.seenBy = []; // saves from before fog of war
             const tgtSlot = findTarget(w, p.targetId)?.slot;
             for (const n of w.nations) {
-                if (!n.alive || p.seenBy.includes(n.slot) || !sensors[n.slot]) continue;
+                if (!n.alive || p.seenBy.includes(n.slot) || !sensors[n.slot]?.length) continue;
                 if (!sensorsCover(sensors[n.slot], p.lng, p.lat)) continue;
                 p.seenBy.push(n.slot);
                 if (n.slot === tgtSlot) w.events.push({
@@ -547,11 +705,35 @@ export function step(w, dt) {
     if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
 
     aiTick(w, dt);
-    for (const n of w.nations) if (n.alive && !w.cities.some((c) => c.slot === n.slot && c.alive)) n.alive = false;
-    const alive = w.nations.filter((n) => n.alive);
-    if (alive.length <= 1) {
+    diploTick(w, dt);
+    // One pass over cities: which slots still hold a living city, and the population
+    // tally for the domination check. O(cities), not O(nations × cities) — the naive
+    // per-nation `cities.some(...)` was 222 × ~2565 every tick at full-world scale.
+    const slotsAlive = new Set();
+    let myPop = 0, totPop = 0;
+    for (const c of w.cities) {
+        if (!c.alive) continue;
+        slotsAlive.add(c.slot);
+        const p = c.pop || 0;
+        totPop += p;
+        if (c.slot === w.mySlot) myPop += p;
+    }
+    for (const n of w.nations) if (n.alive && !slotsAlive.has(n.slot)) n.alive = false;
+    const me = nationOf(w, w.mySlot);
+    if (!me || !me.alive) {
+        // Player eliminated — immediate defeat, regardless of the surviving world.
         w.over = true;
-        w.winnerSlot = alive[0]?.slot ?? null;
+        w.winnerSlot = null;
+        w.paused = true;
+        return w;
+    }
+    // Victory: last nation standing, or a commanding share of surviving world
+    // population (last-of-222 is impractical, so domination is the reachable win).
+    const aliveNations = w.nations.filter((n) => n.alive);
+    const dominant = totPop > 0 && myPop / totPop >= DIPLOMACY.dominationPopFrac;
+    if (aliveNations.length <= 1 || dominant) {
+        w.over = true;
+        w.winnerSlot = me.slot;
         w.paused = true;
     }
     return w;
