@@ -1,0 +1,29 @@
+/* GoldenDome — the single stylesheet (Tailwind v4).
+   Target end-state (ADR-0005): this file holds ONLY the Tailwind import, the
+   @theme token block, and one @layer for irreducible keyframe VFX. Everything
+   else is utility classes on components.
+
+   MIGRATION NOTE: preflight (Tailwind's global reset) is intentionally NOT
+   imported while the legacy `styles.css` still governs the app — the two resets
+   would fight and shift the look. Phase 4 (teardown) deletes styles.css and
+   switches the import below to the full `@import "tailwindcss"` so preflight
+   comes on. Until then we pull only the theme + utilities layers. */
+
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@plugin "tailwindcss-animate";
+
+/* Phase 1 fills this from the 55 :root tokens currently in styles.css
+   (color, type, elevation, easing, custom small-window breakpoints, fonts). */
+@theme {
+    /* tokens land here in Phase 1 */
+}
+
+/* Phase 1 moves the 26 @keyframes + procedural VFX (fireball, fallout,
+   missile/THAAD sprites, targeting brackets, tactical scrollbars, era
+   gradients) here, verbatim, so the signature look cannot regress. */
+@layer vfx {
+    /* VFX lands here in Phase 1 */
+}
