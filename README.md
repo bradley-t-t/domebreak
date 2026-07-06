@@ -25,7 +25,11 @@
 
 ## Why GoldenDome
 
-Most nuke-'em games flatten the planet to an abstract grid. GoldenDome keeps the real one — a MapLibre GL world map with actual cities, coastlines, and borders — and turns it into the board. You command a single nation in a real-time exchange against AI rivals: place defenses over your cities, mass offensive systems at the front, research your way ahead, and manage a war economy while missiles are already in the air. When your Golden Dome holds and theirs doesn't, you win.
+Most nuke-'em games flatten the planet to an abstract grid. GoldenDome keeps the real one — a MapLibre GL world map with
+actual cities, coastlines, and borders — and turns it into the board. You command a single nation in a real-time
+exchange against AI rivals: place defenses over your cities, mass offensive systems at the front, research your way
+ahead, and manage a war economy while missiles are already in the air. When your Golden Dome holds and theirs doesn't,
+you win.
 
 <table width="100%">
   <tr>
@@ -35,7 +39,7 @@ Most nuke-'em games flatten the planet to an abstract grid. GoldenDome keeps the
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, and air — Patriot batteries, the Golden Dome, ICBM silos, hypersonics, Aegis cruisers, carriers, and F-22s — firing standard, cluster, and thermonuclear warheads.</p>
+      <p align="center">Land, sea, and air — SAM batteries, the Golden Dome, missile silos, hypersonics, missile cruisers, carriers, and interceptors — firing standard, cluster, and thermonuclear warheads.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">Out-tech, out-economy</h3>
@@ -53,7 +57,8 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-Open the dev server, start a **New Game**, pick your nation and the number of AI opponents, and command your arsenal on the map. Progress autosaves to local storage; **Continue** picks up where you left off.
+Open the dev server, start a **New Game**, pick your nation and the number of AI opponents, and command your arsenal on
+the map. Progress autosaves to local storage; **Continue** picks up where you left off.
 
 ## Build
 
@@ -70,38 +75,46 @@ npm run electron:build:all   # package macOS + Windows
 
 ## How it works
 
-- The game runs a **pure, deterministic real-time simulation** (`src/game/engine.js`), driven by an animation-frame loop in `useEngine` and mutated in place — no server needed for single-player.
-- **Defenses roll intercepts by range and probability.** A radar or AWACS in range links to nearby launchers to extend their reach (`RADAR_RANGE_MULT`), so early warning is worth as much as raw firepower.
-- **Offense is munitions-limited.** Silos and launchers fire warheads you produce — cheap standard rounds, splash-damage cluster munitions, or slow, expensive city-killer thermonuclear yields.
-- **Economy is the clock.** Income scales with your surviving cities and is drained by unit upkeep; research and construction spend against it while the war continues around you.
-- A **server-authoritative multiplayer backend** ships in the repo — a Supabase edge function resolves a shared, seeded combat exchange so every client replays it identically.
+- The game runs a **pure, deterministic real-time simulation** (`src/game/engine.js`), driven by an animation-frame loop
+  in `useEngine` and mutated in place — no server needed for single-player.
+- **Defenses roll intercepts by range and probability.** A radar or AWACS in range links to nearby launchers to extend
+  their reach (`RADAR_RANGE_MULT`), so early warning is worth as much as raw firepower.
+- **Offense is munitions-limited.** Silos and launchers fire warheads you produce — cheap standard rounds, splash-damage
+  cluster munitions, or slow, expensive city-killer thermonuclear yields.
+- **Economy is the clock.** Income scales with your surviving cities and is drained by unit upkeep; research and
+  construction spend against it while the war continues around you.
+- A **server-authoritative multiplayer backend** ships in the repo — a Supabase edge function resolves a shared, seeded
+  combat exchange so every client replays it identically.
 
 ## Arsenal
 
-| Domain    | Systems                                                                                  |
-| :-------- | :--------------------------------------------------------------------------------------- |
-| **Land**  | Patriot battery, Golden Dome, AN/TPY-2 radar, hypersonic launcher, ICBM silo             |
-| **Sea**   | Aegis cruiser, battleship, aircraft carrier                                              |
-| **Air**   | Airstrip, F-16, F-35, F-22, A-10, E-3 AWACS, and the carrier-borne F/A-18                |
-| **Warheads** | Standard, cluster (splash), and thermonuclear — each with its own cost and build time |
+| Domain       | Systems                                                                                                                            |
+|:-------------|:-----------------------------------------------------------------------------------------------------------------------------------|
+| **Land**     | SAM battery, Golden Dome, early-warning radar, over-the-horizon radar, hypersonic launcher, missile silo                           |
+| **Sea**      | Missile cruiser, destroyer, battleship, aircraft carrier                                                                           |
+| **Air**      | Airstrip, multirole fighter, strike fighter, air-superiority fighter, close air support, transport, AEW&C, and the carrier fighter |
+| **Warheads** | Standard, cluster (splash), and thermonuclear — each with its own cost and build time                                              |
 
 ## Research tracks
 
-| Track                | Focus                                                             |
-| :------------------- | :---------------------------------------------------------------- |
-| **Strategic Command** | Warhead damage, missile range, and reload speed.                 |
-| **Aegis Program**     | Interceptor rate, defense range, and interceptor speed.          |
-| **War Economy**       | Income, build cost, and upkeep efficiency.                       |
-| **Early Warning**     | Radar coverage, tracking, and intercept accuracy.               |
-| **Command & Control** | Research speed, relocation cost, and cross-cutting bonuses.      |
+| Track                 | Focus                                                       |
+|:----------------------|:------------------------------------------------------------|
+| **Strategic Command** | Warhead damage, missile range, and reload speed.            |
+| **Missile Shield**    | Interceptor rate, defense range, and interceptor speed.     |
+| **War Economy**       | Income, build cost, and upkeep efficiency.                  |
+| **Early Warning**     | Radar coverage, tracking, and intercept accuracy.           |
+| **Command & Control** | Research speed, relocation cost, and cross-cutting bonuses. |
 
 Each track runs six tiers, unlocked in order.
 
 ## Stack
 
-- **Client** — React 19 + Vite 7, rendered over MapLibre GL and `react-map-gl`, with PMTiles tiles read client-side and `polygon-clipping` for territory geometry. Flags via `flag-icons`.
-- **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with `electron-builder`.
-- **Multiplayer backend** — Supabase Postgres + a `gd-match` edge function (server-authoritative, free-for-all for 2–16 seats held by humans or AI). Configure it with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
+- **Client** — React 19 + Vite 7, rendered over MapLibre GL and `react-map-gl`, with PMTiles tiles read client-side and
+  `polygon-clipping` for territory geometry. Flags via `flag-icons`.
+- **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with
+  `electron-builder`.
+- **Multiplayer backend** — Supabase Postgres + a `gd-match` edge function (server-authoritative, free-for-all for 2–16
+  seats held by humans or AI). Configure it with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
 
 ## Design
 
@@ -109,7 +122,10 @@ See [`docs/spec.md`](docs/spec.md) for the design and architecture notes.
 
 ## Attribution
 
-The interactive world map — MapLibre + PMTiles rendering and the region/country/city tile layers — is reused from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License. Unit icons are from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+The interactive world map — MapLibre + PMTiles rendering and the region/country/city tile layers — is reused
+from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License. Unit icons are
+from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. See [`LICENSE`](LICENSE) and [
+`NOTICE`](NOTICE).
 
 ## License
 

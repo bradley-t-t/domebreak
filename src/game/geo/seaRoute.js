@@ -1,0 +1,187 @@
+// Terrain-aware routing over the generated 0.25-degree world grid: A* across
+// walkable cells (longitude wraps, latitude doesn't), then greedy line-of-sight
+// smoothing so a crossing collapses to a handful of waypoints. Two routers share
+// the search: seaRoute walks navigable-water cells (naval), landRoute walks the
+// complement (ground forces) — so ships path around land and armies path around
+// oceans with the same machinery.
+import {SEA_B64, SEA_H, SEA_W} from "./seaGrid.js";
+
+const STEP = 360 / SEA_W;
+const bits = (() => {
+    const bin = atob(SEA_B64);
+    const a = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return a;
+})();
+
+const wrapLng = (lng) => ((lng + 540) % 360) - 180;
+const colOf = (lng) => (((Math.floor((lng + 180) / STEP)) % SEA_W) + SEA_W) % SEA_W;
+const rowOf = (lat) => Math.min(SEA_H - 1, Math.max(0, Math.floor((lat + 90) / STEP)));
+const seaCell = (r, c) => (bits[(r * SEA_W + c) >> 3] >> ((r * SEA_W + c) & 7)) & 1;
+// Land is everything the water mask doesn't claim (non-navigable inland water
+// reads as terrain — armies may cross it, ships may not).
+const landCell = (r, c) => !seaCell(r, c);
+const cellLng = (c) => -180 + (c + 0.5) * STEP;
+const cellLat = (r) => -90 + (r + 0.5) * STEP;
+
+export function isSea(lng, lat) {
+    return !!seaCell(rowOf(lat), colOf(lng));
+}
+
+const R = 6371, toRad = Math.PI / 180;
+
+function havKm(lng1, lat1, lng2, lat2) {
+    const dLa = (lat2 - lat1) * toRad, dLo = (lng2 - lng1) * toRad;
+    const a = Math.sin(dLa / 2) ** 2 + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(Math.min(1, a)));
+}
+
+// Nearest walkable cell to a point, searched in growing square rings. Coastal
+// units often sit in a cell whose center rasterized as the other terrain;
+// this recovers them.
+function snapTo(lng, lat, ok, maxRing = 8) {
+    const r0 = rowOf(lat), c0 = colOf(lng);
+    if (ok(r0, c0)) return r0 * SEA_W + c0;
+    for (let ring = 1; ring <= maxRing; ring++) {
+        let best = -1, bestD = Infinity;
+        for (let dr = -ring; dr <= ring; dr++) for (let dc = -ring; dc <= ring; dc++) {
+            if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue;
+            const r = r0 + dr;
+            if (r < 0 || r >= SEA_H) continue;
+            const c = (((c0 + dc) % SEA_W) + SEA_W) % SEA_W;
+            if (!ok(r, c)) continue;
+            const d = havKm(lng, lat, cellLng(c), cellLat(r));
+            if (d < bestD) {
+                bestD = d;
+                best = r * SEA_W + c;
+            }
+        }
+        if (best >= 0) return best;
+    }
+    return -1;
+}
+
+// Straight segment stays on walkable terrain the whole way (sampled every quarter cell).
+function clearPath(lng1, lat1, lng2, lat2, ok) {
+    let dLng = wrapLng(lng2 - lng1);
+    const dLat = lat2 - lat1;
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(dLng), Math.abs(dLat)) / (STEP / 2)));
+    for (let i = 0; i <= n; i++) {
+        const lng = wrapLng(lng1 + (dLng * i) / n), lat = lat1 + (dLat * i) / n;
+        if (!ok(rowOf(lat), colOf(lng))) return false;
+    }
+    return true;
+}
+
+const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+
+// A* from (aLng,aLat) to (bLng,bLat) over cells passing `ok`. Returns smoothed
+// waypoints [{lng,lat}, ...] ending at the (possibly snapped) destination, or
+// null when either end can't reach walkable terrain or no path connects them.
+function gridRoute(aLng, aLat, bLng, bLat, ok) {
+    const start = snapTo(aLng, aLat, ok), goal = snapTo(bLng, bLat, ok);
+    if (start < 0 || goal < 0) return null;
+    // Final waypoint: the exact click when it sits on walkable terrain, else the snapped cell.
+    const clickOk = ok(rowOf(bLat), colOf(bLng));
+    const endLng = clickOk ? bLng : cellLng(goal % SEA_W);
+    const endLat = clickOk ? bLat : cellLat((goal / SEA_W) | 0);
+    if (start === goal || clearPath(aLng, aLat, endLng, endLat, ok)) return [{lng: wrapLng(endLng), lat: endLat}];
+
+    const gLng = cellLng(goal % SEA_W), gLat = cellLat((goal / SEA_W) | 0);
+    // Float64 is load-bearing: with float32 storage a double-precision ng can
+    // land epsilon-below the rounded stored g, "improve" it by nothing, and
+    // re-push the same cells forever.
+    const g = new Float64Array(SEA_W * SEA_H).fill(Infinity);
+    const from = new Int32Array(SEA_W * SEA_H).fill(-1);
+    const done = new Uint8Array(SEA_W * SEA_H);
+    const heap = [start], f = new Float64Array(SEA_W * SEA_H);
+    g[start] = 0;
+    f[start] = havKm(cellLng(start % SEA_W), cellLat((start / SEA_W) | 0), gLng, gLat);
+    const up = (i) => {
+        while (i > 0) {
+            const p = (i - 1) >> 1;
+            if (f[heap[p]] <= f[heap[i]]) break;
+            [heap[p], heap[i]] = [heap[i], heap[p]];
+            i = p;
+        }
+    };
+    const down = () => {
+        let i = 0;
+        for (; ;) {
+            const l = 2 * i + 1, rr = l + 1;
+            let m = i;
+            if (l < heap.length && f[heap[l]] < f[heap[m]]) m = l;
+            if (rr < heap.length && f[heap[rr]] < f[heap[m]]) m = rr;
+            if (m === i) break;
+            [heap[m], heap[i]] = [heap[i], heap[m]];
+            i = m;
+        }
+    };
+    let found = false;
+    while (heap.length) {
+        const cur = heap[0];
+        if (cur === goal) {
+            found = true;
+            break;
+        }
+        const last = heap.pop();
+        if (heap.length) {
+            heap[0] = last;
+            down();
+        }
+        if (done[cur]) continue; // stale duplicate entry
+        done[cur] = 1;
+        const r = (cur / SEA_W) | 0, c = cur % SEA_W;
+        const lng = cellLng(c), lat = cellLat(r);
+        for (const [dr, dc] of DIRS) {
+            const nr = r + dr;
+            if (nr < 0 || nr >= SEA_H) continue;
+            const nc = (((c + dc) % SEA_W) + SEA_W) % SEA_W;
+            if (!ok(nr, nc)) continue;
+            // No slipping diagonally between two touching blocked corners.
+            if (dr && dc && !ok(r, nc) && !ok(nr, c)) continue;
+            const ni = nr * SEA_W + nc;
+            const ng = g[cur] + havKm(lng, lat, cellLng(nc), cellLat(nr));
+            if (ng >= g[ni]) continue;
+            g[ni] = ng;
+            from[ni] = cur;
+            f[ni] = ng + havKm(cellLng(nc), cellLat(nr), gLng, gLat);
+            heap.push(ni);
+            up(heap.length - 1);
+        }
+    }
+    if (!found) return null;
+
+    const cells = [];
+    for (let i = goal; i >= 0; i = from[i]) cells.push(i);
+    cells.reverse();
+    const pts = cells.map((i) => [cellLng(i % SEA_W), cellLat((i / SEA_W) | 0)]);
+    pts[pts.length - 1] = [endLng, endLat];
+
+    // Greedy string-pull: from each kept point, jump to the farthest later point
+    // still on clear terrain. First hop starts at the unit itself.
+    const route = [];
+    let curPt = [aLng, aLat], i = 0;
+    while (i < pts.length - 1) {
+        let j = pts.length - 1;
+        while (j > i + 1 && !clearPath(curPt[0], curPt[1], pts[j][0], pts[j][1], ok)) j--;
+        curPt = pts[j];
+        route.push({lng: wrapLng(curPt[0]), lat: curPt[1]});
+        i = j;
+    }
+    if (!route.length || route[route.length - 1].lng !== wrapLng(endLng) || route[route.length - 1].lat !== endLat) {
+        route.push({lng: wrapLng(endLng), lat: endLat});
+    }
+    return route;
+}
+
+// Naval routing over navigable water — ships path around land.
+export function seaRoute(aLng, aLat, bLng, bLat) {
+    return gridRoute(aLng, aLat, bLng, bLat, seaCell);
+}
+
+// Ground routing over land — armies path around oceans (and cross non-navigable
+// inland water, which the mask reads as terrain).
+export function landRoute(aLng, aLat, bLng, bLat) {
+    return gridRoute(aLng, aLat, bLng, bLat, landCell);
+}

@@ -1,0 +1,156 @@
+// GoldenDome match server. Three jobs:
+//   1. Claim lobbies flipped to 'starting' (Realtime + poll fallback), build a
+//      Match, and advertise this server's WS URLs back on the lobby row.
+//   2. Terminate WebSockets: verify the Supabase JWT, map user -> slot, route
+//      whitelisted commands, stream snapshots.
+//   3. Record results with the service role when a war ends.
+// It also serves the built client from ../dist so any browser on the network
+// can play without installing anything.
+import http from "http";
+import {readFileSync, statSync} from "fs";
+import {extname, join, normalize} from "path";
+import {WebSocketServer} from "ws";
+import {createClient} from "@supabase/supabase-js";
+import {MAX_MATCHES, PORT, SERVICE_ROLE_KEY, SUPABASE_URL, WS_URLS} from "./config.js";
+import {Match} from "./match.js";
+
+const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {auth: {persistSession: false}});
+const matches = new Map(); // matchId -> Match
+const log = (...a) => console.log(new Date().toISOString(), ...a);
+
+// ---- lobby claiming -------------------------------------------------------
+
+// Live matches = those still running (finished ones linger in the map for late
+// reconnects but no longer count against capacity).
+function liveMatches() {
+    return [...matches.values()].filter((m) => !m.reported).length;
+}
+
+async function claimLobby(row) {
+    if (liveMatches() >= MAX_MATCHES) {
+        log("at capacity", liveMatches(), "/", MAX_MATCHES, "- leaving lobby", row.id, "for the next sweep");
+        return;
+    }
+    // status-guarded update = single-claim, even if realtime and the poll race
+    const {data: claimed} = await db.from("lobbies")
+        .update({status: "active", updated_at: new Date().toISOString()})
+        .eq("id", row.id).eq("status", "starting").select().maybeSingle();
+    if (!claimed) return;
+
+    const {data: members} = await db.from("lobby_members")
+        .select("user_id, slot, iso, profiles!inner(username)")
+        .eq("lobby_id", row.id).order("slot");
+    if (!members?.length) {
+        await db.from("lobbies").update({status: "closed"}).eq("id", row.id);
+        return;
+    }
+    const roster = members.map((m) => ({
+        userId: m.user_id,
+        username: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username ?? "Commander",
+        iso: m.iso,
+    }));
+
+    const match = new Match({
+        lobbyId: row.id,
+        roster,
+        aiCount: claimed.ai_slots,
+        onFinished: async (m) => {
+            const {error} = await db.from("matches").insert(m.resultRows());
+            if (error) log("result insert failed", m.id, error.message);
+            await db.from("lobbies").update({status: "closed"}).eq("id", m.lobbyId);
+            setTimeout(() => {
+                m.dispose();
+                matches.delete(m.id);
+            }, 5 * 60_000); // linger for late "over" screens/reconnects
+        },
+    });
+    matches.set(match.id, match);
+    await db.from("lobbies").update({match_id: match.id, server_url: WS_URLS.join(",")}).eq("id", row.id);
+    log("match started", match.id, "lobby", row.id, "humans", roster.length, "ai", claimed.ai_slots);
+}
+
+async function pollStarting() {
+    const {data} = await db.from("lobbies").select("*").eq("status", "starting");
+    for (const row of data ?? []) await claimLobby(row);
+}
+
+function watchLobbies() {
+    db.channel("gd-server-lobbies")
+        .on("postgres_changes", {event: "UPDATE", schema: "public", table: "lobbies"}, (payload) => {
+            if (payload.new?.status === "starting") claimLobby(payload.new);
+        })
+        .subscribe((status) => log("lobby realtime:", status));
+    setInterval(pollStarting, 5000); // belt-and-braces if realtime hiccups
+}
+
+// ---- static client + health ----------------------------------------------
+
+const DIST = join(process.cwd(), "dist");
+const MIME = {
+    ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
+    ".pmtiles": "application/octet-stream", ".geojson": "application/json", ".png": "image/png",
+    ".svg": "image/svg+xml", ".ico": "image/x-icon", ".woff2": "font/woff2", ".woff": "font/woff",
+};
+
+const server = http.createServer((req, res) => {
+    const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+    if (urlPath === "/health") {
+        res.writeHead(200, {"Content-Type": "application/json"});
+        return res.end(JSON.stringify({ok: true, matches: liveMatches(), max: MAX_MATCHES, ws: WS_URLS}));
+    }
+    let filePath = normalize(join(DIST, urlPath === "/" ? "index.html" : urlPath));
+    if (!filePath.startsWith(DIST)) {
+        res.writeHead(403);
+        return res.end();
+    }
+    try {
+        if (!statSync(filePath).isFile()) throw new Error("dir");
+    } catch {
+        filePath = join(DIST, "index.html"); // SPA fallback
+    }
+    try {
+        const body = readFileSync(filePath);
+        res.writeHead(200, {"Content-Type": MIME[extname(filePath).toLowerCase()] || "application/octet-stream"});
+        res.end(body);
+    } catch {
+        res.writeHead(404);
+        res.end();
+    }
+});
+
+// ---- websockets ------------------------------------------------------------
+
+const wss = new WebSocketServer({server, perMessageDeflate: true});
+
+wss.on("connection", (ws) => {
+    let match = null, slot = null;
+    ws.on("message", async (raw) => {
+        let msg;
+        try {
+            msg = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        if (msg.t === "hello") {
+            const m = matches.get(msg.matchId);
+            if (!m) return ws.send(JSON.stringify({t: "err", error: "no such match"}));
+            const {data: {user} = {user: null}} = await db.auth.getUser(typeof msg.jwt === "string" ? msg.jwt : "");
+            if (!user) return ws.send(JSON.stringify({t: "err", error: "unauthorized"}));
+            const p = m.attach(user.id, ws);
+            if (!p) return ws.send(JSON.stringify({t: "err", error: "not in this match"}));
+            match = m;
+            slot = p.slot;
+            ws.send(m.initPayload(slot));
+        } else if (msg.t === "cmd" && match && slot != null) {
+            const r = match.command(slot, msg.name, msg.args);
+            if (r?.error && msg.seq != null) ws.send(JSON.stringify({t: "nack", seq: msg.seq, error: r.error}));
+        }
+    });
+    ws.on("close", () => {
+        if (match && slot != null) match.detach(slot);
+    });
+});
+
+watchLobbies();
+pollStarting();
+server.listen(PORT, "0.0.0.0", () => log(`goldendome server on :${PORT}, advertising ${WS_URLS.join(", ")}`));
