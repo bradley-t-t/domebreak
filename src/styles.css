@@ -998,6 +998,31 @@ input {
     color: #ffd7dd;
 }
 
+/* fallout / contamination warning — sickly radioactive green */
+.gd-toast.warn {
+    background: rgba(140, 255, 58, 0.12);
+    border-color: rgba(140, 255, 58, 0.55);
+    color: #d6ff9e;
+}
+
+/* contamination readouts (city hover, arsenal tag) share the fallout hue */
+.gd-contam {
+    color: #a6ff5c;
+}
+
+/* small radioactive tag under a warhead card's description line */
+.gd-ucard-tag {
+    align-self: flex-start;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid rgba(140, 255, 58, 0.5);
+    background: rgba(140, 255, 58, 0.1);
+}
+
 /* ================= motion system + command console ================= */
 /* press feedback + snappy transitions on every control */
 .gd-btn, .gd-mini, .gd-speedbtn, .gd-tab, .gd-chip, .gd-wing-add, .gd-country, .gd-layerbtn, .gd-cat, .gd-ctx-item, .gd-roster-badge, .gd-seg button, .gd-wing-row, .gd-natcard {

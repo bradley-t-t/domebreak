@@ -1,7 +1,7 @@
 // Radioactive fallout: warhead trigger, the intensity/proximity dose curves, and
 // the damage-over-time integration through the tick. Deterministic, no RNG, no I/O.
 import {describe, expect, it} from "vitest";
-import {createWorld, falloutIntensity, falloutProximity, step} from "../../../src/game/engine.js";
+import {createWorld, falloutDoseAt, falloutIntensity, falloutProximity, step} from "../../../src/game/engine.js";
 import {resolveHit, spawnFallout} from "../../../src/game/sim/combat.js";
 import {FALLOUT} from "../../../src/game/data/constants.js";
 
@@ -161,5 +161,39 @@ describe("damage over time through the tick", () => {
         spawnFallout(w, 0, 0, 0);
         run(w, FALLOUT.lifeSec + 3);
         expect(w.effects.filter((fx) => fx.type === "fallout").length).toBe(0);
+    });
+});
+
+describe("falloutDoseAt (UI readout query)", () => {
+    // One peaked cloud (age past riseSec, before decay) centered at the origin.
+    function withCloud(age = FALLOUT.riseSec + 1) {
+        return {effects: [{type: "fallout", lng: 0, lat: 0, radiusKm: FALLOUT.radiusKm, age}]};
+    }
+
+    it("test_clean_ground_reads_zero", () => {
+        expect(falloutDoseAt({effects: []}, 0, 0)).toEqual({dose: 0, remain: 0});
+        expect(falloutDoseAt({}, 0, 0)).toEqual({dose: 0, remain: 0}); // no effects array at all
+    });
+    it("test_full_dose_and_remaining_life_at_core", () => {
+        const age = FALLOUT.riseSec + 1;
+        const fo = falloutDoseAt(withCloud(age), 0, 0);
+        expect(fo.dose).toBeCloseTo(1, 6); // peak intensity × center proximity
+        expect(fo.remain).toBeCloseTo(FALLOUT.lifeSec - age, 6);
+    });
+    it("test_zero_outside_the_radius", () => {
+        // ~10° east ≈ 1100 km, well beyond the ~480 km radius.
+        expect(falloutDoseAt(withCloud(), 10, 0)).toEqual({dose: 0, remain: 0});
+    });
+    it("test_takes_worst_dose_and_longest_life_across_clouds", () => {
+        const w = {
+            effects: [
+                {type: "fallout", lng: 0, lat: 0, radiusKm: FALLOUT.radiusKm, age: FALLOUT.lifeSec - 5},   // near center, almost spent
+                {type: "fallout", lng: 3, lat: 0, radiusKm: FALLOUT.radiusKm, age: FALLOUT.riseSec + 1},   // offset, peaked, fresh
+            ],
+        };
+        const fo = falloutDoseAt(w, 0, 0);
+        // Longest remaining life comes from the fresh second cloud.
+        expect(fo.remain).toBeCloseTo(FALLOUT.lifeSec - (FALLOUT.riseSec + 1), 6);
+        expect(fo.dose).toBeGreaterThan(0);
     });
 });

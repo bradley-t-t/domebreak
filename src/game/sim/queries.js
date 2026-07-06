@@ -23,6 +23,25 @@ export function falloutProximity(distKm, radiusKm) {
     return 1 - (1 - FALLOUT.edgeFalloff) * (distKm / radiusKm);
 }
 
+// The fallout situation at a point: the worst current dose (0..1, intensity ×
+// proximity) across every cloud covering it, and the longest time any of those
+// clouds still has to live. `dose × FALLOUT.dmgPerSec` is the hp/s being lost
+// there; `remain > 0` means the point sits under at least one active cloud. Used
+// by the UI to flag contaminated cities and time the hazard.
+export function falloutDoseAt(w, lng, lat) {
+    let dose = 0, remain = 0;
+    for (const fx of (w.effects || [])) {
+        if (fx.type !== "fallout") continue;
+        const prox = falloutProximity(haversine(fx.lng, fx.lat, lng, lat), fx.radiusKm);
+        if (prox <= 0) continue;
+        const d = prox * falloutIntensity(fx.age);
+        if (d > dose) dose = d;
+        const r = FALLOUT.lifeSec - fx.age;
+        if (r > remain) remain = r;
+    }
+    return {dose, remain};
+}
+
 export function atWar(w, a, b) {
     if (a === b) return false;
     const n = nationOf(w, a);
