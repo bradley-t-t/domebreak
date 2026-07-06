@@ -807,6 +807,18 @@ input {
     text-overflow: ellipsis;
 }
 
+/* ×N count badge for a collapsed run of identical orders. */
+.gd-prodbar-mult {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: var(--text);
+}
+
 /* Progress wash behind the building item's content. */
 .gd-prodbar-fill {
     position: absolute;
@@ -819,14 +831,19 @@ input {
     pointer-events: none;
 }
 
+/* Cancel affordance: reserved space at rest (no layout shift), revealed red on
+   hover. Kept invisible otherwise so a collapsed pill reads cleanly as "ICBM ×12"
+   without a second stray × sitting next to the count badge. */
 .gd-prodbar-x {
-    color: var(--faint);
+    color: var(--danger);
     font-size: 12px;
     line-height: 1;
+    opacity: 0;
+    transition: opacity 120ms var(--ease-out);
 }
 
 .gd-prodbar-item:hover .gd-prodbar-x {
-    color: var(--danger);
+    opacity: 1;
 }
 
 /* Narrow windows: lift the line clear of the right-anchored layer bar. */
@@ -996,6 +1013,31 @@ input {
     background: rgba(224, 87, 79, 0.14);
     border-color: var(--danger);
     color: #ffd7dd;
+}
+
+/* fallout / contamination warning — sickly radioactive green */
+.gd-toast.warn {
+    background: rgba(140, 255, 58, 0.12);
+    border-color: rgba(140, 255, 58, 0.55);
+    color: #d6ff9e;
+}
+
+/* contamination readouts (city hover, arsenal tag) share the fallout hue */
+.gd-contam {
+    color: #a6ff5c;
+}
+
+/* small radioactive tag under a warhead card's description line */
+.gd-ucard-tag {
+    align-self: flex-start;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid rgba(140, 255, 58, 0.5);
+    background: rgba(140, 255, 58, 0.1);
 }
 
 /* ================= motion system + command console ================= */
@@ -1533,199 +1575,318 @@ input {
     }
 }
 
-/* missile impact explosion (fireball + shockwave) */
-.gd-explosion {
+/* ===================== fireball detonation (Explosion.jsx) =====================
+   A layered fire burst: white flash + shock ring + three billowing flame blobs +
+   a white-hot core + a short smoke wisp + flung embers. Every kind is FIRE; kinds
+   only change scale and a small ring accent. Pure transform/opacity so dozens can
+   play at once. All layers fill the box (inset:0) and scale past it as they grow. */
+.gd-boom {
     position: relative;
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
-}
-
-.gd-explosion.destroy {
-    width: 24px;
-    height: 24px;
-}
-
-.gd-explosion span {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-}
-
-/* interception reads as a green explosion (vs orange damage impacts) */
-.gd-explosion.intercept {
     width: 15px;
     height: 15px;
+    pointer-events: none;
 }
 
-/* ---- compact fire explosion ---- */
-.gd-explosion {
-    position: relative;
+.gd-boom.destroy {
+    width: 22px;
+    height: 22px;
+}
+
+.gd-boom.intercept {
     width: 12px;
     height: 12px;
-    pointer-events: none;
-    --d: 10px;
 }
 
-.gd-explosion.destroy {
-    width: 17px;
-    height: 17px;
-    --d: 15px;
+.gd-boom.mirv {
+    width: 12px;
+    height: 12px;
 }
 
-.gd-explosion.intercept {
-    width: 11px;
-    height: 11px;
-    --d: 9px;
+.gd-boom.miss {
+    width: 9px;
+    height: 9px;
 }
 
-.gd-explosion span {
+.gd-boom span {
     position: absolute;
     inset: 0;
     border-radius: 50%;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
 }
 
-.gd-fx-flash {
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 62%);
-    animation: gdFxFlash 0.18s ease-out forwards;
+/* white-hot detonation flash */
+.gd-boom-flash {
+    background: radial-gradient(circle, #fff 0%, rgba(255, 244, 214, 0.9) 34%, rgba(255, 210, 120, 0) 66%);
+    animation: gdBoomFlash 0.17s ease-out forwards;
 }
 
-.gd-fx-fire {
-    filter: blur(0.6px);
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #ffd24a 16%, #ff7b1a 40%, #ff2e0a 66%, rgba(120, 20, 0, 0) 82%);
-    animation: gdFxFire 0.6s ease-out forwards;
-}
-
-.gd-fx-fire.two {
-    mix-blend-mode: screen;
-    animation: gdFxFire2 0.55s ease-out forwards;
-}
-
-.gd-fx-smoke {
+/* expanding shock ring */
+.gd-boom-ring {
+    background: none;
+    border: 1.5px solid rgba(255, 214, 140, 0.9);
+    box-shadow: 0 0 4px rgba(255, 180, 90, 0.6);
     opacity: 0;
-    background: radial-gradient(circle, rgba(90, 90, 90, 0.9) 0%, rgba(70, 70, 70, 0.4) 45%, rgba(60, 60, 60, 0) 75%);
-    animation: gdFxSmoke 0.9s ease-out 0.12s forwards;
+    animation: gdBoomRing 0.42s ease-out forwards;
 }
 
-.gd-ember {
+/* billowing flame — hot white center falling to deep red/black edge */
+.gd-boom-fire {
+    background: radial-gradient(circle at 50% 55%,
+    #fff 0%, #fff2c0 13%, #ffd24a 30%, #ff8a1a 52%, #ff3b0a 72%, rgba(120, 20, 0, 0) 87%);
+    mix-blend-mode: screen;
+    filter: blur(0.4px);
+    opacity: 0;
+}
+
+.gd-boom-fire.f1 {
+    animation: gdBoomFireA 0.58s ease-out forwards;
+}
+
+.gd-boom-fire.f2 {
+    animation: gdBoomFireB 0.52s ease-out 0.04s forwards;
+}
+
+.gd-boom-fire.f3 {
+    animation: gdBoomFireC 0.5s ease-out 0.06s forwards;
+}
+
+/* persistent white-hot core */
+.gd-boom-core {
+    background: radial-gradient(circle, #fff 0%, #fff0b8 40%, rgba(255, 200, 90, 0) 72%);
+    animation: gdBoomCore 0.3s ease-out forwards;
+}
+
+/* short, faint smoke wisp rising off the burn — fire stays the star */
+.gd-boom-smoke {
+    opacity: 0;
+    background: radial-gradient(circle, rgba(60, 54, 48, 0.7) 0%, rgba(48, 44, 40, 0.3) 46%, rgba(40, 36, 32, 0) 74%);
+    animation: gdBoomSmoke 0.6s ease-out 0.16s forwards;
+}
+
+/* flung embers — fly outward along --a to --dist, shrinking */
+.gd-boom-spark {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 2px;
-    height: 2px;
-    margin: -1px 0 0 -1px;
+    width: var(--sz, 2px);
+    height: var(--sz, 2px);
+    margin: calc(var(--sz, 2px) / -2) 0 0 calc(var(--sz, 2px) / -2);
     border-radius: 50%;
-    inset: auto;
-    background: #ffcf5a;
+    background: #ffd873;
     box-shadow: 0 0 4px 1px #ff8a1a;
-    animation: gdEmber 0.55s ease-out forwards;
+    animation: gdBoomSpark 0.5s ease-out var(--delay, 0ms) forwards;
 }
 
-.gd-explosion.destroy .gd-ember {
-    animation-duration: 0.7s;
+/* interception accent: keep the fire, but tint the shock ring + embers cool so a
+   missile-vs-missile kill still reads apart from a ground impact — no green. */
+.gd-boom.intercept .gd-boom-ring {
+    border-color: rgba(160, 226, 255, 0.9);
+    box-shadow: 0 0 4px rgba(120, 200, 255, 0.6);
 }
 
-.gd-explosion.intercept .gd-fx-fire {
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #ccffe4 16%, #5cffab 40%, #12c46e 66%, rgba(0, 80, 40, 0) 82%);
+.gd-boom.destroy .gd-boom-spark {
+    animation-duration: 0.62s;
 }
 
-.gd-explosion.intercept .gd-ember {
-    background: #9dffc0;
-    box-shadow: 0 0 4px 1px #25e084;
-}
-
-.gd-explosion.intercept .gd-fx-smoke {
-    background: radial-gradient(circle, rgba(60, 120, 90, 0.7) 0%, rgba(40, 90, 60, 0.3) 45%, rgba(40, 90, 60, 0) 75%);
-}
-
-.gd-explosion.mirv {
-    width: 10px;
-    height: 10px;
-    --d: 8px;
-}
-
-.gd-explosion.mirv .gd-fx-fire {
-    background: radial-gradient(circle at 50% 58%, #fff 0%, #d9f6ff 16%, #61e0ff 40%, #1a9ad4 66%, rgba(0, 60, 90, 0) 82%);
-}
-
-.gd-explosion.mirv .gd-ember {
-    background: #a8ecff;
-    box-shadow: 0 0 4px 1px #61e0ff;
-}
-
-.gd-explosion.mirv .gd-fx-smoke {
-    background: radial-gradient(circle, rgba(60, 100, 120, 0.6) 0%, rgba(40, 70, 90, 0.28) 45%, rgba(40, 70, 90, 0) 75%);
-}
-
-@keyframes gdFxFlash {
+@keyframes gdBoomFlash {
     from {
-        transform: scale(0.4);
-        opacity: 1;
-    }
-    to {
-        transform: scale(1.7);
-        opacity: 0;
-    }
-}
-
-@keyframes gdFxFire {
-    0% {
         transform: scale(0.3);
         opacity: 1;
     }
+    to {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomRing {
+    0% {
+        transform: scale(0.2);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(2.8);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomCore {
+    0% {
+        transform: scale(0.4);
+        opacity: 1;
+    }
     35% {
-        transform: scale(1.25) scaleY(1.15);
+        transform: scale(1.35);
         opacity: 1;
     }
     100% {
-        transform: scale(2) scaleY(1.35) translateY(-2px);
+        transform: scale(0.7);
         opacity: 0;
     }
 }
 
-@keyframes gdFxFire2 {
+@keyframes gdBoomFireA {
     0% {
-        transform: scale(0.5) translateY(1px);
-        opacity: 0.9;
-    }
-    45% {
-        transform: scale(1.1) translateY(-1px);
-        opacity: 0.85;
-    }
-    100% {
-        transform: scale(1.7) scaleY(1.5) translateY(-4px);
-        opacity: 0;
-    }
-}
-
-@keyframes gdFxSmoke {
-    0% {
-        transform: scale(0.4);
-        opacity: 0;
+        transform: scale(0.3);
+        opacity: 0.95;
     }
     30% {
-        opacity: 0.32;
+        transform: scale(1.15);
+        opacity: 1;
     }
     100% {
-        transform: scale(1.9) translateY(-6px);
+        transform: scale(1.9) translateY(-2px);
         opacity: 0;
     }
 }
 
-@keyframes gdEmber {
+@keyframes gdBoomFireB {
+    0% {
+        transform: translate(-6%, -4%) scale(0.2);
+        opacity: 0;
+    }
+    28% {
+        opacity: 0.95;
+    }
+    100% {
+        transform: translate(-30%, -34%) scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomFireC {
+    0% {
+        transform: translate(6%, 4%) scale(0.2);
+        opacity: 0;
+    }
+    28% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translate(30%, 30%) scale(1.45);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomSmoke {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    35% {
+        opacity: 0.3;
+    }
+    100% {
+        transform: scale(1.8) translateY(-7px);
+        opacity: 0;
+    }
+}
+
+@keyframes gdBoomSpark {
     0% {
         transform: rotate(var(--a)) translateY(0) scale(1);
         opacity: 1;
     }
     100% {
-        transform: rotate(var(--a)) translateY(calc(-1 * var(--d, 10px))) scale(0.3);
+        transform: rotate(var(--a)) translateY(calc(-1 * var(--dist, 10px))) scale(0.2);
         opacity: 0;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gd-fx-fire, .gd-fx-fire.two, .gd-fx-smoke, .gd-ember, .gd-fx-flash {
-        animation-duration: 0.25s;
+    .gd-boom span, .gd-boom-spark {
+        animation-duration: 0.22s !important;
+        animation-delay: 0s !important;
+    }
+
+    .gd-boom-fire.f2, .gd-boom-fire.f3, .gd-boom-smoke {
+        display: none;
+    }
+}
+
+/* ---- radioactive fallout: animated cloud epicenter ---- */
+/* --i (0..1) is the live cloud intensity from the sim: it fades the whole
+   epicenter in as the cloud ramps and out as it decays. */
+.gd-fallout {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    pointer-events: none;
+    opacity: calc(0.25 + 0.75 * var(--i, 1));
+}
+
+.gd-fallout span {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+}
+
+.gd-fallout-glow {
+    background: radial-gradient(circle, rgba(160, 255, 74, 0.5) 0%, rgba(120, 220, 40, 0.22) 42%, rgba(90, 180, 30, 0) 72%);
+    animation: gdFalloutGlow 2.4s ease-in-out infinite;
+}
+
+.gd-fallout-ring {
+    border: 1px solid rgba(182, 255, 92, 0.75);
+    box-shadow: 0 0 6px rgba(140, 255, 58, 0.5);
+    animation: gdFalloutRing 2.8s ease-out infinite;
+}
+
+.gd-fallout-ring.two {
+    animation-delay: 1.4s;
+}
+
+.gd-fallout-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    color: #c9ff7a;
+    text-shadow: 0 0 5px rgba(140, 255, 58, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+    animation: gdFalloutCore 2.4s ease-in-out infinite;
+}
+
+@keyframes gdFalloutGlow {
+    0%, 100% {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
+@keyframes gdFalloutRing {
+    0% {
+        transform: scale(0.35);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes gdFalloutCore {
+    0%, 100% {
+        transform: scale(0.95);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-fallout-glow, .gd-fallout-ring, .gd-fallout-ring.two, .gd-fallout-core {
+        animation: none;
+    }
+    .gd-fallout-ring {
+        opacity: 0.4;
     }
 }
 
@@ -3648,20 +3809,6 @@ input[type="range"] {
     animation: none;
 }
 
-/* interceptor miss = small gray puff */
-.gd-explosion.miss {
-    width: 9px;
-    height: 9px;
-}
-
-.gd-explosion.miss .gd-fx-fire {
-    background: radial-gradient(circle, #d4d7da 0%, #8a94a4 45%, rgba(120, 130, 150, 0) 72%);
-}
-
-.gd-explosion.miss .gd-fx-fire.two, .gd-explosion.miss .gd-fx-smoke, .gd-explosion.miss .gd-fx-flash, .gd-explosion.miss .gd-ember {
-    display: none;
-}
-
 /* screen-space ballistic overlay (missiles + contrails arc into the sky) */
 .gd-sky {
     position: absolute;
@@ -4039,6 +4186,96 @@ input[type="range"] {
     }
 }
 
+/* ================= in-game loading veil ================= */
+/* Covers the map from mount until the tiles settle, so the world is only
+   revealed once it's fully drawn and already framed on the player's capital. */
+.gd-boot {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 120% at 50% 42%, #0b0e13 0%, #05070b 72%);
+    transition: opacity 520ms var(--ease-out);
+}
+
+.gd-boot.gone {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gd-boot-inner {
+    text-align: center;
+    animation: gdRowIn 500ms var(--ease-out) both;
+}
+
+.gd-boot-flag {
+    font-size: 30px;
+    border-radius: 3px;
+    box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.7);
+}
+
+.gd-boot-title {
+    margin-top: 16px;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+.gd-boot-sub {
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+
+.gd-boot-bar {
+    width: 190px;
+    height: 2px;
+    margin: 22px auto 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.gd-boot-bar i {
+    display: block;
+    height: 100%;
+    width: 38%;
+    background: linear-gradient(90deg, transparent, var(--text), transparent);
+    animation: gdBootScan 1.15s ease-in-out infinite;
+}
+
+@keyframes gdBootScan {
+    from {
+        transform: translateX(-130%);
+    }
+    to {
+        transform: translateX(330%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-boot {
+        transition: none;
+    }
+
+    .gd-boot-inner {
+        animation: none;
+    }
+
+    .gd-boot-bar i {
+        animation: none;
+        width: 100%;
+        opacity: 0.4;
+    }
+}
+
 /* ================= multiplayer: identity chip, friends, lobby browser/room ================= */
 
 /* ---- MeBadge: profile chip + popover ---- */
@@ -4249,66 +4486,6 @@ input[type="range"] {
     flex-shrink: 0;
 }
 
-/* ---- Multiplayer lobby browser ---- */
-.gd-mp {
-    width: min(560px, 94vw);
-    text-align: left;
-}
-
-.gd-mp .gd-row {
-    justify-content: center;
-}
-
-.gd-mp-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 40vh;
-    overflow: auto;
-    margin-top: 6px;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius);
-    padding: 8px;
-    background: var(--sunk);
-}
-
-.gd-mp-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    background: var(--btn-bg);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    animation: gdRowIn 220ms var(--ease-out) both;
-}
-
-.gd-mp-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.gd-mp-info b {
-    font-size: 13.5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.gd-mp-info span {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--dim);
-}
-
-.gd-mp-rowerr {
-    color: var(--danger);
-    font-size: 11px;
-    max-width: 160px;
-}
-
 .mt {
     margin-top: 16px;
 }
@@ -4428,41 +4605,59 @@ input[type="range"] {
     text-align: center;
 }
 
-.gd-lobby-host {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-}
-
-.gd-lobby-stepper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.gd-lobby-stepper-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.gd-lobby-stepper-val {
-    font-family: var(--mono);
-    font-size: 15px;
-    min-width: 20px;
-    text-align: center;
-}
-
 .gd-lobby-hint {
     text-align: center;
     color: var(--faint);
     font-size: 12px;
     margin-top: 14px;
+}
+
+/* ---- Searching (quick-match queue) ---- */
+.gd-searching {
+    width: min(420px, 94vw);
+    text-align: center;
+}
+
+.gd-searching-pulse {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0 18px;
+}
+
+.gd-searching-pulse span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: gdPulse 1.2s var(--ease-in-out) infinite;
+}
+
+.gd-searching-pulse span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.gd-searching-pulse span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.gd-searching-pulse.still span {
+    animation: none;
+    opacity: 0.7;
+}
+
+.gd-searching-label {
+    font-size: 14px;
+    color: var(--text);
+    margin: 0;
+}
+
+.gd-searching-elapsed {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--dim);
+    margin: 8px 0 0;
+    letter-spacing: 2px;
 }
 
 /* ---- Connection lost (used by App during a live match) ---- */
@@ -4886,5 +5081,119 @@ input[type="range"] {
     .gd-tt-canvas.eased,
     .gd-tt-wire {
         transition: none;
+    }
+}
+
+/* --- Controls reference overlay -------------------------------------------
+   In-game command reference (? / F1). Two-column groups of label → keycap
+   rows, styled on the light-paper modal tokens like the rest of the cards. */
+.gd-card.gd-controls {
+    width: min(760px, 94vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.gd-controls-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.gd-controls-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--dim);
+    margin-top: 4px;
+}
+
+.gd-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 34px;
+    margin: 12px 0 20px;
+}
+
+.gd-ctrl-group {
+    break-inside: avoid;
+}
+
+.gd-ctrl-group-h {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 14px 0 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--line);
+}
+
+.gd-ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    font-size: 13px;
+    color: var(--dim);
+}
+
+.gd-ctrl-lbl {
+    min-width: 0;
+}
+
+.gd-ctrl-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.gd-kbd-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.gd-kbd {
+    min-width: 22px;
+    height: 23px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    background: var(--btn-bg);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.gd-kbd.mouse {
+    color: var(--dim);
+    font-size: 10.5px;
+    letter-spacing: 0.01em;
+}
+
+.gd-kbd-plus {
+    color: var(--faint);
+    font-size: 11px;
+}
+
+.gd-kbd-sep {
+    width: 2px;
+}
+
+@media (max-width: 640px) {
+    .gd-controls-grid {
+        grid-template-columns: 1fr;
     }
 }

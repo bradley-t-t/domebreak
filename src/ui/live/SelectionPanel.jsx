@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {FALLOUT, hangarCapOf, hangarCount, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
 
 export default function SelectionPanel({
                                            selectedUnit,
@@ -141,7 +141,8 @@ export default function SelectionPanel({
                                 const stock = myNation?.ammo?.[k] || 0;
                                 const cur = (selectedUnit.warhead || "standard") === k;
                                 return <button key={k} className={`gd-wh-chip ${cur ? "on" : ""}`}
-                                               style={{["--flame"]: wh.flame}} title={`${wh.name} — ${wh.desc}`}
+                                               style={{["--flame"]: wh.flame}}
+                                               title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
                                                onClick={() => api.setWarhead(selectedUnit.id, k)}><span
                                     className="gd-wh-dot"/>{wh.short}<b>{stock}</b></button>;
                             })}

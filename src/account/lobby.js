@@ -1,6 +1,11 @@
 // Lobby/matchmaking surface: reads + Realtime under RLS, writes through
 // gd-lobby. The lobby row is also how a started match hands the client its
 // game server (server_url is a comma-separated WS URL list, best-first).
+//
+// Quick-match only: there is no lobby browser, no host, no create/find/set_ai.
+// Pressing Play enrolls the caller in `matchmaking_queue`; the authoritative
+// server groups/forms/bot-fills/auto-launches the lobby (see
+// docs/architecture/adr-004-matchmaking-bot-lobby.md).
 import {supabase} from "./client.js";
 
 async function invoke(body) {
@@ -8,36 +13,63 @@ async function invoke(body) {
     return error ? {error: error.message} : (data ?? {ok: true});
 }
 
-export const createLobby = (name, maxPlayers) => invoke({action: "create", name, maxPlayers});
-export const joinLobby = (lobbyId) => invoke({action: "join", lobbyId});
+// Enroll the caller as a 'waiting' matchmaking_queue row. Idempotent server-side.
+export const quickMatch = (iso) => invoke({action: "quick_match", ...(iso ? {iso} : {})});
+// Delete the caller's 'waiting' row. Safe no-op if already matched / not queued.
+export const cancelMatch = () => invoke({action: "cancel"});
+
 export const leaveLobby = () => invoke({action: "leave"});
-export const findGame = () => invoke({action: "find"});
 export const setLobbyIso = (iso) => invoke({action: "set_iso", iso});
 export const setReady = (ready) => invoke({action: "ready", ready});
-export const setAiSlots = (count) => invoke({action: "set_ai", count});
-export const startLobby = () => invoke({action: "start"});
 
-export async function fetchOpenLobbies() {
-    const {data} = await supabase.from("lobbies")
-        .select("id, name, status, max_players, ai_slots, created_at, lobby_members(user_id)")
-        .in("status", ["open"]).order("created_at", {ascending: false}).limit(30);
-    return (data ?? []).map((l) => ({...l, humans: l.lobby_members?.length ?? 0}));
+// The caller's own matchmaking_queue row (RLS scopes this to own row only).
+export async function fetchMyQueue() {
+    const {data} = await supabase.from("matchmaking_queue").select("*").maybeSingle();
+    return data ?? null;
 }
 
-// Full room state for one lobby: row + members with usernames, sorted by slot.
+// Realtime on the caller's own queue row, plus a heartbeat refetch fallback
+// so a missed/late Realtime event can't strand the Searching screen. Mirrors
+// watchLobby's pattern below. Returns an unsubscribe fn.
+export function watchQueue(cb) {
+    let ch = null;
+    let beat = null;
+    let stopped = false;
+    supabase.auth.getUser().then(({data}) => {
+        const uid = data?.user?.id;
+        if (stopped || !uid) return;
+        ch = supabase.channel(`queue-${uid}`)
+            .on("postgres_changes", {
+                event: "*",
+                schema: "public",
+                table: "matchmaking_queue",
+                filter: `user_id=eq.${uid}`,
+            }, cb)
+            .subscribe();
+        beat = setInterval(cb, 3000);
+    });
+    return () => {
+        stopped = true;
+        if (beat) clearInterval(beat);
+        if (ch) supabase.removeChannel(ch);
+    };
+}
+
+// Full room state for one lobby: row + members (human + bot), sorted by slot.
 export async function fetchLobby(lobbyId) {
     const [{data: lobby}, {data: members}] = await Promise.all([
         supabase.from("lobbies").select("*").eq("id", lobbyId).maybeSingle(),
         supabase.from("lobby_members")
-            .select("user_id, slot, iso, ready, profiles(username)")
+            .select("user_id, slot, iso, ready, is_bot, display_name, profiles(username)")
             .eq("lobby_id", lobbyId).order("slot"),
     ]);
     if (!lobby) return null;
     return {
         ...lobby,
         members: (members ?? []).map((m) => ({
-            userId: m.user_id, slot: m.slot, iso: m.iso, ready: m.ready,
-            username: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username ?? "Commander",
+            userId: m.user_id, slot: m.slot, iso: m.iso, ready: m.ready, isBot: m.is_bot,
+            username: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username
+                ?? m.display_name ?? "Commander",
         })),
     };
 }
@@ -55,18 +87,6 @@ export function watchLobby(lobbyId, cb) {
         }, cb)
         .subscribe();
     const beat = setInterval(cb, 5000);
-    return () => {
-        clearInterval(beat);
-        supabase.removeChannel(ch);
-    };
-}
-
-// Realtime over the lobby browser list. Returns an unsubscribe fn.
-export function watchLobbies(cb) {
-    const ch = supabase.channel("lobby-browser")
-        .on("postgres_changes", {event: "*", schema: "public", table: "lobbies"}, cb)
-        .subscribe();
-    const beat = setInterval(cb, 7000);
     return () => {
         clearInterval(beat);
         supabase.removeChannel(ch);

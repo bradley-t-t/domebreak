@@ -11,8 +11,8 @@ export default function PauseMenu({onResume, onSave, onLoad, onSettings, onQuit,
                     <button className="gd-menu-btn danger" onClick={onQuit}>Quit to Menu</button>
                 </div>
                 {!over &&
-                    <div className="gd-menu-hint">E — Production · R — Diplomacy · T — Research · Space — Pause · Esc —
-                        Menu · Rebind all in Settings</div>}
+                    <div className="gd-menu-hint">E — Production · R — Diplomacy · T — Research · Space — Pause · ? —
+                        Controls · Esc — Menu · Rebind all in Settings</div>}
             </div>
         </div>
     );

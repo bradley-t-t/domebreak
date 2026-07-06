@@ -27,8 +27,13 @@ function resolveIsos(picks) {
 }
 
 export class Match {
-    // roster: [{userId, username, iso}] in join order; aiCount: extra AI nations
-    constructor({lobbyId, roster, aiCount, onFinished}) {
+    // roster: [{userId, username, iso, isBot, ready}] in slot order (0..n-1).
+    // Every roster entry becomes a nation/slot — bots and unready humans
+    // (force-launched at the lobby-ready timeout) are drafted isAi; a ready
+    // human is player-controlled. There is no separate aiCount: bot seats are
+    // already roster members by the time the matchmaker hands off the lobby
+    // (ADR-0004).
+    constructor({lobbyId, roster, onFinished}) {
         this.id = randomUUID();
         this.lobbyId = lobbyId;
         this.onFinished = onFinished;
@@ -38,15 +43,16 @@ export class Match {
         this.quit = new Set();      // userIds recorded as quit
         this.reported = false;
 
-        const isos = resolveIsos([
-            ...roster.map((r) => r.iso),
-            ...Array.from({length: aiCount}, () => null),
-        ]);
+        const isos = resolveIsos(roster.map((r) => r.iso));
         this.players = roster.map((r, i) => ({...r, slot: i, iso: isos[i]}));
 
         const setup = buildSetup(gameData(), isos[0], isos.slice(1), (Math.random() * 1e9) | 0 || 1);
         setup.nations.forEach((n) => {
-            n.isAi = n.slot >= roster.length;
+            const p = this.players[n.slot];
+            // Bots are always AI; humans are AI only if they never readied by
+            // the time the lobby force-launched (same conversion ADR-0003
+            // already performs for an expired reconnect grace window).
+            n.isAi = !!p?.isBot || p?.ready === false;
         });
         this.world = createWorld(setup);
         this.world.speed = 1;
@@ -64,6 +70,8 @@ export class Match {
         this.snapTimer = setInterval(() => this.broadcastSnapshot(), SNAPSHOT_MS);
     }
 
+    // Bots have userId === null and never call attach(); only human rows are
+    // ever looked up here (WebSocket auth always resolves to a real user_id).
     playerByUser(userId) {
         return this.players.find((p) => p.userId === userId);
     }
@@ -123,7 +131,7 @@ export class Match {
             matchId: this.id,
             slot,
             world: this.world,
-            players: this.players.map((p) => ({slot: p.slot, username: p.username, iso: p.iso})),
+            players: this.players.map((p) => ({slot: p.slot, username: p.username, iso: p.iso, isBot: !!p.isBot})),
         });
     }
 
@@ -141,8 +149,9 @@ export class Match {
     }
 
     // Rows for the matches table — the server is the authority on results.
+    // Bots (userId === null) never get a matches row; only humans do.
     resultRows() {
-        return this.players.map((p) => ({
+        return this.players.filter((p) => p.userId != null).map((p) => ({
             user_id: p.userId,
             started_at: this.startedAt,
             result: this.quit.has(p.userId) ? "quit" : this.world.winnerSlot === p.slot ? "win" : "loss",
