@@ -1,0 +1,169 @@
+// One live match: builds the world from a lobby roster, ticks it, routes
+// validated commands, broadcasts snapshots, and records results when the war
+// ends. Humans who drop get a reconnect grace window, then their nation goes
+// to the AI; a permanent drop is recorded as a quit.
+import {randomUUID} from "crypto";
+import {createWorld, step} from "../src/game/engine.js";
+import {buildSetup, GREAT_POWERS} from "../src/game/sim/newGame.js";
+import {gameData} from "./data.js";
+import {COMMANDS} from "./commands.js";
+import {RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
+
+// Roster isos must be valid (city data exists) and unique — substitutions come
+// from the great-powers pool so a bad pick never shifts slot assignments.
+function resolveIsos(picks) {
+    const data = gameData();
+    const used = new Set();
+    const out = [];
+    for (const want of picks) {
+        let iso = typeof want === "string" ? want.toUpperCase() : "";
+        if (!data.cities[iso]?.length || used.has(iso)) {
+            iso = GREAT_POWERS.find((g) => data.cities[g]?.length && !used.has(g));
+        }
+        used.add(iso);
+        out.push(iso);
+    }
+    return out;
+}
+
+export class Match {
+    // roster: [{userId, username, iso}] in join order; aiCount: extra AI nations
+    constructor({lobbyId, roster, aiCount, onFinished}) {
+        this.id = randomUUID();
+        this.lobbyId = lobbyId;
+        this.onFinished = onFinished;
+        this.startedAt = new Date().toISOString();
+        this.sockets = new Map();   // slot -> ws
+        this.graceTimers = new Map();
+        this.quit = new Set();      // userIds recorded as quit
+        this.reported = false;
+
+        const isos = resolveIsos([
+            ...roster.map((r) => r.iso),
+            ...Array.from({length: aiCount}, () => null),
+        ]);
+        this.players = roster.map((r, i) => ({...r, slot: i, iso: isos[i]}));
+
+        const setup = buildSetup(gameData(), isos[0], isos.slice(1), (Math.random() * 1e9) | 0 || 1);
+        setup.nations.forEach((n) => {
+            n.isAi = n.slot >= roster.length;
+        });
+        this.world = createWorld(setup);
+        this.world.speed = 1;
+        this.world.paused = false;
+        this.world.meta = {matchId: this.id, mode: "online"};
+
+        let last = Date.now();
+        this.tickTimer = setInterval(() => {
+            const now = Date.now();
+            const dt = Math.min(0.25, (now - last) / 1000);
+            last = now;
+            if (!this.world.over) step(this.world, dt * this.world.speed);
+            if (this.world.over) this.finish();
+        }, TICK_MS);
+        this.snapTimer = setInterval(() => this.broadcastSnapshot(), SNAPSHOT_MS);
+    }
+
+    playerByUser(userId) {
+        return this.players.find((p) => p.userId === userId);
+    }
+
+    attach(userId, ws) {
+        const p = this.playerByUser(userId);
+        if (!p) return null;
+        const old = this.sockets.get(p.slot);
+        if (old && old !== ws) {
+            try {
+                old.close(4000, "superseded");
+            } catch { /* already gone */
+            }
+        }
+        clearTimeout(this.graceTimers.get(p.slot));
+        this.graceTimers.delete(p.slot);
+        const nation = this.world.nations.find((n) => n.slot === p.slot);
+        if (nation) nation.isAi = false; // back from AI stewardship on reconnect
+        this.quit.delete(userId);
+        this.sockets.set(p.slot, ws);
+        return p;
+    }
+
+    detach(slot) {
+        this.sockets.delete(slot);
+        if (this.world.over) return;
+        // grace window, then the AI takes the chair and the drop counts as a quit
+        this.graceTimers.set(slot, setTimeout(() => {
+            const nation = this.world.nations.find((n) => n.slot === slot);
+            if (nation) nation.isAi = true;
+            const p = this.players.find((x) => x.slot === slot);
+            if (p) this.quit.add(p.userId);
+        }, RECONNECT_GRACE_S * 1000));
+    }
+
+    command(slot, name, args) {
+        const fn = COMMANDS[name];
+        if (!fn) return {error: "unknown command"};
+        if (this.world.over) return {error: "the war is over"};
+        try {
+            return fn(this.world, slot, Array.isArray(args) ? args : []) ?? {ok: true};
+        } catch (e) {
+            return {error: String(e?.message || e)};
+        }
+    }
+
+    broadcastSnapshot() {
+        const payload = JSON.stringify({t: "snap", world: this.world});
+        for (const ws of this.sockets.values()) {
+            if (ws.readyState === ws.OPEN) ws.send(payload);
+        }
+    }
+
+    initPayload(slot) {
+        return JSON.stringify({
+            t: "init",
+            matchId: this.id,
+            slot,
+            world: this.world,
+            players: this.players.map((p) => ({slot: p.slot, username: p.username, iso: p.iso})),
+        });
+    }
+
+    finish() {
+        if (this.reported) return;
+        this.reported = true;
+        clearInterval(this.tickTimer);
+        clearInterval(this.snapTimer);
+        for (const t of this.graceTimers.values()) clearTimeout(t);
+        const payload = JSON.stringify({t: "over", winnerSlot: this.world.winnerSlot, world: this.world});
+        for (const ws of this.sockets.values()) {
+            if (ws.readyState === ws.OPEN) ws.send(payload);
+        }
+        this.onFinished?.(this);
+    }
+
+    // Rows for the matches table — the server is the authority on results.
+    resultRows() {
+        return this.players.map((p) => ({
+            user_id: p.userId,
+            started_at: this.startedAt,
+            result: this.quit.has(p.userId) ? "quit" : this.world.winnerSlot === p.slot ? "win" : "loss",
+            nation_iso: p.iso,
+            opponents: this.world.nations.length - 1,
+            duration_s: Math.round(this.world.time),
+            mode: "online",
+            match_id: this.id,
+            stats: {},
+        }));
+    }
+
+    dispose() {
+        clearInterval(this.tickTimer);
+        clearInterval(this.snapTimer);
+        for (const t of this.graceTimers.values()) clearTimeout(t);
+        for (const ws of this.sockets.values()) {
+            try {
+                ws.close(1001, "match disposed");
+            } catch { /* already gone */
+            }
+        }
+    }
+}

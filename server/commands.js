@@ -1,0 +1,49 @@
+// Whitelisted client commands. Every entry receives (world, senderSlot, args)
+// and forwards to the engine with the SENDER'S slot — a client can never act
+// for another nation. commandAttack has no slot parameter in the engine, so
+// ownership is enforced here.
+import {
+    cancelProd,
+    commandAttack,
+    declareWar,
+    enqueueResearch,
+    makePeace,
+    moveUnit,
+    queueAircraft,
+    queueAmmo,
+    queueUnit,
+    scrapUnit,
+    setAwacsPatrol,
+    setPatrolSize,
+    setSail,
+    setWarhead,
+    stopSail,
+    unqueueResearch,
+} from "../src/game/engine.js";
+
+const num = (v) => (Number.isFinite(v) ? v : null);
+const str = (v, max = 40) => (typeof v === "string" ? v.slice(0, max) : null);
+
+export const COMMANDS = {
+    buyPlace: (w, slot, [type, lng, lat, territoryOk]) =>
+        queueUnit(w, slot, str(type), num(lng), num(lat), !!territoryOk),
+    commandAttack: (w, slot, [uid, tid]) => {
+        const u = w.units.find((x) => x.id === uid);
+        if (!u || u.slot !== slot) return {error: "not your unit"};
+        return commandAttack(w, uid, tid == null ? null : str(tid, 64));
+    },
+    research: (w, slot, [id]) => enqueueResearch(w, slot, str(id)),
+    unqueue: (w, slot, [id]) => unqueueResearch(w, slot, str(id)),
+    move: (w, slot, [uid, lng, lat, territoryOk]) => moveUnit(w, slot, str(uid, 64), num(lng), num(lat), !!territoryOk),
+    setSail: (w, slot, [uid, lng, lat]) => setSail(w, slot, str(uid, 64), num(lng), num(lat)),
+    stopSail: (w, slot, [uid]) => stopSail(w, slot, str(uid, 64)),
+    queueAircraft: (w, slot, [baseId, type]) => queueAircraft(w, slot, str(baseId, 64), str(type)),
+    setPatrolSize: (w, slot, [uid, size]) => setPatrolSize(w, slot, str(uid, 64), num(size)),
+    setAwacsPatrol: (w, slot, [uid, on]) => setAwacsPatrol(w, slot, str(uid, 64), !!on),
+    declareWar: (w, slot, [target]) => declareWar(w, slot, num(target)),
+    makePeace: (w, slot, [target]) => makePeace(w, slot, num(target)),
+    scrap: (w, slot, [uid]) => scrapUnit(w, slot, str(uid, 64)),
+    produceAmmo: (w, slot, [type]) => queueAmmo(w, slot, str(type)),
+    cancelProd: (w, slot, [i]) => cancelProd(w, slot, num(i)),
+    setWarhead: (w, slot, [uid, type]) => setWarhead(w, slot, str(uid, 64), str(type)),
+};
