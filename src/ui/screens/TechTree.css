@@ -1,0 +1,126 @@
+/* TechTree component-local styles — the "Requires: …" node line and the
+   research-queue preview panel. Global tech-tree layout stays in styles.css;
+   this file only adds the affordances introduced with the a11y/queue pass. */
+
+/* Prerequisite hint inside a locked/available node — names the gating tech so
+   players don't have to trace wires back to figure out what's blocking it. */
+.gd-tt-req {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    color: var(--faint);
+    margin-top: 2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Head toggle that opens the queue preview — reuses the mono/dim readout look
+   of the sibling status chips, but reads as an interactive control. */
+.gd-tt-queuebtn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--btn-bg);
+    cursor: pointer;
+    transition: border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+
+.gd-tt-queuebtn:hover {
+    color: var(--text);
+    border-color: var(--line);
+}
+
+.gd-tt-queuebtn.on {
+    color: var(--text);
+    border-color: var(--gold);
+}
+
+/* Queue preview — a compact panel floated over the top-left of the viewport,
+   listing the nation's research queue in order. Click a row to unqueue it. */
+.gd-tt-queue-panel {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 3;
+    width: 260px;
+    max-height: calc(100% - 28px);
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--panel-solid);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+.gd-tt-queue-head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.gd-tt-queue-list {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gd-tt-queue-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: var(--btn-bg);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 140ms var(--ease-out), background 140ms var(--ease-out);
+}
+
+.gd-tt-queue-row:hover {
+    border-color: var(--red);
+    background: var(--panel);
+}
+
+.gd-tt-queue-pos {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    min-width: 22px;
+}
+
+.gd-tt-queue-glyph {
+    font-size: 13px;
+    color: var(--dim);
+}
+
+.gd-tt-queue-name {
+    flex: 1;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gd-tt-queue-cost {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold);
+}

@@ -9,6 +9,8 @@ import {canQueue, TECH_PATHS, TECHS, UNIT_ICON, UNITS, unitLabel} from "../../ga
 // straight from the constants module alongside the rest of the tech-tree data.
 import {ERAS} from "../../game/data/constants.js";
 import UnitIcon from "../common/UnitIcon.jsx";
+import {useModal} from "../hooks/useModal.js";
+import "./TechTree.css";
 
 const TIERS = Math.max(...Object.values(TECHS).map((t) => t.tier));
 const PATHS = TECH_PATHS.length;
@@ -68,6 +70,23 @@ function Node({id, tech, nation, api, style, eraColor}) {
     // as a badge so players can read the arsenal payoff straight off the node.
     const unlockType = tech.unlocks;
     const unlockName = unlockType ? unitLabel(unlockType) : null;
+    // Prerequisite name (for the "Requires: …" line and the aria-label), shown
+    // only while the tech is still gated by an unmet earlier tier.
+    const reqName = tech.req ? TECHS[tech.req]?.name : null;
+    // Full spoken description: name → state → cost/time (when relevant) → payoff.
+    // Screen readers get the same picture sighted players read off color + badges.
+    const state = done ? "Done"
+        : isCur ? `In Progress ${Math.floor((rr.current?.progress ?? 0) * 100)}%`
+            : qi >= 0 ? `Queued #${qi + 1}`
+                : avail ? (poor ? `Available — insufficient points (need ${tech.cost})` : "Available")
+                    : "Locked";
+    const ariaLabel = [
+        `${tech.name}.`,
+        `${state}.`,
+        (!done && !isCur) ? `Costs ${tech.cost} points, ${tech.time} seconds.` : null,
+        (locked && reqName) ? `Requires ${reqName}.` : null,
+        unlockName ? `Unlocks ${unlockName}.` : null,
+    ].filter(Boolean).join(" ");
     const onClick = () => {
         if (avail && !poor) api.research(id);
         else if (qi >= 0) api.unqueue(id);
@@ -76,6 +95,7 @@ function Node({id, tech, nation, api, style, eraColor}) {
         <button className={`gd-tt-node ${cls} ${unlockType ? "has-unlock" : ""}`}
                 style={{...style, "--era": eraColor}} onClick={onClick}
                 disabled={locked || done || isCur || poor && avail}
+                aria-label={ariaLabel}
                 title={locked ? "Requires the previous tech." : poor ? `Need ◆ ${tech.cost}` : tech.desc}>
             {isCur &&
                 <i className="gd-tt-fill" style={{width: `${Math.min(100, (rr.current?.progress ?? 0) * 100)}%`}}/>}
@@ -89,6 +109,8 @@ function Node({id, tech, nation, api, style, eraColor}) {
                 {done ? "✓ Fielded" : isCur ? `${Math.floor((rr.current?.progress ?? 0) * 100)}%`
                     : qi >= 0 ? `#${qi + 1} in queue` : `◆ ${tech.cost} · ${tech.time}s`}
             </span>
+            {(locked || avail) && reqName &&
+                <span className="gd-tt-req">Requires: {reqName}</span>}
             {unlockType && (
                 <span className="gd-tt-unlock" title={`Unlocks: ${unlockName}`}>
                     <span className="gd-tt-unlock-medal">
@@ -108,11 +130,16 @@ export default function TechTree({world, api, mySlot, onClose}) {
     const nation = world.nations.find((n) => n.slot === mySlot);
     const rr = nation?.research || {queue: [], done: [], current: null};
 
+    // Modal a11y contract: focus trap + Escape-to-close + focus restore. Attached
+    // to the outer .gd-techtree container (which carries tabIndex={-1}).
+    const modalRef = useModal(onClose);
+
     const viewRef = useRef(null);
     const camRef = useRef({x: 0, y: 0, k: 1});
     const dragRef = useRef(null);
     const [cam, setCam] = useState({x: 0, y: 0, k: 1});
     const [eased, setEased] = useState(false);
+    const [queueOpen, setQueueOpen] = useState(false);
 
     const viewSize = () => {
         const el = viewRef.current;
@@ -176,14 +203,6 @@ export default function TechTree({world, api, mySlot, onClose}) {
         return () => el.removeEventListener("wheel", onWheel);
     }, [apply]);
 
-    useEffect(() => {
-        const h = (e) => {
-            if (e.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [onClose]);
-
     // Drag to pan — only when the press lands on empty canvas, so node clicks
     // still register. A small movement threshold keeps taps from being pans.
     const onPointerDown = (e) => {
@@ -215,14 +234,22 @@ export default function TechTree({world, api, mySlot, onClose}) {
     };
 
     return (
-        <div className="gd-techtree" role="dialog" aria-label="Research tree">
+        <div className="gd-techtree" ref={modalRef} tabIndex={-1}
+             role="dialog" aria-modal="true" aria-labelledby="gd-tt-title">
             <div className="gd-tt-head">
-                <span className="gd-tt-title">RESEARCH COMMAND</span>
+                <span className="gd-tt-title" id="gd-tt-title">RESEARCH COMMAND</span>
                 <span className="gd-tt-points">◆ {Math.floor(nation?.points ?? 0)}</span>
                 {rr.current && <span className="gd-tt-current">
                     {TECHS[rr.current.id].name} · {Math.floor((rr.current.progress ?? 0) * 100)}%
                 </span>}
-                {rr.queue.length > 0 && <span className="gd-tt-queue">{rr.queue.length} queued</span>}
+                {rr.queue.length > 0 && (
+                    <button className={`gd-tt-queuebtn ${queueOpen ? "on" : ""}`}
+                            onClick={() => setQueueOpen((v) => !v)}
+                            aria-expanded={queueOpen} aria-controls="gd-tt-queue-panel"
+                            title="Show the research queue">
+                        Queue ({rr.queue.length})
+                    </button>
+                )}
                 <div className="gd-tt-zoom" role="group" aria-label="Zoom">
                     <button className="gd-iconbtn" onClick={() => zoomBy(1 / 1.35)} title="Zoom out"
                             aria-label="Zoom out">−
@@ -308,6 +335,32 @@ export default function TechTree({world, api, mySlot, onClose}) {
                     )}
                 </div>
                 <div className="gd-tt-vignette" aria-hidden="true"/>
+
+                {queueOpen && rr.queue.length > 0 && (
+                    <div className="gd-tt-queue-panel" id="gd-tt-queue-panel"
+                         role="region" aria-label="Research queue">
+                        <div className="gd-tt-queue-head">Research Queue</div>
+                        <ul className="gd-tt-queue-list">
+                            {rr.queue.map((qid, i) => {
+                                const t = TECHS[qid];
+                                if (!t) return null;
+                                const glyph = TECH_PATHS.find((p) => p.id === t.path)?.glyph;
+                                return (
+                                    <li key={qid}>
+                                        <button className="gd-tt-queue-row" onClick={() => api.unqueue(qid)}
+                                                title={`Remove ${t.name} from the queue`}
+                                                aria-label={`Queue position ${i + 1}: ${t.name}, ${t.cost} points. Remove from queue.`}>
+                                            <span className="gd-tt-queue-pos">#{i + 1}</span>
+                                            <span className="gd-tt-queue-glyph" aria-hidden="true">{glyph}</span>
+                                            <span className="gd-tt-queue-name">{t.name}</span>
+                                            <span className="gd-tt-queue-cost">◆ {t.cost}</span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             <div className="gd-tt-foot">Drag to pan · scroll to zoom · click an unlocked tech to queue it, a queued tech

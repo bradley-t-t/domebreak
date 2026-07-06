@@ -1,12 +1,18 @@
 import {useEffect, useState} from "react";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {DEFAULT_KEYS, KEY_ACTIONS, keyLabel, keyToken, resolveKeys} from "../../game/platform/keybindings.js";
+import {useModal} from "../hooks/useModal.js";
 
 export default function SettingsPanel({settings, onChange, onClose}) {
     const set = (k, v) => onChange({...settings, [k]: v});
     const keys = resolveKeys(settings.keys);
     // Which action (if any) is currently listening for its next keypress.
     const [capturing, setCapturing] = useState(null);
+    // Focus-trap + Escape-to-close + focus restoration on the card. The keybinding
+    // capture listener below runs on the capturing phase and stops propagation, so
+    // while capturing, Escape cancels the capture before it can bubble to this
+    // modal's (bubble-phase) close handler — capture-cancel keeps priority.
+    const cardRef = useModal(onClose);
 
     // While capturing, the next keypress rebinds the action. Escape cancels the
     // capture; a key already bound to another action is swapped, so no two
@@ -36,35 +42,41 @@ export default function SettingsPanel({settings, onChange, onClose}) {
 
     return (
         <div className="gd-overlay center" onClick={onClose}>
-            <div className="gd-card gd-settings" onClick={(e) => e.stopPropagation()}>
+            <div className="gd-card gd-settings" ref={cardRef} tabIndex={-1}
+                 onClick={(e) => e.stopPropagation()}>
                 <div className="gd-menu-title sm">Settings</div>
                 <div className="gd-set-row"><span>Default Speed</span>
-                    <div className="gd-seg">{GAME_SPEEDS.map((s) => <button key={s}
+                    <div className="gd-seg" role="radiogroup"
+                         aria-label="Default speed">{GAME_SPEEDS.map((s) => <button key={s} role="radio"
+                                                                            aria-checked={settings.speed === s}
                                                                             className={settings.speed === s ? "active" : ""}
                                                                             onClick={() => set("speed", s)}>{s}×</button>)}</div>
                 </div>
                 <div className="gd-set-row"><span>Default View</span>
-                    <div className="gd-seg">
-                        <button className={settings.globe ? "active" : ""} onClick={() => set("globe", true)}>Globe
+                    <div className="gd-seg" role="radiogroup" aria-label="Default view">
+                        <button className={settings.globe ? "active" : ""} role="radio" aria-checked={settings.globe}
+                                onClick={() => set("globe", true)}>Globe
                         </button>
-                        <button className={!settings.globe ? "active" : ""} onClick={() => set("globe", false)}>Flat
+                        <button className={!settings.globe ? "active" : ""} role="radio" aria-checked={!settings.globe}
+                                onClick={() => set("globe", false)}>Flat
                         </button>
                     </div>
                 </div>
                 <div className="gd-set-row"><span>Music Volume</span>
-                    <div className="gd-set-slider"><input type="range" min="0" max="100"
+                    <div className="gd-set-slider"><input type="range" min="0" max="100" aria-label="Music volume"
                                                           value={Math.round((settings.musicVol ?? 0.5) * 100)}
                                                           onChange={(e) => set("musicVol", +e.target.value / 100)}/><b>{Math.round((settings.musicVol ?? 0.5) * 100)}%</b>
                     </div>
                 </div>
                 <div className="gd-set-row"><span>Effects Volume</span>
-                    <div className="gd-set-slider"><input type="range" min="0" max="100"
+                    <div className="gd-set-slider"><input type="range" min="0" max="100" aria-label="Effects volume"
                                                           value={Math.round((settings.sfxVol ?? 0.8) * 100)}
                                                           onChange={(e) => set("sfxVol", +e.target.value / 100)}/><b>{Math.round((settings.sfxVol ?? 0.8) * 100)}%</b>
                     </div>
                 </div>
                 <div className="gd-set-row"><span>Reduce Motion</span>
                     <button className={`gd-toggle ${settings.reduceMotion ? "on" : ""}`}
+                            aria-pressed={settings.reduceMotion} aria-label="Reduce motion"
                             onClick={() => set("reduceMotion", !settings.reduceMotion)}><span/></button>
                 </div>
 
@@ -84,6 +96,8 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                                 <div key={a.id} className="gd-set-row gd-keyrow">
                                     <span>{a.label}</span>
                                     <button className={`gd-key ${capturing === a.id ? "capturing" : ""}`}
+                                            aria-live={capturing === a.id ? "polite" : undefined}
+                                            aria-busy={capturing === a.id ? "true" : undefined}
                                             onClick={() => setCapturing((c) => (c === a.id ? null : a.id))}>
                                         {capturing === a.id ? "Press a key…" : keyLabel(keys[a.id])}
                                     </button>

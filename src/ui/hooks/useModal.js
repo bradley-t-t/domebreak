@@ -14,10 +14,13 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
 
 export function useModal(onClose, {autoFocus = true} = {}) {
     const ref = useRef(null);
-    // Keep the latest onClose without re-running the effect (which would drop and
-    // re-take focus every render).
+    // Keep the latest onClose without re-running the focus effect (which would
+    // drop and re-take focus every render). Updated in a commit-phase effect so
+    // the keydown handler always calls the current onClose.
     const onCloseRef = useRef(onClose);
-    onCloseRef.current = onClose;
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    });
 
     useEffect(() => {
         const node = ref.current;

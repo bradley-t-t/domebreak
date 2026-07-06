@@ -45,7 +45,14 @@ export default function SplashSequence({reduceMotion, onDone}) {
                     <div className="gd-splash-name">TRENTON TAYLOR</div>
                 </div>
             )}
-            <div className="gd-splash-skip">press any key to skip</div>
+            <div className="gd-splash-skip" role="button" tabIndex={0} aria-label="Skip intro"
+                 onClick={finish}
+                 onKeyDown={(e) => {
+                     if (e.key === "Enter" || e.key === " ") {
+                         e.preventDefault();
+                         finish();
+                     }
+                 }}>press any key to skip</div>
         </div>
     );
 }

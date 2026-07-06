@@ -22,8 +22,9 @@ import {
     WARHEAD_ORDER,
     WARHEADS,
 } from "../../game/engine.js";
-import {DEFAULT_BUILD_TIME, FALLOUT, WARHEAD_ICON} from "../../game/data/constants.js";
+import {DEFAULT_BUILD_TIME, FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
 import {fmtNet} from "../common/format.js";
+import "./ProductionScreen.css";
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // Space assets (the Space Command HQ + everything that requires it) group under
@@ -83,6 +84,36 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     const icon = (it) => (it.kind === "ammo" ? WARHEAD_ICON[it.type] : UNIT_ICON[it.type]);
     const timeOf = (it) => (it.kind === "ammo" ? WARHEADS[it.type].prodTime : (UNITS[it.type].buildTime || DEFAULT_BUILD_TIME));
 
+    // Research-adjusted stat sheet for a unit *type* (nothing placed yet, so we
+    // read UNITS[type] and apply this nation's research multipliers directly —
+    // mirrors LiveGame.unitStats()/queries.js). Returns compact label/value rows
+    // relevant to the unit's kind; kept dense so cards don't bloat.
+    const km = (v) => `${Math.round(v).toLocaleString()} km`;
+    const statsFor = (u) => {
+        const rows = [];
+        if (u.kind === "defense") {
+            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, u.intercept + (me?.interceptAdd ?? 0)) * 100)}%`]);
+            rows.push(["Engage Range", km(u.range * (me?.defRangeMult ?? 1))]);
+            if (u.minRange) rows.push(["Min Range", km(u.minRange)]);
+            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Shot Cost", `◆ ${u.fireCost}`]);
+        } else if (u.kind === "offense") {
+            rows.push(["Damage", `${Math.round(u.damage * (me?.dmgMult ?? 1))}`]);
+            rows.push(["Strike Range", km(u.range * (me?.rangeMult ?? 1))]);
+            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            if (u.speed) rows.push(["Missile Spd", `${u.speed} km/s`]);
+        } else if (u.detect) {
+            rows.push(["Detection", km((u.radarKm || u.range) * (me?.radarMult ?? 1))]);
+            rows.push(["Track Grade", u.warnOnly ? "Warning Only" : "Fire Control"]);
+        } else if (u.kind === "industry") {
+            rows.push(["Output", `+${u.output}/s`]);
+            rows.push(["GDP", `+$${u.gdpAdd}T`]);
+        }
+        if (u.navalSpeed) rows.push(["Speed", `${u.navalSpeed} kn`]);
+        if (u.airSpeed) rows.push(["Air Speed", `${u.airSpeed} kn`]);
+        return rows;
+    };
+
     const unitCard = (key, u) => {
         // null when buildable, else a short reason (locked by tech/prereq/cap).
         // Locked cards render greyed with a lock glyph and the reason as the line
@@ -99,10 +130,12 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 : arm ? `Fires ${arm}`
                     : u.kind === "industry" ? `+${u.output}/s income · +$${u.gdpAdd}T GDP`
                         : `${cap(u.kind)}${u.range ? ` · ${u.range.toLocaleString()} km` : ""}`;
+        const rows = lock ? [] : statsFor(u);
         return (
             <button key={key}
                     className={`gd-ucard ${placing === key ? "active" : ""} ${lock ? "locked" : afford ? "" : "poor"}`}
                     onClick={() => !lock && pick(key)} disabled={!!lock} aria-disabled={!!lock}
+                    aria-label={lock ? `${unitLabel(key, me?.iso)} — locked: ${lock}` : `${unitLabel(key, me?.iso)}, ◆ ${cost}`}
                     title={lock || u.hint || `${cap(u.kind)} · builds in ${u.buildTime}s`}>
                 {lock && <span className="gd-ucard-lock" aria-hidden="true">🔒</span>}
                 <span className="gd-ucard-ico" data-kind={u.kind} data-domain={u.domain || "land"}>
@@ -114,6 +147,13 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         <span className="gd-ucard-cost">◆ {cost}</span>
                     </div>
                     <span className="gd-ucard-line">{line}</span>
+                    {rows.length > 0 && (
+                        <dl className="gd-ucard-stats">
+                            {rows.map(([k, v]) => (
+                                <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+                            ))}
+                        </dl>
+                    )}
                     <div className="gd-ucard-foot">
                         <span>⧗ {u.buildTime}s</span>
                         {u.kind !== "industry" && <span>−{u.upkeep}/s</span>}
@@ -136,7 +176,8 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     onClick={(e) => {
                         for (let i = 0, n = e.shiftKey ? 5 : 1; i < n; i++) if (api.produceAmmo(key)?.error) break;
                     }}
-                    title={`${wh.name} — ${wh.desc}${fallout ? " · Contaminates ground zero with radioactive fallout." : ""} (Shift-click ×5)`}>
+                    aria-label={`${wh.name}, ◆ ${wh.prodCost}, ${stock} in stock. Shift-click to queue five.`}
+                    title={`${wh.name} — ${wh.desc}${fallout ? " · Contaminates ground zero with radioactive fallout." : ""}`}>
                 <span className="gd-ucard-ico"><UnitIcon name={WARHEAD_ICON[key]} size={30}/></span>
                 <div className="gd-ucard-body">
                     <div className="gd-ucard-top">
@@ -148,6 +189,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     <div className="gd-ucard-foot">
                         <span>⧗ {wh.prodTime}s</span>
                         <span className="gd-ucard-stock">{stock} in stock</span>
+                        <span className="gd-ucard-shift" aria-hidden="true">⇧ ×5</span>
                         {qn > 0 && <span className="gd-ucard-q">{qn} queued</span>}
                     </div>
                 </div>
@@ -197,11 +239,13 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         <div><span>Fielded</span><b>{mine.length}</b></div>
                     </div>
                     {net < 0 && <div className="gd-prod-warn">In deficit — build Industry or scrap units to recover.</div>}
-                    <nav className="gd-prod-cats">
+                    <nav className="gd-prod-cats" role="tablist" aria-label="Arsenal categories">
                         {CATS.map((c) => (
                             <button key={c.id} className={`gd-prod-cat ${cat === c.id ? "active" : ""}`}
+                                    role="tab" aria-selected={cat === c.id}
+                                    aria-label={`${c.name}, ${countFor(c.id)} systems`}
                                     onClick={() => setCat(c.id)}>
-                                <span className="gd-prod-cat-g">{c.glyph}</span>
+                                <span className="gd-prod-cat-g" aria-hidden="true">{c.glyph}</span>
                                 <span className="gd-prod-cat-n">{c.name}</span>
                                 <span className="gd-prod-cat-c">{countFor(c.id)}</span>
                             </button>
@@ -221,7 +265,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <aside className="gd-prod-queue">
                     <h3 className="gd-queue-h">Build Queue {(cur ? 1 : 0) + queue.length > 0 &&
                         <span>{(cur ? 1 : 0) + queue.length}</span>}</h3>
-                    <div className="gd-queue-list">
+                    <div className="gd-queue-list" aria-live="polite" aria-label="National build queue">
                         {!cur && queue.length === 0 && <div className="gd-queue-empty">The line is idle. Pick a system to
                             build it.</div>}
                         {cur && (

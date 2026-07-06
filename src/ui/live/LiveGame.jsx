@@ -1055,7 +1055,9 @@ export default function LiveGame({
                                 offset={air ? [0, -alt * 30] : undefined}>
                             <div
                                 className={`gd-unit ${u.slot === mySlot ? "mine" : "enemy"} ${u.id === selUnit ? "sel" : ""}`}
-                                title={labelOf(u.type, u.slot)} onClick={(e) => onUnitClick(u, e)}
+                                title={labelOf(u.type, u.slot)}
+                                aria-label={`${labelOf(u.type, u.slot)} — ${nationName(u.slot)}`}
+                                onClick={(e) => onUnitClick(u, e)}
                                 onContextMenu={(e) => openUnitMenu(u, e)}
                                 onMouseEnter={(e) => {
                                     if (!placing && !moving) setHover({
@@ -1103,9 +1105,14 @@ export default function LiveGame({
                 {meBadge}
             </div>
 
-            <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
-                     onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
-            <NewsTicker world={w} mySlot={mySlot}/>
+            {/* Top command bar + news ticker share one centred lane that reserves
+                gutters for the left nation panel and the right corner controls, so
+                the bar can never crowd the globe/help/menu buttons. */}
+            <div className="gd-tophud">
+                <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
+                         onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
+                <NewsTicker world={w} mySlot={mySlot}/>
+            </div>
             {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
@@ -1123,10 +1130,10 @@ export default function LiveGame({
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
 
             {moving && <div
-                className="gd-move-hint">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
+                className="gd-move-hint" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
                 <button className="gd-mini" onClick={() => setMoving(null)}>Cancel</button>
             </div>}
-            {disembarkId && <div className="gd-move-hint">Landing — click a coastal point inside your territory.
+            {disembarkId && <div className="gd-move-hint" role="status" aria-live="polite">Landing — click a coastal point inside your territory.
                 <button className="gd-mini" onClick={() => setDisembarkId(null)}>Cancel</button>
             </div>}
 
@@ -1148,7 +1155,7 @@ export default function LiveGame({
                 const left = hover.x + 18 > window.innerWidth - 250 ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 190);
                 return (
-                    <div className="gd-probe" style={{left, top}}>
+                    <div className="gd-probe" style={{left, top}} aria-hidden="true">
                         <div className="gd-probe-h">{iso ? <Flag iso={iso}/> : null}<span>{name}</span></div>
                         <div className="gd-detail-grid">
                             {nation ? (<>
@@ -1172,7 +1179,7 @@ export default function LiveGame({
                 const left = flip ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 200);
                 return (
-                    <div className="gd-probe" style={{left, top}}>
+                    <div className="gd-probe" style={{left, top}} aria-hidden="true">
                         {hover.kind === "unit" ? (<>
                             <div className="gd-probe-h"><UnitIcon name={UNIT_ICON[hoverEnt.type]}
                                                                   color={teamColor(hoverEnt.slot)}
@@ -1237,11 +1244,12 @@ export default function LiveGame({
                 );
             })()}
 
-            {err && <div className={`gd-toast ${err.kind}`}>{err.msg}</div>}
+            {err && <div className={`gd-toast ${err.kind}`} role="alert"
+                         aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {w.over && (
-                <div className="gd-overlay center">
+                <div className="gd-overlay center" role="dialog" aria-modal="true" aria-labelledby="gd-outcome-title">
                     <div className="gd-card wide gd-pop">
-                        <div
+                        <div id="gd-outcome-title"
                             className={`gd-outcome ${w.winnerSlot === mySlot ? "win" : w.winnerSlot === null ? "draw" : "loss"}`}>{w.winnerSlot === mySlot ? "Victory" : w.winnerSlot === null ? "Annihilation" : "Defeated"}</div>
                         <p className="gd-sub">{w.winnerSlot === mySlot ? "You are the last power standing." : "The war is over."}</p>
                         <button className="gd-btn primary" onClick={onPause}>Menu</button>

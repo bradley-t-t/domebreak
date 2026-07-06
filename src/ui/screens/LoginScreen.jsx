@@ -56,21 +56,25 @@ export default function LoginScreen() {
             <div className="gd-menu-inner">
                 <h1 className="gd-menu-title">GOLDEN<span>DOME</span></h1>
                 <p className="gd-menu-tag">Global Missile Command</p>
-                <form className="gd-card gd-login" onSubmit={submit}>
-                    <div className="gd-menu-title sm">{mode === "signin" ? "Sign In" : "Create Account"}</div>
-                    <label className="gd-label">Email</label>
-                    <input className="gd-input" type="email" autoComplete="email" value={email}
-                           onChange={(e) => setEmail(e.target.value)} disabled={busy}/>
+                <form className="gd-card gd-login" onSubmit={submit} aria-labelledby="gd-login-title">
+                    <div className="gd-menu-title sm" id="gd-login-title">{mode === "signin" ? "Sign In" : "Create Account"}</div>
+                    <label className="gd-label" htmlFor="gd-login-email">Email</label>
+                    <input id="gd-login-email" className="gd-input" type="email" autoComplete="email" value={email}
+                           onChange={(e) => setEmail(e.target.value)} disabled={busy}
+                           aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
                     {mode === "signup" && <>
-                        <label className="gd-label mt">Username</label>
-                        <input className="gd-input" maxLength={24} autoComplete="username" value={username}
-                               onChange={(e) => setUsername(e.target.value)} disabled={busy}/>
+                        <label className="gd-label mt" htmlFor="gd-login-username">Username</label>
+                        <input id="gd-login-username" className="gd-input" maxLength={24} autoComplete="username"
+                               value={username} onChange={(e) => setUsername(e.target.value)} disabled={busy}/>
                     </>}
-                    <label className="gd-label mt">Password</label>
-                    <input className="gd-input" type="password"
+                    <label className="gd-label mt" htmlFor="gd-login-password">Password</label>
+                    <input id="gd-login-password" className="gd-input" type="password"
                            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                           value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy}/>
-                    {error && <p className="gd-login-err">{error}</p>}
+                           value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy}
+                           aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
+                    <div aria-live="assertive">
+                        {error && <p className="gd-login-err" id="gd-login-err">{error}</p>}
+                    </div>
                     <button className="gd-btn primary block gd-login-submit" type="submit" disabled={!canSubmit}>
                         {busy ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
                     </button>

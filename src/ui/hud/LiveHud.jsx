@@ -2,6 +2,7 @@ import {gdpOf, industryOutputOf, netIncomeOf, populationOf} from "../../game/eng
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtNet, fmtPop} from "../common/format.js";
+import "./LiveHud.css";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const SEC_PER_GS = 1800; // 30 in-game minutes per game-second
@@ -36,16 +37,20 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
             <div className="gd-hud-sep"/>
             <div className="gd-points"><span className="gd-points-val">{Math.floor(myNation?.points ?? 0)}</span><span
                 className={`gd-points-label ${net < 0 ? "deficit" : ""}`}>PTS · {fmtNet(net)}/s</span>
+                {net < 0 && <span className="gd-deficit-chip">DEFICIT</span>}
             </div>
             <div className="gd-hud-sep"/>
             <div className="gd-speed"
                  title={`${keyLabel(K.pause)} — Pause · ${keyLabel(K.speedDown)}/${keyLabel(K.speedUp)} — Speed · 1–5 — Speed Level`}>
                 <button className={`gd-speedbtn ${world.paused ? "active" : ""}`} onClick={api.pause}
+                        aria-pressed={world.paused}
                         title={`Pause (${keyLabel(K.pause)})`}>⏸
                 </button>
-                <button className="gd-speedbtn" onClick={api.play} title={`Resume (${keyLabel(K.pause)})`}>▶</button>
+                <button className="gd-speedbtn" onClick={api.play} aria-pressed={!world.paused}
+                        title={`Resume (${keyLabel(K.pause)})`}>▶</button>
                 {GAME_SPEEDS.map((s, i) => <button key={s}
                                                    className={`gd-speedbtn ${!world.paused && world.speed === s ? "active" : ""}`}
+                                                   aria-pressed={!world.paused && world.speed === s}
                                                    onClick={() => api.setSpeed(s)}
                                                    title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
             </div>
@@ -55,7 +60,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
                 className="gd-hud-sub">Industry +{ind.toFixed(1)}/s</span></div>
             <div className="gd-hud-sep"/>
             <div className="gd-hud-cell right"><span className="gd-hud-lbl">Population</span><span
-                className="gd-hud-val">{fmtPop(pop)}</span><span className="gd-hud-sub">{alive} Powers Left</span></div>
+                className="gd-hud-val">{fmtPop(pop)}</span><span className="gd-hud-sub" aria-live="polite">{alive} Powers Left</span></div>
             {onPanel && <>
                 <div className="gd-hud-sep"/>
                 <div className="gd-hud-nav">
