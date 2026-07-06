@@ -5197,3 +5197,430 @@ input[type="range"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================================= *
+ * Nation panel (left dock) + News ticker (top-bar extension)    *
+ * ============================================================= */
+
+.gd-natpanel {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 5;
+    width: 246px;
+    max-height: calc(100vh - 132px);
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow), inset 0 1px 0 var(--hair);
+    backdrop-filter: blur(14px);
+    pointer-events: auto;
+    overflow: hidden;
+    animation: gdDropIn 300ms var(--ease-drawer);
+}
+
+.gd-natpanel.collapsed {
+    width: 246px;
+}
+
+.gd-natpanel-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-flag {
+    width: 26px;
+    height: 18px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--line);
+    flex: 0 0 auto;
+}
+
+.gd-natpanel-id {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+    min-width: 0;
+    flex: 1;
+}
+
+.gd-natpanel-name {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gd-natpanel-tag {
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-collapse {
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--dim);
+    font-size: 11px;
+    flex: 0 0 auto;
+    transition: border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+}
+
+.gd-natpanel-collapse:hover {
+    color: var(--text);
+    border-color: var(--line-soft);
+}
+
+.gd-natpanel-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--hair);
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 9px 12px;
+    background: var(--panel);
+}
+
+.gd-natpanel-sl {
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-sv {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.gd-natpanel-sv.neg {
+    color: var(--red);
+}
+
+.gd-natpanel-of {
+    color: var(--faint);
+    font-weight: 400;
+    font-size: 12px;
+}
+
+.gd-natpanel-ind {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--hair);
+}
+
+.gd-natpanel-ind-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.gd-natpanel-ind-v {
+    font-family: var(--display);
+    font-size: 12.5px;
+    color: var(--dim);
+}
+
+.gd-natpanel-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--hair);
+    overflow: hidden;
+}
+
+.gd-natpanel-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--dim), var(--text));
+    transition: width 400ms var(--ease-out);
+}
+
+.gd-natpanel-terr-h {
+    padding: 9px 12px 5px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-natpanel-terr {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 6px 8px;
+}
+
+.gd-terr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms var(--ease-out);
+}
+
+.gd-terr-row:hover {
+    background: var(--hair);
+}
+
+.gd-terr-row.dead {
+    opacity: 0.55;
+}
+
+.gd-terr-main {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.gd-terr-name {
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 132px;
+}
+
+.gd-terr-state {
+    font-size: 10px;
+    color: var(--faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 132px;
+}
+
+.gd-terr-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex: 0 0 auto;
+}
+
+.gd-terr-pop {
+    font-family: var(--display);
+    font-size: 11.5px;
+    color: var(--dim);
+}
+
+.gd-terr-pill {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--dim);
+}
+
+.gd-terr-pill.secure {
+    color: var(--dim);
+    border-color: var(--line);
+}
+
+.gd-terr-pill.strained {
+    color: #d79a3f;
+    border-color: rgba(215, 154, 63, 0.5);
+}
+
+.gd-terr-pill.critical {
+    color: var(--red);
+    border-color: rgba(224, 87, 79, 0.5);
+}
+
+.gd-terr-pill.lost {
+    color: var(--faint);
+    border-color: var(--line);
+}
+
+.gd-terr-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 12px;
+}
+
+/* News ticker — a scrolling strip tucked beneath the centred top bar. */
+.gd-ticker {
+    position: absolute;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    align-items: stretch;
+    width: min(720px, 80vw);
+    height: 28px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+    pointer-events: auto;
+    animation: gdDropIn 340ms var(--ease-drawer);
+}
+
+.gd-ticker-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 11px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--faint);
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    flex: 0 0 auto;
+}
+
+.gd-ticker-tag::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: gdPulse 2s ease-in-out infinite;
+}
+
+@keyframes gdPulse {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.gd-ticker-window {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.gd-ticker-track {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    animation-name: gdTickerScroll;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform;
+}
+
+.gd-ticker:hover .gd-ticker-track {
+    animation-play-state: paused;
+}
+
+.gd-ticker-run {
+    display: inline-flex;
+    flex-wrap: nowrap;
+}
+
+.gd-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.gd-ticker-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--faint);
+    flex: 0 0 auto;
+}
+
+.gd-ticker-item.info .gd-ticker-dot {
+    background: var(--faint);
+}
+
+.gd-ticker-item.good {
+    color: var(--text);
+}
+
+.gd-ticker-item.good .gd-ticker-dot {
+    background: var(--text);
+}
+
+.gd-ticker-item.alert .gd-ticker-dot {
+    background: #d79a3f;
+}
+
+.gd-ticker-item.danger {
+    color: #f0a39d;
+}
+
+.gd-ticker-item.danger .gd-ticker-dot {
+    background: var(--red);
+    box-shadow: 0 0 5px rgba(224, 87, 79, 0.8);
+}
+
+.gd-ticker-idle {
+    padding: 0 16px;
+    font-size: 12px;
+    color: var(--faint);
+}
+
+@keyframes gdTickerScroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* Motion-sensitive users: freeze the scroll, show the latest headlines static. */
+@media (prefers-reduced-motion: reduce) {
+    .gd-ticker-track {
+        animation: none;
+    }
+
+    .gd-ticker-run:nth-child(2) {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .gd-natpanel {
+        width: 210px;
+    }
+
+    .gd-ticker {
+        display: none;
+    }
+}
