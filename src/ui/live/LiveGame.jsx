@@ -131,6 +131,10 @@ export default function LiveGame({
     // Tactical allegiance color for anything drawn on the map: you = white,
     // hostile (at war) = red, everyone else = neutral grey.
     const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : "#8b94a1");
+    // Your leadership airlift — the transport ferries and their fighter escorts —
+    // reads green so the evacuation stands out from the rest of your white forces.
+    const isLeadAirlift = (u) => u.mission?.role === "leadershipFerry" || u.mission?.role === "leadershipEscort";
+    const unitColor = (u) => (u.slot === mySlot && isLeadAirlift(u) ? "#46d38a" : teamColor(u.slot));
     const nationName = (slot) => w.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`;
     const labelOf = (type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso);
     const armOf = (type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso);
@@ -1098,7 +1102,7 @@ export default function LiveGame({
                                 } : h))}
                                 onMouseLeave={() => setHover((h) => (h && h.kind === "unit" && h.id === u.id ? null : h))}>
               <span className="inline-flex transition-transform duration-[170ms] ease-linear" style={Object.keys(iconStyle).length ? iconStyle : undefined}>
-                <UnitIcon name={iconName} color={teamColor(u.slot)} size={air ? 16 : 22}/>
+                <UnitIcon name={iconName} color={unitColor(u)} size={air ? 16 : 22}/>
               </span>
                             </div>
                         </Marker>
