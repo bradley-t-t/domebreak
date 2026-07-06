@@ -30,7 +30,7 @@ import {
     sensorsCover,
     sensorsOf
 } from "./queries.js";
-import {findTarget, launch, mirvSplit, resolveHit, trackPoint} from "./combat.js";
+import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
 import {canQueue, commandAttack, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
@@ -457,8 +457,12 @@ export function step(w, dt) {
             it._dead = true;
             continue;
         }
-        it.toLng = tgt.lng;
-        it.toLat = tgt.lat;
+        // Lead pursuit: steer toward where the target *will* be, not where it is.
+        // The kill test still measures the real separation (below), so leading only
+        // shapes the flight path — it can't teleport a hit.
+        const aim = leadInterceptPoint(it, tgt);
+        it.toLng = aim[0];
+        it.toLat = aim[1];
         const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
         const stepKm = it.speed * dt;
         it.altNorm = (tgt.altNorm ?? 0) * Math.min(1, Math.max(0, 1 - dist / (it.launchDist || 1)));
@@ -487,9 +491,10 @@ export function step(w, dt) {
                 });
             }
         } else {
-            const f = stepKm / dist;
-            it.lng += (tgt.lng - it.lng) * f;
-            it.lat += (tgt.lat - it.lat) * f;
+            const aimDist = haversine(it.lng, it.lat, aim[0], aim[1]) || 1;
+            const f = Math.min(1, stepKm / aimDist);
+            it.lng += (aim[0] - it.lng) * f;
+            it.lat += (aim[1] - it.lat) * f;
         }
     }
 

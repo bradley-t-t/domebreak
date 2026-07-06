@@ -164,6 +164,6 @@ export {
 
 export {hangarCapOf} from "./sim/aircraft.js";
 
-export {trackPoint} from "./sim/combat.js";
+export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {step} from "./sim/tick.js";
