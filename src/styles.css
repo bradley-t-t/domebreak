@@ -1729,6 +1729,91 @@ input {
     }
 }
 
+/* ---- radioactive fallout: animated cloud epicenter ---- */
+/* --i (0..1) is the live cloud intensity from the sim: it fades the whole
+   epicenter in as the cloud ramps and out as it decays. */
+.gd-fallout {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    pointer-events: none;
+    opacity: calc(0.25 + 0.75 * var(--i, 1));
+}
+
+.gd-fallout span {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+}
+
+.gd-fallout-glow {
+    background: radial-gradient(circle, rgba(160, 255, 74, 0.5) 0%, rgba(120, 220, 40, 0.22) 42%, rgba(90, 180, 30, 0) 72%);
+    animation: gdFalloutGlow 2.4s ease-in-out infinite;
+}
+
+.gd-fallout-ring {
+    border: 1px solid rgba(182, 255, 92, 0.75);
+    box-shadow: 0 0 6px rgba(140, 255, 58, 0.5);
+    animation: gdFalloutRing 2.8s ease-out infinite;
+}
+
+.gd-fallout-ring.two {
+    animation-delay: 1.4s;
+}
+
+.gd-fallout-core {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+    color: #c9ff7a;
+    text-shadow: 0 0 5px rgba(140, 255, 58, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+    animation: gdFalloutCore 2.4s ease-in-out infinite;
+}
+
+@keyframes gdFalloutGlow {
+    0%, 100% {
+        transform: scale(0.9);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
+@keyframes gdFalloutRing {
+    0% {
+        transform: scale(0.35);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes gdFalloutCore {
+    0%, 100% {
+        transform: scale(0.95);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-fallout-glow, .gd-fallout-ring, .gd-fallout-ring.two, .gd-fallout-core {
+        animation: none;
+    }
+    .gd-fallout-ring {
+        opacity: 0.4;
+    }
+}
+
 /* ================= game shell: menus, context, pins, details ================= */
 .gd-app {
     position: relative;
