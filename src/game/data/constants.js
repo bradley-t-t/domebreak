@@ -1032,10 +1032,10 @@ export function eraForTier(tier) {
 // override. Data-driven per coding standards — no scaling numbers in systems.
 //   cost(tier) = round(TECH_COST_BASE * TECH_COST_GROWTH ^ (tier-1))
 //   time(tier) = round(TECH_TIME_BASE * TECH_TIME_GROWTH ^ (tier-1))
-export const TECH_COST_BASE = 180;
-export const TECH_COST_GROWTH = 1.34;
-export const TECH_TIME_BASE = 16;
-export const TECH_TIME_GROWTH = 1.22;
+export const TECH_COST_BASE = 900;
+export const TECH_COST_GROWTH = 1.40;
+export const TECH_TIME_BASE = 80;
+export const TECH_TIME_GROWTH = 1.30;
 
 // Derive the escalating research cost (points) for a 1-based tier.
 export function techCostForTier(tier) {

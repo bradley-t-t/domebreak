@@ -56,9 +56,9 @@ cost(T) = round(TECH_COST_BASE * TECH_COST_GROWTH^(T-1))
 time(T) = round(TECH_TIME_BASE * TECH_TIME_GROWTH^(T-1))
 ```
 
-With `TECH_COST_BASE=180`, `TECH_COST_GROWTH=1.34`, `TECH_TIME_BASE=16`,
-`TECH_TIME_GROWTH=1.22`, sampled: T1 ≈ 180 pts / 16 s · T6 ≈ 778 / 43 ·
-T12 ≈ 4502 / 143. Helpers `techCostForTier(T)` / `techTimeForTier(T)` compute
+With `TECH_COST_BASE=900`, `TECH_COST_GROWTH=1.40`, `TECH_TIME_BASE=80`,
+`TECH_TIME_GROWTH=1.30`, sampled: T1 ≈ 900 pts / 80 s · T6 ≈ 4840 / 297 ·
+T12 ≈ 36,440 / 1433. Helpers `techCostForTier(T)` / `techTimeForTier(T)` compute
 these; `chain()` applies them as defaults. A per-tech `cost`/`time` override wins.
 
 ## 5. Edge Cases
