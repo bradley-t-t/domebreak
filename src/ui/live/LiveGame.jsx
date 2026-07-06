@@ -1103,9 +1103,14 @@ export default function LiveGame({
                 {meBadge}
             </div>
 
-            <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
-                     onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
-            <NewsTicker world={w} mySlot={mySlot}/>
+            {/* Top command bar + news ticker share one centred lane that reserves
+                gutters for the left nation panel and the right corner controls, so
+                the bar can never crowd the globe/help/menu buttons. */}
+            <div className="gd-tophud">
+                <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
+                         onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
+                <NewsTicker world={w} mySlot={mySlot}/>
+            </div>
             {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
