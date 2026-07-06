@@ -131,10 +131,15 @@ export default function LiveGame({
     // Tactical allegiance color for anything drawn on the map: you = white,
     // hostile (at war) = red, everyone else = neutral grey.
     const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : "#8b94a1");
-    // Your leadership airlift — the transport ferries and their fighter escorts —
-    // reads green so the evacuation stands out from the rest of your white forces.
-    const isLeadAirlift = (u) => u.mission?.role === "leadershipFerry" || u.mission?.role === "leadershipEscort";
-    const unitColor = (u) => (u.slot === mySlot && isLeadAirlift(u) ? "#46d38a" : teamColor(u.slot));
+    // Your leadership airlift stands out from your white forces: a transport
+    // ferry reads GREEN while it's carrying leaders and YELLOW when flying empty
+    // (outbound to a pickup or back home), and its fighter escorts read green.
+    const unitColor = (u) => {
+        if (u.slot !== mySlot) return teamColor(u.slot);
+        if (u.mission?.role === "leadershipFerry") return u.mission.cargo > 0 ? "#46d38a" : "#f4c02a";
+        if (u.mission?.role === "leadershipEscort") return "#46d38a";
+        return teamColor(u.slot);
+    };
     const nationName = (slot) => w.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`;
     const labelOf = (type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso);
     const armOf = (type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso);
