@@ -42,7 +42,7 @@ import {
     vitalityOf
 } from "../../game/engine.js";
 import {toGid3} from "../../game/data/iso3.js";
-import {GAME_SPEEDS} from "../../game/data/constants.js";
+import {GAME_SPEEDS, START_CAM} from "../../game/data/constants.js";
 import {keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
@@ -105,6 +105,10 @@ export default function LiveGame({
     const [hover, setHover] = useState(null);
     const [pins, setPins] = useState([]);
     const [err, setErr] = useState(null);
+    // Loading veil: covers the map from mount until the style + tiles finish
+    // (map "idle"), so the player only sees the world once it's fully drawn and
+    // already framed on their capital. Failsafe timer lifts it regardless.
+    const [booting, setBooting] = useState(true);
     // Seed with whatever the world already carries (loaded saves keep their last
     // 60 events) so mount doesn't replay a backlog of explosions and sounds.
     const seen = useRef(null);
@@ -814,12 +818,56 @@ export default function LiveGame({
     const selectedCity = w.cities.find((c) => c.id === selCity);
     const hoverEnt = hover && (hover.kind === "unit" ? visUnits.find((u) => u.id === hover.id) : w.cities.find((c) => c.id === hover.id));
 
+    // Open the game already looking at home: center on the player's capital at a
+    // zoom that fits most of their nation. The frame is the geographic span of
+    // my cities around the capital, padded and clamped so a city-state still
+    // keeps regional context. fitBounds handles the projection math (flat/globe).
+    const frameOnCapital = (m) => {
+        const mine = w.cities.filter((c) => c.slot === mySlot && c.alive);
+        if (!mine.length) return;
+        const cap = mine.find((c) => c.cap) || mine[0];
+        // Widest deviation of any of my cities from the capital, wrapping longitude
+        // across the antimeridian so a nation split by ±180 still frames sanely.
+        let dLat = 0.05, dLng = 0.05;
+        for (const c of mine) {
+            let dl = c.lng - cap.lng;
+            if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
+            dLat = Math.max(dLat, Math.abs(c.lat - cap.lat));
+            dLng = Math.max(dLng, Math.abs(dl));
+        }
+        dLat *= START_CAM.spanPad;
+        dLng *= START_CAM.spanPad;
+        try {
+            m.fitBounds(
+                [[cap.lng - dLng, cap.lat - dLat], [cap.lng + dLng, cap.lat + dLat]],
+                {padding: START_CAM.padPx, maxZoom: START_CAM.maxZoom, duration: 0}
+            );
+        } catch { /* projection not ready — keep the default view */ }
+    };
+
+    // Map is live: frame home, then hold the loading veil until the tiles settle
+    // (map "idle"), with a hard failsafe so a slow/never-idling map still reveals.
+    const handleMap = (m) => {
+        mapRef.current = m;
+        setMapReady((x) => x + 1);
+        frameOnCapital(m);
+        let settled = false;
+        const reveal = () => {
+            if (settled) return;
+            settled = true;
+            setBooting(false);
+        };
+        try {
+            m.once("idle", reveal);
+        } catch {
+            reveal();
+        }
+        setTimeout(reveal, START_CAM.bootMs);
+    };
+
     return (
         <>
-            <WorldMap globe={globe} onMap={(m) => {
-                mapRef.current = m;
-                setMapReady((x) => x + 1);
-            }} interactiveLayerIds={CITY_LAYERS}
+            <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <Source id="gd-regions" type="vector" url={REGIONS_URL}>
@@ -1155,6 +1203,15 @@ export default function LiveGame({
                     </div>
                 </div>
             )}
+
+            <div className={`gd-boot ${booting ? "" : "gone"}`} aria-hidden={!booting}>
+                <div className="gd-boot-inner">
+                    {myNation?.iso && <Flag iso={myNation.iso} className="gd-boot-flag"/>}
+                    <div className="gd-boot-title">{myNation?.name || "Command"}</div>
+                    <div className="gd-boot-sub">Establishing theater command</div>
+                    <div className="gd-boot-bar"><i/></div>
+                </div>
+            </div>
         </>
     );
 }
