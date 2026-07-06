@@ -1,0 +1,48 @@
+/* Production screen — component-local additions layered over the global .gd-ucard
+   arsenal cards. House style only: mono data, faint uppercase micro-labels, a
+   hairline divider, squared corners, no glow. */
+
+/* Research-adjusted stat readout on each unit card — a dense two-column grid so
+   the player can evaluate before buying without the card ballooning. */
+.gd-ucard-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 12px;
+    margin: 5px 0 1px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line-soft);
+}
+
+.gd-ucard-stats > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+}
+
+.gd-ucard-stats dt {
+    font-size: 8.5px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--faint);
+    white-space: nowrap;
+}
+
+.gd-ucard-stats dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+/* Visible affordance for the Shift-click ×5 munitions trick — a muted mono tag
+   in the card foot, so the shortcut isn't tooltip-only. */
+.gd-ucard-shift {
+    color: var(--faint);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0 4px;
+    line-height: 1.5;
+}

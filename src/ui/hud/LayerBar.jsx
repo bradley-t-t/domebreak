@@ -8,11 +8,14 @@ const LAYER_DEFS = [
 ];
 export default function LayerBar({layers, onToggle}) {
     return (
-        <div className="gd-layerbar">
+        <div className="gd-layerbar" role="group" aria-label="Map layers">
             <div className="gd-layerbar-t">Map Layers</div>
             {LAYER_DEFS.map((l) => (
-                <button key={l.id} className={`gd-layerbtn ${layers[l.id] ? "on" : ""}`} onClick={() => onToggle(l.id)}>
-                    <span className="gd-layerbtn-g">{l.glyph}</span><span
+                <button key={l.id} className={`gd-layerbtn ${layers[l.id] ? "on" : ""}`}
+                        aria-pressed={!!layers[l.id]}
+                        aria-label={`${l.label} layer, ${layers[l.id] ? "on" : "off"}`}
+                        onClick={() => onToggle(l.id)}>
+                    <span className="gd-layerbtn-g" aria-hidden="true">{l.glyph}</span><span
                     className="gd-layerbtn-l">{l.label}</span><span className="gd-layerdot"/>
                 </button>
             ))}

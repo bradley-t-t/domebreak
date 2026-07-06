@@ -1,0 +1,14 @@
+/* Shared visually-hidden utility for accessible labels that shouldn't render
+   visually (design system relies on placeholder/context for compact inputs,
+   but screen readers still need a real associated <label>). */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
