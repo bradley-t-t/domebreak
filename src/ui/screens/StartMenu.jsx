@@ -22,11 +22,23 @@ export default function StartMenu({
     const winRate = total > 0 ? Math.round(((stats?.wins ?? 0) / total) * 100) : 0;
     const hours = stats ? (stats.total_playtime_s / 3600).toFixed(1) : null;
     return (
-        <div className="gd-menu-screen">
+        // Command rail: all menu chrome lives in a slim left-anchored console so the
+        // live attract war owns the center of the globe, uncovered.
+        <div className="gd-menu-screen framed">
             <div className="gd-menu-bg"/>
-            <div className="gd-menu-inner">
-                <h1 className="gd-menu-title">GOLDEN<span>DOME</span></h1>
-                <p className="gd-menu-tag">Global Missile Command</p>
+            <aside className="gd-menu-rail">
+                <div className="gd-rail-top">
+                    <div className="gd-rail-status"><span className="gd-rail-dot"/>System Online</div>
+                    <h1 className="gd-menu-title">GOLDEN<span>DOME</span></h1>
+                    <p className="gd-menu-tag">Global Missile Command</p>
+                </div>
+                <nav className="gd-menu-btns">
+                    {canContinue && <button className="gd-menu-btn primary" onClick={onContinue}>Continue</button>}
+                    <button className={`gd-menu-btn ${canContinue ? "" : "primary"}`} onClick={onNew}>New Game</button>
+                    <button className="gd-menu-btn" onClick={onMultiplayer}>Multiplayer</button>
+                    <button className="gd-menu-btn" onClick={onLoad}>Load Game</button>
+                    <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
+                </nav>
                 <div className="gd-commander-strip">
                     <div className="gd-commander-id">
                         <span className="gd-commander-name">{profile?.username || "—"}</span>
@@ -41,17 +53,10 @@ export default function StartMenu({
                         <span>{hours != null ? `${hours}h Playtime` : "—"}</span>
                     </div>
                 </div>
-                <div className="gd-menu-btns">
-                    {canContinue && <button className="gd-menu-btn primary" onClick={onContinue}>Continue</button>}
-                    <button className={`gd-menu-btn ${canContinue ? "" : "primary"}`} onClick={onNew}>New Game</button>
-                    <button className="gd-menu-btn" onClick={onMultiplayer}>Multiplayer</button>
-                    <button className="gd-menu-btn" onClick={onLoad}>Load Game</button>
-                    <button className="gd-menu-btn" onClick={onSettings}>Settings</button>
-                </div>
                 <div className="gd-menu-foot">A TaylorURL game · made solo by Trenton Taylor · world map © Open
                     Historia (MIT) · icons game-icons.net (CC BY)
                 </div>
-            </div>
+            </aside>
         </div>
     );
 }

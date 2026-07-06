@@ -1957,6 +1957,159 @@ input {
     font-size: 11px;
 }
 
+/* ================= main menu: left command rail ================= */
+/* The attract war plays uncovered on the globe; every control lives in this
+   left-anchored console. Scoped under .framed so other .gd-menu-screen users
+   (login, lobby, multiplayer, new game) keep their centered card. */
+.gd-menu-screen.framed {
+    display: block;
+    place-items: initial;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* Edge-weighted scrim biased right-of-center: darkens the far corners while the
+   offset globe stays bright. */
+.gd-menu-screen.framed .gd-menu-bg {
+    background: radial-gradient(ellipse 120% 100% at 66% 46%, transparent 46%, rgba(4, 6, 9, 0.42) 82%, rgba(4, 6, 9, 0.72) 100%);
+}
+
+.gd-menu-rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 384px;
+    max-width: 84vw;
+    display: flex;
+    flex-direction: column;
+    padding: 46px 46px 26px 40px;
+    text-align: left;
+    pointer-events: none; /* let the cleared globe breathe; controls opt back in */
+    animation: gdRailIn 520ms var(--ease-out) both;
+}
+
+/* Fading glass backing — opaque at the left edge, gone before the globe center.
+   Sits behind the content so text and buttons stay crisp over the war. */
+.gd-menu-rail::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(7, 9, 13, 0.82) 0%, rgba(7, 9, 13, 0.58) 52%, rgba(7, 9, 13, 0) 100%);
+    backdrop-filter: blur(9px) saturate(1.1);
+    -webkit-backdrop-filter: blur(9px) saturate(1.1);
+    -webkit-mask-image: linear-gradient(90deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 58%, transparent 100%);
+}
+
+/* Corner tick frames the console like a reticle. */
+.gd-menu-rail::after {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 16px;
+    height: 16px;
+    border-top: 1px solid var(--line-soft);
+    border-left: 1px solid var(--line-soft);
+}
+
+.gd-rail-top {
+    margin-bottom: 34px;
+}
+
+.gd-rail-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 16px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+}
+
+.gd-rail-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 7px var(--danger);
+    animation: gdBlink 2.4s var(--ease-in-out) infinite;
+}
+
+.gd-menu-rail .gd-menu-title {
+    font-size: 46px;
+    letter-spacing: 8px;
+    line-height: 0.96;
+    color: var(--dim);
+}
+
+.gd-menu-rail .gd-menu-title span {
+    display: block;
+}
+
+.gd-menu-rail .gd-menu-tag {
+    margin: 12px 0 0;
+}
+
+.gd-menu-rail .gd-menu-btns {
+    width: 100%;
+    margin: 0 0 22px;
+    gap: 9px;
+    pointer-events: auto;
+}
+
+.gd-menu-rail .gd-menu-btn {
+    text-align: left;
+}
+
+.gd-menu-rail .gd-commander-strip {
+    width: 100%;
+    margin: 0;
+    pointer-events: auto;
+}
+
+.gd-menu-rail .gd-menu-foot {
+    margin: auto 0 0;
+    max-width: 300px;
+    font-size: 10px;
+    line-height: 1.6;
+    pointer-events: auto;
+}
+
+@keyframes gdRailIn {
+    from {
+        opacity: 0;
+        transform: translateX(-18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes gdBlink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.28;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gd-menu-rail {
+        animation: none;
+    }
+
+    .gd-rail-dot {
+        animation: none;
+    }
+}
+
 .gd-newgame {
     width: min(460px, 94vw);
     text-align: left;
