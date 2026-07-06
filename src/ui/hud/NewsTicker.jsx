@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useLayoutEffect, useRef, useState} from "react";
 import {TECHS, unitLabel} from "../../game/data/constants.js";
 
 // Turn one engine event into a headline, or null to ignore it. Kept high-signal:
@@ -47,71 +47,99 @@ export function headline(e, world, mySlot) {
     }
 }
 
-const CAP = 40; // rolling headlines retained (the sim only keeps the last ~60 events)
-const SPEED = 40; // px/sec — constant scroll speed regardless of how many headlines queue
+const CAP = 40;       // rolling headlines retained (the sim only keeps the last ~60 events)
+const SPEED = 40;     // px/sec — wall-clock scroll speed, independent of game speed
+const SCAN_MS = 300;  // fixed cadence to harvest new headlines, decoupled from the sim tick
 
-// A scrolling news strip that extends the top bar. It accumulates its own
-// history because the engine trims world.events to a short window — each tick we
-// scan for events we have not seen and prepend their headlines (newest first).
-// The marquee duplicates its content for a seamless loop.
+// A scrolling news strip. Two things keep it smooth and speed-independent:
 //
-// The scroll is driven by a requestAnimationFrame loop rather than a CSS
-// keyframe animation: a percentage-based CSS animation restarts/snaps whenever
-// the track content or duration changes, so every new headline made the strip
-// visibly jump. The rAF loop keeps a continuous pixel offset that survives
-// content updates, and compensates for the width of newly prepended items so
-// the visible portion never shifts. It also does not pause on hover.
+//  1. Headlines are harvested on a fixed wall-clock interval (NOT per sim tick),
+//     so the update rate — and any layout cost — is identical at 1× and 5× game
+//     speed. New headlines are APPENDED (they enter from the right and scroll
+//     across), so adding one never shifts the currently-visible strip.
+//  2. The scroll is a rAF loop advancing a continuous pixel offset in wall-clock
+//     time, wrapped into (-w, 0] every frame against the live run width. It never
+//     resets to the start; the duplicated second run makes the wrap seamless.
+//     When old headlines are trimmed off the front, the exact width removed is
+//     added back to the offset before paint, so trimming never makes it jump.
 export default function NewsTicker({world, mySlot}) {
-    const seen = useRef(new Set());
     const [items, setItems] = useState([]);
-
+    const seen = useRef(new Set());
+    const itemsRef = useRef([]);            // mirror of items, matches the committed DOM between scans
+    const ctx = useRef({world, mySlot});
+    // Keep the scanner's view of world/mySlot current (engine mutates world in
+    // place); updated after each render, well ahead of the 300 ms scan cadence.
     useEffect(() => {
-        const fresh = [];
-        for (const e of world.events) {
-            if (seen.current.has(e.id)) continue;
-            seen.current.add(e.id);
-            const h = headline(e, world, mySlot);
-            if (h) fresh.push({id: e.id, ...h});
-        }
-        if (fresh.length) setItems((list) => [...fresh.reverse(), ...list].slice(0, CAP));
-        // Keep the seen-set from growing without bound as events roll off.
-        if (seen.current.size > 400) seen.current = new Set(world.events.map((e) => e.id));
-    }, [world.time]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    const hasNews = items.length > 0;
+        ctx.current = {world, mySlot};
+    });
 
     const trackRef = useRef(null);
     const runRef = useRef(null);
     const offsetRef = useRef(0);
-    const widthRef = useRef(0);
+    const trimWidthRef = useRef(0);         // front width removed this update, compensated pre-paint
+
+    useEffect(() => {
+        const scan = () => {
+            const {world: w, mySlot: ms} = ctx.current;
+            const fresh = [];
+            for (const e of w.events) {
+                if (seen.current.has(e.id)) continue;
+                seen.current.add(e.id);
+                const h = headline(e, w, ms);
+                if (h) fresh.push({id: e.id, ...h});
+            }
+            if (seen.current.size > 400) seen.current = new Set(w.events.map((e) => e.id));
+            if (!fresh.length) return;
+            let next = [...itemsRef.current, ...fresh];
+            const over = next.length - CAP;
+            if (over > 0) {
+                // Measure the front items about to be dropped (they're still in the
+                // DOM, matching itemsRef) so the scroll can hold its visible place.
+                const run = runRef.current;
+                if (run && run.children.length > over) {
+                    const firstLeft = run.children[0].getBoundingClientRect().left;
+                    const cutLeft = run.children[over].getBoundingClientRect().left;
+                    trimWidthRef.current += cutLeft - firstLeft;
+                }
+                next = next.slice(over);
+            }
+            itemsRef.current = next;
+            setItems(next);
+        };
+        scan();
+        const id = setInterval(scan, SCAN_MS);
+        return () => clearInterval(id);
+    }, []);
+
+    // Trimming the front shifts remaining content left; add the removed width back
+    // to the offset before paint so the visible strip stays put (no jump).
+    useLayoutEffect(() => {
+        if (trimWidthRef.current) {
+            offsetRef.current += trimWidthRef.current;
+            trimWidthRef.current = 0;
+        }
+    }, [items]);
+
+    const hasNews = items.length > 0;
 
     useEffect(() => {
         if (!hasNews) return;
         if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-
-        let raf;
-        let last = null;
+        let raf, last = null;
         const step = (t) => {
-            const track = trackRef.current;
-            const run = runRef.current;
+            const track = trackRef.current, run = runRef.current;
             if (track && run) {
                 if (last == null) last = t;
                 const dt = Math.min((t - last) / 1000, 0.05); // clamp long frames (tab defocus)
                 last = t;
-
-                const w = run.scrollWidth;
-                // New headlines are prepended, widening the run from the left and
-                // shoving visible items right — shift the offset by the growth so
-                // the on-screen position stays put (no jump).
-                if (widthRef.current && w > widthRef.current) offsetRef.current -= w - widthRef.current;
-                widthRef.current = w;
-
-                offsetRef.current -= SPEED * dt;
-                // One run scrolled fully off → wrap by exactly its width (seamless,
-                // since the second run is identical and sits right behind it).
-                if (w > 0) while (offsetRef.current <= -w) offsetRef.current += w;
-
-                track.style.transform = `translateX(${offsetRef.current}px)`;
+                const w = run.scrollWidth || 1;
+                let off = offsetRef.current - SPEED * dt;
+                // Wrap into (-w, 0] against the live width — robust to the run
+                // growing (tail append) or shrinking (front trim), so it never snaps.
+                off %= w;
+                if (off > 0) off -= w;
+                offsetRef.current = off;
+                track.style.transform = `translateX(${off}px)`;
             }
             raf = requestAnimationFrame(step);
         };
