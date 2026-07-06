@@ -4018,66 +4018,6 @@ input[type="range"] {
     flex-shrink: 0;
 }
 
-/* ---- Multiplayer lobby browser ---- */
-.gd-mp {
-    width: min(560px, 94vw);
-    text-align: left;
-}
-
-.gd-mp .gd-row {
-    justify-content: center;
-}
-
-.gd-mp-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 40vh;
-    overflow: auto;
-    margin-top: 6px;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius);
-    padding: 8px;
-    background: var(--sunk);
-}
-
-.gd-mp-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    background: var(--btn-bg);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    animation: gdRowIn 220ms var(--ease-out) both;
-}
-
-.gd-mp-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.gd-mp-info b {
-    font-size: 13.5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.gd-mp-info span {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--dim);
-}
-
-.gd-mp-rowerr {
-    color: var(--danger);
-    font-size: 11px;
-    max-width: 160px;
-}
-
 .mt {
     margin-top: 16px;
 }
@@ -4197,41 +4137,59 @@ input[type="range"] {
     text-align: center;
 }
 
-.gd-lobby-host {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-}
-
-.gd-lobby-stepper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-}
-
-.gd-lobby-stepper-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.gd-lobby-stepper-val {
-    font-family: var(--mono);
-    font-size: 15px;
-    min-width: 20px;
-    text-align: center;
-}
-
 .gd-lobby-hint {
     text-align: center;
     color: var(--faint);
     font-size: 12px;
     margin-top: 14px;
+}
+
+/* ---- Searching (quick-match queue) ---- */
+.gd-searching {
+    width: min(420px, 94vw);
+    text-align: center;
+}
+
+.gd-searching-pulse {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0 18px;
+}
+
+.gd-searching-pulse span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: gdPulse 1.2s var(--ease-in-out) infinite;
+}
+
+.gd-searching-pulse span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.gd-searching-pulse span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.gd-searching-pulse.still span {
+    animation: none;
+    opacity: 0.7;
+}
+
+.gd-searching-label {
+    font-size: 14px;
+    color: var(--text);
+    margin: 0;
+}
+
+.gd-searching-elapsed {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--dim);
+    margin: 8px 0 0;
+    letter-spacing: 2px;
 }
 
 /* ---- Connection lost (used by App during a live match) ---- */

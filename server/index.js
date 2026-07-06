@@ -1,9 +1,12 @@
-// GoldenDome match server. Three jobs:
-//   1. Claim lobbies flipped to 'starting' (Realtime + poll fallback), build a
+// GoldenDome match server. Four jobs:
+//   1. Run the matchmaker (server/matchmaker.js, ADR-0004): group waiting
+//      quick-match queue rows, form lobbies with bot fill, simulate bot
+//      join/ready, and auto-launch by flipping lobbies to 'starting'.
+//   2. Claim lobbies flipped to 'starting' (Realtime + poll fallback), build a
 //      Match, and advertise this server's WS URLs back on the lobby row.
-//   2. Terminate WebSockets: verify the Supabase JWT, map user -> slot, route
+//   3. Terminate WebSockets: verify the Supabase JWT, map user -> slot, route
 //      whitelisted commands, stream snapshots.
-//   3. Record results with the service role when a war ends.
+//   4. Record results with the service role when a war ends.
 // It also serves the built client from ../dist so any browser on the network
 // can play without installing anything.
 import http from "http";
@@ -13,6 +16,7 @@ import {WebSocketServer} from "ws";
 import {createClient} from "@supabase/supabase-js";
 import {MAX_MATCHES, PORT, SERVICE_ROLE_KEY, SUPABASE_URL, WS_URLS} from "./config.js";
 import {Match} from "./match.js";
+import {startMatchmaker} from "./matchmaker.js";
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {auth: {persistSession: false}});
 const matches = new Map(); // matchId -> Match
@@ -37,8 +41,10 @@ async function claimLobby(row) {
         .eq("id", row.id).eq("status", "starting").select().maybeSingle();
     if (!claimed) return;
 
+    // LEFT join to profiles (not !inner): bot rows have user_id = null and no
+    // matching profiles row at all, and must still be included in the roster.
     const {data: members} = await db.from("lobby_members")
-        .select("user_id, slot, iso, profiles!inner(username)")
+        .select("user_id, slot, iso, ready, is_bot, display_name, profiles(username)")
         .eq("lobby_id", row.id).order("slot");
     if (!members?.length) {
         await db.from("lobbies").update({status: "closed"}).eq("id", row.id);
@@ -46,14 +52,15 @@ async function claimLobby(row) {
     }
     const roster = members.map((m) => ({
         userId: m.user_id,
-        username: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username ?? "Commander",
+        username: m.display_name || (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username || "Commander",
         iso: m.iso,
+        isBot: !!m.is_bot,
+        ready: !!m.ready,
     }));
 
     const match = new Match({
         lobbyId: row.id,
         roster,
-        aiCount: claimed.ai_slots,
         onFinished: async (m) => {
             const {error} = await db.from("matches").insert(m.resultRows());
             if (error) log("result insert failed", m.id, error.message);
@@ -66,7 +73,8 @@ async function claimLobby(row) {
     });
     matches.set(match.id, match);
     await db.from("lobbies").update({match_id: match.id, server_url: WS_URLS.join(",")}).eq("id", row.id);
-    log("match started", match.id, "lobby", row.id, "humans", roster.length, "ai", claimed.ai_slots);
+    const humanCount = roster.filter((r) => !r.isBot).length;
+    log("match started", match.id, "lobby", row.id, "humans", humanCount, "bots", roster.length - humanCount);
 }
 
 async function pollStarting() {
@@ -153,4 +161,5 @@ wss.on("connection", (ws) => {
 
 watchLobbies();
 pollStarting();
+startMatchmaker(db, log);
 server.listen(PORT, "0.0.0.0", () => log(`goldendome server on :${PORT}, advertising ${WS_URLS.join(", ")}`));

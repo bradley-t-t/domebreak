@@ -1,35 +1,44 @@
 <h1 align="center">Multiplayer, Matchmaking & Friends</h1>
 
 <p align="center">
-  <b>Find or host live matches against real commanders on an authoritative server running the same deterministic engine as single-player.</b>
+  <b>Press Play. The authoritative server fills your war room with real commanders when they're queueing and convincing bot ones when they're not, then launches the match the moment everyone's ready.</b>
 </p>
 
 <br />
 
 ## Overview
 
-GoldenDome's online mode lets a commander find or host a live match against other humans (and AI
-fill-ins) instead of only local AI, and stay connected to other players as friends across sessions.
-A thin Supabase control plane (`friendships`, `lobbies`, `lobby_members`) handles identity, friend
-requests, and lobby formation with realtime updates; an authoritative Node game server — running
-the exact same deterministic engine as the client — claims lobbies the moment they are ready,
-assembles the match (human slots plus AI-filled nations), and ticks the real game. Clients never
-simulate combat against each other directly: they connect to the authoritative server, send
-whitelisted commands scoped to their own slot, and reconcile against periodic world snapshots. The
-same `[world, api]` contract that drives local single-player drives online play, so the entire UI
-layer is unaware which mode it is in.
+GoldenDome's online mode has exactly one entry point: a **Play** button that enrolls the commander
+in a matchmaking queue and stays connected to other players as friends across sessions. There is no
+lobby browser, no hosting, and no manual AI-count configuration — the authoritative server groups
+players who queue within a short window into the same match, backfills any remaining seats with
+**bot lobby members** (real `lobby_members` rows that visibly join, pick nations, and ready up), and
+auto-launches the moment every member — human or bot — is ready. A thin Supabase control plane
+(`friendships`, `matchmaking_queue`, `lobbies`, `lobby_members`) handles identity, friend requests,
+and match formation with realtime updates; the same authoritative Node game server introduced for
+ticking the match (`docs/architecture/adr-003-authoritative-server.md`) now also owns the
+matchmaker and the bot lobby simulation (`docs/architecture/adr-004-matchmaking-bot-lobby.md`),
+claiming lobbies the moment they are ready, assembling the match (human slots plus AI-filled
+nations), and ticking the real game. Clients never simulate combat against each other directly:
+they connect to the authoritative server, send whitelisted commands scoped to their own slot, and
+reconcile against periodic world snapshots. The same `[world, api]` contract that drives local
+single-player drives online play, so the entire UI layer is unaware which mode it is in.
 
 ## Player Fantasy
 
-Command real rivals, not just the AI. Finding a friend online and dropping into their lobby should
-feel like calling up an ally to co-run a war room — a Friends panel with live presence, a lobby
-room where you watch each seat fill and claim your nation, and a Ready flag that turns the match
-into a shared countdown. This primarily serves **Fellowship** (a persistent roster of named
-commanders you can find, challenge, and rejoin) and **Competition-flavored Challenge** — the
-stakes of a match feel real when the pressure is coming from another person's decisions, not a
-script. Quick Match (Find Game) serves the player who just wants a fight now, no social overhead —
-dropping them straight into the oldest open seat with the same low-friction "one more match" pull
-as the single-player loop, just against a human counterpart.
+Press one button and the war room fills. No browsing empty lobbies, no configuring an AI-count
+slider, no waiting on a host who wandered off — Play puts the commander straight into a "Searching
+for commanders…" beat that resolves in seconds, then drops them into a room where seats fill one by
+one, each new arrival claiming a nation and readying up, until the countdown to war is unanimous.
+Whether those seats are filled by real rivals who queued at the same moment or by bots standing in
+for absent humans, the moment reads the same: a room of commanders assembling for a fight, not a
+menu of settings to configure. This primarily serves **low-friction Challenge** — the "one more
+match" pull of single-player, now pointed at a live opponent — and **Fellowship**, both in the
+immediate sense (watching a room of commanders come together) and in the persistent sense (a
+Friends panel with live presence for finding, challenging, and rejoining specific people, which
+remains available alongside quick-match as a secondary path). Command real rivals, not just the
+AI, whenever any are available — and don't let the absence of one ever be the reason a match feels
+empty or administrative.
 
 ## Detailed Rules
 
@@ -48,64 +57,121 @@ as the single-player loop, just against a human counterpart.
 - The Friends panel shows three lists: accepted friends, incoming pending requests (requests where
   the viewer is `addressee`), and outgoing pending requests (where the viewer is `requester`).
 
-### Lobbies (control plane)
+### Matchmaking queue and lobbies (control plane)
 
-- A lobby is a `lobbies` row: `host` (user id), `name`, `status` (`open` | `starting` | `active` |
-  `closed`), `max_players` (2–16), `ai_slots`, `match_id` (set once the game server assigns one),
-  `server_url` (set once the game server assigns one), `updated_at`.
-- Each seat is a `lobby_members` row: `lobby_id`, `user_id`, `slot`, `iso` (chosen nation), `ready`.
-  `slot` is unique per `lobby_id` — this is the mechanism that resolves join races (see Edge Cases).
-- All lobby mutations go through the `gd-lobby` edge function; the client never writes `lobbies` or
-  `lobby_members` directly. Actions: `create`, `join`, `leave`, `set_iso`, `ready`, `set_ai`,
-  `start`, `find`.
-    - `create`: makes a new `open` lobby with the caller as `host` and as the first `lobby_members`
-      row (slot 0).
-    - `join`: claims the lowest free slot in a target `open` lobby for the caller. Fails if the
-      lobby is not `open`, is full, or the caller already holds a seat in it.
-    - `leave`: removes the caller's `lobby_members` row. If the caller was the host, host inherits
-      to the member with the lowest remaining `slot`; if no members remain, the lobby's `status`
-      is set to `closed`.
-    - `set_iso`: sets the caller's own `iso` (nation) on their `lobby_members` row. Any player may
-      change their own pick until the lobby leaves `open`.
-    - `ready`: toggles the caller's own `ready` flag. Only meaningful while `status = open`.
-    - `set_ai`: host-only. Sets `ai_slots` (the count of nations the game server should fill with
-      AI once it assembles the match). `ai_slots + count(lobby_members) ≤ max_players` is enforced
-      server-side in the edge function.
-    - `start`: host-only, requires `status = open` and every human member `ready = true`. Sets
-      `status = 'starting'`. This is the **only** effect of `start` — the edge function does not
-      spin up a match itself (see Game Server below for why).
-    - `find`: quick-match. Joins the oldest `open` lobby with a free seat (`created_at` ascending
-      among lobbies with `status = 'open'` and `count(lobby_members) < max_players`); if none
-      exists, creates a new one with the caller as host, default `max_players`, and no AI slots
-      configured yet.
+- **Queue.** Clicking **Play** enrolls the caller in `matchmaking_queue`: `user_id` (JWT-derived),
+  `iso` (optional nation preference, nullable), `enqueued_at`, `status` (`'waiting'` | `'matched'`),
+  `lobby_id` (nullable, set once the matchmaker places the caller). A caller may read/subscribe to
+  their own row only; all writes go through `gd-lobby` under the service-role path — the client
+  never inserts or updates this table directly.
+- A lobby is a `lobbies` row: `status` (`starting` | `active` | `closed` — note there is no
+  human-visible `open` state in the quick-match flow; a lobby only comes into existence
+  server-formed and already populated), `max_players` (2–16, mirroring `TARGET_NATIONS`),
+  `match_id` (set once the game server assigns one), `server_url` (set once the game server assigns
+  one), `updated_at`. There is no `host` column — quick-match lobbies have no host; assembly and
+  launch are entirely server-driven.
+- Each seat is a `lobby_members` row: `lobby_id`, `user_id` (**nullable** — null for bot seats),
+  `slot`, `iso` (chosen nation, nullable until picked), `ready`, `is_bot` (boolean, new), and
+  `display_name` (the human's username, or a plausible commander callsign for a bot). `slot` is
+  unique per `lobby_id`. Bot rows are structurally identical to human rows in every field the
+  client reads — this is exactly what lets the Lobby room render a bot member with the same row
+  treatment as a human, with no visible "BOT" label anywhere in the UI.
+- All lobby/queue mutations go through the `gd-lobby` edge function; the client never writes
+  `matchmaking_queue`, `lobbies`, or `lobby_members` directly. The player-facing action set is now
+  **`quick_match`, `cancel`, `set_iso`, `ready`, `leave`** — `create`, `find`, and the host-only
+  `set_ai` are removed entirely from the player-facing flow; `start` still exists as an internal
+  status transition, but it is no longer a client-callable action — it is written by the server's
+  auto-launch logic (see Game Server below), never by a host clicking a button.
+    - `quick_match`: enrolls the caller as a `'waiting'` row in `matchmaking_queue` with an optional
+      nation preference. **Idempotent** — calling it again while the caller already has a
+      `'waiting'` row is a no-op success, not a duplicate row.
+    - `cancel`: deletes the caller's `'waiting'` row. **Safe to call with no effect** if the caller
+      has no `'waiting'` row (already matched, or never queued) — a no-op success either way. A
+      caller whose row has already flipped to `'matched'` cannot be cancelled out of a formed lobby
+      via `cancel`; they use `leave` on the lobby instead, exactly as before.
+    - `set_iso`: sets the caller's own `iso` on their `lobby_members` row. Any player may change
+      their own pick until the lobby leaves its pre-launch state (i.e., until `status` becomes
+      `starting`).
+    - `ready`: toggles the caller's own `ready` flag. Only meaningful while the lobby has not yet
+      launched.
+    - `leave`: removes the caller's `lobby_members` row. Since quick-match lobbies have no host,
+      there is no host-inheritance step. If the departing member was the lobby's last remaining
+      human, the server immediately sets `lobbies.status = 'closed'` regardless of bot readiness —
+      a human-less lobby never reaches `starting` (see Edge Cases — "last human leaves a pre-launch
+      lobby" — for the exact rule this overrides the otherwise-satisfiable all-bots-ready
+      condition).
 - Every write derives the acting identity from the verified JWT, exactly as `gd-account` does in
   `accounts-and-stats.md` — no action ever trusts a client-supplied `user_id`.
-- Realtime is enabled on `lobbies` and `lobby_members`. The Multiplayer screen's lobby browser and
-  the Lobby room both subscribe directly (Postgres Changes over Supabase Realtime) so every
-  client's view of seats, readiness, and status updates live without polling.
+- Realtime is enabled on `matchmaking_queue`, `lobbies`, and `lobby_members`. The client's Searching
+  state subscribes to the caller's own `matchmaking_queue` row (watching for `status = 'matched'`);
+  the Lobby room subscribes to its `lobbies`/`lobby_members` rows (Postgres Changes over Supabase
+  Realtime), exactly mirroring how it already observed seat fills and readiness before this
+  revision — there is no lobby browser to subscribe a list of rows to anymore.
 - `matches` (from `accounts-and-stats.md`) gains a `mode` column: `'solo' | 'online'`. Online match
   reports are written by the game server (service-role key) at game-over, one row per human
   participant — not by the client, and not through `gd-account`'s client-facing `report_match`
   path (see Game Server below).
 
-### Game server (authoritative)
+### Game server (authoritative) — matchmaker + bot lobby simulation + claim
 
 - A single long-running Node process (systemd service on the Sunday host, a Raspberry Pi 5) imports
   `src/game/engine.js` — the same pure, deterministic engine module the browser client uses. No
-  simulation code is duplicated or reimplemented for the server.
-- Supabase edge functions cannot reach this host (no public ingress), so the control flow is
-  **server-pulls, not backend-pushes**: the game server holds its own Realtime subscription
-  (service-role key) on the `lobbies` table, filtered to `status = 'starting'`. When a row appears
-  or changes to `starting`, the server **claims** it with a compare-and-swap-style update (only
-  proceeds if it can transition that specific row from `starting` to a server-owned in-progress
-  marker without another server instance having already claimed it — in the current single-server
-  deployment this is a formality, but the claim step is not skipped).
-- On claiming a lobby, the server reads the lobby's `lobby_members` rows to get human `user_id` +
-  `slot` + `iso` assignments, then builds a `createWorld(setup)` call: human members map directly
-  to their reserved `slot`/`iso`; `ai_slots` are filled with AI-controlled nations drafted the same
-  way the attract-mode/single-player AI draft works. The server then writes `status = 'active'`,
-  `match_id` (a new id it mints for this run), and `server_url` (its own WebSocket endpoint) back
-  onto the `lobbies` row in one update.
+  simulation code is duplicated or reimplemented for the server. This process now carries **two**
+  responsibilities: the matchmaker described here, and the lobby-claim/tick/broadcast pipeline
+  carried over unchanged from before (see `docs/architecture/adr-003-authoritative-server.md`,
+  extended by `docs/architecture/adr-004-matchmaking-bot-lobby.md`).
+- Supabase edge functions cannot reach this host (no public ingress), so all control flow is
+  **server-pulls, not backend-pushes**. The matchmaker is a *second* outbound Realtime subscription
+  (service-role key) — on `matchmaking_queue` filtered to `status = 'waiting'` — living alongside
+  the existing subscription on `lobbies` filtered to `status = 'starting'`. A periodic sweep runs
+  alongside the subscription so that window expiry fires even when no new queue row arrives to
+  trigger a Realtime event.
+- **Matchmaker loop — grouping.** The server opens a forming group anchored on the oldest `waiting`
+  row's `enqueued_at`. It admits further waiting humans into that group until either
+  `TARGET_NATIONS` (default 6) humans have gathered or `matchWindowS` (default 6s, measured from
+  the anchor) elapses — whichever comes first. If no other humans are waiting, the anchor's own
+  window elapse immediately forms a group of one; there is no minimum human count and no artificial
+  delay imposed on a lone waiter beyond the (skippable) window itself — see Formulas for the exact
+  skip condition.
+- **Matchmaker loop — lobby formation.** Once a group closes (by fill or by window expiry), the
+  server: (1) creates one `lobbies` row (server-owned, no host); (2) inserts one `lobby_members` row
+  per grouped human (`is_bot = false`, a reserved `slot`, a default `iso`, `display_name` = their
+  username); (3) inserts `TARGET_NATIONS − humansGathered` bot `lobby_members` rows (`is_bot =
+  true`, reserved `slot`s, `display_name` drawn from a commander-callsign pool, `iso` left unset and
+  `ready = false` initially); (4) sets each grouped human's `matchmaking_queue.status = 'matched'`
+  with the new `lobby_id`. This is the write that flips a searching client into the Lobby room.
+- **Bot lobby simulation.** Over the next few seconds, the server writes each bot's `iso` (a
+  distinct nation, chosen to avoid collision with any human's pick or another bot's pick) after a
+  per-bot staggered join delay (`botJoinStaggerS`, default range 0.4–1.6s), then — after a further
+  per-bot delay (`botReadyDelayS`, default range 1–4s) — sets that bot's `ready = true`. Every bot
+  write is a plain, timed database update; bots never open a WebSocket, never authenticate, and
+  never enter the command path — they exist purely as `lobby_members` rows until match assembly
+  converts them into `isAi` nations. Humans, meanwhile, pick their own `iso` via `set_iso` and
+  toggle their own `ready` in the Lobby room UI; every human is auto-assigned a changeable default
+  nation on entry so a human who never interacts with the nation picker still has a valid seat.
+- **Auto-launch.** The server performs the all-ready check itself (it owns the authoritative member
+  set — never inferred from a client). The moment every `lobby_members` row for a lobby has
+  `ready = true`, the server sets `lobbies.status = 'starting'`. If instead `lobbyReadyTimeoutS`
+  (default 45s, measured from lobby formation) elapses first, the server force-launches anyway: any
+  human seat still `ready = false` at that moment is flagged for AI conversion at assembly, reusing
+  the exact same disconnect→AI-takeover mechanism `adr-003-authoritative-server.md` already defines
+  for an expired reconnect grace window — no second AI-takeover mechanism is introduced. Either path
+  ends in the same `status = 'starting'` write that the claim step below already knows how to
+  consume.
+- **Claim (unchanged from the prior version).** The server holds its existing outbound Realtime
+  subscription (service-role key) on `lobbies` filtered to `status = 'starting'`. When a row appears
+  or changes to `starting` — whether from an all-ready launch or a timeout force-launch — the server
+  **claims** it with a compare-and-swap-style update (only proceeds if it can transition that
+  specific row from `starting` to a server-owned in-progress marker without another server instance
+  having already claimed it).
+- On claiming a lobby, the server reads the lobby's `lobby_members` rows to get slot/`iso`
+  assignments for every member: non-bot, ready-at-launch humans map directly to their reserved
+  `slot`/`iso`; bot rows (`is_bot = true`) and any human seat flagged unready-at-timeout are drafted
+  as AI-controlled nations the same way the attract-mode/single-player AI draft works, carrying
+  forward whichever `iso` each bot had already picked (a timeout-flagged human keeps their own
+  chosen or default `iso`, just AI-piloted). The server then writes `status = 'active'`, `match_id`
+  (a new id it mints for this run), and `server_url` (its own WebSocket endpoint) back onto the
+  `lobbies` row in one update.
 - Clients discover the server purely from the lobby row: once `status` flips to `active`, the
   client reads `server_url` + `match_id` from the (already-subscribed) lobby row and opens a
   WebSocket directly to the server. LAN/Tailscale reachability is the deployment target now; a
@@ -153,22 +219,42 @@ as the single-player loop, just against a human counterpart.
 - **Reconnect**: on a dropped WebSocket, the client retries the connection using its JWT and the
   known `match_id`. The server recognizes the returning `user_id` against the same slot it was
   assigned and resumes streaming snapshots to it — a reconnect within the grace window is invisible
-  to the match (see Formulas/Edge Cases for the 60s grace window and AI-takeover behavior).
+  to the match (see Formulas/Edge Cases for the 60s grace window and AI-takeover behavior). This
+  in-match mechanism is the same one the lobby-ready timeout reuses: a human seat still unready at
+  `lobbyReadyTimeoutS` is converted to AI at match assembly exactly as a disconnect that outlives
+  the 60s grace window is — there is one AI-takeover mechanism, entered from two triggers.
+- **Searching state**: clicking Play calls `quick_match` and immediately transitions the client into
+  a Searching state ("Searching for commanders…") with a cancel affordance. The client subscribes
+  (Realtime) to its own `matchmaking_queue` row and does nothing else while `status = 'waiting'`.
+  The moment that row's `status` flips to `'matched'`, the client reads the accompanying `lobby_id`,
+  drops the Searching state, and subscribes to that lobby's `lobbies`/`lobby_members` rows exactly
+  as the Lobby room already does — there is no separate "you've been matched" screen between
+  Searching and the Lobby room. Cancelling while Searching calls `cancel` and returns to the main
+  menu with no lobby ever having formed for that caller.
 
 ### UI surfaces
 
+- **Play button** (main menu / StartMenu): the **only** multiplayer entry point. Calls `quick_match`
+  and transitions into the Searching state described above. Single-player's "New Game" (local AI)
+  is a separate, untouched entry and remains the offline path — Play is exclusively the online
+  quick-match flow.
+- **Searching state**: "Searching for commanders…" with a cancel affordance (calls `cancel`).
+  Resolves into the Lobby room the instant the caller's `matchmaking_queue` row reports
+  `status = 'matched'` — see Client, above.
 - **Me badge** (top-right, present on menu screens and in-game): shows `username`; clicking/tapping
   opens a stats popover reusing the same `player_stats`-derived values from
   `accounts-and-stats.md` (win rate, playtime, etc. — this document adds no new stat fields).
 - **Friends panel**: search-by-username, send/accept/remove actions, and the three lists (friends,
-  incoming pending, outgoing pending) described above.
-- **Multiplayer screen**: three entry points — **Find Game** (calls `find`), **Create Lobby**
-  (calls `create`), and a **live lobby browser** listing `open` lobbies (name, host, seat count,
-  `max_players`) updating via the same Realtime subscription the Lobby room uses.
-- **Lobby room**: member list (each row: username, chosen `iso`, ready flag), a per-player nation
-  picker bound to `set_iso`, individual Ready toggles bound to `ready`, and — host-only — an AI-fill
-  control bound to `set_ai` and a Start button bound to `start` (disabled until every human member
-  is ready).
+  incoming pending, outgoing pending) described above. This remains a secondary, persistent-identity
+  surface alongside Play — it is not itself a match entry point (there is no "invite to lobby"
+  action in this document's scope).
+- **Lobby room**: member list (each row: `display_name`, chosen `iso`, ready flag) rendered
+  identically whether the row is a human or a bot (`is_bot` is never surfaced in the UI), a
+  per-player nation picker bound to `set_iso` (usable on the caller's own row only), and an
+  individual Ready toggle bound to `ready`. There is **no host, no AI-fill control, and no Start
+  button** — every seat, human or bot, appears and readies on its own, and the match auto-launches
+  per the Game Server rules above the moment every member is ready (or the lobby-ready timeout
+  fires). The human's own seat is pre-populated with a changeable default nation on entry.
 - Single-player is untouched by any of the above — no existing local-mode screen, hook, or command
   path is modified by this system.
 
@@ -177,20 +263,80 @@ as the single-player loop, just against a human counterpart.
 This system is primarily a state machine and protocol, not a numeric model — the formulas below
 are the few derived/timing values that need an unambiguous definition.
 
-**Quick-match lobby selection**
+**Matchmaking grouping window**
 
 ```
-find(user) =
-    join(oldest(L))   if L = { l ∈ lobbies : l.status = 'open' ∧ members(l) < l.max_players } ≠ ∅
-    create(user)       if L = ∅
+group(anchor) =
+    close(group)   when  |group.humans| = TARGET_NATIONS
+                   or    now − anchor.enqueued_at ≥ matchWindowS
+    (whichever condition is met first)
 ```
 
-- `oldest(L)` = the member of `L` with the minimum `created_at` (FIFO — first lobby opened gets
-  filled first, rather than e.g. best-fit on seat count).
-- `members(l)` = `count(lobby_members where lobby_id = l.id)`.
-- Example: two open lobbies exist, one created at `10:00:00` with 3/8 seats and one created at
-  `10:00:05` with 1/2 seats. `find` joins the `10:00:00` lobby (older), even though the `10:00:05`
-  lobby is closer to full — simplicity over optimal packing; see Tuning Knobs.
+- `anchor` = the `waiting` queue row with the minimum `enqueued_at` among rows not yet assigned to a
+  forming group. Every subsequent `waiting` row is admitted into the anchor's forming group (FIFO
+  admission by `enqueued_at`) until the group closes.
+- `TARGET_NATIONS` = 6 (default; range 2–16 — see Tuning Knobs).
+- `matchWindowS` = 6 (default, seconds — see Tuning Knobs), measured from `anchor.enqueued_at`, not
+  from each individual admitted waiter's own `enqueued_at`.
+- **Skip condition**: if no other `waiting` row exists when the anchor's own window would otherwise
+  be checked, the group closes immediately with 1 human — the window is not artificially waited out
+  once it's clear no one else is coming within it. In practice this means a lone waiter is placed
+  the moment the matchmaker's sweep or Realtime handler next runs, not after a full 6s delay.
+- Example A (grouped): players X and Y call `quick_match` at `10:00:00.0` and `10:00:03.5`
+  respectively. X is the anchor. At `10:00:06.0` (`matchWindowS` elapsed from X's `enqueued_at`), the
+  group closes with `{X, Y}` — 2 humans, `6 − 2 = 4` bot seats.
+- Example B (lone waiter, skipped window): player Z calls `quick_match` at `10:00:00.0` with no one
+  else queueing. The matchmaker's next sweep (sub-second) finds no other `waiting` row eligible to
+  join Z's group and closes it immediately with `{Z}` — 1 human, `6 − 1 = 5` bot seats. Z perceives
+  no meaningful wait.
+
+**Bot backfill count**
+
+```
+botsNeeded(humansGathered) = TARGET_NATIONS − humansGathered
+```
+
+- `humansGathered` = the size of the closed group (1 ≤ `humansGathered` ≤ `TARGET_NATIONS`).
+- Example: `TARGET_NATIONS = 6`, `humansGathered = 3` → `botsNeeded = 3`. If `humansGathered = 6`
+  (the group filled entirely with humans), `botsNeeded = 0` and no bot rows are inserted.
+
+**Bot join and ready stagger**
+
+```
+botJoinAtS(i)  = uniform(botJoinStaggerS.min, botJoinStaggerS.max)   for each bot i, independently
+botReadyAtS(i) = botJoinAtS(i) + uniform(botReadyDelayS.min, botReadyDelayS.max)
+```
+
+- `botJoinStaggerS` = `[0.4, 1.6]` seconds (default range — see Tuning Knobs): the delay, from lobby
+  formation, before bot `i`'s `iso` write lands (its visible "join").
+- `botReadyDelayS` = `[1, 4]` seconds (default range — see Tuning Knobs): the additional delay,
+  measured from that same bot's own join time, before its `ready` write lands.
+- Each bot draws its own independent samples — bots do not ready in lockstep, which is what
+  produces the staggered, human-like appearance in the Lobby room.
+- Example: a lobby forms at `t = 0` with 3 bot seats. Bot 1 draws `botJoinAtS = 0.7`,
+  `botReadyDelayS = 2.1` → joins at `t = 0.7s`, readies at `t = 2.8s`. Bot 2 draws `botJoinAtS = 1.3`,
+  `botReadyDelayS = 1.2` → joins at `t = 1.3s`, readies at `t = 2.5s`. Bot 3 draws `botJoinAtS = 0.5`,
+  `botReadyDelayS = 3.6` → joins at `t = 0.5s`, readies at `t = 4.1s`. The three bots visibly
+  populate and ready across roughly a 4-second window rather than all at once.
+
+**Auto-launch condition**
+
+```
+autoLaunch(lobby) =
+    "starting"   if  ∀ m ∈ lobby_members(lobby): m.ready = true
+    "starting"   if  secondsSinceFormed(lobby) ≥ lobbyReadyTimeoutS   (force-launch)
+    "waiting"     otherwise
+```
+
+- `lobbyReadyTimeoutS` = 45 (default, seconds — see Tuning Knobs), measured from the moment the
+  lobby's `lobbies` row was created by the matchmaker.
+- On a force-launch (the second branch fires before the first), every `m` with `m.ready = false` at
+  that instant is flagged for AI conversion at match assembly — this applies to bots that
+  (abnormally) never finished readying and to humans who never toggled `ready`, identically.
+- Example: a lobby forms at `t = 0` with 1 human and 5 bots. All 5 bots ready by `t = 4.1s` (per the
+  stagger example above), but the human never toggles Ready. At `t = 45s`, `autoLaunch` fires via the
+  timeout branch; the human's seat is flagged unready-at-timeout and is drafted as an AI nation
+  (carrying their default `iso`) when the claim step assembles the match.
 
 **Tick and snapshot cadence**
 
@@ -234,67 +380,87 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
 
 ## Edge Cases
 
-- **Host leaves the lobby**: on `leave`, if the departing member was `host`, host status inherits
-  to the remaining member with the lowest `slot`. If the departing member was the lobby's only
-  member, the lobby's `status` is set to `closed` instead of reassigning a nonexistent host —
-  a `closed` lobby never appears in the lobby browser or in `find`'s candidate set. A closed lobby
-  is not deleted (its row persists for audit/debug) but is functionally dead.
-- **Lobby full**: `join` (direct or via `find`) against a lobby where
-  `members(l) = l.max_players` fails with an error from `gd-lobby`; the client shows a "lobby is
-  full" message and (for `find`) does not fall back to creating a new lobby on this specific
-  failure mode — a full lobby is simply excluded from `find`'s candidate set `L` per the Formulas
-  definition, so this case should only surface from a direct `join` (e.g. the browser listing was
-  briefly stale) rather than from quick-match itself.
-- **Join race — two players claim the last seat**: both clients call `join` (or `find` resolves to
-  the same lobby) at effectively the same time against a lobby with exactly one free slot. The
-  `lobby_members` unique constraint on `(lobby_id, slot)` — combined with the edge function
-  computing "lowest free slot" and attempting the insert — means only one insert succeeds; the
-  losing request's insert fails the constraint and `gd-lobby` returns an error to that caller. The
-  losing client's UI shows "that seat was just taken" and, if it arrived via `find`, may retry
-  `find` once to land in a different open lobby (client-side retry policy, not a server guarantee).
-- **Server offline / never claims the lobby**: `start` sets `status = 'starting'`, but no running
-  game server instance is alive to claim it (service down, host unreachable). Per the Formulas
-  "lobby-stuck watchdog," if the client observes `status` still `'starting'` (never reaching
-  `'active'`) more than 30s after the transition, it shows an error ("couldn't start the match —
-  try again") and calls a revert action that sets the lobby back to `status = 'open'` so the host
-  can retry `start` or the lobby can be abandoned normally. This revert is a client-triggered
-  `gd-lobby` action guarded server-side to only succeed if the lobby is still `starting` and has
-  not since been claimed (`match_id`/`server_url` still unset) — this prevents a slow client from
-  reverting a lobby the game server *did* just claim a moment later.
-- **Player disconnect mid-match**: the server does not immediately hand a disconnected human's
-  slot to AI. Per the Formulas reconnect-grace formula, the slot stays reconnectable for 60s; a
-  successful reconnect (same `user_id` + `match_id`, fresh JWT) resumes it with no interruption
-  recorded anywhere. If 60s elapses with no reconnect, the slot converts to AI control for the
-  rest of the match, and that participant's eventual `matches` row is written with `result: 'quit'`
-  (disconnect-without-return is treated identically to an explicit quit for scoring purposes — see
-  the Game Server rules).
-- **Duplicate friend request**: a `request` call where a `pending` or `accepted` `friendships` row
-  already exists between the two users (in either direction) is **idempotent** — it does not create
-  a second row or error the caller; `gd-social` treats it as a no-op success (or, for the specific
-  case of an incoming pending request the caller already sent to *them*, it may auto-accept rather
-  than silently no-op — either behavior is acceptable so long as the result is never a duplicate
-  row or a client-visible error for re-sending a request that already exists).
-- **All humans quit mid-match**: if every human participant either explicitly quits or exceeds the
-  60s reconnect grace (converting to AI) such that zero humans remain connected, the match is not
-  kept running indefinitely for AI-vs-AI spectacle — it ends immediately, and the server writes
-  the `matches` rows for all humans who were ever part of the match using whatever `result` each
-  had earned or been assigned at the moment the last human left (win/loss for anyone already
-  decided by the engine's win condition, `quit` for anyone who disconnected/quit without the match
-  having resolved in their favor first).
-- **Lobby member changes nation after another member already picked it**: `set_iso` does not
-  enforce nation uniqueness at the lobby-control-plane layer in this document's scope — if
-  uniqueness of chosen nations is required, that validation belongs to the same layer that already
-  validates nation choice for single-player setup, applied identically when the game server
-  assembles `createWorld(setup)`. This document does not introduce a new uniqueness rule beyond
-  whatever the existing nation-select flow enforces.
+- **No humans in queue when Play is pressed**: per the Formulas skip condition, the anchor's group
+  closes with 1 human as soon as the matchmaker's sweep confirms no other `waiting` row exists — the
+  `matchWindowS` window is not waited out. The lobby forms immediately with `TARGET_NATIONS − 1`
+  bot seats, and the player perceives no meaningful delay between pressing Play and landing in the
+  Lobby room with bots already beginning to join.
+- **A second human enters the queue right as a group is about to close (window boundary)**: group
+  membership is decided at the instant the anchor's window elapses (or `TARGET_NATIONS` is reached),
+  whichever the matchmaker's sweep observes first. A `waiting` row that lands after that instant —
+  even by a fraction of a second — is not retroactively added to the closing group; it becomes the
+  anchor of a new forming group instead. Outcome: two humans who queue within milliseconds of a
+  window boundary can land in two separate, both bot-backfilled, lobbies rather than together. This
+  is accepted as a tunable simplicity trade (see `matchWindowS` in Tuning Knobs) rather than treated
+  as a bug — there is no re-grouping or lobby-merging step once a group has closed.
+- **Human cancels while Searching**: `cancel` deletes the caller's `matchmaking_queue` row. If the
+  matchmaker had not yet closed a group containing that row, no lobby is ever formed referencing the
+  cancelling caller — the row simply ceases to exist and no `lobby_members` insert follows. If
+  `cancel` arrives after the caller's row already flipped to `'matched'` (a race against the
+  matchmaker), the deletion is rejected as a no-op on a row that no longer has `status = 'waiting'`;
+  the caller's client has already observed the `'matched'` transition via Realtime and moved to the
+  Lobby room, where `leave` (not `cancel`) is the correct exit action from that point forward.
+- **Human never readies in the lobby**: per the auto-launch formula's timeout branch, if
+  `lobbyReadyTimeoutS` (default 45s) elapses from lobby formation with that human's `ready` still
+  `false`, the lobby force-launches anyway. That human's seat is flagged unready-at-timeout and is
+  drafted as an AI-controlled nation at match assembly (carrying forward their default or
+  last-chosen `iso`), using the identical disconnect→AI-takeover mechanism `adr-003` defines for an
+  expired reconnect grace — not a second mechanism. The human, if they later open the client, finds
+  themselves either spectating an AI-piloted nation or back at the main menu, depending on how the
+  client's post-timeout UX is implemented (not specified further here — see Dependencies).
+- **Bot nation collision avoidance**: bots select `iso` from the roster of playable nations
+  excluding every `iso` already claimed — by a human's default/chosen pick at the moment the bot's
+  join-delay write lands, and by any earlier bot in the same lobby. Because bot joins are staggered
+  (see Formulas) and humans can change `set_iso` at any point before launch, a bot's `iso` choice is
+  computed fresh at write time, not reserved in advance; this guarantees no two `lobby_members` rows
+  in the same lobby share an `iso` at the moment each bot writes its own. If a human changes nation
+  *after* a bot has already picked that same nation, uniqueness is resolved the same way single-
+  player setup already resolves it — at `createWorld(setup)` assembly time, not by this document
+  introducing a second uniqueness authority (mirrors the prior version's stance on this question).
+- **Last human leaves a pre-launch lobby**: if a human calls `leave` on a lobby that has not yet
+  reached `starting`, and no other human `lobby_members` row remains in that lobby, the server sets
+  `lobbies.status = 'closed'` immediately — this rule takes priority over the auto-launch condition
+  even if every bot in that lobby is already `ready = true` (an all-bot lobby is never launched into
+  a match; the auto-launch all-ready check is only ever evaluated for lobbies with at least one
+  remaining human). Any bot lobby-simulation timers still pending for that lobby (unfired join/ready
+  writes) are cancelled and never write to a `closed` lobby's rows.
+- **All humans quit mid-match**: unchanged from the prior version. If every human participant
+  either explicitly quits or exceeds the 60s reconnect grace (converting to AI) such that zero
+  humans remain connected, the match is not kept running indefinitely for AI-vs-AI spectacle — it
+  ends immediately, and the server writes the `matches` rows for all humans who were ever part of
+  the match using whatever `result` each had earned or been assigned at the moment the last human
+  left (win/loss for anyone already decided by the engine's win condition, `quit` for anyone who
+  disconnected/quit without the match having resolved in their favor first). Note this can now
+  include humans whose seat was never manually readied — they were force-launched as AI at
+  `lobbyReadyTimeoutS` and are scored identically to a mid-match disconnect-without-return.
+- **Matchmaker/server offline**: if the game server process is down, `matchmaking_queue` rows can
+  still be written by `gd-lobby` (it is a stateless edge function, independent of the server), but
+  nothing ever forms them into a lobby — the caller's row stays `'waiting'` indefinitely. The client
+  applies a searching-timeout (mirroring the existing 30s `starting`-watchdog pattern — see Tuning
+  Knobs) measured from the moment `quick_match` was called: if no `'matched'` transition is observed
+  within that window, the client shows an error ("couldn't find a match — try again") with retry and
+  cancel affordances, and calls `cancel` to clear the stale `waiting` row before any retry.
+  Single-player's "New Game" remains available with no dependency on the game server, exactly as
+  before.
+- **Lobby-`starting`-stuck watchdog (unchanged)**: whether `status = 'starting'` was written by an
+  all-ready auto-launch or by the `lobbyReadyTimeoutS` force-launch, the same 30s client-observed
+  watchdog applies — if no corresponding `status = 'active'` update (with `server_url`/`match_id`
+  populated) arrives within 30s, the client treats the lobby as failed-to-start and shows an error.
+  Because there is no host in the quick-match flow, the revert-to-`open` behavior the prior version
+  described no longer applies (there is no `open` status to revert to); the client instead surfaces
+  the error and offers to return to the main menu and press Play again, which starts an entirely new
+  quick-match attempt from a clean queue enrollment.
+- **Duplicate friend request (unchanged)**: a `request` call where a `pending` or `accepted`
+  `friendships` row already exists between the two users (in either direction) is **idempotent** —
+  it does not create a second row or error the caller; `gd-social` treats it as a no-op success (or,
+  for the specific case of an incoming pending request the caller already sent to *them*, it may
+  auto-accept rather than silently no-op — either behavior is acceptable so long as the result is
+  never a duplicate row or a client-visible error for re-sending a request that already exists).
 - **Ready flag stale after a mid-lobby nation change**: no automatic un-readying is specified — a
   player who is `ready = true` and then calls `set_iso` remains `ready` unless they explicitly
-  toggle it. This is a deliberate minimalism choice (fewer implicit state transitions); if
-  playtesting shows this causes starts with unintended nation picks, revisit as a follow-up, not a
-  blocking gap in this version.
-- **`ai_slots` exceeds remaining capacity**: `set_ai` is rejected server-side by `gd-lobby` if
-  `ai_slots + members(l) > l.max_players`; the host sees an error rather than the value silently
-  clamping, so the host always knows their actual configured seat math.
+  toggle it. This is a deliberate minimalism choice (fewer implicit state transitions), unchanged
+  from the prior version's stance; if playtesting shows this causes launches with unintended nation
+  picks, revisit as a follow-up, not a blocking gap in this version.
 
 ## Dependencies
 
@@ -310,22 +476,30 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   server-authored rows — a future revision of `accounts-and-stats.md` should cross-reference this
   document for the `mode: 'online'` case rather than this document silently diverging from it.
 - **Supabase project "Golden Dome"** (same project as `accounts-and-stats.md`) — provides the
-  `friendships`, `lobbies`, `lobby_members` tables, Realtime, and the `gd-social`/`gd-lobby` edge
-  functions. Requires from this system: standard Supabase client configuration (already present
-  from the accounts system) plus a Realtime subscription client for the lobby browser/room and
-  (service-role side) for the game server.
-- **Authoritative game server (new component)** — provides match assembly, tick simulation,
-  snapshot broadcast, command validation, and online `matches` row authorship. Requires from this
-  system: `lobbies`/`lobby_members` rows to be structurally correct and stable by the time
-  `status = 'starting'` is observed (host + members + `iso` picks + `ai_slots` finalized before
-  `start` is callable). See `docs/architecture/adr-003-authoritative-server.md` for the full
-  technical decision this component is built on.
+  `friendships`, `matchmaking_queue` (new), `lobbies`, `lobby_members` (gains `is_bot` and
+  `display_name`) tables, Realtime, and the `gd-social`/`gd-lobby` edge functions. Requires from
+  this system: standard Supabase client configuration (already present from the accounts system)
+  plus a Realtime subscription client for the Searching state (own `matchmaking_queue` row), the
+  Lobby room, and (service-role side) for the game server's two subscriptions (`matchmaking_queue`
+  filtered to `waiting`, `lobbies` filtered to `starting`).
+- **Authoritative game server (component introduced by ADR-0003, extended by ADR-0004)** — provides
+  matchmaking (grouping, lobby formation, bot backfill), bot lobby simulation (staggered join/ready),
+  auto-launch, match assembly, tick simulation, snapshot broadcast, command validation, and online
+  `matches` row authorship. Requires from this system: `matchmaking_queue` rows to carry a correctly
+  JWT-derived `user_id` and a valid `enqueued_at`; `lobbies`/`lobby_members` rows (once formed by the
+  matchmaker) to be structurally correct and stable by the time `status = 'starting'` is observed
+  (every member's `iso`/`ready` finalized or explicitly flagged unready-at-timeout before the claim
+  step runs). See `docs/architecture/adr-003-authoritative-server.md` for the claim/tick/broadcast
+  decision and `docs/architecture/adr-004-matchmaking-bot-lobby.md` for the matchmaker and bot lobby
+  simulation this document's Play-button flow depends on.
 - **Engine (`src/game/engine.js`, `src/game/sim/`)** — provides `createWorld`, `step`, and every
   slot-scoped command (`queueUnit`, `commandAttack`, `moveUnit`, `setSail`, `enqueueResearch`,
-  `declareWar`, etc.) that both single-player and this system's game server consume identically.
-  Requires from this system: nothing — the engine gains no network awareness, no online-specific
-  branch, and no knowledge that a game server (rather than a browser tab) may be driving it. This
-  mirrors the engine-decoupling stance already established by `accounts-and-stats.md`.
+  `declareWar`, etc.) that both single-player and this system's game server consume identically, plus
+  the existing AI draft (`src/game/sim/newGame.js`) and `aiTick` (`src/game/sim/tick.js`) that bot
+  `lobby_members` rows and timeout-flagged human seats are converted into at match assembly. Requires
+  from this system: nothing — the engine gains no network awareness, no matchmaking awareness, and no
+  online-specific branch. Bot lobby-phase behavior (join/pick/ready) lives entirely in the game
+  server's control-plane writes, never inside the engine or `aiTick` itself.
 - **`sensors-and-fog-of-war.md`** — this system's snapshot broadcast currently sends the full,
   unfiltered world to every connected client (see Formulas — no per-recipient filtering). That
   GDD's fog-of-war rules (`sensorsOf`/`sensedBy`) still execute and still gate what each client's
@@ -339,26 +513,33 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   require no branching. Requires from this system: `useNetGame` to fully implement every method
   `useEngine`'s `api` exposes, even where the online implementation forwards to the server instead
   of mutating local state directly.
-- **UI: `LiveGame`, a new Multiplayer screen, a new Lobby room component, a Friends panel, and a
-  Me badge** — provide the player-facing surfaces described in Detailed Rules. Require from this
-  system: the `gd-social`/`gd-lobby` action set, Realtime subscriptions on `lobbies`/
-  `lobby_members`, and (for the Me badge) the same `player_stats` values `accounts-and-stats.md`
-  already exposes — no new stat fields are introduced by this document.
-- **Single-player mode** — explicitly untouched. No dependency runs from single-player to this
-  system in either direction; this is stated to make the boundary unambiguous, not because a real
-  data dependency exists.
+- **UI: `LiveGame`, the Play button on the main menu / StartMenu, a Searching state, a Lobby room
+  component (no host controls), a Friends panel, and a Me badge** — provide the player-facing
+  surfaces described in Detailed Rules. Require from this system: the `gd-lobby` action set
+  (`quick_match`, `cancel`, `set_iso`, `ready`, `leave`), Realtime subscriptions on the caller's own
+  `matchmaking_queue` row (Searching state) and on `lobbies`/`lobby_members` (Lobby room), and (for
+  the Me badge) the same `player_stats` values `accounts-and-stats.md` already exposes — no new stat
+  fields are introduced by this document. The prior Multiplayer screen (lobby browser, Create Lobby)
+  and the Lobby room's host-only AI-fill control and Start button are retired surfaces; no UI
+  component in this system should reference `create`, `find`, or `set_ai` going forward.
+- **Single-player mode** — explicitly untouched. "New Game" against local AI remains the fully
+  offline path with no dependency on the game server, the matchmaker, or any table this document
+  introduces. No dependency runs from single-player to this system in either direction; this is
+  stated to make the boundary unambiguous, not because a real data dependency exists.
 
 ## Tuning Knobs
 
-| Knob                            | Category | Range / Values                                                                     | Rationale                                                                                                                                                                                                               |
+| Knob                             | Category | Range / Values                                                                     | Rationale                                                                                                                                                                                                                     |
 | :--- | :--- | :--- | :--- |
-| `max_players` per lobby         | Gate     | 2–16 (DB `check` constraint)                                                       | Mirrors the existing free-for-all seat range established by the local/`gd-match` multiplayer backend in `docs/spec.md`; not intended to be widened without re-validating server tick cost at high seat counts.          |
+| Target nations per quick-match   | Gate     | Default `6`, range 2–16                                                           | Sets both the lobby's seat count and the bot-backfill ceiling (`TARGET_NATIONS − humansGathered`); 6 was chosen as a lively-feeling war room that doesn't demand 16 concurrent humans to feel full. Mirrors `max_players`.  |
+| Matchmaking human-match window   | Curve    | Default `6s`                                                                       | Long enough that two humans pressing Play moments apart land together; short enough that a lone player's wait (when skipped, effectively 0s) never feels like the common case is "waiting." Tune against real queue depth. |
+| Bot join stagger (`botJoinStaggerS`) | Feel | Default range `[0.4s, 1.6s]`                                                       | Produces a visibly staggered, human-like sequence of seats filling rather than all bots appearing in one frame; tuned by playtest feel, not by a formula.                                                                    |
+| Bot ready delay (`botReadyDelayS`)   | Feel | Default range `[1s, 4s]`                                                           | Keeps bots from readying suspiciously instantly after joining; wide enough that the Lobby room's ready countdown feels organic rather than mechanical.                                                                       |
+| Lobby-ready max timeout (`lobbyReadyTimeoutS`) | Gate | Default `45s`                                                              | Bounds how long a human can leave the lobby hanging before their seat is force-converted to AI; long enough to pick a nation and hit Ready without feeling rushed, short enough that other members (human or watching bots) aren't stuck indefinitely.                     |
 | Server tick rate                | Feel     | Fixed at `10 Hz` for this version                                                  | Matches the responsiveness the deterministic engine already assumes locally (`useEngine`'s per-frame `step` calls); raising it trades server CPU for lower input-to-effect latency, not currently needed at this scale. |
 | Snapshot broadcast rate         | Curve    | Fixed at `2 Hz` for this version                                                   | Full-snapshot bandwidth scales with world size and player count; 2 Hz was chosen as "clearly enough to correct drift" without profiling bandwidth at max seats. Revisit once delta encoding (ADR follow-up) lands.      |
 | Reconnect grace window          | Gate     | Fixed at `60s`                                                                     | Long enough to survive a phone call, a wifi blip, or an app crash-and-relaunch; short enough that an abandoned match doesn't stall the other players' pacing waiting on a slot that may never return.                   |
-| Lobby-`starting`-stuck watchdog | Gate     | Fixed at `30s` (client-observed)                                                   | Balances "give the game server a moment to notice and claim the row" against "don't leave the host staring at a spinner indefinitely if the server is actually down."                                                   |
-| Quick-match candidate ordering  | Curve    | Fixed at oldest-`open`-lobby-first (FIFO)                                          | Simplicity over optimal seat-packing; an alternative (best-fit on remaining seats, or bias toward near-full lobbies to minimize AI fill) is a plausible future revision, not implemented in this version.               |
-| `ai_slots` upper bound          | Gate     | `ai_slots + humans ≤ max_players`, enforced by `gd-lobby`                          | Prevents a host from configuring a lobby that can never validly assemble; rejecting invalid configuration server-side (rather than clamping) keeps the host's displayed seat math always truthful.                      |
+| Lobby-`starting`-stuck watchdog | Gate     | Fixed at `30s` (client-observed)                                                   | Balances "give the game server a moment to notice and claim the row" against "don't leave the player staring at a spinner indefinitely if the server is actually down." Reused as-is for the searching-timeout pattern (see Edge Cases). |
 | Friend search result set        | Feel     | Unbounded username substring/exact match (implementer's choice) against `profiles` | Not specified further here — this is a UX-layer decision (result limit, debounce) rather than a backend constraint; `profiles` is readable to any authenticated user for exactly this purpose (see Detailed Rules).     |
 
 ## Acceptance Criteria
@@ -372,22 +553,34 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   a duplicate `friendships` row and does not surface an error to the sender.
 - Removing a friend removes the relationship symmetrically — neither account lists the other
   afterward, and a fresh `request` after a `remove` behaves as a brand-new request, not a stale one.
-- Creating a lobby produces exactly one `lobbies` row (host as slot 0) and is visible in another
-  account's live lobby browser without that account refreshing the page/screen.
-- `find` (quick match) joins the oldest eligible open lobby when one exists, and creates a new one
-  when none does — verified by constructing both scenarios with seeded test lobbies.
-- Two clients racing to claim the last open seat in a lobby result in exactly one success and one
-  clean, user-visible failure — never two members occupying the same `slot`, and never a silent
-  failure with no client-visible feedback.
-- A host leaving a multi-member lobby transfers host to the lowest-`slot` remaining member; a host
-  leaving a single-member lobby closes it — both verified by inspecting `lobbies.status` and
-  `lobbies.host` after each scenario.
-- Starting a lobby (`start`) with a live game server running results in the lobby reaching
-  `status = 'active'` with a populated `match_id` and `server_url` within a few seconds, and every
-  human member's client auto-connects using those values without manual entry.
-- With no game server process running, a lobby stuck at `status = 'starting'` for more than 30s is
-  visibly reported as an error to the host, and the lobby is confirmed to revert to `status = 'open'`
-  (re-startable) rather than remaining permanently stuck.
+- Pressing **Play** enrolls the caller in `matchmaking_queue` and immediately shows the Searching
+  state ("Searching for commanders…") with a working cancel affordance — verified by inspecting the
+  `matchmaking_queue` row created and by confirming `cancel` deletes it and returns to the main menu
+  with no lobby ever formed.
+- Two accounts pressing Play within `matchWindowS` (default 6s) of each other land in the **same**
+  `lobbies` row together — verified by constructing this scenario with two real test accounts and
+  inspecting `lobby_members` for both `user_id`s under one `lobby_id`.
+- A lone account pressing Play with no other account queued is matched immediately (the human-match
+  window is observably skipped, not waited out) against an all-bot roster — verified by timing from
+  `quick_match` call to `matchmaking_queue.status = 'matched'` and confirming it is not gated behind
+  the full `matchWindowS`.
+- Bot `lobby_members` rows appear in the Lobby room over a staggered, non-instantaneous cadence
+  (per `botJoinStaggerS`/`botReadyDelayS`), each selecting a **distinct** `iso` (no two members,
+  human or bot, share a nation at assembly) and setting their own `ready = true` without any client
+  action — verified by observing a real client's Realtime feed across a full bot-fill lobby and
+  confirming no `iso` collision and no simultaneous mass-ready.
+- The match auto-launches (`lobbies.status` reaches `'starting'`, then `'active'`) the instant every
+  member (human and bot) is ready, with **no host role, no AI-count control, and no Start button**
+  present anywhere in the client — verified by code inspection (no such component/action exists) and
+  by playing a full lobby-to-match transition with zero manual launch interaction.
+- A human who never toggles Ready triggers the `lobbyReadyTimeoutS` (default 45s) force-launch, and
+  their seat is confirmed AI-controlled in the resulting match (via the same conversion mechanism
+  ADR-0003 defines for an expired reconnect) — verified by leaving one seat unready for the full
+  timeout and observing that nation is AI-piloted once `status` reaches `'active'`.
+- The retired surfaces — the lobby browser, Create Lobby, the host-only AI-count stepper, and the
+  Start button — are absent from the client, and `gd-lobby` no longer accepts `create`, `find`, or
+  `set_ai` on the player-facing path (calls to those actions are rejected or simply do not exist in
+  the deployed function) — verified by code inspection and by attempting each retired action.
 - A running match enforces the command whitelist and slot-forcing: a scripted/forged WebSocket
   message attempting to act on another player's slot, or to call a non-whitelisted action, is
   rejected by the server and produces no state change for the targeted slot.
@@ -397,9 +590,10 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
 - Disconnecting a client mid-match and not reconnecting within 60s results in that nation
   continuing under AI control, and a `matches` row with `result: 'quit'` and `mode: 'online'` for
   that human once the match ends.
-- If every human participant quits or times out with no reconnect, the match ends immediately
-  (does not continue running AI-vs-AI), and every human who was ever part of the match has exactly
-  one `matches` row written reflecting their state at the moment the last human departed.
+- If every human participant quits or times out (mid-lobby via `lobbyReadyTimeoutS`, or mid-match
+  via the 60s reconnect grace) with no reconnect, the match does not run indefinitely as AI-vs-AI —
+  it ends immediately, and every human who was ever part of the match has exactly one `matches` row
+  written reflecting their state at the moment the last human departed.
 - Online matches never expose pause or speed controls in the UI, and the observed tick pacing is
   consistent with the fixed 1× server rate across a full test match.
 - The client's projectile/unit motion between snapshots visibly interpolates/predicts smoothly
@@ -410,8 +604,11 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
 - `LiveGame` and its panels render identically (same components, same layout) whether driven by
   `useEngine` (single-player) or `useNetGame` (online) — confirmed by code inspection showing no
   mode-conditional branching above the hook boundary, and by playing one full match in each mode.
-- The Me badge, Friends panel, Multiplayer screen, and Lobby room are each reachable from the
-  relevant menu/in-game context and reflect live state (seat fills, ready toggles, friend
+- Bot `lobby_members` render with the same row treatment as human members in the Lobby room (no
+  visible "BOT" label or distinct styling) — confirmed by screenshot/visual comparison of a human
+  row and a bot row in the same lobby.
+- The Me badge, Friends panel, Play button/Searching state, and Lobby room are each reachable from
+  the relevant menu/in-game context and reflect live state (seat fills, ready toggles, friend
   request changes) without a manual page refresh, verified with two simultaneous test clients.
 
 <br />
