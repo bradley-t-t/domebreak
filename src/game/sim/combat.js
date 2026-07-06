@@ -24,6 +24,27 @@ export function findTarget(w, id) {
     return null;
 }
 
+// Predicted-intercept aim point: where a pursuer at {lng,lat,speed} should steer
+// to *meet* moving projectile p, rather than chasing where p is right now. Solves
+// time-to-intercept by fixed-point iteration (tau = range / pursuerSpeed, re-sample
+// the target's future track point, repeat — converges in a few steps for any
+// closing geometry) and returns that future track point. When the pursuer is too
+// slow to catch up, tau grows, the future fraction clamps to 1, and the aim point
+// settles on the target's impact point — a sane lead-toward-the-endpoint fallback.
+export function leadInterceptPoint(it, p) {
+    const pursuerSpeed = it.speed || 1;
+    const tgtSpeed = p.speed ?? MISSILE_SPEED;
+    const total = p.dist || 1;
+    let tau = haversine(it.lng, it.lat, p.lng, p.lat) / pursuerSpeed;
+    let aim = [p.lng, p.lat];
+    for (let k = 0; k < 4; k++) {
+        const f = Math.min(1, p.progress + (tgtSpeed * tau) / total);
+        aim = trackPoint(p, f);
+        tau = haversine(it.lng, it.lat, aim[0], aim[1]) / pursuerSpeed;
+    }
+    return aim;
+}
+
 // Ground track of a projectile at flight fraction f: the great circle from
 // launch to aim point, plus — for MIRVs — a lateral bow (spreadKm, signed per
 // sub) that fans the pattern out after release and converges it back onto the
