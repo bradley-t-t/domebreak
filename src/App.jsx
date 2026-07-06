@@ -287,7 +287,11 @@ export default function App() {
     // The live attract war plays behind login and menu — never during a real
     // game, never under reduced motion (the static backdrop stands in).
     const attractOn = data && !reduceMotion && (authStatus !== "signedIn" || screen === "menu");
-    const attract = attractOn ? <AttractSim data={data}/> : null;
+    // On the main menu the chrome sits in a left rail, so nudge the globe's
+    // projection center rightward to keep it clear of the console.
+    const attract = attractOn
+        ? <AttractSim data={data} framed={authStatus === "signedIn" && screen === "menu"}/>
+        : null;
     const splash = !splashDone &&
         <SplashSequence reduceMotion={reduceMotion} onDone={() => setSplashDone(true)}/>;
 
