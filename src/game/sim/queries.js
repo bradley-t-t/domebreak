@@ -88,11 +88,11 @@ export function incomeOf(w, slot) {
     if (n.gdp > 0) {
         let econ = 0;
         for (const c of w.cities) if (c.slot === slot && c.alive) econ += (c.econ || 0) * vitalityOf(c);
-        return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econ + ind) * (n.incomeMult ?? 1);
+        return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econ + ind) * (n.incomeMult ?? 1) * (n.commandMult ?? 1);
     }
     let vit = 0;
     for (const c of w.cities) if (c.slot === slot && c.alive) vit += vitalityOf(c);
-    return (ECONOMY.fallbackBase + vit * ECONOMY.fallbackPerCity + ind) * (n.incomeMult ?? 1);
+    return (ECONOMY.fallbackBase + vit * ECONOMY.fallbackPerCity + ind) * (n.incomeMult ?? 1) * (n.commandMult ?? 1);
 }
 
 export function upkeepOf(w, slot) {
