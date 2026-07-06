@@ -19,6 +19,7 @@ import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import {
     armamentOf,
     COAST_KM,
+    defenseMinRange,
     defenseRange,
     gdpOf,
     hangarCapOf,
@@ -126,6 +127,7 @@ export default function LiveGame({
         if (def.kind === "defense") {
             rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, def.intercept + (myNation?.interceptAdd ?? 0)) * 100)}%`]);
             rows.push(["Engage Range", km(defenseRange(w, u))]);
+            if (defenseMinRange(w, u) > 0) rows.push(["Min Range", km(defenseMinRange(w, u))]);
             rows.push(["Radar Link", radarLinked(w, u) ? `Linked ×${RADAR_RANGE_MULT}` : "No Link"]);
             rows.push(["Reload", `${def.reload}s`]);
             rows.push(["Shot Cost", `◆ ${def.fireCost}`]);

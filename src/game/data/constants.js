@@ -411,6 +411,10 @@ export const UNITS = {
         cost: 460,
         buildTime: 18,
         range: 700,
+        // High-altitude area ABM: it kills reentry vehicles far out and high up.
+        // Inside this keep-out radius the engagement geometry collapses, so the
+        // battery can't fire — that inner gap is the lower tier's (Patriot) job.
+        minRange: 250,
         intercept: 0.85,
         reload: 4,
         fireCost: 24,
