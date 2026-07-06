@@ -2,7 +2,26 @@
 // coverage, and defense-range queries. No mutation of world state.
 import {haversine} from "../geo/geo.js";
 import {nationOf} from "./worldState.js";
-import {AIRBORNE_ALT, ECONOMY, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+
+// Fallout cloud intensity (0..1) for a given age in sim seconds: ramps up over
+// riseSec, holds at peak through fadeFrac of its life, then decays linearly to 0
+// at lifeSec. Pure — the tick uses it for damage, the map uses it for opacity, so
+// the danger footprint and the visible haze always agree.
+export function falloutIntensity(age) {
+    if (age <= 0 || age >= FALLOUT.lifeSec) return 0;
+    if (age < FALLOUT.riseSec) return age / FALLOUT.riseSec;
+    const fadeStart = FALLOUT.lifeSec * FALLOUT.fadeFrac;
+    if (age <= fadeStart) return 1;
+    return Math.max(0, 1 - (age - fadeStart) / (FALLOUT.lifeSec - fadeStart));
+}
+
+// Fallout dose falloff (0..1) at distance distKm from the cloud center: full dose
+// at the core, tapering to edgeFalloff at radiusKm, zero beyond.
+export function falloutProximity(distKm, radiusKm) {
+    if (distKm >= radiusKm) return 0;
+    return 1 - (1 - FALLOUT.edgeFalloff) * (distKm / radiusKm);
+}
 
 export function atWar(w, a, b) {
     if (a === b) return false;
@@ -221,6 +240,13 @@ export function defenseRange(w, d) {
     if (UNITS[d.type].kind !== "defense") return base;
     const n = nationOf(w, d.slot);
     return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1) * (n?.defRangeMult ?? 1);
+}
+
+// Inner keep-out radius (km): targets closer than this can't be engaged. It's a
+// flat kinematic floor of the battery — radar links and range research push the
+// outer edge out, but never shrink this inner gap. 0 for units without one.
+export function defenseMinRange(_w, d) {
+    return UNITS[d.type].minRange || 0;
 }
 
 // Returns the human-readable reason a structure can't be sited here, or null

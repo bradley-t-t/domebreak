@@ -2,7 +2,7 @@
 // Target resolution (findTarget) also lives here since launch/impact/attack
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
-import {MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
+import {FALLOUT, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 
@@ -22,6 +22,27 @@ export function findTarget(w, id) {
         }, lng: u.lng, lat: u.lat
     };
     return null;
+}
+
+// Predicted-intercept aim point: where a pursuer at {lng,lat,speed} should steer
+// to *meet* moving projectile p, rather than chasing where p is right now. Solves
+// time-to-intercept by fixed-point iteration (tau = range / pursuerSpeed, re-sample
+// the target's future track point, repeat — converges in a few steps for any
+// closing geometry) and returns that future track point. When the pursuer is too
+// slow to catch up, tau grows, the future fraction clamps to 1, and the aim point
+// settles on the target's impact point — a sane lead-toward-the-endpoint fallback.
+export function leadInterceptPoint(it, p) {
+    const pursuerSpeed = it.speed || 1;
+    const tgtSpeed = p.speed ?? MISSILE_SPEED;
+    const total = p.dist || 1;
+    let tau = haversine(it.lng, it.lat, p.lng, p.lat) / pursuerSpeed;
+    let aim = [p.lng, p.lat];
+    for (let k = 0; k < 4; k++) {
+        const f = Math.min(1, p.progress + (tgtSpeed * tau) / total);
+        aim = trackPoint(p, f);
+        tau = haversine(it.lng, it.lat, aim[0], aim[1]) / pursuerSpeed;
+    }
+    return aim;
 }
 
 // Ground track of a projectile at flight fraction f: the great circle from
@@ -92,6 +113,12 @@ export function launch(w, unit, target, warhead) {
 // (cities permanently — alive=false), and emits the hit/destroy/fizzle event.
 export function resolveHit(w, p) {
     const target = findTarget(w, p.targetId);
+    // A qualifying warhead (thermonuclear) contaminates the ground where it goes
+    // off, whether or not a live target was there to absorb the blast — so the
+    // cloud is sited before the fizzle bail-out, at the impact point.
+    if (FALLOUT.warheads.includes(p.warhead)) {
+        spawnFallout(w, target ? target.lng : p.toLng, target ? target.lat : p.toLat, p.slot);
+    }
     if (!target || !target.alive) {
         w.events.push({id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat});
         return;
@@ -112,6 +139,24 @@ export function resolveHit(w, p) {
         lat: target.lat,
         slot: p.slot
     });
+}
+
+// Seeds a radioactive fallout cloud at a ground-zero point. The cloud is a
+// long-lived world effect (w.effects) the tick ages, drifts, and reads for
+// damage-over-time; the map renders its footprint and epicenter. Deterministic —
+// no rng — so replays and tests stay stable.
+export function spawnFallout(w, lng, lat, slot) {
+    if (!w.effects) w.effects = []; // saves from before fallout existed
+    w.effects.push({
+        id: nextId(w, "fx"),
+        type: "fallout",
+        lng,
+        lat,
+        radiusKm: FALLOUT.radiusKm,
+        age: 0,
+        slot,
+    });
+    w.events.push({id: nextId(w, "e"), t: w.time, type: "fallout", lng, lat, slot});
 }
 
 // Cluster bus reentry: release subCount MIRVs from the bus position. Half dive
