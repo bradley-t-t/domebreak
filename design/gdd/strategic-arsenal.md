@@ -63,8 +63,10 @@ missile supports more than one warhead show a picker.
   (~8,000 km start), survivable; **ICBM** — global (~20,000 km), fast, fixed
   (silo) or stealth (SSBN); **Orbital** — strike anywhere; **Hypersonic** — fast,
   high evasion, regional, very hard to intercept.
-- The Hypersonic round is today's `hgv` warhead repurposed as the Battery's fixed
-  delivery vehicle; the Battery is now the *sole* owner of hypersonic delivery.
+- The Hypersonic round keeps its existing key `hgv` (relabelled "Hypersonic
+  Missile") as the Battery's fixed round; the Battery is now the *sole* owner of
+  hypersonic delivery. Keeping the key means the only warhead rename is
+  `standard`→`conventional`, minimising save migration.
 
 ### 3.3 The TEL (Transporter-Erector-Launcher)
 
@@ -87,6 +89,30 @@ the **SICBM** (a single heavy warhead, shorter range than the silo ICBM).
 - Interception, blast, MIRV split, evasion, and fallout use the existing
   projectile pipeline (`combat.js` / `tick.js`), extended for the new keys.
 
+### 3.5 Implementation model (how "two axes" maps to the engine)
+
+The engine already has exactly the two levers this design needs — it does **not**
+require a new "delivery vehicle" data structure:
+
+- **Delivery vehicle = the platform's own stats.** Range, missile speed, and
+  evasion already live on the `UNITS` entry for each platform. "SICBM vs ICBM vs
+  Orbital vs Hypersonic" is expressed entirely through those per-platform numbers
+  plus display naming. There is no separate delivery object.
+- **Warhead = the `ammo` key** the platform loads and the projectile carries
+  (`WARHEADS[key]`), exactly as today.
+- **Single-round platforms** (TEL, Battery) model their missile *as* their one
+  ammo key — `ammo: ["sicbm"]`, `ammo: ["hgv"]`. With one entry the UI shows no
+  picker (the existing `>1 warhead` gate). So a "delivery vehicle" and a
+  "warhead" are the same field for these platforms; the distinction only matters
+  visually for the multi-warhead platforms.
+- **Multi-warhead platforms** (Silo, SSBN, Orbital) list the selectable warheads
+  in `ammo`; their delivery vehicle is flavour derived from the platform.
+
+Consequence: this is an extension of the current `ammo`/`warhead` system, not a
+rewrite. New work is new keys (`conventional` rename, `sicbm`, `thermomirv`),
+TEL mobility, the `thermomirv` split path, and migration — not a new selection
+dimension.
+
 ## 4. Formulas
 
 - Impact damage = `UNITS[platform].damage × platform.dmgMult × WARHEADS[wh].dmgMult`.
@@ -97,20 +123,43 @@ the **SICBM** (a single heavy warhead, shorter range than the silo ICBM).
   `subCount` sub-projectiles, each `damage = bus.damage × subDmgFrac`; a
   `primaryShare` fraction stay on the primary target, the rest fan to hostile
   targets within `splash`.
-- Thermo-MIRV proposed start: `subCount ≈ 3`, `subDmgFrac` sized so total yield
-  ≈ a single Thermo × a modest multiplier; each sub seeds fallout on impact.
 - TEL fire gate adds: `!unit.dest` (stationary) to the existing offense fire
   conditions.
+
+### Concrete starting stats for the new keys (all tunable)
+
+`WARHEADS` entries — proposed starting values, to be confirmed by `/balance-check`:
+
+| key           | short | role     | dmgMult | blastKm | subCount | subDmgFrac | primaryShare | fallout | prodCost | prodTime | requiresTech |
+|---------------|-------|----------|---------|---------|----------|------------|--------------|---------|----------|----------|--------------|
+| `conventional`| CONV  | Balanced | 1.0     | 70      | —        | —          | —            | no      | 30       | 4        | —            |
+| `cluster`     | CLU   | Area     | 0.75    | 0       | 8        | 0.25       | 0.5          | no      | 55       | 6        | —            |
+| `sicbm`       | SICBM | Mobile   | 1.4     | 100     | —        | —          | —            | no      | 55       | 6        | —            |
+| `hgv`         | HYP   | Fast     | 1.6     | 90      | —        | —          | —            | no      | 90       | 8        | (existing)   |
+| `thermo`      | THR   | Heavy    | 2.4     | 170     | —        | —          | —            | yes     | 130      | 11       | —            |
+| `thermomirv`  | TMRV  | Heavy MIRV| 2.4    | 120     | 3        | 0.6        | 0.34         | yes     | 210      | 17       | late off-tier|
+
+Notes:
+- `sicbm` dmgMult 1.4 gives the TEL its "bigger warhead" feel; blastKm 100 (wider
+  than conventional 70). It is a single ballistic round, no evasion.
+- `thermomirv`: 3 sub-warheads, one stays on the primary (`primaryShare` 0.34) and
+  two fan out — a multi-city weapon, not single-target overkill. Each sub seeds
+  fallout (`thermomirv` added to `FALLOUT.warheads`); per-sub `blastKm` 120.
+  Expensive and tech-gated so it is a capstone, not a default.
+- TEL platform `damage` starts at ~40 (up from the launcher's 34) to suit a
+  heavier round; SICBM range ~8,000 km (down from silo 20,000).
 
 ## 5. Edge Cases
 
 - **TEL ordered to move mid-engagement:** drops/holds its shot until it stops.
 - **Orbital has no conventional round:** its picker never offers Conventional;
   `initialWarhead` returns its cheapest allowed strategic round.
-- **Save migration:** in-progress games with old ammo keys map forward —
-  `standard → conventional`; existing `hgv` stock folds into the Battery's
-  hypersonic round; `cluster`/`thermo` unchanged; `sicbm`/`thermomirv` start at 0.
-  A save-load shim rewrites `nation.ammo` and each unit's `warhead`.
+- **Save migration:** in-progress games map forward with a single key rename —
+  `standard → conventional` in `nation.ammo` and every unit's `warhead`. `hgv`,
+  `cluster`, `thermo` keep their keys (no change); `sicbm`/`thermomirv` start at 0.
+  Any unit whose loaded `warhead` is no longer in its `ammo` list (e.g. an old
+  `launcher` becoming a TEL) is reset to its `initialWarhead`. A save-load shim
+  performs the rename and the reset.
 - **Thermo-MIRV vs thin defenses:** multiple city-killers from one launch can be
   decisive — mitigated by cost, tech gating, and low sub-count (balance-check).
 - **AI on new keys:** AI stocking/arming references update from `standard`/`hgv`
