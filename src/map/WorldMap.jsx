@@ -1,6 +1,6 @@
 /*!
- * GoldenDome board. Reused Open Historia PMTiles tiles (MIT) under a fresh
- * MapLibre renderer, with globe + flat projection. Accepts children for overlays.
+ * GoldenDome board. PMTiles tiles under a MapLibre renderer, with globe + flat
+ * projection. Accepts children for overlays.
  *
  * Rendering stack (bottom -> top): deep-sea base, real Natural-Earth relief
  * (faded in only when zoomed in), depth-graded ocean from Natural-Earth

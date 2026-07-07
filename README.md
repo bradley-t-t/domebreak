@@ -34,7 +34,7 @@ you win.
   <tr>
     <td width="33%" valign="top">
       <h3 align="center">The whole planet is the board</h3>
-      <p align="center">Choose any real nation and fight on a MapLibre GL + PMTiles world map — globe or flat, real cities, real borders, backed by reused Open Historia tiles.</p>
+      <p align="center">Choose any real nation and fight on a MapLibre GL + PMTiles world map — globe or flat, real cities, real borders, backed by a real-world tile map.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
@@ -131,14 +131,13 @@ for the decision records behind accounts, local saves, and the authoritative ser
 
 ## Attribution
 
-The interactive world map — MapLibre + PMTiles rendering and the region/country/city tile layers — is reused
-from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License. Unit icons are
+The interactive world map is a MapLibre + PMTiles renderer with region/country/city tile layers. Unit icons are
 from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0.
 
 ## License
 
-Authored by **Trenton Taylor**. Reused components — the Open Historia map engine and game-icons.net icons — retain their
-upstream licenses noted above; the repository does not yet ship its own license file.
+Authored by **Trenton Taylor**. Reused game-icons.net icons retain their upstream license noted above; the
+repository does not yet ship its own license file.
 
 <br />
 
