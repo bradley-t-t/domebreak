@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
+import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
 import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
@@ -58,6 +58,14 @@ export default function SelectionPanel({
                     setPlacing(null);
                 }}>{moving === selectedUnit.id ? "Pick a Destination…" : "Set Sail"}</button>)}
             {UNITS[selectedUnit.type].wing && (() => {
+                // Patrol wording follows the base's craft: fixed-wing bases fly a
+                // fighter CAP, the Army Base flies a helicopter patrol. Never "ship"
+                // — this game has actual naval ships, so the word is reserved for them.
+                const rotaryPatrol = !!UNITS[PATROL_FIGHTER[selectedUnit.type]]?.rotary;
+                const craftWord = rotaryPatrol ? "Helo" : "Aircraft";
+                const patrolTitle = rotaryPatrol ? "Helicopter Patrol" : "Fighter Patrol";
+                const patrolTerm = rotaryPatrol ? "Patrol" : "CAP";
+                const hasAwacs = hangarCapOf(selectedUnit.type, "awacs") > 0;
                 return (
                     <div className="my-1 mb-[10px]">
                         <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Hangar</div>
@@ -121,10 +129,10 @@ export default function SelectionPanel({
                                 </div>
                             );
                         })()}
-                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Fighter Patrol</div>
+                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">{patrolTitle}</div>
                         <p className="mt-0 mb-1.5 font-mono text-[10px] tracking-[0.6px] text-dim">
-                            {(selectedUnit.patrolSize || 0) === 0 ? "Patrol Stood Down" : `${selectedUnit.patrolSize}-Ship CAP`}
-                            {" · "}AWACS {selectedUnit.awacsPatrol ? "On" : "Off"}
+                            {(selectedUnit.patrolSize || 0) === 0 ? "Patrol Stood Down" : `${selectedUnit.patrolSize}-${craftWord} ${patrolTerm}`}
+                            {hasAwacs && <>{" · "}AWACS {selectedUnit.awacsPatrol ? "On" : "Off"}</>}
                         </p>
                         <div className="flex gap-1 mb-2">
                             {PATROL_SIZES.map((n) => (
@@ -133,9 +141,9 @@ export default function SelectionPanel({
                                     (selectedUnit.patrolSize || 0) === n && "bg-gold text-gold-contrast border-transparent"
                                 )}
                                         aria-pressed={(selectedUnit.patrolSize || 0) === n}
-                                        aria-label={n === 0 ? "Stand patrol down" : `Keep a ${n}-ship patrol on station`}
-                                        title={n === 0 ? "Stand the patrol down." : `Keep a ${n}-ship on station.`}
-                                        onClick={() => api.setPatrolSize(selectedUnit.id, n)}>{n === 0 ? "Off" : `${n}-Ship`}</button>
+                                        aria-label={n === 0 ? "Stand patrol down" : `Keep a ${n}-${craftWord.toLowerCase()} patrol on station`}
+                                        title={n === 0 ? "Stand the patrol down." : `Keep ${n} ${craftWord.toLowerCase()}s on station.`}
+                                        onClick={() => api.setPatrolSize(selectedUnit.id, n)}>{n === 0 ? "Off" : `×${n}`}</button>
                             ))}
                         </div>
                         {hangarCapOf(selectedUnit.type, "awacs") > 0 && (

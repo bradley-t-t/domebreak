@@ -39,6 +39,7 @@ import {
     inTerritory,
     placementBlocked,
     populationOf,
+    PATROL_FIGHTER,
     RADAR_RANGE_MULT,
     radarLinked,
     radarRangeOf,
@@ -1384,7 +1385,7 @@ export default function LiveGame({
                                     <div><span>Radar</span><b>{UNITS[hoverEnt.type].radarKm} km</b></div> : null}
                                 {UNITS[hoverEnt.type].wing ?
                                     <div>
-                                        <span>Patrol</span><b>{(hoverEnt.patrolSize ? `${hoverEnt.patrolSize}-Ship` : "Off") + (hoverEnt.awacsPatrol ? " · AWACS" : "")}</b>
+                                        <span>Patrol</span><b>{(hoverEnt.patrolSize ? `${hoverEnt.patrolSize}-${UNITS[PATROL_FIGHTER[hoverEnt.type]]?.rotary ? "Helo" : "Aircraft"}` : "Off") + (hoverEnt.awacsPatrol ? " · AWACS" : "")}</b>
                                     </div> : null}
                                 <div><span>HP</span><b>{Math.round(hoverEnt.hp)}</b></div>
                                 <div><span>Upkeep</span><b>{UNITS[hoverEnt.type].upkeep}/s</b></div>

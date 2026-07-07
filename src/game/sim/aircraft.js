@@ -10,6 +10,7 @@ import {
     FIGHTER_ORBIT_STEP_KM,
     HANGAR_SPEC,
     HELO_CLIMB_T,
+    HELO_PATROL_RATE,
     HELO_STATION_KM,
     HOLD_PAD,
     KM_PER_DEG,
@@ -407,9 +408,9 @@ export function recordTrail(u, dt) {
     if (u.trail.length > TRAIL_LEN) u.trail.shift();
 }
 
-// Rotary-wing controller: vertical lift-off, hover on a picket point around the
-// base (a distinct bearing per helo so a flight fans out), then a vertical descent
-// onto the pad. No ground roll, no orbit ring, no localizer approach.
+// Rotary-wing controller: vertical lift-off, then patrol a slow picket circle around
+// the base (each helo starts on a distinct bearing so a flight fans out around the
+// ring), then a vertical descent onto the pad. No ground roll, no localizer approach.
 function flyRotary(w, u, def, base, dt) {
     const sp = def.airSpeed, tr = def.turnRate;
     const d = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
@@ -431,12 +432,16 @@ function flyRotary(w, u, def, base, dt) {
         if (u.alt >= 0.98) u.phase = "station";
         return;
     }
-    if (u.phase !== "recover" && u.phase !== "landing") { // hover on station (default while airborne)
+    if (u.phase !== "recover" && u.phase !== "landing") { // patrol the picket ring (default while airborne)
         u.phase = "station";
         u.alt = slew(u.alt, 1, dt);
         u.vis = 1;
-        const pt = polarFrom(base, HELO_STATION_KM, bearing);
-        if (goHover(pt, sp)) u.face = polarFrom(u, 30, bearing); // arrived → hold, watching outward
+        // Walk the picket point slowly around the base so the helo flies a circuit
+        // rather than parking on one spot — a visible patrol, not a static hover.
+        u.orbitA = (u.orbitA ?? 0) + HELO_PATROL_RATE * dt;
+        const pt = polarFrom(base, HELO_STATION_KM, u.orbitA);
+        goHover(pt, sp);
+        u.face = polarFrom(u, 30, u.orbitA + Math.PI / 2); // nose along the patrol track
         u.fuel = (u.fuel ?? 0) - dt;
         if (u.fuel <= 0 || u.recall) u.phase = "recover";
         return;

@@ -1452,10 +1452,11 @@ export const PATROL_FUEL = 45, REFUEL_TIME = 14, LAUNCH_GAP = 3.5;
 export const AWACS_ORBIT_KM = 330, FIGHTER_ORBIT_BASE_KM = 140, FIGHTER_ORBIT_STEP_KM = 45;
 export const KM_PER_DEG = 111;
 export const ROLL_KM = 35, CLIMB_KM = 95, APPROACH_KM = 210, ROLLOUT_KM = 42, HOLD_PAD = 50, AIRSTRIP_RUNWAY = 0.95;
-// Rotary-wing (helicopter) flight: no runway, no orbit rings. HELO_STATION_KM is the
-// picket standoff each helo hovers at around its base; HELO_CLIMB_T is the vertical
-// lift-off / touchdown time constant (seconds to rise/settle).
-export const HELO_STATION_KM = 95, HELO_CLIMB_T = 1.1;
+// Rotary-wing (helicopter) flight: no runway. HELO_STATION_KM is the picket radius
+// each helo patrols around its base; HELO_PATROL_RATE is how fast (rad/s) its picket
+// point walks that ring, so the flight sweeps a slow circle instead of hovering in
+// place; HELO_CLIMB_T is the vertical lift-off / touchdown time constant (s to rise/settle).
+export const HELO_STATION_KM = 95, HELO_PATROL_RATE = 0.08, HELO_CLIMB_T = 1.1;
 export const TRAIL_DT = 0.4, TRAIL_LEN = 9;
 
 // Real-world country populations (2024 estimates). City/state populations in the
