@@ -3,7 +3,7 @@ import {colorForSlot} from "../../game/data/constants.js";
 export default function PinnedBar({pins, onGo, onRemove}) {
     if (!pins.length) return null;
     return (
-        <div className="absolute top-[60px] right-4 z-5 w-[190px] bg-panel border border-line rounded px-[10px] py-2 backdrop-blur-[10px]">
+        <div className="absolute top-[88px] right-4 z-5 w-[190px] bg-panel border border-line rounded px-[10px] py-2 backdrop-blur-[10px]">
             <div className="text-[10px] tracking-[1px] uppercase text-faint mb-[5px]">Pinned</div>
             {pins.map((p) => (
                 <div key={p.key} className="flex items-center gap-1">

@@ -90,6 +90,9 @@ async function createWindow() {
     const win = new BrowserWindow({
         width: 1440, height: 920, minWidth: 1024, minHeight: 680,
         backgroundColor: "#05080f", title: "DomeBreak",
+        titleBarStyle: "hidden",
+        trafficLightPosition: {x: 14, y: 18},
+        titleBarOverlay: {color: "#05080f", symbolColor: "#9ba1ab", height: 34},
         webPreferences: {
             contextIsolation: true, preload: path.join(__dirname, "preload.cjs"),
             devTools: false, spellcheck: false, backgroundThrottling: false,

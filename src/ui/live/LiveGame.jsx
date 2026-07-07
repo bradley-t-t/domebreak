@@ -1194,7 +1194,7 @@ export default function LiveGame({
                       aircraft={visUnits.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)} tick={w.time}/>
             <CountryLabels map={mapRef.current} labels={labels}/>
 
-            <div className="absolute top-[14px] right-4 z-6 flex gap-2">
+            <div className="absolute top-[40px] right-4 z-6 flex gap-2">
                 <AmmoBar nation={myNation}/>
                 <button className={iconButton()} onClick={onToggleGlobe} title="Globe / Flat view"
                         aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>
@@ -1211,7 +1211,7 @@ export default function LiveGame({
                 gutters are held at every width; LiveHud auto-scales the bar to fit the
                 lane it's given (see its measured zoom-fit), so shrinking the viewport
                 shrinks the bar instead of letting it overflow into the corners. */}
-            <div className="absolute top-4 left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
+            <div className="absolute top-[40px] left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
                 <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
                 <NewsTicker world={w} mySlot={mySlot}/>
@@ -1236,10 +1236,10 @@ export default function LiveGame({
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
 
             {moving && <div
-                className="absolute top-[84px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
+                className="absolute top-[100px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
                 <button className={miniButton()} onClick={() => setMoving(null)}>Cancel</button>
             </div>}
-            {disembarkId && <div className="absolute top-[84px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">Landing — click a coastal point inside your territory.
+            {disembarkId && <div className="absolute top-[100px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">Landing — click a coastal point inside your territory.
                 <button className={miniButton()} onClick={() => setDisembarkId(null)}>Cancel</button>
             </div>}
 
