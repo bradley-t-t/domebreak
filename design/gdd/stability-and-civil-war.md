@@ -1,4 +1,10 @@
-# Stability & Civil War
+<h1 align="center">Stability &amp; Civil War</h1>
+
+<p align="center">
+  <b>A second survival bar: mounting strains — lost cities, too many wars, killed or bunkered leadership, a running deficit — erode national Stability until a nation held at zero fractures into a breakaway hostile state.</b>
+</p>
+
+<br />
 
 ## 1. Overview
 

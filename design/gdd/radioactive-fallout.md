@@ -1,4 +1,10 @@
-# Radioactive Fallout & City Destruction Feedback
+<h1 align="center">Radioactive Fallout &amp; City Destruction Feedback</h1>
+
+<p align="center">
+  <b>Thermonuclear ground bursts leave a drifting fallout cloud that irradiates every city and unit in its path — friend or foe alike — while destroyed cities scar the map as unmistakable scorched ruins.</b>
+</p>
+
+<br />
 
 ## Overview
 
@@ -128,5 +134,3 @@ standards — no fallout numbers live in systems code):
    normal map zoom.
 7. Fallout damages assets of all owners, including the attacker's.
 8. `npm run lint` and `npm run build` pass; the engine remains deterministic.
-</content>
-</invoke>

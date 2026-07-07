@@ -1,4 +1,10 @@
-# Quick Design Spec: AI Placement Political-Border Parity
+<h1 align="center">AI Placement Political-Border Parity</h1>
+
+<p align="center">
+  <b>Bind AI unit placement to the same real political-border test the human player already obeys, replacing the Voronoi nearest-city approximation that let AI units spill across frontiers.</b>
+</p>
+
+<br />
 
 **Type**: Tweak
 **System**: AI Strategic Placement / Territory

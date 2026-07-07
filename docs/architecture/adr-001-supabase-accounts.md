@@ -147,8 +147,8 @@ body. The client can put whatever it wants in the request payload; `user_id` is 
             │  reads: anon key + user JWT, RLS-scoped SELECT
             ▼
 ┌─────────────────────────────────────┐
-│  Supabase Postgres (project: Golden  │
-│  Dome, bhzxnorbhylfsrdjzodv)         │
+│  Supabase Postgres (project:         │
+│  DomeBreak, bhzxnorbhylfsrdjzodv)    │
 │                                       │
 │  auth.users ──trigger──▶ profiles    │
 │                          matches      │
