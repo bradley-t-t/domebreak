@@ -16,6 +16,7 @@ import {cn} from "../lib/cn.js";
 // living world (every other country is world AI, as in single player).
 
 const RAIL_PAD = 360;       // left projection padding so the globe clears the rail
+const MINE_COLOR = "#f4c02a"; // vivid gold for YOUR own claimed nation — unmistakable vs the grey map
 
 // Average lng/lat of a nation's cities — a good-enough centroid to fly the globe
 // to when the player claims that country.
@@ -101,6 +102,51 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     const humans = members.length; // real players only — no bots
     const countryName = (iso) => data?.countries?.find((c) => c.iso === iso)?.name || iso;
 
+    // My ready state (optimistic-aware) and the ready tally. My own count reflects
+    // the instant optimistic value so the meter never lags a click.
+    const ready = readyOpt ?? !!myMember?.ready;
+    const readyCount = members.filter((m) => (me?.id === m.userId ? ready : !!m.ready)).length;
+    const allReady = members.length > 0 && readyCount === members.length;
+    const starting = lobby?.status === "starting" || lobby?.status === "active";
+    const statusLine = starting ? "All commanders ready — deploying to the theater…"
+        : allReady ? "Everyone ready — launching…"
+            : !myIso ? "Claim your nation to continue."
+                : ready ? `Standing by — waiting on ${members.length - readyCount} more.`
+                    : "Ready up when you're set.";
+
+    // Live activity feed: diff the roster each realtime update into human-readable
+    // status lines (joins, nation picks, ready toggles, launch), newest last.
+    const prevMembersRef = useRef(null);
+    const feedIdRef = useRef(0);
+    const [feed, setFeed] = useState([]);
+    useEffect(() => {
+        const prev = prevMembersRef.current;
+        const snap = {};
+        const msgs = [];
+        for (const m of members) {
+            const key = m.userId ?? `s${m.slot}`;
+            snap[key] = {ready: !!m.ready, iso: m.iso || null, name: m.username || "Commander"};
+            const own = me?.id === m.userId;
+            const who = own ? "You" : (m.username || "Commander");
+            const p = prev?.[key];
+            if (!prev) continue; // seed silently on first load — no backlog of "joined"
+            if (!p) msgs.push(`${who} joined the war room`);
+            else {
+                if (snap[key].iso && snap[key].iso !== p.iso) msgs.push(`${who} chose ${countryName(snap[key].iso)}`);
+                if (snap[key].ready && !p.ready) msgs.push(`${who} ${own ? "are" : "is"} ready`);
+                if (!snap[key].ready && p.ready) msgs.push(`${who} stood down`);
+            }
+        }
+        if (prev) for (const key in prev) if (!(key in snap)) msgs.push(`${prev[key].name} left the war room`);
+        prevMembersRef.current = snap;
+        if (msgs.length) setFeed((f) => [...f, ...msgs.map((t) => ({id: ++feedIdRef.current, t}))].slice(-6));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [members]);
+    // A launch line the moment the server flips the lobby to starting/active.
+    useEffect(() => {
+        if (starting) setFeed((f) => [...f, {id: ++feedIdRef.current, t: "Deploying — establishing theater command…"}].slice(-6));
+    }, [starting]);
+
     // Tint every member's claimed nation on the globe, keyed by slot color. A
     // dedicated fill layer sits above the base country fill so it never fights
     // the map's own theming; the paint expression is rebuilt as picks change.
@@ -118,19 +164,23 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             const picks = {};
             for (const mem of members) {
                 const gid = toGid3(mem.iso);
-                if (gid) picks[gid] = SLOT_COLOR[mem.slot] || "#8ecae6"; // dedupe by GID_0 (match labels must be unique)
+                if (!gid) continue; // dedupe by GID_0 (match labels must be unique)
+                // YOUR nation glows vivid gold; opponents keep their slot color.
+                picks[gid] = me?.id === mem.userId ? MINE_COLOR : (SLOT_COLOR[mem.slot] || "#8ecae6");
             }
             // Paint the optimistic pick immediately, before the server echo lands.
             if (optimisticIso && myMember) {
                 const gid = toGid3(optimisticIso);
-                if (gid) picks[gid] = SLOT_COLOR[myMember.slot] || "#8ecae6";
+                if (gid) picks[gid] = MINE_COLOR;
             }
             const pairs = Object.entries(picks).flat();
             const expr = pairs.length ? ["match", ["get", "GID_0"], ...pairs, "rgba(0,0,0,0)"] : "rgba(0,0,0,0)";
             m.setPaintProperty("lobby-pick", "fill-color", expr);
+            // Bright outline around every claimed nation for an unmistakable selection.
+            if (m.getLayer("lobby-pick-line")) m.setPaintProperty("lobby-pick-line", "line-color", expr);
         } catch { /* style not ready / tearing down */
         }
-    }, [members, mapReady, optimisticIso, myMember?.slot]);
+    }, [members, mapReady, optimisticIso, myMember?.slot, me?.id]);
 
     // Fly the globe to the nation the local player just claimed.
     useEffect(() => {
@@ -153,7 +203,12 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             if (!m.getLayer("lobby-pick")) {
                 m.addLayer({
                     id: "lobby-pick", type: "fill", source: "countries", "source-layer": "countries",
-                    paint: {"fill-color": "rgba(0,0,0,0)", "fill-opacity": 0.55},
+                    paint: {"fill-color": "rgba(0,0,0,0)", "fill-opacity": 0.72},
+                }, "country-line");
+                // A bright outline on top of the fill makes a claimed nation pop.
+                m.addLayer({
+                    id: "lobby-pick-line", type: "line", source: "countries", "source-layer": "countries",
+                    paint: {"line-color": "rgba(0,0,0,0)", "line-width": 2.2, "line-opacity": 0.95},
                 }, "country-line");
             }
         } catch { /* map tearing down */
@@ -221,8 +276,6 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
         );
     }
 
-    const ready = readyOpt ?? !!myMember?.ready;
-
     return (
         <div className="absolute inset-0 z-10 block overflow-hidden p-0">
             <div className="absolute inset-0 z-0 pointer-events-auto">
@@ -260,22 +313,48 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                 <div className="pointer-events-none flex-1 min-h-0 flex flex-col gap-1.5 overflow-y-auto mb-4 pr-1" role="list" aria-label="War room roster">
                     {members.map((m) => {
                         const own = me?.id === m.userId;
+                        const r = own ? ready : !!m.ready; // own row reflects the optimistic toggle
                         return (
-                            <div key={m.userId ?? `bot-${m.slot}`}
+                            <div key={m.userId ?? `p-${m.slot}`}
                                  className={cn(
-                                     "flex items-center gap-[9px] py-2 px-[11px] rounded-[var(--radius)] border border-line-soft bg-[rgba(9,11,15,0.5)] [&_.gd-flag]:w-[22px] [&_.gd-flag]:rounded-[2px] [&_.gd-flag]:shrink-0 [&_img]:w-[22px] [&_img]:rounded-[2px] [&_img]:shrink-0",
-                                     m.ready && "border-gold-line",
-                                     own && "border-gold-line bg-[rgba(9,11,15,0.72)]"
+                                     "flex items-center gap-[9px] py-2 px-[11px] rounded-[var(--radius)] border border-line-soft bg-[rgba(9,11,15,0.5)] transition-colors [&_.gd-flag]:w-[22px] [&_.gd-flag]:rounded-[2px] [&_.gd-flag]:shrink-0 [&_img]:w-[22px] [&_img]:rounded-[2px] [&_img]:shrink-0",
+                                     r && "border-gold-line bg-[rgba(244,192,42,0.08)]",
+                                     own && !r && "border-gold-line bg-[rgba(9,11,15,0.72)]"
                                  )}
                                  role="listitem"
-                                 aria-label={`${m.username || "Commander"}${own ? " (you)" : ""} — ${m.iso || "no nation"} — ${m.ready ? "ready" : "not ready"}`}>
-                                <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{background: SLOT_COLOR[m.slot]}}/>
+                                 aria-label={`${m.username || "Commander"}${own ? " (you)" : ""} — ${m.iso || "no nation"} — ${r ? "ready" : "not ready"}`}>
+                                <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{background: own ? MINE_COLOR : SLOT_COLOR[m.slot]}}/>
                                 <Flag iso={m.iso}/>
                                 <span className="flex-1 text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{m.username || "Commander"}{own ? " (You)" : ""}</span>
-                                <span className={cn("font-mono text-[10px] tracking-[1px] uppercase text-faint shrink-0", m.ready && "text-gold")}>{m.ready ? "Ready" : "…"}</span>
+                                <span className={cn("font-mono text-[10px] tracking-[1px] uppercase shrink-0", r ? "text-gold" : "text-faint")}>{r ? "✓ Ready" : "Waiting"}</span>
                             </div>
                         );
                     })}
+                </div>
+
+                {/* Ready tally + your-ready state + live activity feed. */}
+                <div className="pointer-events-none mb-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] tracking-[2.5px] uppercase text-faint">Ready</span>
+                        <span className={cn("font-mono text-[12px] tracking-[1px]", allReady ? "text-gold" : "text-dim")}>{readyCount} / {members.length}</span>
+                    </div>
+                    <div className="flex gap-1" aria-hidden="true">
+                        {members.map((m) => {
+                            const r = me?.id === m.userId ? ready : !!m.ready;
+                            return <div key={m.userId ?? m.slot}
+                                        className={cn("h-[5px] flex-1 rounded-full transition-colors duration-200", r ? "bg-gold shadow-[0_0_6px_var(--glow-gold,rgba(244,192,42,0.7))]" : "bg-[rgba(255,255,255,0.12)]")}/>;
+                        })}
+                    </div>
+                    <span className={cn("self-start font-mono text-[10px] tracking-[1.5px] uppercase px-2 py-1 rounded-sm border transition-colors",
+                        ready ? "text-gold border-gold-line bg-[rgba(244,192,42,0.1)]" : "text-faint border-line")}>
+                        {ready ? "✓ You are ready" : "You are not ready"}
+                    </span>
+                    <span className={cn("text-[12px] leading-snug", starting || allReady ? "text-gold" : "text-dim")} role="status" aria-live="polite">{statusLine}</span>
+                    {feed.length > 0 && (
+                        <div className="gd-scroll max-h-[84px] overflow-y-auto flex flex-col gap-[2px] font-mono text-[11px] text-faint pr-1" aria-live="polite" aria-label="Lobby activity">
+                            {feed.map((f) => <span key={f.id} className="animate-[gdRowIn_200ms_var(--ease-out)_both]">&rsaquo; {f.t}</span>)}
+                        </div>
+                    )}
                 </div>
 
                 <div className="pointer-events-auto flex flex-col gap-[9px]">
@@ -289,10 +368,6 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                         {leaving ? "Leaving…" : "Leave"}
                     </button>
                 </div>
-
-                <p className="text-left mt-3.5 max-w-[300px] text-faint text-xs pointer-events-none">
-                    Claim a nation on the globe, then ready up. War begins the moment every commander is ready.
-                </p>
             </aside>
         </div>
     );
