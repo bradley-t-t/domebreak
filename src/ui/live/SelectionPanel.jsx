@@ -228,7 +228,7 @@ export default function SelectionPanel({
                         warhead icon, one-word role, and current stock, so the picker
                         itself reads as the platform's identity: a launcher offers the
                         fast HGV, a silo the heavy thermo — never the same generic set. */}
-                    {def.warheads && selectedUnit.slot === mySlot && (() => {
+                    {def.warheads && selectedUnit.slot === mySlot && allowedAmmo(selectedUnit.type).length > 1 && (() => {
                         const loaded = selectedUnit.warhead || initialWarhead(selectedUnit.type);
                         const lw = WARHEADS[loaded];
                         const loadedFallout = FALLOUT.warheads.includes(loaded);

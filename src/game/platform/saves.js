@@ -1,6 +1,23 @@
 // Local save-game system (localStorage, mirrored to the machine-local data
 // folder on desktop). The world is plain JSON-serializable data.
 import {persistKey, removeKey} from "./localData.js";
+import {allowedAmmo, initialWarhead, UNITS} from "../data/constants.js";
+
+// Forward-compat migration for loaded worlds. Platform loadouts can change between
+// builds (e.g. the launcher became a SICBM-only TEL); a saved unit may carry a
+// warhead its platform can no longer load. Reset any such orphaned warhead to the
+// platform's default round so it never fires a payload it isn't cleared for.
+// Ammo stockpiles are untouched (no warhead keys were renamed).
+function migrateWorld(world) {
+    if (!world || !Array.isArray(world.units)) return world;
+    for (const u of world.units) {
+        const def = UNITS[u.type];
+        if (def?.warheads && u.warhead && !allowedAmmo(u.type).includes(u.warhead)) {
+            u.warhead = initialWarhead(u.type);
+        }
+    }
+    return world;
+}
 
 const PREFIX = "domebreak.save.";
 // v2: unit type ids renamed to generic roles (interceptor, strikefighter, …) — older saves are unreadable.
@@ -26,7 +43,9 @@ export function loadGame(slot) {
     try {
         const raw = localStorage.getItem(PREFIX + slot);
         const d = raw ? JSON.parse(raw) : null;
-        return d && d.v === VERSION ? d : null;
+        if (!d || d.v !== VERSION) return null;
+        d.world = migrateWorld(d.world);
+        return d;
     } catch {
         return null;
     }

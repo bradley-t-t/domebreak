@@ -364,12 +364,14 @@
 
     /* Thermonuclear: the heaviest missile — a bigger booster, a blunt reentry-vehicle
        cone, a dense plume, and a wide ominous halo. */
-    .db-missile.thermo {
+    .db-missile.thermo,
+    .db-missile.thermomirv {
         width: 12px;
         height: 32px;
     }
 
-    .db-missile.thermo .db-missile-body {
+    .db-missile.thermo .db-missile-body,
+    .db-missile.thermomirv .db-missile-body {
         left: 3px;
         top: 5px;
         width: 6px;
@@ -377,7 +379,8 @@
         background: linear-gradient(180deg, #f6f7f8, #c6cace 52%, #93979d);
     }
 
-    .db-missile.thermo .db-missile-body::before {
+    .db-missile.thermo .db-missile-body::before,
+    .db-missile.thermomirv .db-missile-body::before {
         left: -0.5px;
         top: -6px;
         border-left-width: 3.5px;
@@ -385,20 +388,23 @@
         border-bottom-width: 7px;
     }
 
-    .db-missile.thermo .db-missile-body::after {
+    .db-missile.thermo .db-missile-body::after,
+    .db-missile.thermomirv .db-missile-body::after {
         left: -2.5px;
         width: 11px;
         height: 3.5px;
     }
 
-    .db-missile.thermo .db-missile-flame {
+    .db-missile.thermo .db-missile-flame,
+    .db-missile.thermomirv .db-missile-flame {
         left: 3px;
         top: 21px;
         width: 6px;
         height: 15px;
     }
 
-    .db-missile.thermo .db-missile-glow {
+    .db-missile.thermo .db-missile-glow,
+    .db-missile.thermomirv .db-missile-glow {
         left: -10px;
         top: 6px;
         width: 32px;
