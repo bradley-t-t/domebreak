@@ -1,4 +1,4 @@
-// GoldenDome match service. Server-authoritative free-for-all for 2-16 slots,
+// DomeBreak match service. Server-authoritative free-for-all for 2-16 slots,
 // each held by a human or an AI. Every mutation runs here with the service-role
 // key after validating the caller. AI participants are played entirely by the
 // server; combat is a deterministic, seeded simulation.
@@ -94,14 +94,14 @@ function code5() {
 }
 
 async function requirePlayer(playerId: string, secret: string) {
-    const {data} = await db.from("gd_players").select("id,secret").eq("id", playerId).maybeSingle();
+    const {data} = await db.from("db_players").select("id,secret").eq("id", playerId).maybeSingle();
     if (!data || data.secret !== secret) throw new Error("bad player credentials");
     return data;
 }
 
 async function requireHost(matchId: string, playerId: string, secret: string) {
     await requirePlayer(playerId, secret);
-    const {data: match} = await db.from("gd_matches").select("*").eq("id", matchId).maybeSingle();
+    const {data: match} = await db.from("db_matches").select("*").eq("id", matchId).maybeSingle();
     if (!match) throw new Error("match not found");
     if (match.created_by !== playerId) throw new Error("only the host can do that");
     return match;
@@ -112,12 +112,12 @@ async function seedCities(matchId: string, playerId: string, slot: number) {
     const rows = home.cities.map(([name, lng, lat]) => ({
         match_id: matchId, player_id: playerId, name, lng, lat, hp: 100, alive: true,
     }));
-    await db.from("gd_cities").insert(rows);
+    await db.from("db_cities").insert(rows);
     return home;
 }
 
 async function usedSlots(matchId: string) {
-    const {data} = await db.from("gd_match_players").select("slot").eq("match_id", matchId);
+    const {data} = await db.from("db_match_players").select("slot").eq("match_id", matchId);
     return new Set((data ?? []).map((r) => r.slot));
 }
 
@@ -155,31 +155,31 @@ async function playAi(participant: any, cities: any[], seedBase: number) {
         buy("silo", capital.lng, capital.lat, t.id);
     }
     if (rows.length) {
-        await db.from("gd_placements").insert(rows);
-        await db.from("gd_match_players").update({spent: participant.budget - remaining, ready: true})
+        await db.from("db_placements").insert(rows);
+        await db.from("db_match_players").update({spent: participant.budget - remaining, ready: true})
             .eq("match_id", participant.match_id).eq("player_id", participant.player_id);
     }
 }
 
 async function resolve(matchId: string) {
     // Compare-and-swap lock: only the caller that flips build->combat resolves.
-    const {data: locked} = await db.from("gd_matches").update({status: "combat"})
+    const {data: locked} = await db.from("db_matches").update({status: "combat"})
         .eq("id", matchId).eq("status", "build").select().maybeSingle();
     if (!locked) {
-        const {data: existing} = await db.from("gd_results").select("*").eq("match_id", matchId).maybeSingle();
+        const {data: existing} = await db.from("db_results").select("*").eq("match_id", matchId).maybeSingle();
         return existing
             ? {summary: existing.summary, replay: existing.replay, winnerId: existing.winner_player_id, already: true}
             : {pending: true};
     }
     const match = locked;
 
-    const {data: players} = await db.from("gd_match_players").select("*").eq("match_id", matchId).order("slot");
-    const {data: cities0} = await db.from("gd_cities").select("*").eq("match_id", matchId);
+    const {data: players} = await db.from("db_match_players").select("*").eq("match_id", matchId).order("slot");
+    const {data: cities0} = await db.from("db_cities").select("*").eq("match_id", matchId);
     // AI participants spend their remaining budget before the exchange.
     for (const mp of players!.filter((p) => p.is_ai)) await playAi(mp, cities0!, Number(match.seed) || 1);
 
-    const {data: cities} = await db.from("gd_cities").select("*").eq("match_id", matchId);
-    const {data: placements} = await db.from("gd_placements").select("*").eq("match_id", matchId);
+    const {data: cities} = await db.from("db_cities").select("*").eq("match_id", matchId);
+    const {data: placements} = await db.from("db_placements").select("*").eq("match_id", matchId);
     const cityById: Record<string, any> = {};
     for (const c of cities!) {
         c.hp = 100;
@@ -276,10 +276,10 @@ async function resolve(matchId: string) {
     if (best <= 0) winnerSlot = null;
     const winnerId = winnerSlot === null ? null : players!.find((p) => p.slot === winnerSlot)?.player_id ?? null;
 
-    for (const c of cities!) await db.from("gd_cities").update({hp: c.hp, alive: c.alive}).eq("id", c.id);
+    for (const c of cities!) await db.from("db_cities").update({hp: c.hp, alive: c.alive}).eq("id", c.id);
     const summary = {score, alive, winnerSlot};
-    await db.from("gd_results").upsert({match_id: matchId, winner_player_id: winnerId, summary, replay});
-    await db.from("gd_matches").update({status: "done", winner_player_id: winnerId}).eq("id", matchId);
+    await db.from("db_results").upsert({match_id: matchId, winner_player_id: winnerId, summary, replay});
+    await db.from("db_matches").update({status: "done", winner_player_id: winnerId}).eq("id", matchId);
     return {summary, replay, winnerId};
 }
 
@@ -298,15 +298,15 @@ Deno.serve(async (req) => {
         if (a === "create") {
             const handle = String(body.handle || "Commander").slice(0, 24);
             const maxSlots = Math.max(2, Math.min(MAX_SLOTS, parseInt(body.maxSlots, 10) || 2));
-            const {data: player} = await db.from("gd_players").insert({handle}).select().single();
+            const {data: player} = await db.from("db_players").insert({handle}).select().single();
             let match: any = null;
             for (let i = 0; i < 6 && !match; i++) {
-                const {data, error} = await db.from("gd_matches")
+                const {data, error} = await db.from("db_matches")
                     .insert({code: code5(), created_by: player!.id, max_slots: maxSlots}).select().single();
                 if (!error) match = data;
             }
             if (!match) return bad("could not create match", 500);
-            await db.from("gd_match_players").insert({
+            await db.from("db_match_players").insert({
                 match_id: match.id, player_id: player!.id, slot: 0, handle,
                 home_lng: HOMES[0].cities[0][1], home_lat: HOMES[0].cities[0][2],
             });
@@ -316,15 +316,15 @@ Deno.serve(async (req) => {
 
         if (a === "join") {
             const handle = String(body.handle || "Commander").slice(0, 24);
-            const {data: match} = await db.from("gd_matches").select("*")
+            const {data: match} = await db.from("db_matches").select("*")
                 .eq("code", String(body.code || "").toUpperCase()).maybeSingle();
             if (!match) return bad("match not found", 404);
             if (match.status !== "lobby") return bad("match already started");
             const slot = await nextEmptySlot(match.id, match.max_slots);
             if (slot < 0) return bad("match is full");
-            const {data: player} = await db.from("gd_players").insert({handle}).select().single();
+            const {data: player} = await db.from("db_players").insert({handle}).select().single();
             const home = HOMES[slot % HOMES.length];
-            await db.from("gd_match_players").insert({
+            await db.from("db_match_players").insert({
                 match_id: match.id, player_id: player!.id, slot, handle,
                 home_lng: home.cities[0][1], home_lat: home.cities[0][2],
             });
@@ -339,7 +339,7 @@ Deno.serve(async (req) => {
             const highest = used.size ? Math.max(...used) : 0;
             const next = Math.max(2, Math.min(MAX_SLOTS, parseInt(body.maxSlots, 10) || 2, MAX_SLOTS));
             if (next <= highest) return bad("a filled slot is above that count");
-            const {data} = await db.from("gd_matches").update({max_slots: next}).eq("id", match.id).select().single();
+            const {data} = await db.from("db_matches").update({max_slots: next}).eq("id", match.id).select().single();
             return json({match: data});
         }
 
@@ -349,8 +349,8 @@ Deno.serve(async (req) => {
             const slot = await nextEmptySlot(match.id, match.max_slots, body.slot);
             if (slot < 0) return bad("no empty slot");
             const home = HOMES[slot % HOMES.length];
-            const {data: aiPlayer} = await db.from("gd_players").insert({handle: `AI · ${home.name}`}).select().single();
-            await db.from("gd_match_players").insert({
+            const {data: aiPlayer} = await db.from("db_players").insert({handle: `AI · ${home.name}`}).select().single();
+            await db.from("db_match_players").insert({
                 match_id: match.id, player_id: aiPlayer!.id, slot, handle: `AI · ${home.name}`,
                 is_ai: true, ready: true, home_lng: home.cities[0][1], home_lat: home.cities[0][2],
             });
@@ -361,13 +361,13 @@ Deno.serve(async (req) => {
         if (a === "removeParticipant") {
             const match = await requireHost(body.matchId, body.playerId, body.secret);
             if (match.status !== "lobby") return bad("only in lobby");
-            const {data: mp} = await db.from("gd_match_players").select("*")
+            const {data: mp} = await db.from("db_match_players").select("*")
                 .eq("match_id", match.id).eq("slot", body.slot).maybeSingle();
             if (!mp) return bad("empty slot");
             if (mp.player_id === match.created_by) return bad("cannot remove the host");
-            await db.from("gd_match_players").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
-            await db.from("gd_cities").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
-            await db.from("gd_placements").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
+            await db.from("db_match_players").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
+            await db.from("db_cities").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
+            await db.from("db_placements").delete().eq("match_id", match.id).eq("player_id", mp.player_id);
             return json({ok: true});
         }
 
@@ -376,12 +376,12 @@ Deno.serve(async (req) => {
         if (a === "replaceWithAi") {
             const match = await requireHost(body.matchId, body.playerId, body.secret);
             if (match.status === "done") return bad("match is over");
-            const {data: mp} = await db.from("gd_match_players").select("*")
+            const {data: mp} = await db.from("db_match_players").select("*")
                 .eq("match_id", match.id).eq("slot", body.slot).maybeSingle();
             if (!mp) return bad("empty slot");
             if (mp.player_id === match.created_by) return bad("cannot replace the host");
             const home = HOMES[mp.slot % HOMES.length];
-            await db.from("gd_match_players").update({is_ai: true, ready: true, handle: `AI · ${home.name}`})
+            await db.from("db_match_players").update({is_ai: true, ready: true, handle: `AI · ${home.name}`})
                 .eq("match_id", match.id).eq("player_id", mp.player_id);
             return json({ok: true});
         }
@@ -389,56 +389,56 @@ Deno.serve(async (req) => {
         if (a === "start") {
             const match = await requireHost(body.matchId, body.playerId, body.secret);
             if (match.status !== "lobby") return json({match});
-            const {count} = await db.from("gd_match_players").select("*", {
+            const {count} = await db.from("db_match_players").select("*", {
                 count: "exact",
                 head: true
             }).eq("match_id", match.id);
             if ((count ?? 0) < 2) return bad("need at least two participants");
             const ends = new Date(Date.now() + match.build_seconds * 1000).toISOString();
-            const {data: updated} = await db.from("gd_matches")
+            const {data: updated} = await db.from("db_matches")
                 .update({status: "build", build_ends_at: ends}).eq("id", match.id).select().single();
             return json({match: updated});
         }
 
         if (a === "place") {
             await requirePlayer(body.playerId, body.secret);
-            const {data: match} = await db.from("gd_matches").select("*").eq("id", body.matchId).maybeSingle();
+            const {data: match} = await db.from("db_matches").select("*").eq("id", body.matchId).maybeSingle();
             if (!match || match.status !== "build") return bad("not in build phase");
             const kind = String(body.kind);
             if (!(kind in COST)) return bad("unknown kind");
-            const {data: mp} = await db.from("gd_match_players").select("*")
+            const {data: mp} = await db.from("db_match_players").select("*")
                 .eq("match_id", body.matchId).eq("player_id", body.playerId).maybeSingle();
             if (!mp) return bad("not in this match");
             const cost = COST[kind];
             if (mp.spent + cost > mp.budget) return bad("insufficient budget");
             if (kind === "silo" && !body.targetCityId) return bad("silo needs a target city");
-            const {data: placement} = await db.from("gd_placements").insert({
+            const {data: placement} = await db.from("db_placements").insert({
                 match_id: body.matchId, player_id: body.playerId, kind,
                 lng: body.lng, lat: body.lat, target_city_id: body.targetCityId ?? null, cost,
             }).select().single();
-            await db.from("gd_match_players").update({spent: mp.spent + cost})
+            await db.from("db_match_players").update({spent: mp.spent + cost})
                 .eq("match_id", body.matchId).eq("player_id", body.playerId);
             return json({placement, spent: mp.spent + cost, budget: mp.budget});
         }
 
         if (a === "unplace") {
             await requirePlayer(body.playerId, body.secret);
-            const {data: p} = await db.from("gd_placements").select("*")
+            const {data: p} = await db.from("db_placements").select("*")
                 .eq("id", body.placementId).eq("player_id", body.playerId).maybeSingle();
             if (!p) return bad("placement not found", 404);
-            await db.from("gd_placements").delete().eq("id", p.id);
-            const {data: mp} = await db.from("gd_match_players").select("*")
+            await db.from("db_placements").delete().eq("id", p.id);
+            const {data: mp} = await db.from("db_match_players").select("*")
                 .eq("match_id", p.match_id).eq("player_id", body.playerId).single();
             const spent = Math.max(0, mp!.spent - p.cost);
-            await db.from("gd_match_players").update({spent}).eq("match_id", p.match_id).eq("player_id", body.playerId);
+            await db.from("db_match_players").update({spent}).eq("match_id", p.match_id).eq("player_id", body.playerId);
             return json({removed: p.id, spent});
         }
 
         if (a === "ready") {
             await requirePlayer(body.playerId, body.secret);
-            await db.from("gd_match_players").update({ready: true})
+            await db.from("db_match_players").update({ready: true})
                 .eq("match_id", body.matchId).eq("player_id", body.playerId);
-            const {data: mps} = await db.from("gd_match_players").select("ready,is_ai").eq("match_id", body.matchId);
+            const {data: mps} = await db.from("db_match_players").select("ready,is_ai").eq("match_id", body.matchId);
             const humans = (mps ?? []).filter((m) => !m.is_ai);
             const allReady = (mps?.length ?? 0) >= 2 && humans.every((m) => m.ready);
             if (allReady) return json({result: await resolve(body.matchId), allReady});
@@ -447,16 +447,16 @@ Deno.serve(async (req) => {
 
         if (a === "resolve") {
             await requirePlayer(body.playerId, body.secret);
-            const {data: match} = await db.from("gd_matches").select("*").eq("id", body.matchId).maybeSingle();
+            const {data: match} = await db.from("db_matches").select("*").eq("id", body.matchId).maybeSingle();
             if (!match) return bad("match not found", 404);
             if (match.status === "done") {
-                const {data: existing} = await db.from("gd_results").select("*").eq("match_id", match.id).maybeSingle();
+                const {data: existing} = await db.from("db_results").select("*").eq("match_id", match.id).maybeSingle();
                 return json({result: existing, alreadyDone: true});
             }
             if (match.status === "combat") return json({result: await resolve(body.matchId)});
             if (match.status !== "build") return bad("not in build phase");
             const deadline = match.build_ends_at ? new Date(match.build_ends_at).getTime() : 0;
-            const {data: mps} = await db.from("gd_match_players").select("ready,is_ai").eq("match_id", match.id);
+            const {data: mps} = await db.from("db_match_players").select("ready,is_ai").eq("match_id", match.id);
             const humans = (mps ?? []).filter((m) => !m.is_ai);
             const allReady = (mps?.length ?? 0) >= 2 && humans.every((m) => m.ready);
             if (!allReady && Date.now() < deadline) return bad("build phase still running");
@@ -464,18 +464,18 @@ Deno.serve(async (req) => {
         }
 
         if (a === "state") {
-            const {data: match} = await db.from("gd_matches").select("*").eq("id", body.matchId).maybeSingle();
+            const {data: match} = await db.from("db_matches").select("*").eq("id", body.matchId).maybeSingle();
             if (!match) return bad("match not found", 404);
             const [{data: players}, {data: cities}, {data: result}] = await Promise.all([
-                db.from("gd_match_players").select("*").eq("match_id", match.id).order("slot"),
-                db.from("gd_cities").select("*").eq("match_id", match.id),
-                db.from("gd_results").select("*").eq("match_id", match.id).maybeSingle(),
+                db.from("db_match_players").select("*").eq("match_id", match.id).order("slot"),
+                db.from("db_cities").select("*").eq("match_id", match.id),
+                db.from("db_results").select("*").eq("match_id", match.id).maybeSingle(),
             ]);
             let placements: any[] = [];
             if (body.playerId && body.secret) {
                 try {
                     await requirePlayer(body.playerId, body.secret);
-                    const {data} = await db.from("gd_placements").select("*")
+                    const {data} = await db.from("db_placements").select("*")
                         .eq("match_id", match.id).eq("player_id", body.playerId);
                     placements = data ?? [];
                 } catch { /* unauthenticated state read */

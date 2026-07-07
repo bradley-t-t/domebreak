@@ -1985,9 +1985,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2119,9 +2119,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2253,9 +2253,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2403,9 +2403,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2553,9 +2553,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2703,9 +2703,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -2853,9 +2853,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3003,9 +3003,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3153,9 +3153,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3303,9 +3303,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3453,9 +3453,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3603,9 +3603,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3753,9 +3753,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -3903,9 +3903,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4053,9 +4053,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4203,9 +4203,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4353,9 +4353,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4503,9 +4503,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4653,9 +4653,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4803,9 +4803,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -4953,9 +4953,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5103,9 +5103,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5253,9 +5253,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5403,9 +5403,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5553,9 +5553,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5703,9 +5703,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -5853,9 +5853,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6003,9 +6003,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6153,9 +6153,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6303,9 +6303,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6453,9 +6453,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6603,9 +6603,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6753,9 +6753,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -6903,9 +6903,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7053,9 +7053,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7203,9 +7203,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7353,9 +7353,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7503,9 +7503,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7653,9 +7653,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7805,9 +7805,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -7957,9 +7957,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8109,9 +8109,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8261,9 +8261,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8413,9 +8413,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8565,9 +8565,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8717,9 +8717,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -8869,9 +8869,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9021,9 +9021,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9173,9 +9173,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9325,9 +9325,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9477,9 +9477,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9629,9 +9629,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9781,9 +9781,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -9933,9 +9933,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10085,9 +10085,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10237,9 +10237,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10389,9 +10389,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10541,9 +10541,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10693,9 +10693,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10845,9 +10845,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -10997,9 +10997,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11149,9 +11149,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11301,9 +11301,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11453,9 +11453,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11605,9 +11605,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11757,9 +11757,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -11909,9 +11909,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12061,9 +12061,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12213,9 +12213,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12365,9 +12365,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12517,9 +12517,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12669,9 +12669,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12821,9 +12821,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -12973,9 +12973,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13125,9 +13125,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13277,9 +13277,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13429,9 +13429,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13581,9 +13581,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13733,9 +13733,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -13885,9 +13885,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14037,9 +14037,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14189,9 +14189,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14341,9 +14341,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14493,9 +14493,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14645,9 +14645,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14797,9 +14797,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -14949,9 +14949,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)
@@ -15101,9 +15101,9 @@ Task: Complete — awaiting /release
 
 ## Accounts & Stats (second work block, same session)
 
-- Supabase project "Golden Dome" (bhzxnorbhylfsrdjzodv): schema applied
+- Supabase project "DomeBreak" (bhzxnorbhylfsrdjzodv): schema applied
   (profiles, matches, player_stats view, signup trigger, RLS read-own),
-  autoconfirm on, gd-account edge function deployed (touch / report_match,
+  autoconfirm on, db-account edge function deployed (touch / report_match,
   JWT-derived identity, service-role writes, CORS fixed for browser callers)
 - Client: src/account/{client,api}.js (publishable key via .env.local,
   reads-only under RLS, writes via edge function only)

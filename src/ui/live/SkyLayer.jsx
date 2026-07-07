@@ -136,12 +136,12 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
                     ["--flame"]: h.flame
                 }}>
                     {h.kind === "missile"
-                        ? <div className="gd-missile"><span className="gd-missile-glow"/><span
-                            className="gd-missile-body"/><span className="gd-missile-flame"/></div>
+                        ? <div className="db-missile"><span className="db-missile-glow"/><span
+                            className="db-missile-body"/><span className="db-missile-flame"/></div>
                         :
-                        <div className={`gd-interceptor ${h.variant || ""}`}><span className="gd-int-body"/><span
-                            className="gd-int-flame"/>{h.variant === "thaad" &&
-                            <span className="gd-int-spark"/>}</div>}
+                        <div className={`db-interceptor ${h.variant || ""}`}><span className="db-int-body"/><span
+                            className="db-int-flame"/>{h.variant === "thaad" &&
+                            <span className="db-int-spark"/>}</div>}
                 </div>
             ))}
         </>

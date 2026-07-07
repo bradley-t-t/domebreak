@@ -136,7 +136,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         return (
             <button key={key}
                     className={cn(
-                        "gd-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd",
+                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd",
                         !lock && "hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
                         placing === key ? "active border-gold bg-[rgba(245,197,49,0.07)]"
                             : lock ? "locked opacity-[0.55] grayscale-[0.85] cursor-not-allowed border-dashed"
@@ -145,18 +145,18 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     onClick={() => !lock && pick(key)} disabled={!!lock} aria-disabled={!!lock}
                     aria-label={lock ? `${unitLabel(key, me?.iso)} — locked: ${lock}` : `${unitLabel(key, me?.iso)}, ◆ ${cost}`}
                     title={lock || u.hint || `${cap(u.kind)} · builds in ${u.buildTime}s`}>
-                {lock && <span className="gd-ucard-lock absolute top-2 right-2.5 text-xs leading-none opacity-85 grayscale" aria-hidden="true">🔒</span>}
-                <span className="gd-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm" data-kind={u.kind} data-domain={u.domain || "land"}>
+                {lock && <span className="db-ucard-lock absolute top-2 right-2.5 text-xs leading-none opacity-85 grayscale" aria-hidden="true">🔒</span>}
+                <span className="db-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm" data-kind={u.kind} data-domain={u.domain || "land"}>
                     <UnitIcon name={UNIT_ICON[key]} size={30}/>
                 </span>
-                <div className="gd-ucard-body flex-1 min-w-0 flex flex-col gap-1">
-                    <div className="gd-ucard-top flex items-baseline gap-2">
-                        <b className="gd-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{unitLabel(key, me?.iso)}</b>
-                        <span className="gd-ucard-cost font-mono text-xs text-gold">◆ {cost}</span>
+                <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
+                    <div className="db-ucard-top flex items-baseline gap-2">
+                        <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{unitLabel(key, me?.iso)}</b>
+                        <span className="db-ucard-cost font-mono text-xs text-gold">◆ {cost}</span>
                     </div>
-                    <span className={cn("gd-ucard-line text-[10.5px] leading-[1.3] text-dim", lock && "text-faint")}>{line}</span>
+                    <span className={cn("db-ucard-line text-[10.5px] leading-[1.3] text-dim", lock && "text-faint")}>{line}</span>
                     {rows.length > 0 && (
-                        <dl className="gd-ucard-stats grid grid-cols-2 gap-x-3 gap-y-0.5 mt-[5px] mb-px pt-1.5 border-t border-line-soft">
+                        <dl className="db-ucard-stats grid grid-cols-2 gap-x-3 gap-y-0.5 mt-[5px] mb-px pt-1.5 border-t border-line-soft">
                             {rows.map(([k, v]) => (
                                 <div key={k} className="flex items-baseline justify-between gap-1.5 min-w-0 overflow-hidden">
                                     <dt className="flex-shrink flex-grow-0 basis-auto min-w-0 overflow-hidden text-ellipsis text-[8.5px] tracking-[0.4px] uppercase text-faint whitespace-nowrap">{k}</dt>
@@ -165,11 +165,11 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                             ))}
                         </dl>
                     )}
-                    <div className="gd-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
+                    <div className="db-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
                         <span>⧗ {u.buildTime}s</span>
                         {u.kind !== "industry" && <span>−{u.upkeep}/s</span>}
-                        {qn > 0 && <span className="gd-ucard-q text-gold">{qn} queued</span>}
-                        {placing === key && <span className="gd-ucard-q hot text-gold-hi">Placing…</span>}
+                        {qn > 0 && <span className="db-ucard-q text-gold">{qn} queued</span>}
+                        {placing === key && <span className="db-ucard-q hot text-gold-hi">Placing…</span>}
                     </div>
                 </div>
             </button>
@@ -186,7 +186,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         return (
             <button key={key}
                     className={cn(
-                        "gd-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
+                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
                         !afford && "poor opacity-50"
                     )}
                     onClick={(e) => {
@@ -194,15 +194,15 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     }}
                     aria-label={`${wh.name}, ◆ ${wh.prodCost}, ${stock} in stock. Shift-click to queue five.`}
                     title={`${wh.name} — ${wh.desc}${fallout ? " · Contaminates ground zero with radioactive fallout." : ""}`}>
-                <span className="gd-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm"><UnitIcon name={WARHEAD_ICON[key]} size={30}/></span>
-                <div className="gd-ucard-body flex-1 min-w-0 flex flex-col gap-1">
-                    <div className="gd-ucard-top flex items-baseline gap-2">
-                        <b className="gd-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{wh.name}</b>
-                        <span className="gd-ucard-cost font-mono text-xs text-gold">◆ {wh.prodCost}</span>
+                <span className="db-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm"><UnitIcon name={WARHEAD_ICON[key]} size={30}/></span>
+                <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
+                    <div className="db-ucard-top flex items-baseline gap-2">
+                        <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{wh.name}</b>
+                        <span className="db-ucard-cost font-mono text-xs text-gold">◆ {wh.prodCost}</span>
                     </div>
-                    <span className="gd-ucard-line text-[10.5px] leading-[1.3] text-dim">{wh.desc}</span>
+                    <span className="db-ucard-line text-[10.5px] leading-[1.3] text-dim">{wh.desc}</span>
                     {users.length > 0 && (
-                        <div className="gd-ucard-fires flex items-center gap-1.5 mt-0.5" aria-label={`Fired by: ${users.map((t) => unitLabel(t, me?.iso)).join(", ")}`}>
+                        <div className="db-ucard-fires flex items-center gap-1.5 mt-0.5" aria-label={`Fired by: ${users.map((t) => unitLabel(t, me?.iso)).join(", ")}`}>
                             <span className="font-mono text-[9px] tracking-[0.4px] uppercase text-faint" aria-hidden="true">Fires from</span>
                             <span className="flex items-center gap-1" aria-hidden="true">
                                 {users.map((t) => (
@@ -211,12 +211,12 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                             </span>
                         </div>
                     )}
-                    {fallout && <span className="gd-ucard-tag gd-contam self-start mt-0.5 font-mono text-[9px] tracking-[0.3px] py-px px-[5px] rounded-[3px] border border-[rgba(140,255,58,0.5)] bg-[rgba(140,255,58,0.1)] text-[#a6ff5c]">☢ Leaves fallout</span>}
-                    <div className="gd-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
+                    {fallout && <span className="db-ucard-tag db-contam self-start mt-0.5 font-mono text-[9px] tracking-[0.3px] py-px px-[5px] rounded-[3px] border border-[rgba(140,255,58,0.5)] bg-[rgba(140,255,58,0.1)] text-[#a6ff5c]">☢ Leaves fallout</span>}
+                    <div className="db-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
                         <span>⧗ {wh.prodTime}s</span>
-                        <span className="gd-ucard-stock text-dim">{stock} in stock</span>
-                        <span className="gd-ucard-shift text-faint border border-line rounded-sm px-1 leading-[1.5]" aria-hidden="true">⇧ ×5</span>
-                        {qn > 0 && <span className="gd-ucard-q text-gold">{qn} queued</span>}
+                        <span className="db-ucard-stock text-dim">{stock} in stock</span>
+                        <span className="db-ucard-shift text-faint border border-line rounded-sm px-1 leading-[1.5]" aria-hidden="true">⇧ ×5</span>
+                        {qn > 0 && <span className="db-ucard-q text-gold">{qn} queued</span>}
                     </div>
                 </div>
             </button>
@@ -226,18 +226,18 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     const section = (id) => {
         if (id === "Munitions") {
             return (
-                <section key="Munitions" className="gd-arsec">
-                    <h3 className="gd-arsec-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim after:content-[''] after:flex-1 after:h-px after:bg-line-soft">Munitions <span className="font-mono text-[10px] text-faint">{WARHEAD_ORDER.length}</span></h3>
-                    <div className="gd-ucard-grid grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[10px]">{WARHEAD_ORDER.map(ammoCard)}</div>
+                <section key="Munitions" className="db-arsec">
+                    <h3 className="db-arsec-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim after:content-[''] after:flex-1 after:h-px after:bg-line-soft">Munitions <span className="font-mono text-[10px] text-faint">{WARHEAD_ORDER.length}</span></h3>
+                    <div className="db-ucard-grid grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[10px]">{WARHEAD_ORDER.map(ammoCard)}</div>
                 </section>
             );
         }
         const g = groups[id];
         if (!g?.length) return null;
         return (
-            <section key={id} className="gd-arsec">
-                <h3 className="gd-arsec-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim after:content-[''] after:flex-1 after:h-px after:bg-line-soft">{id} <span className="font-mono text-[10px] text-faint">{g.length}</span></h3>
-                <div className="gd-ucard-grid grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[10px]">{g.map(([k, u]) => unitCard(k, u))}</div>
+            <section key={id} className="db-arsec">
+                <h3 className="db-arsec-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim after:content-[''] after:flex-1 after:h-px after:bg-line-soft">{id} <span className="font-mono text-[10px] text-faint">{g.length}</span></h3>
+                <div className="db-ucard-grid grid grid-cols-[repeat(auto-fill,minmax(238px,1fr))] gap-[10px]">{g.map(([k, u]) => unitCard(k, u))}</div>
             </section>
         );
     };
@@ -248,14 +248,14 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
 
     return (
         <ScreenFrame title="PRODUCTION" subtitle="Arsenal & national build line" bare onClose={onClose}>
-            <div className="gd-prod grid grid-cols-[236px_minmax(0,1fr)_304px] h-full">
-                <aside className="gd-prod-rail gd-scroll flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
-                    <div className="gd-prod-bank flex flex-col gap-px py-3 px-3.5 bg-sunk border border-line rounded">
-                        <span className="gd-prod-bank-l text-[9px] tracking-[1.5px] uppercase text-faint">Treasury</span>
-                        <span className="gd-prod-bank-v font-mono text-[22px] font-bold text-gold">◆ {Math.floor(points)}</span>
-                        <span className={cn("gd-prod-bank-net font-mono text-[11px]", net < 0 ? "neg text-red" : "pos text-[#46d38a]")}>{fmtNet(net, 1)}/s</span>
+            <div className="db-prod grid grid-cols-[236px_minmax(0,1fr)_304px] h-full">
+                <aside className="db-prod-rail db-scroll flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
+                    <div className="db-prod-bank flex flex-col gap-px py-3 px-3.5 bg-sunk border border-line rounded">
+                        <span className="db-prod-bank-l text-[9px] tracking-[1.5px] uppercase text-faint">Treasury</span>
+                        <span className="db-prod-bank-v font-mono text-[22px] font-bold text-gold">◆ {Math.floor(points)}</span>
+                        <span className={cn("db-prod-bank-net font-mono text-[11px]", net < 0 ? "neg text-red" : "pos text-[#46d38a]")}>{fmtNet(net, 1)}/s</span>
                     </div>
-                    <div className="gd-prod-econ grid grid-cols-2 gap-[7px]">
+                    <div className="db-prod-econ grid grid-cols-2 gap-[7px]">
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Income</span><b className="pos font-mono text-[13px] text-[#46d38a]">+{income.toFixed(1)}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Upkeep</span><b className="neg font-mono text-[13px] text-red">−{upkeep.toFixed(1)}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">GDP</span><b className="font-mono text-[13px]">${gdpOf(world, mySlot).toFixed(2)}T</b></div>
@@ -264,27 +264,27 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         </div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Fielded</span><b className="font-mono text-[13px]">{mine.length}</b></div>
                     </div>
-                    {net < 0 && <div className="gd-prod-warn text-[10px] leading-[1.35] text-red py-2 px-2.5 border border-[rgba(224,87,79,0.4)] rounded-sm bg-[rgba(224,87,79,0.08)]">In deficit — build Industry or scrap units to recover.</div>}
-                    <nav className="gd-prod-cats flex flex-col gap-0.5 mt-1" role="tablist" aria-label="Arsenal categories">
+                    {net < 0 && <div className="db-prod-warn text-[10px] leading-[1.35] text-red py-2 px-2.5 border border-[rgba(224,87,79,0.4)] rounded-sm bg-[rgba(224,87,79,0.08)]">In deficit — build Industry or scrap units to recover.</div>}
+                    <nav className="db-prod-cats flex flex-col gap-0.5 mt-1" role="tablist" aria-label="Arsenal categories">
                         {CATS.map((c) => (
                             <button key={c.id}
                                     className={cn(
-                                        "gd-prod-cat flex items-center gap-[10px] py-[9px] px-[11px] border border-transparent rounded-sm bg-transparent text-dim cursor-pointer text-left transition-[color,background-color,border-color] duration-150 ease-out-gd hover:text-text hover:bg-sunk active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue",
+                                        "db-prod-cat flex items-center gap-[10px] py-[9px] px-[11px] border border-transparent rounded-sm bg-transparent text-dim cursor-pointer text-left transition-[color,background-color,border-color] duration-150 ease-out-gd hover:text-text hover:bg-sunk active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue",
                                         cat === c.id && "active text-text bg-sunk border-gold-line"
                                     )}
                                     role="tab" aria-selected={cat === c.id}
                                     aria-label={`${c.name}, ${countFor(c.id)} systems`}
                                     onClick={() => setCat(c.id)}>
-                                <span className="gd-prod-cat-g w-[18px] text-center text-sm" aria-hidden="true">{c.glyph}</span>
-                                <span className="gd-prod-cat-n flex-1 font-display font-semibold text-[11.5px] tracking-[0.4px]">{c.name}</span>
-                                <span className="gd-prod-cat-c font-mono text-[10px] text-faint">{countFor(c.id)}</span>
+                                <span className="db-prod-cat-g w-[18px] text-center text-sm" aria-hidden="true">{c.glyph}</span>
+                                <span className="db-prod-cat-n flex-1 font-display font-semibold text-[11.5px] tracking-[0.4px]">{c.name}</span>
+                                <span className="db-prod-cat-c font-mono text-[10px] text-faint">{countFor(c.id)}</span>
                             </button>
                         ))}
                     </nav>
                 </aside>
 
-                <main className="gd-prod-main gd-scroll overflow-auto py-5 px-[22px] flex flex-col gap-[22px]">
-                    {placing && <div className="gd-prod-placing text-[11px] leading-[1.4] text-text py-2.5 px-3 border border-gold-line rounded-sm bg-[rgba(245,197,49,0.07)]">
+                <main className="db-prod-main db-scroll overflow-auto py-5 px-[22px] flex flex-col gap-[22px]">
+                    {placing && <div className="db-prod-placing text-[11px] leading-[1.4] text-text py-2.5 px-3 border border-gold-line rounded-sm bg-[rgba(245,197,49,0.07)]">
                         Placing <b>{unitLabel(placing, me?.iso)}</b> — click {UNITS[placing].coastal ? "your coastline" : UNITS[placing].domain === "sea" ? "your coastal waters" : "your territory"} to
                         site it. Hold <b>Shift</b> to place several.
                         <button className={cn(miniButton(), "ml-2")} onClick={() => setPlacing(null)}>Cancel</button>
@@ -292,28 +292,28 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     {shown.map(section)}
                 </main>
 
-                <aside className="gd-prod-queue flex flex-col p-[18px] overflow-hidden bg-panel border-l border-line-soft">
-                    <h3 className="gd-queue-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim">Build Queue {(cur ? 1 : 0) + queue.length > 0 &&
+                <aside className="db-prod-queue flex flex-col p-[18px] overflow-hidden bg-panel border-l border-line-soft">
+                    <h3 className="db-queue-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim">Build Queue {(cur ? 1 : 0) + queue.length > 0 &&
                         <span className="font-mono text-[10px] text-faint">{(cur ? 1 : 0) + queue.length}</span>}</h3>
-                    <div className="gd-queue-list gd-scroll flex flex-col gap-1.5 overflow-auto" aria-live="polite" aria-label="National build queue">
-                        {!cur && queue.length === 0 && <div className="gd-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line is idle. Pick a system to
+                    <div className="db-queue-list db-scroll flex flex-col gap-1.5 overflow-auto" aria-live="polite" aria-label="National build queue">
+                        {!cur && queue.length === 0 && <div className="db-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line is idle. Pick a system to
                             build it.</div>}
                         {cur && (
-                            <button className="gd-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(-1)}
+                            <button className="db-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(-1)}
                                     title="Building — click to cancel for a refund">
-                                <i className="gd-qitem-fill absolute inset-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none" style={{width: `${Math.round(cur.progress * 100)}%`}}/>
+                                <i className="db-qitem-fill absolute inset-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none" style={{width: `${Math.round(cur.progress * 100)}%`}}/>
                                 <UnitIcon name={icon(cur.item)} size={16}/>
-                                <span className="gd-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(cur.item)}</span>
-                                <b className="gd-qitem-pct relative font-mono text-[10px] text-gold">{Math.round(cur.progress * 100)}%</b>
+                                <span className="db-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(cur.item)}</span>
+                                <b className="db-qitem-pct relative font-mono text-[10px] text-gold">{Math.round(cur.progress * 100)}%</b>
                             </button>
                         )}
                         {queue.map((it, i) => (
-                            <button key={i} className="gd-qitem group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(i)}
+                            <button key={i} className="db-qitem group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(i)}
                                     title={`${label(it)} · ${timeOf(it)}s — click to cancel`}>
-                                <span className="gd-qitem-n w-3.5 font-mono text-[10px] text-faint">{i + 2}</span>
+                                <span className="db-qitem-n w-3.5 font-mono text-[10px] text-faint">{i + 2}</span>
                                 <UnitIcon name={icon(it)} size={16}/>
-                                <span className="gd-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(it)}</span>
-                                <span className="gd-qitem-x relative text-[11px] text-faint group-hover:text-red">✕</span>
+                                <span className="db-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(it)}</span>
+                                <span className="db-qitem-x relative text-[11px] text-faint group-hover:text-red">✕</span>
                             </button>
                         ))}
                     </div>

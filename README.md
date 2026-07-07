@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="build/icon.png" width="180" alt="GoldenDome" />
+  <img src="build/icon.png" width="180" alt="DomeBreak" />
 </p>
 
-<h1 align="center">GoldenDome</h1>
+<h1 align="center">DomeBreak</h1>
 
 <p align="center">
   <b>A real-time strategy missile game played on the living world map.</b>
 </p>
 <p align="center">
   Pick a nation, build an arsenal of silos, interceptors, warships and jets,<br />
-  and out-launch, out-tech, and out-defend the AI — one Golden Dome at a time.
+  and out-launch, out-tech, and out-defend the AI — one DomeBreak at a time.
 </p>
 
 <p align="center">
@@ -22,12 +22,12 @@
 
 <br />
 
-## Why GoldenDome
+## Why DomeBreak
 
-Most nuke-'em games flatten the planet to an abstract grid. GoldenDome keeps the real one — a MapLibre GL world map with
+Most nuke-'em games flatten the planet to an abstract grid. DomeBreak keeps the real one — a MapLibre GL world map with
 actual cities, coastlines, and borders — and turns it into the board. You command a single nation in a real-time
 exchange against AI rivals: place defenses over your cities, mass offensive systems at the front, research your way
-ahead, and manage a war economy while missiles are already in the air. When your Golden Dome holds and theirs doesn't,
+ahead, and manage a war economy while missiles are already in the air. When your DomeBreak holds and theirs doesn't,
 you win.
 
 <table width="100%">
@@ -38,7 +38,7 @@ you win.
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
+      <p align="center">Land, sea, air, ground, and space — SAM batteries, the DomeBreak, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">Out-tech, out-economy</h3>
@@ -90,7 +90,7 @@ npm run electron:build:all   # package macOS + Windows
 
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| **Land — defense**  | SAM battery and the Golden Dome, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                                |
+| **Land — defense**  | SAM battery and the DomeBreak, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                                |
 | **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the tech-gated hypersonic missile battery — each firing selectable warheads                      |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
@@ -120,7 +120,7 @@ escalate super-linearly with tier, so the future is slow and expensive to reach.
   Flags via `flag-icons`.
 - **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with
   `electron-builder`.
-- **Multiplayer backend** — Supabase (Auth, Postgres, and Deno edge functions `gd-account`, `gd-lobby`, and `gd-social`)
+- **Multiplayer backend** — Supabase (Auth, Postgres, and Deno edge functions `db-account`, `db-lobby`, and `db-social`)
   plus an authoritative Node game server (`server/`) that imports the same engine and runs live matches over WebSockets.
   Configure the client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
 

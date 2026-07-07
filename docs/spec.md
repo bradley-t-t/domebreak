@@ -1,4 +1,4 @@
-<h1 align="center">GoldenDome — Design & Architecture</h1>
+<h1 align="center">DomeBreak — Design & Architecture</h1>
 
 <p align="center">
   <b>A real-time strategy missile game on the world map — and the server-authoritative backend behind it.</b>
@@ -35,7 +35,7 @@ Two modes share one engine:
 - **Supabase Auth** (email + password) provides a durable player identity; a signup trigger mints a `profiles` row per
   user. Clients read their own `profiles`, `matches`, and the aggregated `player_stats` view directly under Row Level
   Security.
-- **All writes go through the `gd-account` edge function** — `touch` (stamp `last_login`) and `report_match` (insert one
+- **All writes go through the `db-account` edge function** — `touch` (stamp `last_login`) and `report_match` (insert one
   `matches` row) — which derives the caller's identity from a verified JWT and writes with the service-role key, so a
   client can never forge its own stats. Full rationale in
   [`adr-001-supabase-accounts.md`](architecture/adr-001-supabase-accounts.md).
@@ -45,7 +45,7 @@ Two modes share one engine:
 Live play is a Supabase control plane plus one authoritative Node game server; see
 [`adr-003-authoritative-server.md`](architecture/adr-003-authoritative-server.md).
 
-- **Lobby control plane (`gd-lobby`)** — every lobby mutation runs through this JWT-verified edge function: `create`,
+- **Lobby control plane (`db-lobby`)** — every lobby mutation runs through this JWT-verified edge function: `create`,
   `join`, `leave`, `find` (quick match), `set_iso`, `ready`, `set_ai`, and `start`. `start` only flips a lobby's status
   to `starting`; it runs no simulation.
 - **Authoritative game server (`server/`)** — a long-lived Node process that imports `src/game/engine.js` unmodified. It
@@ -54,7 +54,7 @@ Live play is a Supabase control plane plus one authoritative Node game server; s
   the world at 10 Hz and broadcasts a full-world JSON snapshot at 2 Hz; clients present their Supabase JWT at handshake
   and may only send whitelisted commands forced to their own seat. On game over it writes one `matches` row per human
   (`mode: 'online'`).
-- **Friends (`gd-social`)** — a JWT-verified edge function for the friend graph: `request`, `accept`, and `remove`.
+- **Friends (`db-social`)** — a JWT-verified edge function for the friend graph: `request`, `accept`, and `remove`.
 
 ### Lobby lifecycle
 
@@ -78,9 +78,9 @@ read their own rows under RLS and never write them directly.
 
 ### Legacy one-shot resolver
 
-An earlier multiplayer path also lives in the repo: the `gd-match` edge function is a self-contained free-for-all that
-runs a build phase and then resolves a single seeded combat exchange over its own `gd_*` tables (`gd_players`,
-`gd_matches`, `gd_match_players`, `gd_cities`, `gd_placements`, `gd_results`), authenticated by a per-player secret
+An earlier multiplayer path also lives in the repo: the `db-match` edge function is a self-contained free-for-all that
+runs a build phase and then resolves a single seeded combat exchange over its own `db_*` tables (`db_players`,
+`db_matches`, `db_match_players`, `db_cities`, `db_placements`, `db_results`), authenticated by a per-player secret
 rather than a Supabase account. It is retained for reference; the shipping client uses the authoritative server above.
 
 ## Combat model
@@ -94,7 +94,7 @@ rather than a Supabase account. It is retained for reference; the shipping clien
 
 ## Attribution & licensing
 
-GoldenDome is authored by Trenton Taylor. Unit icons are
+DomeBreak is authored by Trenton Taylor. Unit icons are
 from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. The repository does not yet ship its
 own license file.
 

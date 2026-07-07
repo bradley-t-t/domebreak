@@ -5,12 +5,12 @@
 
 ## Engine & Language
 
-- **Engine**: GoldenDome custom real-time tick engine (`src/game/engine.js` facade, `src/game/sim/`) — this repo's own
+- **Engine**: DomeBreak custom real-time tick engine (`src/game/engine.js` facade, `src/game/sim/`) — this repo's own
   code, no third-party game engine
 - **Language**: JavaScript (ES modules), JSX for UI components
 - **Rendering**: React 19 + MapLibre GL world map (`src/map/`), SVG unit icons, CSS-mask icon tinting
 - **Styling**: Tailwind CSS v4, utility-first (ADR-0005). One stylesheet only — `src/index.css` (`@import "tailwindcss"`,
-  `:root` tokens, `@theme` mapping, `@layer vfx` for irreducible keyframe/procedural art, and an unlayered `.gd-card`
+  `:root` tokens, `@theme` mapping, `@layer vfx` for irreducible keyframe/procedural art, and an unlayered `.db-card`
   paper re-theme). Shared control vocabulary in `src/ui/lib/variants.js` (cva); `cn()` in `src/ui/lib/cn.js`.
 - **Physics**: None — geodesic kinematics in `src/game/geo/` (haversine, great-circle interpolation)
 

@@ -1,4 +1,4 @@
-// GoldenDome match server. Four jobs:
+// DomeBreak match server. Four jobs:
 //   1. Run the matchmaker (server/matchmaker.js, ADR-0004): group waiting
 //      quick-match queue rows, form lobbies with bot fill, simulate bot
 //      join/ready, and auto-launch by flipping lobbies to 'starting'.
@@ -81,7 +81,7 @@ async function pollStarting() {
 }
 
 function watchLobbies() {
-    db.channel("gd-server-lobbies")
+    db.channel("db-server-lobbies")
         .on("postgres_changes", {event: "UPDATE", schema: "public", table: "lobbies"}, (payload) => {
             if (payload.new?.status === "starting") claimLobby(payload.new);
         })
@@ -160,4 +160,4 @@ wss.on("connection", (ws) => {
 watchLobbies();
 pollStarting();
 startMatchmaker(db, log);
-server.listen(PORT, "0.0.0.0", () => log(`goldendome server on :${PORT}, advertising ${WS_URLS.join(", ")}`));
+server.listen(PORT, "0.0.0.0", () => log(`domebreak server on :${PORT}, advertising ${WS_URLS.join(", ")}`));

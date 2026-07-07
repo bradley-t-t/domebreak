@@ -1,6 +1,6 @@
-# GoldenDome — Game Studio Agent Architecture
+# DomeBreak — Game Studio Agent Architecture
 
-GoldenDome is a real-time strategy game of missile defense and offense on a live
+DomeBreak is a real-time strategy game of missile defense and offense on a live
 world map, developed through the Claude Code Game Studios framework: 49
 coordinated subagents, 73 workflow skills, path-scoped rules, and validation
 hooks. **Using this framework is mandatory for all game work in this repo** —
@@ -16,8 +16,8 @@ and specialist agents, reviews through the review skills.
 - **Language**: JavaScript (ES modules), JSX for components
 - **Build System**: Vite 7 (`npm run dev`, `npm run build`), ESLint (`npm run lint`)
 - **Desktop**: Electron (`npm run electron`, `electron:build:mac|win|all`)
-- **Backend**: Supabase — dedicated "Golden Dome" project (`bhzxnorbhylfsrdjzodv`):
-  Auth accounts, match history + stats under RLS, `gd-account` edge function
+- **Backend**: Supabase — dedicated "DomeBreak" project (`bhzxnorbhylfsrdjzodv`):
+  Auth accounts, match history + stats under RLS, `db-account` edge function
   (all writes server-side; see `docs/architecture/adr-001-supabase-accounts.md`)
 - **Version Control**: Git — work lands on `develop`; `/release` promotes to `main`
 

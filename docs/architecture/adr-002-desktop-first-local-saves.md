@@ -1,7 +1,7 @@
 <h1 align="center">ADR-0002: Desktop-First Distribution &amp; File-Based Local Saves</h1>
 
 <p align="center">
-  <b>GoldenDome ships only as a packaged desktop app and stores every save as a local file that never leaves the machine.</b>
+  <b>DomeBreak ships only as a packaged desktop app and stores every save as a local file that never leaves the machine.</b>
 </p>
 
 <br />
@@ -24,7 +24,7 @@ Trenton Taylor (creative/technical director), Sunday (agent)
 
 ## Summary
 
-GoldenDome is a desktop game, not a browser game. It ships exclusively as a packaged desktop
+DomeBreak is a desktop game, not a browser game. It ships exclusively as a packaged desktop
 app (Electron shell via electron-builder, macOS + Windows). The browser vite build exists only
 as a development harness and is never a distribution target. Save games are real files on the
 player's machine — one JSON file per key under the OS user-data directory — exactly like a
@@ -35,7 +35,7 @@ carries only profile, stats, and match reports, never world state.
 
 | Field                     | Value                                                                                                                                                                               |
 | :--- | :--- |
-| **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                      |
+| **Engine**                | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                      |
 | **Domain**                | Platform / Persistence (distribution shell, save storage) — no simulation change                                                                                                    |
 | **Knowledge Risk**        | LOW — Electron IPC, `contextBridge`, and JSON-file persistence are stable, well-documented patterns                                                                                 |
 | **References Consulted**  | `electron/main.cjs` (local store + static server), `src/game/platform/localData.js`, `src/game/platform/saves.js`, `docs/architecture/adr-001-supabase-accounts.md`, `package.json` |
@@ -81,13 +81,13 @@ product needs one authoritative answer to "where do saves live?" before more sys
 
 ## Decision
 
-**Distribution**: GoldenDome ships as a desktop app only — `electron:build:mac` /
+**Distribution**: DomeBreak ships as a desktop app only — `electron:build:mac` /
 `electron:build:win` packages. The vite browser build is a development harness; it is never
 deployed as a public, player-facing target.
 
 **Save storage**: one JSON file per localStorage key, written by the Electron main process
 under `app.getPath("userData")/GameData/` (macOS: `~/Library/Application
-Support/goldendome/GameData/`). The directory is created `0700` and files are written `0600` —
+Support/domebreak/GameData/`). The directory is created `0700` and files are written `0600` —
 owner-only, because the auth session token lives alongside the saves.
 
 **Layering** (existing implementation, hereby pinned):
@@ -129,7 +129,7 @@ requires a superseding ADR.
 - **Pros**: No packaging pipeline; one deploy for all platforms; instant updates.
 - **Cons**: Storage is still evictable at the browser's discretion; saves are not visible files;
   no real filesystem identity; "browser game" product perception.
-- **Rejection Reason**: Directly contradicts the product decision — GoldenDome is a desktop
+- **Rejection Reason**: Directly contradicts the product decision — DomeBreak is a desktop
   game whose saves behave like a normal game's.
 
 ### Alternative 2: Cloud saves in Supabase
@@ -203,7 +203,7 @@ this ADR on 2026-07-05.
 
 ## Validation Criteria
 
-- Playing a match in the desktop app produces `GameData/goldendome.save.auto.json` (and slot
+- Playing a match in the desktop app produces `GameData/domebreak.save.auto.json` (and slot
   files on manual save). **Verified 2026-07-05** — real 97 KB world snapshots observed.
 - Clearing localStorage and relaunching the desktop app restores saves from disk via boot
   hydration.

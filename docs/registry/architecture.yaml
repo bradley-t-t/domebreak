@@ -49,7 +49,7 @@ state_ownership:
     owner_system: platform-saves (src/game/platform/saves.js + localData.js bridge)
     adr: docs/architecture/adr-002-desktop-first-local-saves.md
     interface: "saveGame(slot, world, meta) / loadGame(slot) — {v, world, meta} envelope; version mismatch reads as no-save"
-    write_access: saves-module-only   # UI and App call saveGame/loadGame; nothing else touches goldendome.save.* keys or files
+    write_access: saves-module-only   # UI and App call saveGame/loadGame; nothing else touches domebreak.save.* keys or files
     referenced_by:
       - docs/architecture/adr-002-desktop-first-local-saves.md
       - docs/architecture/adr-001-supabase-accounts.md   # backend explicitly does NOT store this state

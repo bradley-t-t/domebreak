@@ -1,5 +1,5 @@
 /*!
- * GoldenDome board. PMTiles tiles under a MapLibre renderer, with globe + flat
+ * DomeBreak board. PMTiles tiles under a MapLibre renderer, with globe + flat
  * projection. Accepts children for overlays.
  *
  * Rendering stack (bottom -> top): deep-sea base, real Natural-Earth relief

@@ -1,4 +1,4 @@
-// GoldenDome matchmaker (ADR-0004: real-players-only). Second responsibility of
+// DomeBreak matchmaker (ADR-0004: real-players-only). Second responsibility of
 // the same authoritative server process introduced in ADR-0003: groups waiting
 // `matchmaking_queue` rows into a match and forms the `lobbies`/`lobby_members`
 // rows — REAL PLAYERS ONLY, no bots. A match forms once at least MIN_PLAYERS are
@@ -100,7 +100,7 @@ export function startMatchmaker(db, log) {
     // guarantees window-expiry and grouping correctness even if this never fires
     // or the subscription drops.
     try {
-        db.channel("gd-server-matchmaking")
+        db.channel("db-server-matchmaking")
             .on("postgres_changes", {event: "*", schema: "public", table: "matchmaking_queue"}, (payload) => {
                 if (payload.new?.status === "waiting") void sweep();
             })
@@ -117,7 +117,7 @@ export function startMatchmaker(db, log) {
 async function formLobby(db, log, players) {
     // 1. Create the lobby row. host is NOT NULL; the anchor fills it, but
     // quick-match lobbies confer no host powers (no host-only actions remain in
-    // gd-lobby).
+    // db-lobby).
     const anchor = players[0];
     const {data: lobby, error: lobbyErr} = await db.from("lobbies")
         .insert({host: anchor.user_id, name: "Quick Match", status: "open", max_players: MAX_PLAYERS})
@@ -182,7 +182,7 @@ async function formLobby(db, log, players) {
     const {error: insertErr} = await db.from("lobby_members").insert(memberRows);
     if (insertErr) {
         log("matchmaker: member insert failed for lobby", lobby.id, ":", insertErr.message);
-        // Best-effort cleanup; the 45s starting-sweep in gd-lobby only reverts
+        // Best-effort cleanup; the 45s starting-sweep in db-lobby only reverts
         // stuck 'starting' lobbies, not malformed 'open' ones, so close it
         // directly rather than leaving a half-seated lobby around.
         await db.from("lobbies").update({status: "closed"}).eq("id", lobby.id);

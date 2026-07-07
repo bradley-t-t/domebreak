@@ -72,7 +72,7 @@ orchestration of a throwaway world.
 
 `CAST_SIZE`, `SIM_SPEED`, `OPENING_FRONTS`, `ESCALATE_MS`,
 `DRIFT_LNG_PER_FRAME`, `RAIL_PAD` (src/ui/live/AttractSim.jsx); rail width and
-glass fade (`.gd-menu-rail` in src/styles.css); splash hold times
+glass fade (`.db-menu-rail` in src/styles.css); splash hold times
 (src/ui/screens/SplashSequence.jsx).
 
 ## Acceptance Criteria

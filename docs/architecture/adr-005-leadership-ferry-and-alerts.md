@@ -39,7 +39,7 @@ existing deterministic tick and the state-owned UI contract.
 
 | Field              | Value                                                                                                          |
 | :--- | :--- |
-| **Engine**         | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine |
+| **Engine**         | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine |
 | **Domain**         | Simulation (aircraft, economy, diplomacy hooks) + UI (alert layer)                                             |
 | **Knowledge Risk** | LOW — reuses existing geodesic flight primitives (`advance`, `bearingTo`, `haversine`) and event/HUD patterns  |
 

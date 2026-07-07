@@ -1,5 +1,5 @@
 // Account surface for the UI: auth session, profile/stats reads (RLS), and
-// mutations via the gd-account edge function. The client never writes tables.
+// mutations via the db-account edge function. The client never writes tables.
 import {supabase} from "./client.js";
 
 export async function signUp(email, password, username) {
@@ -39,7 +39,7 @@ export async function fetchStats() {
 }
 
 async function invokeAccount(body) {
-    const {error} = await supabase.functions.invoke("gd-account", {body});
+    const {error} = await supabase.functions.invoke("db-account", {body});
     return {error: error?.message || null};
 }
 

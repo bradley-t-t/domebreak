@@ -3,7 +3,7 @@
 import {persistKey} from "./localData.js";
 import {DEFAULT_KEYS} from "./keybindings.js";
 
-const KEY = "goldendome.settings";
+const KEY = "domebreak.settings";
 export const DEFAULT_SETTINGS = {
     speed: 1, globe: true, reduceMotion: false, opponents: 5, musicVol: 0.5, sfxVol: 0.8, keys: DEFAULT_KEYS,
 };

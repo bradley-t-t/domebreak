@@ -15,7 +15,7 @@ export function useOnlineCount(enabled) {
         supabase.auth.getUser().then(({data}) => {
             if (cancelled) return;
             const uid = data?.user?.id;
-            ch = supabase.channel("gd-online", {config: {presence: {key: uid || undefined}}});
+            ch = supabase.channel("db-online", {config: {presence: {key: uid || undefined}}});
             const sync = () => {
                 if (!ch) return;
                 setCount(Object.keys(ch.presenceState()).length);

@@ -289,7 +289,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                 after:content-[''] after:absolute after:top-5 after:left-5 after:w-4 after:h-4 after:border-t after:border-l after:border-line-soft">
                 <div className="mb-[34px]">
                     <div className="flex items-center gap-[7px] mb-4 font-mono text-[10px] tracking-[2.5px] uppercase text-faint">
-                        <span className="gd-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
+                        <span className="db-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
                         Matchmaking · War Room
                     </div>
                     <h1 className={menuTitle({sm: true})}>WAR<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">ROOM</span></h1>
@@ -301,7 +301,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                 <div className="pointer-events-none flex flex-col gap-[5px] mb-4">
                     <span className="font-mono text-[10px] tracking-[2.5px] uppercase text-faint">Your Nation</span>
                     <span className={cn(
-                        "flex items-center gap-[9px] font-sans text-[19px] font-bold text-text [&_.gd-flag]:w-[26px] [&_.gd-flag]:rounded-[3px] [&_img]:w-[26px] [&_img]:rounded-[3px]",
+                        "flex items-center gap-[9px] font-sans text-[19px] font-bold text-text [&_.db-flag]:w-[26px] [&_.db-flag]:rounded-[3px] [&_img]:w-[26px] [&_img]:rounded-[3px]",
                         !myIso && "text-[13px] font-medium text-faint"
                     )}>
                         {myIso
@@ -317,7 +317,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                         return (
                             <div key={m.userId ?? `p-${m.slot}`}
                                  className={cn(
-                                     "flex items-center gap-[9px] py-2 px-[11px] rounded-[var(--radius)] border border-line-soft bg-[rgba(9,11,15,0.5)] transition-colors [&_.gd-flag]:w-[22px] [&_.gd-flag]:rounded-[2px] [&_.gd-flag]:shrink-0 [&_img]:w-[22px] [&_img]:rounded-[2px] [&_img]:shrink-0",
+                                     "flex items-center gap-[9px] py-2 px-[11px] rounded-[var(--radius)] border border-line-soft bg-[rgba(9,11,15,0.5)] transition-colors [&_.db-flag]:w-[22px] [&_.db-flag]:rounded-[2px] [&_.db-flag]:shrink-0 [&_img]:w-[22px] [&_img]:rounded-[2px] [&_img]:shrink-0",
                                      r && "border-gold-line bg-[rgba(244,192,42,0.08)]",
                                      own && !r && "border-gold-line bg-[rgba(9,11,15,0.72)]"
                                  )}
@@ -351,7 +351,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                     </span>
                     <span className={cn("text-[12px] leading-snug", starting || allReady ? "text-gold" : "text-dim")} role="status" aria-live="polite">{statusLine}</span>
                     {feed.length > 0 && (
-                        <div className="gd-scroll max-h-[84px] overflow-y-auto flex flex-col gap-[2px] font-mono text-[11px] text-faint pr-1" aria-live="polite" aria-label="Lobby activity">
+                        <div className="db-scroll max-h-[84px] overflow-y-auto flex flex-col gap-[2px] font-mono text-[11px] text-faint pr-1" aria-live="polite" aria-label="Lobby activity">
                             {feed.map((f) => <span key={f.id} className="animate-[gdRowIn_200ms_var(--ease-out)_both]">&rsaquo; {f.t}</span>)}
                         </div>
                     )}

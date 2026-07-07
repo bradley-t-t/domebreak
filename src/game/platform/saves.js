@@ -2,7 +2,7 @@
 // folder on desktop). The world is plain JSON-serializable data.
 import {persistKey, removeKey} from "./localData.js";
 
-const PREFIX = "goldendome.save.";
+const PREFIX = "domebreak.save.";
 // v2: unit type ids renamed to generic roles (interceptor, strikefighter, …) — older saves are unreadable.
 const VERSION = 2;
 // Reserved slot name for the rolling autosave (drives the Continue button).

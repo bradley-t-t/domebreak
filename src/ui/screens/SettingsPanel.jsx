@@ -44,11 +44,11 @@ export default function SettingsPanel({settings, onChange, onClose}) {
 
     return (
         <div className={overlay({placement: "center"})} onClick={onClose}>
-            <div className={cn(card(), "gd-settings max-h-[88vh] overflow-y-auto")} ref={cardRef} tabIndex={-1}
+            <div className={cn(card(), "db-settings max-h-[88vh] overflow-y-auto")} ref={cardRef} tabIndex={-1}
                  onClick={(e) => e.stopPropagation()}>
                 <div className={menuTitle({sm: true})}>Settings</div>
-                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default Speed</span>
-                    <div className="gd-seg flex gap-1" role="radiogroup"
+                <div className="db-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default Speed</span>
+                    <div className="db-seg flex gap-1" role="radiogroup"
                          aria-label="Default speed">{GAME_SPEEDS.map((s) => <button key={s} role="radio"
                                                                             aria-checked={settings.speed === s}
                                                                             className={cn(
@@ -57,8 +57,8 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                                                                             )}
                                                                             onClick={() => set("speed", s)}>{s}×</button>)}</div>
                 </div>
-                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default View</span>
-                    <div className="gd-seg flex gap-1" role="radiogroup" aria-label="Default view">
+                <div className="db-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Default View</span>
+                    <div className="db-seg flex gap-1" role="radiogroup" aria-label="Default view">
                         <button className={cn(
                             "min-w-[40px] py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
                             settings.globe && "active bg-gold text-gold-contrast border-transparent"
@@ -73,23 +73,23 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                         </button>
                     </div>
                 </div>
-                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Music Volume</span>
-                    <div className="gd-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Music volume"
+                <div className="db-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Music Volume</span>
+                    <div className="db-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Music volume"
                                                           className="w-[120px] accent-gold"
                                                           value={Math.round((settings.musicVol ?? 0.5) * 100)}
                                                           onChange={(e) => set("musicVol", +e.target.value / 100)}/><b>{Math.round((settings.musicVol ?? 0.5) * 100)}%</b>
                     </div>
                 </div>
-                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Effects Volume</span>
-                    <div className="gd-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Effects volume"
+                <div className="db-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Effects Volume</span>
+                    <div className="db-set-slider flex items-center gap-2.5"><input type="range" min="0" max="100" aria-label="Effects volume"
                                                           className="w-[120px] accent-gold"
                                                           value={Math.round((settings.sfxVol ?? 0.8) * 100)}
                                                           onChange={(e) => set("sfxVol", +e.target.value / 100)}/><b>{Math.round((settings.sfxVol ?? 0.8) * 100)}%</b>
                     </div>
                 </div>
-                <div className="gd-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Reduce Motion</span>
+                <div className="db-set-row flex items-center justify-between gap-3.5 my-3 text-sm text-dim"><span>Reduce Motion</span>
                     <button className={cn(
-                        "gd-toggle w-11 h-6 rounded border border-line bg-btn-bg relative",
+                        "db-toggle w-11 h-6 rounded border border-line bg-btn-bg relative",
                         settings.reduceMotion && "on bg-gold-soft border-[rgba(244,192,42,0.4)]"
                     )}
                             aria-pressed={settings.reduceMotion} aria-label="Reduce motion"
@@ -101,7 +101,7 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                     </button>
                 </div>
 
-                <div className="gd-set-head flex items-center justify-between gap-3 mt-[22px] mb-1.5 pt-4 border-t border-line font-mono text-xs tracking-[0.08em] uppercase text-faint">
+                <div className="db-set-head flex items-center justify-between gap-3 mt-[22px] mb-1.5 pt-4 border-t border-line font-mono text-xs tracking-[0.08em] uppercase text-faint">
                     <span>Controls</span>
                     <button className={miniButton()} onClick={() => {
                         setCapturing(null);
@@ -109,15 +109,15 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                     }}>Reset to Defaults
                     </button>
                 </div>
-                <div className="gd-keybinds flex flex-col gap-2.5">
+                <div className="db-keybinds flex flex-col gap-2.5">
                     {groups.map((g) => (
-                        <div key={g} className="gd-keygroup">
-                            <div className="gd-keygroup-h font-mono text-[10.5px] tracking-[0.1em] uppercase text-faint mt-2 mb-0.5">{g}</div>
+                        <div key={g} className="db-keygroup">
+                            <div className="db-keygroup-h font-mono text-[10.5px] tracking-[0.1em] uppercase text-faint mt-2 mb-0.5">{g}</div>
                             {KEY_ACTIONS.filter((a) => a.group === g).map((a) => (
-                                <div key={a.id} className="gd-set-row gd-keyrow flex items-center justify-between gap-3.5 my-1.5 text-sm text-dim">
+                                <div key={a.id} className="db-set-row db-keyrow flex items-center justify-between gap-3.5 my-1.5 text-sm text-dim">
                                     <span>{a.label}</span>
                                     <button className={cn(
-                                        "gd-key min-w-[92px] py-1.5 px-2.5 border border-line bg-btn-bg text-text rounded font-mono text-xs text-center",
+                                        "db-key min-w-[92px] py-1.5 px-2.5 border border-line bg-btn-bg text-text rounded font-mono text-xs text-center",
                                         capturing === a.id && "capturing border-gold bg-gold-soft text-gold"
                                     )}
                                             aria-live={capturing === a.id ? "polite" : undefined}
@@ -130,7 +130,7 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                         </div>
                     ))}
                 </div>
-                <div className="gd-menu-hint mt-3.5 font-mono text-[11px] text-dim tracking-[0.02em]">Esc — Cancel / Menu · 1–5 — Jump to speed level (fixed)</div>
+                <div className="db-menu-hint mt-3.5 font-mono text-[11px] text-dim tracking-[0.02em]">Esc — Cancel / Menu · 1–5 — Jump to speed level (fixed)</div>
 
                 <button className={cn(button({variant: "primary"}), "block")} onClick={onClose}>Done
                 </button>

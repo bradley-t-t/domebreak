@@ -574,7 +574,7 @@ export default function LiveGame({
 
     // Fade unit markers out as the camera zooms toward the whole-earth view. The
     // opacity is pushed to a CSS var on the map container (not React state) so it
-    // updates every zoom frame without re-rendering the marker list; .gd-unit
+    // updates every zoom frame without re-rendering the marker list; .db-unit
     // multiplies it in, composing with the engine-driven aircraft takeoff fade.
     useEffect(() => {
         const m = mapRef.current;
@@ -583,15 +583,15 @@ export default function LiveGame({
         const [lo, hi] = UNIT_FADE_ZOOM;
         const apply = () => {
             const o = Math.max(0, Math.min(1, (m.getZoom() - lo) / (hi - lo)));
-            container.style.setProperty("--gd-unit-opacity", o.toFixed(3));
-            container.classList.toggle("gd-units-faded", o < 0.04);
+            container.style.setProperty("--db-unit-opacity", o.toFixed(3));
+            container.classList.toggle("db-units-faded", o < 0.04);
         };
         apply();
         m.on("zoom", apply);
         return () => {
             m.off("zoom", apply);
-            container.style.removeProperty("--gd-unit-opacity");
-            container.classList.remove("gd-units-faded");
+            container.style.removeProperty("--db-unit-opacity");
+            container.classList.remove("db-units-faded");
         };
     }, [mapReady]);
 
@@ -726,7 +726,7 @@ export default function LiveGame({
         setSelUnit(null);
     };
     const onCtx = (e) => {
-        if (e.originalEvent?.target?.closest?.(".gd-unit")) return; // unit markers run their own menu
+        if (e.originalEvent?.target?.closest?.(".db-unit")) return; // unit markers run their own menu
         // Right-click cancels any active targeting mode (place / move / attack / land) first.
         if (disembarkId) {
             setDisembarkId(null);
@@ -959,7 +959,7 @@ export default function LiveGame({
             <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
-                <Source id="gd-regions" type="vector" url={REGIONS_URL}>
+                <Source id="db-regions" type="vector" url={REGIONS_URL}>
                     {layers.states && <Layer id="region-all" type="line" source-layer="regions" paint={{
                         "line-color": "#6b7079",
                         "line-opacity": 0.3,
@@ -1152,7 +1152,7 @@ export default function LiveGame({
                                 offset={air ? [0, -alt * 30] : undefined}>
                             <div
                                 className={cn(
-                                    "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--gd-unit-opacity,1)",
+                                    "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)",
                                     u.id === selUnit && "scale-[1.35] transition-transform duration-[140ms] ease-out-gd"
                                 )}
                                 title={labelOf(u.type, u.slot)}
@@ -1357,9 +1357,9 @@ export default function LiveGame({
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {w.over && (
-                <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="gd-outcome-title">
+                <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">
                     <div className={cn(card({size: "wide"}), "motion-safe:animate-[gdPop_240ms_var(--ease-out)]")}>
-                        <div id="gd-outcome-title"
+                        <div id="db-outcome-title"
                             className={cn(
                                 "font-display text-[40px] font-bold tracking-[4px] uppercase text-center mb-3",
                                 w.winnerSlot === mySlot ? "text-good [text-shadow:0_0_26px_rgba(62,227,139,0.55)]"
@@ -1379,7 +1379,7 @@ export default function LiveGame({
                     {myNation?.iso && <Flag iso={myNation.iso} className="text-[30px] rounded-[3px] shadow-[0_6px_20px_-8px_rgba(0,0,0,0.7)]"/>}
                     <div className="mt-4 font-display text-[26px] font-bold tracking-[8px] uppercase text-text">{myNation?.name || "Command"}</div>
                     <div className="mt-2 font-mono text-[11px] tracking-[3px] uppercase text-dim">Establishing theater command</div>
-                    <div className="gd-boot-bar w-[190px] h-0.5 mt-[22px] mx-auto bg-[rgba(255,255,255,0.08)] rounded-[2px] overflow-hidden"><i/></div>
+                    <div className="db-boot-bar w-[190px] h-0.5 mt-[22px] mx-auto bg-[rgba(255,255,255,0.08)] rounded-[2px] overflow-hidden"><i/></div>
                 </div>
             </div>
         </>

@@ -42,7 +42,7 @@ income/upkeep/production ticks are nation-agnostic, research is paid.
   carrier-wing ordnance — things that fly in the air column.
 - **Missile silos never intercept** (already true): interception is restricted to
   `kind: "defense"` units; silos are `kind: "offense"`.
-- BMD remains with ground/sea defenses: SAM Battery, Golden Dome, Cruiser,
+- BMD remains with ground/sea defenses: SAM Battery, DomeBreak, Cruiser,
   Destroyer.
 
 ## Tuning knobs

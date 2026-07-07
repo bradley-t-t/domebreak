@@ -60,24 +60,24 @@ export default function LoginScreen() {
                     GOLDEN<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">DOME</span>
                 </h1>
                 <p className="text-dim tracking-[3px] uppercase text-[13px] mt-1 mb-[34px]">Global Missile Command</p>
-                <form className={cn(card(), "text-left mt-[22px] w-[min(360px,94vw)]")} onSubmit={submit} aria-labelledby="gd-login-title">
-                    <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim" id="gd-login-title">{mode === "signin" ? "Sign In" : "Create Account"}</div>
-                    <label className={label()} htmlFor="gd-login-email">Email</label>
-                    <input id="gd-login-email" className={input()} type="email" autoComplete="email" value={email}
+                <form className={cn(card(), "text-left mt-[22px] w-[min(360px,94vw)]")} onSubmit={submit} aria-labelledby="db-login-title">
+                    <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim" id="db-login-title">{mode === "signin" ? "Sign In" : "Create Account"}</div>
+                    <label className={label()} htmlFor="db-login-email">Email</label>
+                    <input id="db-login-email" className={input()} type="email" autoComplete="email" value={email}
                            onChange={(e) => setEmail(e.target.value)} disabled={busy}
-                           aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
+                           aria-invalid={!!error} aria-describedby={error ? "db-login-err" : undefined}/>
                     {mode === "signup" && <>
-                        <label className={cn(label(), "mt-4")} htmlFor="gd-login-username">Username</label>
-                        <input id="gd-login-username" className={input()} maxLength={24} autoComplete="username"
+                        <label className={cn(label(), "mt-4")} htmlFor="db-login-username">Username</label>
+                        <input id="db-login-username" className={input()} maxLength={24} autoComplete="username"
                                value={username} onChange={(e) => setUsername(e.target.value)} disabled={busy}/>
                     </>}
-                    <label className={cn(label(), "mt-4")} htmlFor="gd-login-password">Password</label>
-                    <input id="gd-login-password" className={input()} type="password"
+                    <label className={cn(label(), "mt-4")} htmlFor="db-login-password">Password</label>
+                    <input id="db-login-password" className={input()} type="password"
                            autoComplete={mode === "signin" ? "current-password" : "new-password"}
                            value={password} onChange={(e) => setPassword(e.target.value)} disabled={busy}
-                           aria-invalid={!!error} aria-describedby={error ? "gd-login-err" : undefined}/>
+                           aria-invalid={!!error} aria-describedby={error ? "db-login-err" : undefined}/>
                     <div aria-live="assertive">
-                        {error && <p className="text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm px-3 py-2 text-[12.5px] mt-3.5 mb-0" id="gd-login-err">{error}</p>}
+                        {error && <p className="text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm px-3 py-2 text-[12.5px] mt-3.5 mb-0" id="db-login-err">{error}</p>}
                     </div>
                     <button className={cn(button({variant: "primary"}), "block w-full mt-[18px]")} type="submit" disabled={!canSubmit}>
                         {busy ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
