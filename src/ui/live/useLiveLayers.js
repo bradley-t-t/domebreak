@@ -5,7 +5,7 @@
 // state (w) and the handful of UI toggles/inputs the map layers care about.
 import {useMemo} from "react";
 import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
-import {RADAR_RING_COLORS} from "../../game/data/constants.js";
+import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail} from "../../game/geo/geo.js";
 
 export function useLiveLayers({
@@ -59,6 +59,20 @@ export function useLiveLayers({
             return c;
         })
     }), [w.effects, w.time]);
+
+    // Ground occupation in progress: a ring around every city currently being
+    // captured, colored by the occupier and filled by how far the capture has
+    // advanced (c.capture.progress). Map-scale event — like fallout, not fog-gated
+    // — so the player sees a province being taken (theirs or an enemy's). Rebuilds
+    // each tick (w.time) as progress climbs or bleeds off.
+    const captureFC = useMemo(() => ({
+        type: "FeatureCollection",
+        features: w.cities.filter((c) => c.alive && c.capture && c.capture.progress > 0.02).map((c) => {
+            const f = circle(c.lng, c.lat, CAPTURE.holdKm, 40);
+            f.properties = {color: teamColor(c.capture.slot), progress: c.capture.progress};
+            return f;
+        })
+    }), [w.cities, w.time, teamColor]);
 
     // Fog of war: enemy assets exist on my map only where my sensor picture
     // covers them — my own units are always mine to see. unitVisibleTo also
@@ -169,5 +183,5 @@ export function useLiveLayers({
         })
     }), [w.units, w.time, mySlot]);
 
-    return {backdropFC, liveFC, falloutFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
+    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
 }
