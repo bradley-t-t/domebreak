@@ -30,9 +30,9 @@ export const GAME_SPEEDS = [0.5, 1, 2, 4, 10];
 // capital at a zoom that fits most of their nation. The frame is derived from
 // the geographic span of the player's cities around the capital, then clamped.
 export const START_CAM = {
-    spanPad: 1.25,  // grow the nation's span before fitting, so it isn't edge-to-edge
-    padPx: 80,      // pixel inset so the framed nation clears the HUD chrome
-    maxZoom: 5.4,   // cap the opening zoom so even a city-state keeps regional context
+    spanPad: 1.1,  // grow the nation's span before fitting, so it isn't edge-to-edge
+    padPx: 60,      // pixel inset so the framed nation clears the HUD chrome
+    maxZoom: 6.3,   // cap the opening zoom so even a city-state keeps regional context
     bootMs: 6000,   // failsafe: lift the loading veil after this even if the map never idles
 };
 

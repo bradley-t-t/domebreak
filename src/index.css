@@ -35,6 +35,25 @@
         font-family: var(--sans);
         -webkit-font-smoothing: antialiased;
         overflow: hidden;
+        /* Native-app feel: no text selection, no image drag-ghosts, no scroll
+           chaining / rubber-band bounce. Re-enabled below for real form fields. */
+        user-select: none;
+        -webkit-user-select: none;
+        overscroll-behavior: none;
+    }
+
+    img,
+    svg,
+    canvas {
+        -webkit-user-drag: none;
+        user-select: none;
+    }
+
+    input,
+    textarea,
+    [contenteditable="true"] {
+        user-select: text;
+        -webkit-user-select: text;
     }
 
     button {
