@@ -5,6 +5,7 @@ import {
     AI_TUNING,
     AIRSTRIP_RUNWAY,
     allowedAmmo,
+    initialWarhead,
     DEFAULT_BUILD_TIME,
     DEFAULT_HIT_PROB,
     DEFAULT_RELOAD,
@@ -92,7 +93,7 @@ function spawnQueuedUnit(w, n, it) {
         hp: def.hp,
         cooldown: 0,
         targetId: null,
-        warhead: def.kind === "offense" ? "standard" : null
+        warhead: def.kind === "offense" ? initialWarhead(it.type) : null
     };
     if (def.wing) {
         base.hangar = {...HANGAR_SPEC[it.type]};   // full complement in stock
@@ -468,11 +469,13 @@ function aiTick(w, dt) {
         ensureProd(n);
         const myUnits = unitsBySlot.get(n.slot) || [];
         const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
-        // A launcher stuck on an empty magazine falls back to whatever's stocked.
+        // A launcher stuck on an empty magazine falls back to Standard — but only if
+        // the platform is cleared to carry it (the strategic-only SSBN is not, so it
+        // holds its selected round and waits for strategic stock instead).
         for (const u of myUnits) {
             if (UNITS[u.type].kind !== "offense") continue;
-            const wh = u.warhead || "standard";
-            if (!(n.ammo[wh] > 0) && (n.ammo.standard || 0) > 0) u.warhead = "standard";
+            const wh = u.warhead || initialWarhead(u.type);
+            if (!(n.ammo[wh] > 0) && allowedAmmo(u.type).includes("standard") && (n.ammo.standard || 0) > 0) u.warhead = "standard";
         }
         // Units come off the production line idle — point one at a target per tick.
         if (enemies.length) {
@@ -480,10 +483,14 @@ function aiTick(w, dt) {
             if (idle) {
                 const tgt = pickTarget(w, enemies);
                 if (tgt) {
-                    // City-killers only come off the shelf — no conjured warheads —
-                    // and only onto a launcher cleared to carry them (a silo/sub/orbital,
-                    // never a road-mobile hypersonic).
-                    if (allowedAmmo(idle.type).includes("thermo") && (n.ammo.thermo || 0) > 0 && rand(w) < AI_TUNING.thermoChance) idle.warhead = "thermo";
+                    // Arm the platform with its signature round when one is stocked —
+                    // a silo/sub/orbital reaches for the thermo city-killer, a
+                    // hypersonic launcher/battery for the HGV. Warheads only come off
+                    // the shelf (no conjured rounds) and only onto a platform cleared
+                    // to carry them, so each platform fights to its specialization.
+                    const sig = UNITS[idle.type].signature;
+                    const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : AI_TUNING.thermoChance;
+                    if (sig && allowedAmmo(idle.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) idle.warhead = sig;
                     commandAttack(w, idle.id, tgt.id);
                 }
             }
@@ -541,6 +548,13 @@ function aiTick(w, dt) {
         }
         if (hasOffense && enemies.length && stocked("thermo") < AI_TUNING.thermoStockTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
             if (queueAmmo(w, n.slot, "thermo").ok) return;
+        }
+        // Hypersonic rounds — only worth stocking if the nation fields a platform
+        // cleared to carry them (a launcher or battery), so glide-vehicle stock never
+        // piles up unused on a nation that only builds silos.
+        const hasHyper = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("hgv"));
+        if (hasHyper && enemies.length && stocked("hgv") < AI_TUNING.hgvStockTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
+            if (queueAmmo(w, n.slot, "hgv").ok) return;
         }
         // 3. Early-warning radar — spread across the frontier for coverage.
         const radars = myUnits.filter((u) => u.type === "radar").length + prodCount(n, "unit", "radar");
@@ -724,7 +738,7 @@ export function step(w, dt) {
                     // Missile units spend a warhead from the strategic arsenal (and can't
                     // fire when it's empty). Conventional air/sea units — aircraft, ships —
                     // fire their own munitions and never draw the arsenal.
-                    const _wh = def.warheads ? (u.warhead || "standard") : "standard";
+                    const _wh = def.warheads ? (u.warhead || initialWarhead(u.type)) : "standard";
                     if (!def.warheads || (n.ammo[_wh] || 0) > 0) {
                         if (def.warheads) n.ammo[_wh] -= 1;
                         launch(w, u, t, _wh);

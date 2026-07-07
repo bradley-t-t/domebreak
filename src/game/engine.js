@@ -108,6 +108,7 @@ export {
     WARHEAD_ORDER,
     AMMO_START,
     allowedAmmo,
+    initialWarhead,
     launchersForAmmo,
     unitLabel,
     armamentOf,
