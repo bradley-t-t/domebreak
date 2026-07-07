@@ -50,6 +50,13 @@ export function atWar(w, a, b) {
     return !!(n && n.relations[b] === "war");
 }
 
+// Display name for a slot, with a stable fallback for unnamed/AI nations. The
+// public spelling of the internal nationOf lookup — the UI reads this instead of
+// re-implementing `w.nations.find(...)?.name || …` at each call site.
+export function nationName(w, slot) {
+    return nationOf(w, slot)?.name || `Nation ${slot}`;
+}
+
 // A city's vitality (0..1): the share of its people, economy, and output still
 // standing, driven by current health. A dead city contributes nothing; a city at
 // full hp is identical to the pre-vitality behaviour. Every downstream economic /

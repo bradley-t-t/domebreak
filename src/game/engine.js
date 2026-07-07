@@ -151,6 +151,7 @@ export {
     defenseRange,
     defenseMinRange,
     placementBlocked,
+    nationName,
 } from "./sim/queries.js";
 
 export {
@@ -168,7 +169,6 @@ export {
     stopSail,
     setPatrolSize,
     setAwacsPatrol,
-    basedAircraft,
     scrapUnit,
     commandAttack,
     canQueue,
@@ -197,4 +197,4 @@ export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {step, growCities} from "./sim/tick.js";
 
-export {updateStability, stabilityOf, stabilityStatus, stabilityTarget} from "./sim/stability.js";
+export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";

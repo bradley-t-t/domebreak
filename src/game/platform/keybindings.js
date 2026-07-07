@@ -65,3 +65,9 @@ export function keyLabel(code) {
     };
     return named[code] || code;
 }
+
+// True when a text-entry element has focus — used by the in-game keyboard
+// handlers to suppress hotkeys while the player is typing in a field.
+export function isTyping(el) {
+    return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+}

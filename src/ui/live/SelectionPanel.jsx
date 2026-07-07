@@ -4,10 +4,23 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
+import StatGrid from "../common/StatGrid.jsx";
+import Meter from "../common/Meter.jsx";
 import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
 import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
+
+// The domain "pill" row under the unit name — kind is always shown; the rest
+// are conditional badges keyed off the unit def (naval hull, fixed-wing/rotary
+// aircraft, a sensor's detect range, or a wing-carrying airbase).
+const domainPills = (def) => [
+    {when: true, label: def.kind},
+    {when: def.domain === "sea", label: "Naval"},
+    {when: !!def.airSpeed, label: "Aircraft"},
+    {when: !!def.detect, label: "Sensor"},
+    {when: !!def.wing, label: "Airbase"},
+];
 
 export default function SelectionPanel({
                                            selectedUnit,
@@ -33,24 +46,17 @@ export default function SelectionPanel({
                                                   size={18}/>{labelOf(selectedUnit.type, selectedUnit.slot)}
             </div>
             <div className="flex flex-wrap gap-[5px] mt-[7px]">
-                <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">{def.kind}</span>
-                {def.domain === "sea" ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Naval</span> : null}
-                {def.airSpeed ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Aircraft</span> : null}
-                {def.detect ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Sensor</span> : null}
-                {def.wing ? <span className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">Airbase</span> : null}
+                {domainPills(def).filter((p) => p.when).map((p) => (
+                    <span key={p.label} className="font-display text-[9px] tracking-[1.2px] uppercase text-dim bg-btn-bg-2 border border-line rounded-sm px-1.5 py-0.5">{p.label}</span>
+                ))}
             </div>
             {(def.desc || def.hint) && <p className="text-[11.5px] leading-[1.5] text-dim mt-[9px] mb-0">{def.desc || def.hint}</p>}
             <div className="mt-[11px]">
                 <div className="flex justify-between items-baseline mb-1"><span className="text-[10px] tracking-[0.5px] uppercase text-faint">Integrity</span><b className="text-xs font-mono">{Math.round(selectedUnit.hp)}/{def.hp}</b>
                 </div>
-                <div className="h-[3px] bg-line rounded-[2px] overflow-hidden" role="progressbar" aria-label="Integrity"
-                     aria-valuenow={Math.round(hpFrac * 100)} aria-valuemin={0} aria-valuemax={100}>
-                    <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-db", hpFrac <= 0.35 ? "bg-danger" : "bg-good")}
-                       style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
+                <Meter frac={hpFrac} fillClass={hpFrac <= 0.35 ? "bg-danger" : "bg-good"} ariaLabel="Integrity"/>
             </div>
-            <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
-                {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
-            </div>
+            <StatGrid rows={unitStats(selectedUnit)} className="mt-3 mb-3 gap-y-[9px]"/>
             {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
                 ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
                 : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
@@ -119,9 +125,7 @@ export default function SelectionPanel({
                                             <span>Building {labelOf(curHere.item.type, mySlot)}</span>
                                             <b className="font-mono font-semibold">{Math.round(curHere.progress * 100)}%</b>
                                         </div>
-                                        <div className="h-[3px] bg-line rounded-[2px] overflow-hidden"><i
-                                            className="block h-full bg-[var(--flame,#ff8a1a)]"
-                                            style={{width: `${Math.round(curHere.progress * 100)}%`}}/></div>
+                                        <Meter frac={curHere.progress} fillClass="bg-[var(--flame,#ff8a1a)]"/>
                                     </>}
                                     {queuedHere.length > 0 && <div className="flex items-center justify-between text-[10.5px] text-dim">
                                         <span>In Queue</span><b className="font-mono font-semibold">{queuedHere.map((it) => labelOf(it.type, mySlot)).join(", ")}</b>
@@ -169,12 +173,12 @@ export default function SelectionPanel({
                 return (
                     <div className="mt-2">
                         <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">National Leadership</div>
-                        <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
-                            <div><span>Surviving</span><b>{lead.pct}%</b></div>
-                            <div><span>Sheltered</span><b>{leadPct(lead.sheltered)}%</b></div>
-                            <div><span>In Cities</span><b>{leadPct(lead.atCity)}%</b></div>
-                            <div><span>In Transit</span><b>{leadPct(lead.inTransit)}%</b></div>
-                        </div>
+                        <StatGrid rows={[
+                            ["Surviving", `${lead.pct}%`],
+                            ["Sheltered", `${leadPct(lead.sheltered)}%`],
+                            ["In Cities", `${leadPct(lead.atCity)}%`],
+                            ["In Transit", `${leadPct(lead.inTransit)}%`],
+                        ]} className="mt-3 mb-3 gap-y-[9px]"/>
                         <button className={cn(button({variant: sheltering ? "primary" : "default"}), "w-full mt-1.5", sheltering && "disabled:opacity-100")}
                                 disabled={!lead.exposed || sheltering || !lead.hasAirstrip}
                                 title={!lead.hasAirstrip ? "Build an Airstrip to fly the evacuation." : !lead.exposed ? "No leaders are exposed in your cities." : "Airlift exposed leaders into the bunker."}
@@ -215,11 +219,8 @@ export default function SelectionPanel({
                             <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">Capturing {city.state || city.name}</span>
                             <b className="font-mono text-[11px]">{pct}%</b>
                         </div>
-                        <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mb-2" role="progressbar"
-                             aria-label="Capture progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                            <i className="block h-full rounded-[2px] transition-[width] duration-200 ease-out-db"
-                               style={{width: `${pct}%`, background: teamColor(mySlot)}}/>
-                        </div>
+                        <Meter frac={holding ? city.capture.progress : 0} color={teamColor(mySlot)}
+                               ariaLabel="Capture progress" className="mb-2"/>
                         <button className={cn(button({variant: assaulting ? "primary" : "default"}), "w-full")}
                                 aria-pressed={assaulting}
                                 title={assaulting ? "Ease off the assault — the capture continues at the normal hold pace." : `Storm ${city.name} — capture roughly ${CAPTURE.assaultMult}× faster while your troops press the assault.`}

@@ -46,13 +46,9 @@ import {autoResearchTick, canQueue, commandAttack, declareWar, enqueueResearch, 
 import {replenishmentBuff} from "./queries.js";
 import {evacTick, reconcileLeadership, updateCommand} from "./leadership.js";
 import {updateStability} from "./stability.js";
-import {LEADERSHIP} from "../data/constants.js";
+import {LEADERSHIP, REPLENISH_RELOAD_MULT} from "../data/constants.js";
 import {isSea} from "../geo/seaRoute.js";
 
-// Reload multiplier a hull gets while inside a friendly Replenishment Ship's
-// resupplyKm (underway replenishment cuts turnaround). Local tuning knob —
-// belongs in data/constants.js once Phase 1's data contract is open to edits.
-const REPLENISH_RELOAD_MULT = 0.7;
 
 // Delivers one finished production-line item into the world: a replacement
 // aircraft goes straight into its ordering base's hangar stock; a new unit
@@ -646,12 +642,17 @@ export function growCities(w, dt) {
     }
 }
 
-// Advances the world by dt seconds: research/production, unit AI and firing,
-// projectile flight and interception, sensor sweeps, opponent AI, and the
-// end-of-tick cleanup (dead unit/projectile pruning, win condition).
-export function step(w, dt) {
-    if (w.over || dt <= 0) return w;
-    w.time += dt;
+// --- step() phases -----------------------------------------------------
+// step() is a straight-line orchestrator over these phases, in the exact
+// order the original inline tick ran them. Each phase is a mechanical
+// extraction of one comment-delimited block from the old step() body —
+// no reordering, no logic change. See each phase's own comments (carried
+// over verbatim) for what it does and why it runs where it does.
+
+// Phase 1: economy — leadership command factor, income accrual, then each
+// nation's research and production lines advance and (on completion) apply
+// their effect / spawn their unit.
+function stepEconomy(w, dt) {
     // Refresh each nation's leadership command factor before the economy reads it
     // (incomeOf / research below both scale by n.commandMult).
     updateCommand(w);
@@ -699,7 +700,12 @@ export function step(w, dt) {
             }
         }
     }
+}
 
+// Phase 2: unit movement and firing — naval/land march, aircraft flight
+// (sub-stepped for turn-rate stability), and ground/warhead-platform firing
+// against a locked target once in range and off cooldown.
+function stepMovement(w, dt) {
     for (const u of w.units) {
         if (u.hp <= 0) continue;
         u.cooldown = Math.max(0, u.cooldown - dt);
@@ -758,7 +764,13 @@ export function step(w, dt) {
             }
         }
     }
+}
 
+// Phase 3: projectile flight and interception — advances every in-flight
+// projectile along its track (splitting MIRVs at their release point),
+// engages it against the target nation's air defenses within their
+// engagement annulus, and resolves impact on reaching the target.
+function stepCombat(w, dt) {
     // Index live defenses by the nation they protect. A battery only ever engages
     // ordnance inbound on its own nation (the inboundSlot gate below), so each
     // projectile need only test that nation's defenders — this bounds the loop by
@@ -843,13 +855,16 @@ export function step(w, dt) {
             p._dead = true;
         }
     }
+}
 
-    // Radioactive fallout: each contamination cloud ages, drifts on the prevailing
-    // wind, and irradiates every living city and unit inside its radius — friend or
-    // foe alike — for damage over time, then decays away. Pure math (intensity /
-    // proximity / drift are functions of age, position, and dt, no rng), so the
-    // sim stays deterministic. A city that fallout drops to 0 hp dies exactly like
-    // a direct hit — same destroy event, so the toast, explosion, and ruin fire.
+// Phase 4: radioactive fallout.
+// Radioactive fallout: each contamination cloud ages, drifts on the prevailing
+// wind, and irradiates every living city and unit inside its radius — friend or
+// foe alike — for damage over time, then decays away. Pure math (intensity /
+// proximity / drift are functions of age, position, and dt, no rng), so the
+// sim stays deterministic. A city that fallout drops to 0 hp dies exactly like
+// a direct hit — same destroy event, so the toast, explosion, and ruin fire.
+function stepFallout(w, dt) {
     if (w.effects && w.effects.length) {
         for (const fx of w.effects) {
             if (fx.type !== "fallout") continue;
@@ -883,11 +898,14 @@ export function step(w, dt) {
         }
         w.effects = w.effects.filter((fx) => fx.type !== "fallout" || fx.age < FALLOUT.lifeSec);
     }
+}
 
-    // Sensor sweep (~4 Hz): each nation's radars pick up missiles entering their
-    // coverage. A track, once held, is never dropped. The intended victim's first
-    // pickup of ordnance inbound on them raises the "detected" warning — without
-    // OTH coverage of the launch site that's the first they hear of it.
+// Phase 5: sensor sweep (~4 Hz) — each nation's radars pick up missiles
+// entering their coverage. A track, once held, is never dropped. The
+// intended victim's first pickup of ordnance inbound on them raises the
+// "detected" warning — without OTH coverage of the launch site that's the
+// first they hear of it.
+function stepSensors(w, dt) {
     w._det = (w._det || 0) + dt;
     if (w._det >= 0.25) {
         w._det = 0;
@@ -912,7 +930,12 @@ export function step(w, dt) {
             }
         }
     }
+}
 
+// Phase 6: interceptor guidance and resolution — each in-flight interceptor
+// steers toward a lead-pursuit aim point and, once within kill radius, rolls
+// its hit probability against the tracked projectile.
+function stepInterceptors(w, dt) {
     for (const it of w.interceptors) {
         const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
         if (!tgt) {
@@ -959,7 +982,11 @@ export function step(w, dt) {
             it.lat += (aim[1] - it.lat) * f;
         }
     }
+}
 
+// Phase 7: end-of-tick cleanup — reconcile leadership losses, then prune
+// every dead interceptor/projectile/unit and cap the event log.
+function stepEventPrune(w) {
     // Turn any leaders killed this tick into permanent losses BEFORE the prune,
     // while a downed ferry (hp 0) still carries its cargo to be accounted for.
     reconcileLeadership(w);
@@ -968,23 +995,12 @@ export function step(w, dt) {
     w.projectiles = w.projectiles.filter((p) => !p._dead);
     w.units = w.units.filter((u) => u.hp > 0);
     if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
+}
 
-    aiTick(w, dt);
-    diploTick(w, dt);
-    // Dispatch/relaunch leadership evac ferries for nations actively sheltering
-    // (player pressed Shelter, or an AI that has entered a war).
-    evacTick(w);
-    // Advance ground occupation: capture-flagged units holding cleared enemy cities
-    // flip their state to the occupier. Runs before growth/tally so a captured city
-    // is counted for its new owner's income and domination share this same tick.
-    captureTick(w, dt);
-    // Grow city populations for this tick before the tally reads them, so income,
-    // industry cap, and the domination check all see the updated figures.
-    growCities(w, dt);
-    // Ease each nation's stability toward its live target. Runs after
-    // growth/leadership/diplomacy so it reads this tick's population, wars,
-    // leadership, and deficit state.
-    updateStability(w, dt);
+// Phase 8: win/loss check — tallies which slots still hold a living city and
+// the surviving world population, then resolves elimination (player) and
+// victory (last nation standing, or population domination).
+function stepVictory(w) {
     // One pass over cities: which slots still hold a living city, and the population
     // tally for the domination check. O(cities), not O(nations × cities) — the naive
     // per-nation `cities.some(...)` was 222 × ~2565 every tick at full-world scale.
@@ -1004,7 +1020,7 @@ export function step(w, dt) {
         w.over = true;
         w.winnerSlot = null;
         w.paused = true;
-        return w;
+        return;
     }
     // Victory: last nation standing, or a commanding share of surviving world
     // population (last-of-222 is impractical, so domination is the reachable win).
@@ -1015,5 +1031,42 @@ export function step(w, dt) {
         w.winnerSlot = me.slot;
         w.paused = true;
     }
+}
+
+// Advances the world by dt seconds: research/production, unit AI and firing,
+// projectile flight and interception, sensor sweeps, opponent AI, and the
+// end-of-tick cleanup (dead unit/projectile pruning, win condition). A thin
+// orchestrator over the phases above, run in the exact order the original
+// inline tick did.
+export function step(w, dt) {
+    if (w.over || dt <= 0) return w;
+    w.time += dt;
+
+    stepEconomy(w, dt);
+    stepMovement(w, dt);
+    stepCombat(w, dt);
+    stepFallout(w, dt);
+    stepSensors(w, dt);
+    stepInterceptors(w, dt);
+    stepEventPrune(w);
+
+    aiTick(w, dt);
+    diploTick(w, dt);
+    // Dispatch/relaunch leadership evac ferries for nations actively sheltering
+    // (player pressed Shelter, or an AI that has entered a war).
+    evacTick(w);
+    // Advance ground occupation: capture-flagged units holding cleared enemy cities
+    // flip their state to the occupier. Runs before growth/tally so a captured city
+    // is counted for its new owner's income and domination share this same tick.
+    captureTick(w, dt);
+    // Grow city populations for this tick before the tally reads them, so income,
+    // industry cap, and the domination check all see the updated figures.
+    growCities(w, dt);
+    // Ease each nation's stability toward its live target. Runs after
+    // growth/leadership/diplomacy so it reads this tick's population, wars,
+    // leadership, and deficit state.
+    updateStability(w, dt);
+
+    stepVictory(w);
     return w;
 }

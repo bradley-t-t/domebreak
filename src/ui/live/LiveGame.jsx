@@ -1,7 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import WorldMap, {COUNTRY_FILL_OPACITY} from "../../map/WorldMap.jsx";
 import LiveHud from "../hud/LiveHud.jsx";
-import AmmoBar from "../hud/AmmoBar.jsx";
 import LayerBar from "../hud/LayerBar.jsx";
 import ProductionBar from "../hud/ProductionBar.jsx";
 import NationPanel from "../hud/NationPanel.jsx";
@@ -15,14 +14,20 @@ import FalloutCloud from "./FalloutCloud.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
 import PinnedBar from "../hud/PinnedBar.jsx";
 import Flag from "../common/Flag.jsx";
+import Meter from "../common/Meter.jsx";
 import {Layer, Marker, Source} from "react-map-gl/maplibre";
 import {useGameSession} from "../hooks/useGameSession.js";
-import {button, miniButton, iconButton, overlay, card, sub} from "../lib/variants.js";
+import {useEventEffects} from "../hooks/useEventEffects.js";
+import {useKeyboardControls} from "../hooks/useKeyboardControls.js";
+import {usePanControls} from "../hooks/usePanControls.js";
+import {button, miniButton, overlay, card, sub} from "../lib/variants.js";
+import {vitPaint} from "../common/status.js";
 import {cn} from "../lib/cn.js";
 import TechTree from "../screens/TechTree.jsx";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
+import HoverReadout from "./HoverReadout.jsx";
 import {
     armamentOf,
     COAST_KM,
@@ -51,8 +56,8 @@ import {
     vitalityOf
 } from "../../game/engine.js";
 import {toGid3} from "../../game/data/iso3.js";
-import {GAME_SPEEDS, PAN_PX_PER_SEC, START_CAM} from "../../game/data/constants.js";
-import {keyToken, resolveKeys} from "../../game/platform/keybindings.js";
+import {START_CAM, WORLD_ZOOM} from "../../game/data/constants.js";
+import {resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
 import {useOwnershipLayer} from "./useOwnershipLayer.js";
@@ -138,13 +143,6 @@ export default function LiveGame({
         const t = setTimeout(() => setBooting(false), START_CAM.bootMs);
         return () => clearTimeout(t);
     }, []);
-    // Seed with whatever the world already carries (loaded saves keep their last
-    // 60 events) so mount doesn't replay a backlog of explosions and sounds.
-    const seen = useRef(null);
-    if (!seen.current) {
-        seen.current = new Set(w.events.map((e) => e.id));
-        if (w.over) seen.current.add("over");
-    }
 
     const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
     // Tactical allegiance color for anything drawn on the map: you = white,
@@ -292,309 +290,32 @@ export default function LiveGame({
         return null;
     };
 
-    // Spatial cue: place an event's sound in the stereo field by where it sits on
-    // screen, and pull its volume down when it's off the edges (distant news).
-    // Events without map coordinates (diplomacy, research) return centred/full.
-    const spatialize = (e) => {
-        const m = mapRef.current;
-        if (!m || e.lng == null || e.lat == null) return undefined;
-        const p = m.project([e.lng, e.lat]);
-        const w = m.getContainer().clientWidth || 1;
-        const frac = p.x / w;                         // 0 = left edge, 1 = right edge
-        const pan = Math.max(-1, Math.min(1, (frac - 0.5) * 2));
-        const off = frac < 0 ? -frac : frac > 1 ? frac - 1 : 0; // fraction past the edge
-        return {pan, gain: Math.max(0.35, 1 - off * 0.8)};
-    };
+    // Battle audio + toast/explosion pipeline for fresh world.events — see
+    // useEventEffects (same [w.time]-keyed effect, moved out verbatim).
+    useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGameEnd});
 
-    // Battle audio: every fresh engine event gets a synthesized cue. Impacts are
-    // world-scale (the news gets out); launches and MIRV splits only sound if my
-    // sensors actually saw them — fog of war has ears too. Successful interceptor
-    // kills (the "intercept" event) are intentionally silent — the visual flash
-    // still plays, but by request they carry no sound.
-    const eventSound = (e) => {
-        const WORLD = {
-            miss: "miss",
-            fizzle: "fizzle",
-            hit: "boom",
-            destroy: "destroy"
-        };
-        if (WORLD[e.type]) return sfx(WORLD[e.type], spatialize(e));
-        if (e.type === "launch" || e.type === "mirv") {
-            if (!e.seen || e.seen.includes(mySlot)) return sfx(e.type === "mirv" ? "mirv" : "launch", spatialize(e));
-            return;
-        }
-        if (e.type === "detected" && e.slot === mySlot) return sfx("detected");
-        if (e.type === "war" && (e.a === mySlot || e.b === mySlot)) return sfx("war");
-        if (e.type === "peace" && (e.a === mySlot || e.b === mySlot)) return sfx("peace");
-        if (e.type === "research" && e.slot === mySlot) return sfx("research");
-        if (e.type === "built" && e.slot === mySlot) return sfx("built");
-    };
+    // Escape cascade, command-screen hotkeys, controls-reference toggle, game
+    // speed hotkeys and keyboard zoom — see useKeyboardControls (same handlers,
+    // same dependency arrays per effect, moved out verbatim).
+    useKeyboardControls({
+        menu, setMenu,
+        disembarkId, setDisembarkId,
+        moving, setMoving,
+        placing, setPlacing,
+        attackMode, setAttackMode,
+        panel, setPanel,
+        onPause,
+        overlayOpen,
+        w,
+        api,
+        K,
+        setHelpOpen,
+        mapRef,
+    });
 
-    useEffect(() => {
-        const fresh = [];
-        const cityDeaths = [];
-        for (const e of w.events) {
-            if (seen.current.has(e.id)) continue;
-            seen.current.add(e.id);
-            eventSound(e);
-            if (e.type === "destroy" && e.kind === "city") {
-                const c = w.cities.find((x) => x.id === e.cityId);
-                if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot, fallout: !!e.fallout});
-            }
-            // Attack warning: a launch at me my sensors caught, or a track my
-            // radars picked up mid-flight — either way, the klaxon toast.
-            if ((e.type === "launch" && e.tgtSlot === mySlot && e.seen?.includes(mySlot)) ||
-                (e.type === "detected" && e.slot === mySlot)) {
-                setErr({msg: "Launch detected — missile inbound.", kind: "err"});
-                setTimeout(() => setErr(null), 2600);
-            }
-            // Fallout on home soil: a fresh cloud that covers one of my cities
-            // raises a one-time contamination warning (my own strikes near the
-            // front count too — the radiation doesn't check allegiance).
-            if (e.type === "fallout" && w.cities.some((c) => c.alive && c.slot === mySlot && haversine(e.lng, e.lat, c.lng, c.lat) <= FALLOUT.radiusKm)) {
-                setErr({msg: "Radioactive fallout over your territory.", kind: "warn"});
-                setTimeout(() => setErr(null), 3000);
-            }
-            if (e.type === "intercept") fresh.push({
-                id: e.id,
-                lng: e.lng,
-                lat: e.lat,
-                kind: "intercept",
-                alt: e.alt || 0
-            });
-            else if (e.type === "miss") fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "miss", alt: e.alt || 0});
-            else if (e.type === "mirv" && (!e.seen || e.seen.includes(mySlot))) fresh.push({
-                id: e.id,
-                lng: e.lng,
-                lat: e.lat,
-                kind: "mirv",
-                alt: e.alt || 0
-            });
-            else if (e.type === "hit" || e.type === "destroy") fresh.push({
-                id: e.id,
-                lng: e.lng,
-                lat: e.lat,
-                kind: e.type,
-                alt: 0
-            });
-        }
-        // City-death toast, aggregated across this tick so a MIRV that levels
-        // several cities raises one notice, not a stack. My losses (red) take
-        // priority over enemy losses (positive) for the single toast slot.
-        if (cityDeaths.length) {
-            const fmtList = (names) => names.slice(0, 2).join(", ") + (names.length > 2 ? ` +${names.length - 2}` : "");
-            const mine = cityDeaths.filter((d) => d.mine);
-            const mineLost = mine.map((d) => d.name);
-            const enemyLost = cityDeaths.filter((d) => !d.mine).map((d) => d.name);
-            if (mineLost.length) setErr({msg: `Lost ${fmtList(mineLost)}${mine.every((d) => d.fallout) ? " to fallout" : ""}`, kind: "err"});
-            else if (enemyLost.length) setErr({msg: `${fmtList(enemyLost)} destroyed`, kind: "info"});
-            setTimeout(() => setErr(null), 3200);
-        }
-        if (seen.current.size > 500) seen.current = new Set(w.events.map((e) => e.id));
-        if (w.over && !seen.current.has("over")) {
-            seen.current.add("over");
-            sfx(w.winnerSlot === mySlot ? "win" : "lose");
-            onGameEnd?.({result: w.winnerSlot === mySlot ? "win" : "loss"});
-        }
-        if (!fresh.length) return;
-        setExplosions((list) => [...list, ...fresh]);
-        for (const e of fresh) {
-            const id = e.id;
-            setTimeout(() => setExplosions((list) => list.filter((x) => x.id !== id)), 850);
-        }
-    }, [w.time]);
-
-    useEffect(() => {
-        const h = (e) => {
-            if (e.key !== "Escape") return;
-            if (menu) setMenu(null); else if (disembarkId) setDisembarkId(null); else if (moving) setMoving(null);
-            else if (placing) setPlacing(null); else if (attackMode) setAttackMode(false);
-            // An open command screen (Production / Research / Diplomacy) closes on
-            // Escape before Escape falls through to the pause menu.
-            else if (panel) setPanel(null); else onPause?.();
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [menu, disembarkId, moving, placing, attackMode, panel, onPause]);
-
-    // Command-screen hotkeys: toggle the Production, Diplomacy and Research screens
-    // open/closed (Escape also closes them). Bindings are configurable in Settings;
-    // defaults are E / R / T.
-    useEffect(() => {
-        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-        const h = (e) => {
-            if (overlayOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-            const code = keyToken(e);
-            const target = code === K.production ? "production"
-                : code === K.diplomacy ? "diplomacy"
-                    : code === K.research ? "research" : null;
-            if (!target) return;
-            e.preventDefault();
-            setPanel((p) => (p === target ? null : target));
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, w.over, K.production, K.diplomacy, K.research]);
-
-    // Controls reference toggle: "?" or F1 opens/closes the command reference.
-    // Fixed keys (not rebindable) — the overlay itself lists every binding.
-    useEffect(() => {
-        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-        const h = (e) => {
-            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-            if (e.key === "?" || e.key === "F1") {
-                e.preventDefault();
-                setHelpOpen((v) => !v);
-            }
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen]);
-
-    // Game speed hotkeys, RTS-style: pause toggle + speed up/down step the speed
-    // (bindings configurable in Settings; defaults Space / = / −), and the fixed
-    // 1–5 number keys jump straight to a speed level.
-    useEffect(() => {
-        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-        const nearest = () => GAME_SPEEDS.reduce((b, s, i) => (Math.abs(s - w.speed) < Math.abs(GAME_SPEEDS[b] - w.speed) ? i : b), 0);
-        const stepTo = (i) => api.setSpeed(GAME_SPEEDS[Math.max(0, Math.min(GAME_SPEEDS.length - 1, i))]);
-        const h = (e) => {
-            if (overlayOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-            const code = keyToken(e);
-            const lvl = /^(?:Digit|Numpad)([1-5])$/.exec(code);
-            if (code === K.pause) {
-                e.preventDefault();
-                w.paused ? api.play() : api.pause();
-            } else if (code === K.speedUp) {
-                e.preventDefault();
-                stepTo(nearest() + 1);
-            } else if (code === K.speedDown) {
-                e.preventDefault();
-                stepTo(nearest() - 1);
-            } else if (lvl) {
-                e.preventDefault();
-                stepTo(+lvl[1] - 1);
-            }
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, api, w, K.pause, K.speedUp, K.speedDown]);
-
-    // Keyboard zoom (bindings configurable in Settings; defaults Z / X). MapLibre's
-    // own +/- zoom is disabled (WorldMap) so those keys stay reserved for game speed;
-    // zoom lives here instead. Key auto-repeat gives smooth continuous zoom on hold.
-    useEffect(() => {
-        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-        const h = (e) => {
-            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-            const code = keyToken(e);
-            const dir = code === K.zoomIn ? 1 : code === K.zoomOut ? -1 : 0;
-            if (!dir) return;
-            e.preventDefault();
-            const m = mapRef.current;
-            if (m) m.zoomTo(m.getZoom() + dir * 0.6, {duration: 160}); // MapLibre clamps to min/maxZoom
-        };
-        window.addEventListener("keydown", h);
-        return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, K.zoomIn, K.zoomOut]);
-
-    // Camera pan: pan the flat map / rotate the globe while a pan key is held
-    // (bindings configurable in Settings; defaults W / A / S / D). Driven by short
-    // constant-velocity ease SEGMENTS chained back-to-back at PAN_PX_PER_SEC.
-    // A per-frame panBy({duration:0}) fires a full movestart/move/moveend cycle
-    // every frame, re-settling the vector map's tiles + labels ~60x/sec — that was
-    // the WASD stutter. One giant ease killed the stutter but crawled (a far target
-    // clamps at the poles and distorts velocity). Short segments keep `move`
-    // flowing (overlays + unit markers track the camera) at a true, constant px/s,
-    // while `moveend` (the heavy part) runs ~once/sec, like a mouse drag. panBy
-    // works in both projections.
-    useEffect(() => {
-        const dir = {[K.panUp]: "up", [K.panLeft]: "left", [K.panDown]: "down", [K.panRight]: "right"};
-        const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-        const held = new Set();
-        const SEG_MS = 800; // ease-segment length; the next starts just before it ends so motion never idles
-        let timer = 0, curKey = "";
-        const vec = () => [
-            (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0),
-            (held.has("down") ? 1 : 0) - (held.has("up") ? 1 : 0),
-        ];
-        const runSeg = () => {
-            const m = mapRef.current;
-            const [dx, dy] = vec();
-            curKey = `${dx},${dy}`;
-            if (!m || (!dx && !dy)) {
-                timer = 0;
-                m?.stop(); // nothing held: settle once, like releasing a drag
-                return;
-            }
-            const len = Math.hypot(dx, dy);
-            const nx = dx / len, ny = dy / len;
-            const distPx = (PAN_PX_PER_SEC * SEG_MS) / 1000;
-            if (globe) {
-                // On the globe, pan by shifting the CENTER in lng/lat instead of a
-                // pixel panBy. A screen-pixel panBy drifts toward the poles on A/D
-                // (a horizontal screen line is not a line of latitude on a sphere)
-                // and lands off the disc for large offsets. Deriving the local
-                // deg-per-pixel from a tiny (10px, always on-sphere) reference lets
-                // A/D change longitude only (same latitude) and W/S change latitude
-                // only — correct in every orientation, at the same feel as flat.
-                const c = m.getCenter();
-                const pc = m.project(c);
-                const ref = 10;
-                let dLngRef = m.unproject([pc.x + ref, pc.y]).lng - c.lng;
-                if (dLngRef > 180) dLngRef -= 360; else if (dLngRef < -180) dLngRef += 360;
-                const degPerPxLng = dLngRef / ref;
-                const degPerPxLat = (m.unproject([pc.x, pc.y - ref]).lat - c.lat) / ref;
-                const lat = Math.max(-85, Math.min(85, c.lat - ny * distPx * degPerPxLat));
-                m.easeTo({center: [c.lng + nx * distPx * degPerPxLng, lat], duration: SEG_MS, easing: (t) => t});
-            } else {
-                m.panBy([nx * distPx, ny * distPx], {duration: SEG_MS, easing: (t) => t});
-            }
-            timer = setTimeout(runSeg, SEG_MS - 60); // slight overlap → seamless continuous motion
-        };
-        // (Re)start the segment chain only when the held direction actually changes
-        // (keydown auto-repeat and unrelated keys are no-ops).
-        const refresh = () => {
-            const [dx, dy] = vec();
-            if (`${dx},${dy}` === curKey && timer) return;
-            if (timer) clearTimeout(timer);
-            timer = 0;
-            runSeg();
-        };
-        const dn = (e) => {
-            if (e.repeat || overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-            const d = dir[keyToken(e)];
-            if (d) {
-                held.add(d);
-                e.preventDefault();
-                refresh();
-            }
-        };
-        const up = (e) => {
-            const d = dir[keyToken(e)];
-            if (d) {
-                held.delete(d);
-                refresh();
-            }
-        };
-        const clear = () => {
-            held.clear();
-            if (timer) clearTimeout(timer);
-            timer = 0;
-            curKey = "";
-            mapRef.current?.stop();
-        };
-        window.addEventListener("keydown", dn);
-        window.addEventListener("keyup", up);
-        window.addEventListener("blur", clear);
-        return () => {
-            window.removeEventListener("keydown", dn);
-            window.removeEventListener("keyup", up);
-            window.removeEventListener("blur", clear);
-            if (timer) clearTimeout(timer);
-            mapRef.current?.stop();
-        };
-    }, [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
+    // Camera pan (WASD) — see usePanControls (same ease-segment chain, same
+    // [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight] deps).
+    usePanControls({globe, overlayOpen, K, mapRef});
 
     // Countries layer visibility (keep fill queryable at opacity 0 so land/water tests still work).
     useEffect(() => {
@@ -1023,7 +744,7 @@ export default function LiveGame({
 
     return (
         <>
-            <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS}
+            <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS} minZoom={WORLD_ZOOM.min}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <Source id="db-regions" type="vector" url={REGIONS_URL}>
@@ -1169,7 +890,7 @@ export default function LiveGame({
                         "circle-radius": ["case", ["==", ["get", "cap"], 1], 8, 6],
                         "circle-color": "rgba(0,0,0,0)",
                         "circle-stroke-width": ["interpolate", ["linear"], ["get", "vit"], 0, 3, 1, 0.6],
-                        "circle-stroke-color": ["interpolate", ["linear"], ["get", "vit"], 0, "#ff3b3b", 0.5, "#ffb020", 1, "#46d38a"],
+                        "circle-stroke-color": vitPaint(),
                         "circle-stroke-opacity": ["interpolate", ["linear"], ["get", "vit"], 0, 0.95, 0.9, 0.85, 1, 0]
                     }}/>
                     <Layer id="live-cities" type="circle" paint={{
@@ -1269,29 +990,21 @@ export default function LiveGame({
                       aircraft={visUnits.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)} tick={w.time}/>
             <CountryLabels map={mapRef.current} labels={labels}/>
 
-            <div className="absolute top-[40px] right-4 z-6 flex gap-2">
-                <AmmoBar nation={myNation}/>
-                <button className={iconButton()} onClick={onToggleGlobe} title="Globe / Flat view"
-                        aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>
-                <button className={iconButton()} onClick={() => setHelpOpen(true)} title="Controls (?)"
-                        aria-label="Show controls reference">?</button>
-                <button className={iconButton()} onClick={onPause} title="Menu (Esc)"
-                        aria-label="Open pause menu">☰</button>
-                {meBadge}
-            </div>
-
-            {/* Top command bar + news ticker share one centred lane that always
-                reserves gutters for the left nation panel and the right corner
-                controls, so the bar can never crowd the globe/help/menu buttons. The
-                gutters are held at every width; LiveHud auto-scales the bar to fit the
-                lane it's given (see its measured zoom-fit), so shrinking the viewport
-                shrinks the bar instead of letting it overflow into the corners. */}
-            <div className="absolute top-[40px] left-[272px] right-[372px] z-5 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
+            {/* Top command bar (two-tier): LiveHud now owns the whole strip — row 1 is
+                telemetry (date/points/economy), row 2 is speed + console nav + arsenal +
+                view controls. Stacking the arsenal onto its own row is what removes the
+                old overlap entirely; there is no separate corner cluster to collide with.
+                The lane clears the left nation panel (left-[272px]) and runs to right-4.
+                The wrapper is click-through (pointer-events-none) so the empty space around
+                the ticker/alert doesn't block the map; each child re-enables its own. */}
+            <div className="absolute top-[40px] left-[272px] right-4 z-6 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
                 <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
-                         onPanel={(id) => setPanel((p) => (p === id ? null : id))}/>
+                         onPanel={(id) => setPanel((p) => (p === id ? null : id))}
+                         globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
+                         onMenu={onPause} meBadge={meBadge}/>
                 <NewsTicker world={w} mySlot={mySlot}/>
-                {/* Flowed in the top stack (not absolutely pinned) so it always
-                    sits below the HUD + ticker instead of overlapping them. */}
+                {/* Flowed in the stack (not absolutely pinned) so it always sits below the
+                    HUD + ticker instead of overlapping them. */}
                 {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             </div>
             {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
@@ -1333,96 +1046,59 @@ export default function LiveGame({
                 const iso = gl?.iso || nation?.iso;
                 const cities = nation ? w.cities.filter((c) => c.slot === nation.slot && c.alive) : [];
                 const pop = nation ? populationOf(w, nation.slot) : 0;
-                const left = hover.x + 18 > window.innerWidth - 250 ? Math.max(12, hover.x - 248) : hover.x + 18;
-                const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 190);
+                const rows = nation ? [
+                    ["Status", nation.slot === mySlot ? "Yours" : relation(nation.slot) === "war" ? "At War" : "At Peace"],
+                    ["Standing", cities.length ? "Active" : "Eliminated"],
+                    ["Population", fmtPop(pop)],
+                    ["GDP", `$${gdpOf(w, nation.slot).toFixed(2)}T`],
+                    ["States", cities.length],
+                ] : [
+                    ["Status", "Non-combatant"],
+                    ["Role", "Neutral"],
+                ];
                 return (
-                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
-                        <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{iso ? <Flag iso={iso}/> : null}<span>{name}</span></div>
-                        <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
-                            {nation ? (<>
-                                <div>
-                                    <span>Status</span><b>{nation.slot === mySlot ? "Yours" : relation(nation.slot) === "war" ? "At War" : "At Peace"}</b>
-                                </div>
-                                <div><span>Standing</span><b>{cities.length ? "Active" : "Eliminated"}</b></div>
-                                <div><span>Population</span><b>{fmtPop(pop)}</b></div>
-                                <div><span>GDP</span><b>${gdpOf(w, nation.slot).toFixed(2)}T</b></div>
-                                <div><span>States</span><b>{cities.length}</b></div>
-                            </>) : (<>
-                                <div><span>Status</span><b>Non-combatant</b></div>
-                                <div><span>Role</span><b>Neutral</b></div>
-                            </>)}
-                        </div>
-                    </div>
+                    <HoverReadout x={hover.x} y={hover.y} clampBottom={190} rows={rows}
+                                  header={<>{iso ? <Flag iso={iso}/> : null}<span>{name}</span></>}/>
                 );
             })()}
             {hoverEnt && (() => {
-                const flip = hover.x + 18 > window.innerWidth - 250;
-                const left = flip ? Math.max(12, hover.x - 248) : hover.x + 18;
-                const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 200);
-                return (
-                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
-                        {hover.kind === "unit" ? (<>
-                            <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]"><UnitIcon name={UNIT_ICON[hoverEnt.type]}
-                                                                  color={teamColor(hoverEnt.slot)}
-                                                                  size={16}/><span>{labelOf(hoverEnt.type, hoverEnt.slot)}</span>
-                            </div>
-                            <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
-                                <div><span>Owner</span><b>{nationName(hoverEnt.slot)}</b></div>
-                                <div><span>Class</span><b>{UNITS[hoverEnt.type].kind}</b></div>
-                                {UNITS[hoverEnt.type].kind === "industry" ? (<>
-                                    <div><span>Output</span><b>+{UNITS[hoverEnt.type].output}/s</b></div>
-                                    <div><span>GDP</span><b>+${UNITS[hoverEnt.type].gdpAdd}T</b></div>
-                                </>) : <div>
-                                    <span>Range</span><b>{Math.round(UNITS[hoverEnt.type].kind === "defense" ? defenseRange(w, hoverEnt) : UNITS[hoverEnt.type].range).toLocaleString()} km</b>
-                                </div>}
-                                {armOf(hoverEnt.type, hoverEnt.slot) ?
-                                    <div><span>Armament</span><b>{armOf(hoverEnt.type, hoverEnt.slot)}</b></div> : null}
-                                {UNITS[hoverEnt.type].navalSpeed ? <div>
-                                    <span>Speed</span><b>{UNITS[hoverEnt.type].navalSpeed} kn{hoverEnt.dest ? " · Sailing" : ""}</b>
-                                </div> : null}
-                                {UNITS[hoverEnt.type].airSpeed ?
-                                    <div><span>Air Spd</span><b>{UNITS[hoverEnt.type].airSpeed} kn</b></div> : null}
-                                {UNITS[hoverEnt.type].radarKm ?
-                                    <div><span>Radar</span><b>{UNITS[hoverEnt.type].radarKm} km</b></div> : null}
-                                {UNITS[hoverEnt.type].wing ?
-                                    <div>
-                                        <span>Patrol</span><b>{(hoverEnt.patrolSize ? `${hoverEnt.patrolSize}-${UNITS[PATROL_FIGHTER[hoverEnt.type]]?.rotary ? "Helo" : "Aircraft"}` : "Off") + (hoverEnt.awacsPatrol ? " · AWACS" : "")}</b>
-                                    </div> : null}
-                                <div><span>HP</span><b>{Math.round(hoverEnt.hp)}</b></div>
-                                <div><span>Upkeep</span><b>{UNITS[hoverEnt.type].upkeep}/s</b></div>
-                                <div><span>Target</span><b>{hoverEnt.targetId ? "Engaged" : "—"}</b></div>
-                            </div>
-                        </>) : (<>
-                            <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]"><span className="w-2.5 h-2.5 rounded-full flex-none"
-                                                              style={{background: teamColor(hoverEnt.slot)}}/><span>{hoverEnt.name}{hoverEnt.cap ? " ★" : ""}</span>
-                            </div>
-                            <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
-                                <div><span>Nation</span><b>{nationName(hoverEnt.slot)}</b></div>
-                                <div><span>State</span><b>{hoverEnt.state || "—"}</b></div>
-                                <div><span>Population</span><b>{fmtPop(hoverEnt.pop * vitalityOf(hoverEnt))}</b></div>
-                                <div>
-                                    <span>Economy</span><b>{hoverEnt.econ ? (hoverEnt.econ * 100).toFixed(1) + "%" : "—"}</b>
-                                </div>
-                                <div><span>HP</span><b>{Math.max(0, Math.round(hoverEnt.hp))}/{hoverEnt.maxHp}</b></div>
-                                <div>
-                                    <span>Status</span><b>{hoverEnt.slot === mySlot ? "Yours" : relation(hoverEnt.slot) === "war" ? "At War" : "At Peace"}</b>
-                                </div>
-                                {(() => {
-                                    // Radioactive contamination: only shown when the city sits
-                                    // under an active fallout cloud. Reports the live loss rate
-                                    // and roughly how long the hazard lingers.
-                                    const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
-                                    if (fo.remain <= 0) return null;
-                                    return <div><span>Fallout</span><b className="text-[#a6ff5c]">☢ −{(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~{Math.ceil(fo.remain)}s</b></div>;
-                                })()}
-                            </div>
-                            <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mt-2">
-                                <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-db", vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good")}
-                                   style={{width: `${Math.round(vitalityOf(hoverEnt) * 100)}%`}}/>
-                            </div>
-                        </>)}
-                    </div>
-                );
+                let rows, header, footer = null;
+                if (hover.kind === "unit") {
+                    const def = UNITS[hoverEnt.type];
+                    rows = [["Owner", nationName(hoverEnt.slot)], ["Class", def.kind]];
+                    if (def.kind === "industry") {
+                        rows.push(["Output", `+${def.output}/s`]);
+                        rows.push(["GDP", `+$${def.gdpAdd}T`]);
+                    } else {
+                        rows.push(["Range", `${Math.round(def.kind === "defense" ? defenseRange(w, hoverEnt) : def.range).toLocaleString()} km`]);
+                    }
+                    if (armOf(hoverEnt.type, hoverEnt.slot)) rows.push(["Armament", armOf(hoverEnt.type, hoverEnt.slot)]);
+                    if (def.navalSpeed) rows.push(["Speed", `${def.navalSpeed} kn${hoverEnt.dest ? " · Sailing" : ""}`]);
+                    if (def.airSpeed) rows.push(["Air Spd", `${def.airSpeed} kn`]);
+                    if (def.radarKm) rows.push(["Radar", `${def.radarKm} km`]);
+                    if (def.wing) rows.push(["Patrol", (hoverEnt.patrolSize ? `${hoverEnt.patrolSize}-${UNITS[PATROL_FIGHTER[hoverEnt.type]]?.rotary ? "Helo" : "Aircraft"}` : "Off") + (hoverEnt.awacsPatrol ? " · AWACS" : "")]);
+                    rows.push(["HP", Math.round(hoverEnt.hp)]);
+                    rows.push(["Upkeep", `${def.upkeep}/s`]);
+                    rows.push(["Target", hoverEnt.targetId ? "Engaged" : "—"]);
+                    header = <><UnitIcon name={UNIT_ICON[hoverEnt.type]} color={teamColor(hoverEnt.slot)} size={16}/><span>{labelOf(hoverEnt.type, hoverEnt.slot)}</span></>;
+                } else {
+                    rows = [
+                        ["Nation", nationName(hoverEnt.slot)],
+                        ["State", hoverEnt.state || "—"],
+                        ["Population", fmtPop(hoverEnt.pop * vitalityOf(hoverEnt))],
+                        ["Economy", hoverEnt.econ ? (hoverEnt.econ * 100).toFixed(1) + "%" : "—"],
+                        ["HP", `${Math.max(0, Math.round(hoverEnt.hp))}/${hoverEnt.maxHp}`],
+                        ["Status", hoverEnt.slot === mySlot ? "Yours" : relation(hoverEnt.slot) === "war" ? "At War" : "At Peace"],
+                    ];
+                    // Radioactive contamination: only shown when the city sits under an
+                    // active fallout cloud. Reports the live loss rate and roughly how
+                    // long the hazard lingers.
+                    const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
+                    if (fo.remain > 0) rows.push(["Fallout", `☢ −${(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~${Math.ceil(fo.remain)}s`, "text-[#a6ff5c]"]);
+                    header = <><span className="w-2.5 h-2.5 rounded-full flex-none" style={{background: teamColor(hoverEnt.slot)}}/><span>{hoverEnt.name}{hoverEnt.cap ? " ★" : ""}</span></>;
+                    footer = <Meter frac={vitalityOf(hoverEnt)} fillClass={vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good"} className="mt-2"/>;
+                }
+                return <HoverReadout x={hover.x} y={hover.y} clampBottom={200} header={header} rows={rows} footer={footer}/>;
             })()}
 
             {err && <div className={cn(

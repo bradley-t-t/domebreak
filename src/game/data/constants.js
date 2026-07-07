@@ -36,6 +36,17 @@ export const START_CAM = {
     bootMs: 6000,   // failsafe: lift the loading veil after this even if the map never idles
 };
 
+// Interactive world-map zoom limits (MapLibre zoom levels; lower = further out).
+// The floor is per-surface: gameplay clamps hard so the player stays in-theatre,
+// while the attract globe and lobby nation-select keep a permissive floor so their
+// pulled-back framing (~1.85–1.9) still renders. LiveGame passes `min`; the other
+// surfaces use WorldMap's `menuMin` default.
+export const WORLD_ZOOM = {
+    min: 3.8,       // gameplay zoom-out floor (was 1.1 → 1.43 → 1.8 → 2.2 → 3.0; tightened further)
+    menuMin: 1.1,   // permissive floor for attract/lobby so their wide framing isn't clamped
+    max: 7,         // closest zoom-in allowed
+};
+
 // Keyboard (WASD) map-pan speed, in screen pixels per second. The pan is driven
 // by short constant-velocity ease segments (see LiveGame's pan effect).
 export const PAN_PX_PER_SEC = 1500;
@@ -78,6 +89,10 @@ export const AIRBORNE_ALT = 0.55;
 export const SCRAP_REFUND_FRAC = 0.5;
 // Max distance (km) from open water at which a coastal structure may be sited.
 export const COAST_KM = 60;
+// Amphibious lift: transport embark/disembark range for ground units (km).
+export const AMPHIB_LIFT_KM = 120;
+// Reload multiplier a hull gets while inside a friendly Replenishment Ship's resupplyKm.
+export const REPLENISH_RELOAD_MULT = 0.7;
 // Stat fallbacks for unit types that omit a field (and legacy-save projectiles).
 export const DEFAULT_BUILD_TIME = 10, DEFAULT_RELOAD = 3, DEFAULT_HIT_PROB = 0.8;
 // Effective GDP ($T) assumed for nations missing from the GDP_T table.
@@ -1193,6 +1208,17 @@ export const FALLOUT = {
     driftHeadingDeg: 90,    // drift bearing (90 = due east / westerlies)
 };
 
+// Spatial audio: the viewport is the listener. A world event's cue is placed in
+// the stereo field by where it projects on screen and faded toward the edges;
+// anything projecting outside the view (plus a small margin) is silent — combat
+// you can't see doesn't reach you. Zoom is not modeled separately: on-screen
+// plays, off-screen doesn't. See spatialize() in ui/live/LiveGame.jsx.
+export const AUDIO_SPATIAL = {
+    edgeMargin: 0.08,       // fraction of the viewport past each edge still audible before the hard cut to silence
+    edgeGain: 0.55,         // on-screen loudness at the far corner (0..1); dead-centre is 1.0
+    minGain: 0.3,           // floor under the radial rolloff so visible-but-edge cues stay present
+};
+
 // One generic, nation-agnostic name per unit type (UNITS labels). Platform
 // armament is generic flavor too — never named after any one country's missile.
 export function unitLabel(type) {
@@ -1459,6 +1485,60 @@ export const ROLL_KM = 35, CLIMB_KM = 95, APPROACH_KM = 210, ROLLOUT_KM = 42, HO
 // place; HELO_CLIMB_T is the vertical lift-off / touchdown time constant (s to rise/settle).
 export const HELO_STATION_KM = 95, HELO_PATROL_RATE = 0.08, HELO_CLIMB_T = 1.1;
 export const TRAIL_DT = 0.4, TRAIL_LEN = 9;
+
+// Flight-model tuning for flyAircraft/flyFerry's per-phase state machines: climb-out
+// speed/vis ramps, orbit-hold bank geometry, localizer intercept/final-approach
+// tolerances, touchdown/rollout deceleration, and the leadership ferry's
+// point-to-point approach easing. Finer-grained control-law tuning that sits
+// inside the runway/orbit geometry constants above.
+export const FLIGHT = {
+    // Climb-out (takeoff phase)
+    ROLL_SPEED_MULT: 0.5,      // ground-roll speed added atop half airSpeed while rolling
+    ROLL_CLEAR_PAD_KM: 20,     // roll distance past ROLL_KM before the runway clears
+    TAKEOFF_VIS_KM: 8,         // vis ramps to 1 over this many km of roll
+
+    // Orbit-hold guidance (shared by the cruise and hold rings)
+    ORBIT_BANK_RAD: 0.9,       // max bank correction for radial error (rad)
+    ORBIT_RADIAL_DIV: 80,      // radial error divisor feeding the bank correction
+    CRUISE_ALT_SLEW_T: 1.5,    // altitude slew time constant while cruising/holding (s)
+    HOLD_PATTERN_MAX: 2,       // max aircraft already in the landing pattern before another may enter
+
+    // Localizer intercept ("toFinal")
+    LEAD_MIN_KM: 70,
+    LEAD_MAX_KM: 160,
+    LEAD_SPEED_TURN_MULT: 2.2,
+    INTERCEPT_ALONG_KM: 40,           // distance out where intercept control begins
+    INTERCEPT_TURN_RAD: 1.1,          // max cross-track turn angle during intercept (rad)
+    INTERCEPT_CROSS_DIV: 40,          // cross-track divisor feeding the intercept turn
+    INTERCEPT_CAPTURE_CROSS_KM: 15,   // cross-track tolerance to call the localizer captured
+    INTERCEPT_CAPTURE_HDG_RAD: 0.9,   // heading tolerance to call the localizer captured
+    PATTERN_ENTRY_BACK_MULT: 1.6,     // outbound leg distance, as a multiple of LEAD
+    PATTERN_ENTRY_OFFSET_KM: 70,      // lateral offset of the pattern-entry point
+
+    // Final approach
+    GO_AROUND_ALONG_KM: 10,     // below this range, still off centerline → go around
+    CROSS_CAPTURE_KM: 6,        // on-centerline tolerance (go-around trigger and touchdown capture)
+    SHORT_FINAL_ALONG_KM: 35,   // range at which the strip is claimed for landing
+    FINAL_TURN_RAD: 0.6,        // max cross-track turn angle on final (rad)
+    FINAL_CROSS_DIV: 25,        // cross-track divisor feeding the final turn
+    FINAL_SPEED_MULT: 0.7,      // throttled-back airspeed fraction on final
+    GLIDE_SLOPE_FRAC: 0.85,     // fraction of APPROACH_KM used as the glide-slope reference
+    FINAL_ALT_SLEW_T: 1.2,      // altitude slew time constant on final (s)
+    TOUCHDOWN_ARRIVE_PAD_KM: 2, // range pad added to the per-tick travel when testing for touchdown
+    TOUCHDOWN_ALT_CAP: 0.05,    // altitude clamp the instant touchdown is called
+
+    // Touchdown / rollout
+    ROLLOUT_MIN_DECEL: 0.18,    // deceleration floor so rollout speed never bottoms at zero early
+    ROLLOUT_SPEED_MULT: 0.5,    // half airSpeed scaled by decel during rollout
+    ROLLOUT_VIS_FRAC: 0.85,     // fraction of ROLLOUT_KM used as the vis fade-out reference
+
+    // Leadership ferry (flyFerry) point-to-point flight
+    FERRY_VIS_RAMP_T: 0.8,          // vis ramps to 1 over this time constant (s)
+    TRAIL_ALT_THRESHOLD: 0.02,      // altitude above which a trail point is recorded
+    FERRY_APPROACH_SPEED_MULT: 0.3, // speed floor fraction on approach to a waypoint
+    FERRY_APPROACH_RANGE_DIV: 1.5,  // range divisor easing speed down on approach
+    FERRY_APPROACH_TURN_MULT: 3,    // turn-rate multiplier tightening the ferry's turn on approach
+};
 
 // Real-world country populations (2024 estimates). City/state populations in the
 // bundled data are metro figures; at setup newGame.js scales them so each

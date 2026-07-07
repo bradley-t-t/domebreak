@@ -10,6 +10,7 @@ import {
 } from "../../game/engine.js";
 import {fmtNet, fmtPop} from "../common/format.js";
 import Flag from "../common/Flag.jsx";
+import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";
 
 // A territory's readiness band from its city vitality (hp share). Drives the
@@ -110,10 +111,8 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                         <span className="font-display text-[12.5px] text-dim">{view.indCount}<span
                             className="text-faint font-normal text-xs">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
                     </div>
-                    <div className="h-[5px] rounded-[3px] bg-hair overflow-hidden">
-                        <div className="h-full rounded-[3px] bg-linear-to-r from-dim to-text transition-[width] duration-[400ms] ease-out-db"
-                             style={{width: `${indFrac * 100}%`}}/>
-                    </div>
+                    <Meter frac={indFrac} className="h-[5px] rounded-[3px] bg-hair"
+                           fillClass="rounded-[3px] bg-linear-to-r from-dim to-text duration-[400ms]"/>
                 </div>
 
                 <div

@@ -8,6 +8,7 @@ import {
     CLIMB_KM,
     FIGHTER_ORBIT_BASE_KM,
     FIGHTER_ORBIT_STEP_KM,
+    FLIGHT,
     HANGAR_SPEC,
     HELO_CLIMB_T,
     HELO_PATROL_RATE,
@@ -236,6 +237,93 @@ function flyEscort(w, u, def, dt) {
 // picks up from a city and drops at the bunker (sheltered); in "release" mode it
 // picks up from the bunker (sheltered) and drops at a city. Cargo that can't be
 // delivered is redeposited safely (or lost only when nothing valid remains).
+// toPickup: nothing to lift here → skip ahead; otherwise fly to the pickup
+// point and, on arrival, start the timed load.
+function ferryToPickup(u, m, pickup, sourceEmpty, flyTo) {
+    if (sourceEmpty || !pickup) {
+        m.phase = m.cargo > 0 ? "toDrop" : "toHome"; // nothing to lift here
+        return;
+    }
+    if (flyTo(pickup)) {
+        m.phase = "loading";
+        m.timer = LEADERSHIP.loadSec;
+        u.alt = 0;
+    }
+}
+
+// loading: sit on the pad for the timed load, then take on as much cargo as
+// there's room for and source has, before moving on.
+function ferryLoading(u, m, dt, release, n, city) {
+    u.alt = 0;
+    m.timer -= dt;
+    if (m.timer <= 0) {
+        const room = LEADERSHIP.perPlane - m.cargo;
+        if (release) {
+            const take = n?.lead ? Math.min(room, n.lead.sheltered || 0) : 0;
+            if (take > 0) {
+                n.lead.sheltered -= take;
+                m.cargo += take;
+            }
+        } else {
+            const take = city && city.alive ? Math.min(room, city.leaders || 0) : 0;
+            if (take > 0) {
+                city.leaders -= take;
+                m.cargo += take;
+            }
+        }
+        m.phase = m.cargo > 0 ? "toDrop" : "toHome";
+    }
+}
+
+// toDrop: destination lost → carry home and redeposit safely; otherwise fly to
+// the drop point and, on arrival, start the timed unload.
+function ferryToDrop(u, m, drop, dropGone, flyTo) {
+    if (dropGone || !drop) {
+        m.phase = "toHome"; // destination lost — carry home and redeposit safely
+        return;
+    }
+    if (flyTo(drop)) {
+        m.phase = "unloading";
+        m.timer = LEADERSHIP.unloadSec;
+        u.alt = 0;
+    }
+}
+
+// unloading: sit on the pad for the timed unload, deliver any cargo (or
+// redeposit it safely if the destination went bad mid-run), then head home.
+function ferryUnloading(u, m, dt, release, city, n, redeposit) {
+    u.alt = 0;
+    m.timer -= dt;
+    if (m.timer <= 0) {
+        if (m.cargo > 0) {
+            if (release) {
+                if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
+                else redeposit();
+            } else if (n?.lead) n.lead.sheltered += m.cargo;
+            m.cargo = 0;
+        }
+        m.phase = "toHome";
+    }
+}
+
+// toHome (and the default fallback): home strip lost mid-flight → the ferry
+// goes down (cargo lost via reconcile); otherwise fly home and, on arrival,
+// redeposit any diverted cargo and stow back into transport stock.
+function ferryToHome(u, home, redeposit, flyTo) {
+    if (!home) { // home strip lost mid-flight — the ferry goes down (cargo lost via reconcile)
+        redeposit();
+        u.hp = 0;
+        u.face = null;
+        return;
+    }
+    if (flyTo(home)) {
+        redeposit(); // only carries cargo here if it was diverted; a normal run lands empty
+        const cap = hangarCapOf(home.type, "transport");
+        if ((home.hangar?.transport || 0) < cap) home.hangar.transport = (home.hangar.transport || 0) + 1;
+        u.hp = 0; // stow into stock; evacTick relaunches if there is more to move
+    }
+}
+
 function flyFerry(w, u, def, dt) {
     const m = u.mission;
     const release = m.mode === "release";
@@ -247,8 +335,8 @@ function flyFerry(w, u, def, dt) {
     const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
     const pickup = release ? bunker : city;   // where we load
     const drop = release ? city : bunker;     // where we deliver
-    u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
-    if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    u.vis = Math.min(1, (u.vis || 0) + dt / FLIGHT.FERRY_VIS_RAMP_T);
+    if ((u.alt || 0) > FLIGHT.TRAIL_ALT_THRESHOLD) recordTrail(u, dt);
     // Put stuck cargo somewhere sane. Shelter runs return it to the origin city (or
     // lose it with a dead city); release runs keep it safe in the bunker, else a
     // living city, else lost.
@@ -276,8 +364,8 @@ function flyFerry(w, u, def, dt) {
         // Ease speed down and tighten the turn on approach: an airlifter's normal
         // cruise turn radius (v/ω) is far larger than the gaps between a city, the
         // bunker, and the airstrip, so it must slow to capture a near waypoint.
-        const speed = Math.min(sp, Math.max(sp * 0.3, rng / 1.5));
-        advance(u, bearingTo(u, pt), speed, tr * 3, dt);
+        const speed = Math.min(sp, Math.max(sp * FLIGHT.FERRY_APPROACH_SPEED_MULT, rng / FLIGHT.FERRY_APPROACH_RANGE_DIV));
+        advance(u, bearingTo(u, pt), speed, tr * FLIGHT.FERRY_APPROACH_TURN_MULT, dt);
         return false;
     };
     // Is there anything left to load at the source?
@@ -288,77 +376,20 @@ function flyFerry(w, u, def, dt) {
     const dropGone = release ? (!city || !city.alive) : !bunker;
     switch (m.phase) {
         case "toPickup":
-            if (sourceEmpty || !pickup) {
-                m.phase = m.cargo > 0 ? "toDrop" : "toHome"; // nothing to lift here
-                break;
-            }
-            if (flyTo(pickup)) {
-                m.phase = "loading";
-                m.timer = LEADERSHIP.loadSec;
-                u.alt = 0;
-            }
+            ferryToPickup(u, m, pickup, sourceEmpty, flyTo);
             break;
         case "loading":
-            u.alt = 0;
-            m.timer -= dt;
-            if (m.timer <= 0) {
-                const room = LEADERSHIP.perPlane - m.cargo;
-                if (release) {
-                    const take = n?.lead ? Math.min(room, n.lead.sheltered || 0) : 0;
-                    if (take > 0) {
-                        n.lead.sheltered -= take;
-                        m.cargo += take;
-                    }
-                } else {
-                    const take = city && city.alive ? Math.min(room, city.leaders || 0) : 0;
-                    if (take > 0) {
-                        city.leaders -= take;
-                        m.cargo += take;
-                    }
-                }
-                m.phase = m.cargo > 0 ? "toDrop" : "toHome";
-            }
+            ferryLoading(u, m, dt, release, n, city);
             break;
         case "toDrop":
-            if (dropGone || !drop) {
-                m.phase = "toHome"; // destination lost — carry home and redeposit safely
-                break;
-            }
-            if (flyTo(drop)) {
-                m.phase = "unloading";
-                m.timer = LEADERSHIP.unloadSec;
-                u.alt = 0;
-            }
+            ferryToDrop(u, m, drop, dropGone, flyTo);
             break;
         case "unloading":
-            u.alt = 0;
-            m.timer -= dt;
-            if (m.timer <= 0) {
-                if (m.cargo > 0) {
-                    if (release) {
-                        if (city && city.alive) city.leaders = (city.leaders || 0) + m.cargo;
-                        else redeposit();
-                    } else if (n?.lead) n.lead.sheltered += m.cargo;
-                    m.cargo = 0;
-                }
-                m.phase = "toHome";
-            }
+            ferryUnloading(u, m, dt, release, city, n, redeposit);
             break;
         case "toHome":
         default:
-            if (!home) { // home strip lost mid-flight — the ferry goes down (cargo lost via reconcile)
-                redeposit();
-                u.hp = 0;
-                u.face = null;
-                return;
-            }
-            if (flyTo(home)) {
-                redeposit(); // only carries cargo here if it was diverted; a normal run lands empty
-                const cap = hangarCapOf(home.type, "transport");
-                if ((home.hangar?.transport || 0) < cap) home.hangar.transport = (home.hangar.transport || 0) + 1;
-                u.hp = 0; // stow into stock; evacTick relaunches if there is more to move
-                return;
-            }
+            ferryToHome(u, home, redeposit, flyTo);
             break;
     }
 }
@@ -464,6 +495,158 @@ function flyRotary(w, u, def, base, dt) {
     }
 }
 
+// Orbit-hold guidance: fly the ring tangent, banking gently in or out in
+// proportion to radial error. Produces true circles and smooth joins from
+// any entry angle — no carrot-chasing wobble. Shared by the cruise and hold phases.
+function flyOrbitHold(base, u, sp, tr, R, dt) {
+    const rd = Math.max(1, haversine(base.lng, base.lat, u.lng, u.lat));
+    const desired = bearingTo(base, u) + Math.PI / 2 + Math.max(-FLIGHT.ORBIT_BANK_RAD, Math.min(FLIGHT.ORBIT_BANK_RAD, (rd - R) / FLIGHT.ORBIT_RADIAL_DIV));
+    advance(u, desired, sp, tr, dt);
+}
+
+// Climb: roll straight down the runway, rotate, climb out. Progress is the
+// jet's own integrated run, NOT distance from the base — a moving carrier
+// would otherwise outrun the rolling jet and stall it. During the deck roll
+// the ship's speed is added so the jet stays with it.
+function flyClimb(u, base, ra, sp, tr, dt) {
+    const baseSpd = (base.dest && UNITS[base.type]?.navalSpeed) || 0;
+    const rolling = (u._to || 0) < ROLL_KM;
+    const spd = rolling ? baseSpd + sp * FLIGHT.ROLL_SPEED_MULT : sp;
+    u._to = (u._to || 0) + spd * dt;
+    u.alt = u._to < ROLL_KM ? 0 : Math.min(1, (u._to - ROLL_KM) / CLIMB_KM);
+    u.vis = Math.min(1, u._to / FLIGHT.TAKEOFF_VIS_KM);
+    advance(u, ra, spd, tr, dt);
+    if ((u._to || 0) > ROLL_KM + FLIGHT.ROLL_CLEAR_PAD_KM && base.op === u.id) base.op = null; // wheels up — runway clear for the next mover
+    if (u.alt >= 1) {
+        u.phase = "cruise";
+        if (base.op === u.id) base.op = null;
+        u._to = 0;
+    }
+}
+
+// Cruise: hold the patrol ring.
+function flyCruise(u, base, sp, tr, dt) {
+    u.alt = slew(u.alt, 1, dt / FLIGHT.CRUISE_ALT_SLEW_T);
+    u.vis = 1;
+    flyOrbitHold(base, u, sp, tr, u.orbitR, dt);
+    u.fuel = (u.fuel ?? 0) - dt;
+    if (u.fuel <= 0 || u.recall) u.phase = "hold"; // bingo fuel / recalled → recover
+}
+
+// Hold: stack on a wider ring, waiting for the runway. Recovery doesn't
+// reserve the runway — the strip is only owned on short final/rollout, so
+// departures keep flowing between arrivals.
+function flyHold(w, u, base, sp, tr, dt) {
+    u.alt = slew(u.alt, 1, dt / FLIGHT.CRUISE_ALT_SLEW_T);
+    u.vis = 1;
+    flyOrbitHold(base, u, sp, tr, u.orbitR + HOLD_PAD, dt);
+    const inPattern = w.units.filter((x) => x.baseId === base.id && x.hp > 0 && x.phase === "landing").length;
+    if (inPattern < FLIGHT.HOLD_PATTERN_MAX) {
+        u.phase = "landing";
+        u._land = "toFinal";
+    }
+}
+
+// Approach ("toFinal"): localizer-intercept CONTROLLER (no waypoints, so nothing
+// to orbit): fly the runway heading plus a cross-track correction angle — up to
+// ~63° cut toward the centerline, easing to zero as the jet lines up. Too close
+// in (or on the departure side), fly an outbound leg to a pattern-entry region
+// on its own side, then the controller takes over.
+function flyApproachIntercept(u, base, ra, sp, tr, dt) {
+    u.alt = 1;
+    u.vis = 1;
+    const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
+    let dLng = u.lng - base.lng;
+    while (dLng > 180) dLng -= 360;
+    while (dLng < -180) dLng += 360;
+    const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
+    const axx = Math.cos(ra), axy = Math.sin(ra);
+    const along = -(px * axx + py * axy);        // km out on the APPROACH side of the threshold
+    const cross = -px * axy + py * axx;          // signed cross-track distance from the centerline
+    const LEAD = Math.min(FLIGHT.LEAD_MAX_KM, Math.max(FLIGHT.LEAD_MIN_KM, (sp / tr) * FLIGHT.LEAD_SPEED_TURN_MULT));
+    if (along > FLIGHT.INTERCEPT_ALONG_KM) {
+        const desired = ra + Math.max(-FLIGHT.INTERCEPT_TURN_RAD, Math.min(FLIGHT.INTERCEPT_TURN_RAD, -cross / FLIGHT.INTERCEPT_CROSS_DIV));
+        advance(u, desired, sp, tr, dt);
+        let dh = ra - (u.hdg ?? ra);
+        while (dh > Math.PI) dh -= 2 * Math.PI;
+        while (dh < -Math.PI) dh += 2 * Math.PI;
+        if (Math.abs(cross) < FLIGHT.INTERCEPT_CAPTURE_CROSS_KM && Math.abs(dh) < FLIGHT.INTERCEPT_CAPTURE_HDG_RAD) u._land = "final";
+    } else {
+        // Outbound to pattern entry: offset to the jet's own side so the
+        // turn back in is a single smooth procedure turn.
+        const side = cross >= 0 ? 1 : -1;
+        const back = polarFrom(base, LEAD * FLIGHT.PATTERN_ENTRY_BACK_MULT, ra + Math.PI);
+        const entry = polarFrom(back, FLIGHT.PATTERN_ENTRY_OFFSET_KM * side, ra + Math.PI / 2);
+        advance(u, bearingTo(u, entry), sp, tr, dt);
+    }
+}
+
+// Approach ("final"): the same heading-based control as the intercept, just
+// tighter: runway heading plus a small cross-track cut, throttled back,
+// altitude slewing down the glide slope. No sideways position bleeding — the
+// jet only ever moves where its nose points.
+function flyApproachFinal(u, base, ra, sp, tr, dt) {
+    const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
+    let dLng = u.lng - base.lng;
+    while (dLng > 180) dLng -= 360;
+    while (dLng < -180) dLng += 360;
+    const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
+    const axx = Math.cos(ra), axy = Math.sin(ra);
+    const along = -(px * axx + py * axy);
+    const cross = -px * axy + py * axx;
+    u._alongD = along;
+    // Blown approach (short and still off the centerline) → go around.
+    if (along < FLIGHT.GO_AROUND_ALONG_KM && Math.abs(cross) > FLIGHT.CROSS_CAPTURE_KM) {
+        u._land = null;
+        u._alongD = null;
+        u.phase = "hold";
+        return;
+    }
+    // Short final: claim the strip. Occupied by someone else → go around.
+    if (along < FLIGHT.SHORT_FINAL_ALONG_KM) {
+        if (base.op == null) base.op = u.id;
+        else if (base.op !== u.id) {
+            u._land = null;
+            u._alongD = null;
+            u.phase = "hold";
+            return;
+        }
+    }
+    const desired = ra + Math.max(-FLIGHT.FINAL_TURN_RAD, Math.min(FLIGHT.FINAL_TURN_RAD, -cross / FLIGHT.FINAL_CROSS_DIV));
+    advance(u, desired, sp * FLIGHT.FINAL_SPEED_MULT, tr, dt);
+    u.alt = slew(u.alt, Math.max(0, Math.min(1, along / (APPROACH_KM * FLIGHT.GLIDE_SLOPE_FRAC))), dt / FLIGHT.FINAL_ALT_SLEW_T);
+    u.vis = 1;
+    if (along <= sp * FLIGHT.FINAL_SPEED_MULT * dt + FLIGHT.TOUCHDOWN_ARRIVE_PAD_KM && Math.abs(cross) < FLIGHT.CROSS_CAPTURE_KM) {
+        u._land = "rollout";
+        u._roll = 0;
+        u.alt = Math.min(u.alt, FLIGHT.TOUCHDOWN_ALT_CAP);
+    }
+}
+
+// Land: touchdown — roll out and decelerate.
+function flyLandRollout(u, base, ra, sp, tr, dt) {
+    const decel = Math.max(FLIGHT.ROLLOUT_MIN_DECEL, 1 - (u._roll || 0) / ROLLOUT_KM);
+    advance(u, ra, sp * FLIGHT.ROLLOUT_SPEED_MULT * decel, tr, dt);
+    u._roll = (u._roll || 0) + sp * FLIGHT.ROLLOUT_SPEED_MULT * decel * dt;
+    u.alt = 0;
+    u.vis = Math.max(0, 1 - (u._roll || 0) / (ROLLOUT_KM * FLIGHT.ROLLOUT_VIS_FRAC));
+    if ((u._roll || 0) >= ROLLOUT_KM) {
+        // Taxi in — the airframe returns to hangar stock (stock rotation
+        // relaunches a fresh one if the patrol still wants it up).
+        const cap = hangarCapOf(base.type, u.type);
+        if ((base.hangar?.[u.type] || 0) < cap) base.hangar[u.type] = (base.hangar[u.type] || 0) + 1;
+        if (base.op === u.id) base.op = null;
+        u.hp = 0;
+    }
+}
+
+// Landing dispatcher: intercept the localizer, final approach, touchdown, rollout.
+function flyLandingPhase(u, base, ra, sp, tr, dt) {
+    if (u._land === "toFinal") flyApproachIntercept(u, base, ra, sp, tr, dt);
+    else if (u._land === "final") flyApproachFinal(u, base, ra, sp, tr, dt);
+    else flyLandRollout(u, base, ra, sp, tr, dt);
+}
+
 export function flyAircraft(w, u, def, dt) {
     // Leadership ferries + their escorts fly their own profiles, not the patrol
     // pattern — handled entirely before the airbase/runway machinery below.
@@ -478,9 +661,8 @@ export function flyAircraft(w, u, def, dt) {
     if (!u.phase) u.phase = "ground";
     if (base.op && !w.units.some((x) => x.id === base.op && x.hp > 0)) base.op = null; // free a stuck runway
     const ra = runwayAxis(base);
-    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
     const sp = def.airSpeed, tr = def.turnRate;
-    if (u.phase !== "ground" && (u.alt || 0) > 0.02) recordTrail(u, dt);
+    if (u.phase !== "ground" && (u.alt || 0) > FLIGHT.TRAIL_ALT_THRESHOLD) recordTrail(u, dt);
 
     if (u.phase === "ground") {           // legacy state — stow into the hangar
         const cap = hangarCapOf(base.type, u.type);
@@ -495,141 +677,19 @@ export function flyAircraft(w, u, def, dt) {
         return;
     }
     if (u.phase === "takeoff") {                       // roll straight down the runway, rotate, climb out
-        // Progress is the jet's own integrated run, NOT distance from the base —
-        // a moving carrier would otherwise outrun the rolling jet and stall it.
-        // During the deck roll the ship's speed is added so the jet stays with it.
-        const baseSpd = (base.dest && UNITS[base.type]?.navalSpeed) || 0;
-        const rolling = (u._to || 0) < ROLL_KM;
-        const spd = rolling ? baseSpd + sp * 0.5 : sp;
-        u._to = (u._to || 0) + spd * dt;
-        u.alt = u._to < ROLL_KM ? 0 : Math.min(1, (u._to - ROLL_KM) / CLIMB_KM);
-        u.vis = Math.min(1, u._to / 8);
-        advance(u, ra, spd, tr, dt);
-        if ((u._to || 0) > ROLL_KM + 20 && base.op === u.id) base.op = null; // wheels up — runway clear for the next mover
-        if (u.alt >= 1) {
-            u.phase = "cruise";
-            if (base.op === u.id) base.op = null;
-            u._to = 0;
-        }
+        flyClimb(u, base, ra, sp, tr, dt);
         return;
     }
-    // Orbit-hold guidance: fly the ring tangent, banking gently in or out in
-    // proportion to radial error. Produces true circles and smooth joins from
-    // any entry angle — no carrot-chasing wobble.
-    const orbit = (R, h) => {
-        const rd = Math.max(1, dist(base, u));
-        const desired = bearingTo(base, u) + Math.PI / 2 + Math.max(-0.9, Math.min(0.9, (rd - R) / 80));
-        advance(u, desired, sp, tr, h);
-    };
     if (u.phase === "cruise") {                        // hold the patrol ring
-        u.alt = slew(u.alt, 1, dt / 1.5);
-        u.vis = 1;
-        orbit(u.orbitR, dt);
-        u.fuel = (u.fuel ?? 0) - dt;
-        if (u.fuel <= 0 || u.recall) u.phase = "hold"; // bingo fuel / recalled → recover
+        flyCruise(u, base, sp, tr, dt);
         return;
     }
     if (u.phase === "hold") {                          // stack on a wider ring, waiting for the runway
-        u.alt = slew(u.alt, 1, dt / 1.5);
-        u.vis = 1;
-        orbit(u.orbitR + HOLD_PAD, dt);
-        // Recovery doesn't reserve the runway — the strip is only owned on short
-        // final/rollout, so departures keep flowing between arrivals.
-        const inPattern = w.units.filter((x) => x.baseId === base.id && x.hp > 0 && x.phase === "landing").length;
-        if (inPattern < 2) {
-            u.phase = "landing";
-            u._land = "toFinal";
-        }
+        flyHold(w, u, base, sp, tr, dt);
         return;
     }
     if (u.phase === "landing") {                       // intercept the localizer, final approach, touchdown, rollout
-        if (u._land === "toFinal") {
-            // Localizer-intercept CONTROLLER (no waypoints, so nothing to orbit):
-            // fly the runway heading plus a cross-track correction angle — up to
-            // ~63° cut toward the centerline, easing to zero as the jet lines up.
-            // Too close in (or on the departure side), fly an outbound leg to a
-            // pattern-entry region on its own side, then the controller takes over.
-            u.alt = 1;
-            u.vis = 1;
-            const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
-            let dLng = u.lng - base.lng;
-            while (dLng > 180) dLng -= 360;
-            while (dLng < -180) dLng += 360;
-            const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
-            const axx = Math.cos(ra), axy = Math.sin(ra);
-            const along = -(px * axx + py * axy);        // km out on the APPROACH side of the threshold
-            const cross = -px * axy + py * axx;          // signed cross-track distance from the centerline
-            const LEAD = Math.min(160, Math.max(70, (sp / tr) * 2.2));
-            if (along > 40) {
-                const desired = ra + Math.max(-1.1, Math.min(1.1, -cross / 40));
-                advance(u, desired, sp, tr, dt);
-                let dh = ra - (u.hdg ?? ra);
-                while (dh > Math.PI) dh -= 2 * Math.PI;
-                while (dh < -Math.PI) dh += 2 * Math.PI;
-                if (Math.abs(cross) < 15 && Math.abs(dh) < 0.9) u._land = "final";
-            } else {
-                // Outbound to pattern entry: offset to the jet's own side so the
-                // turn back in is a single smooth procedure turn.
-                const side = cross >= 0 ? 1 : -1;
-                const back = polarFrom(base, LEAD * 1.6, ra + Math.PI);
-                const entry = polarFrom(back, 70 * side, ra + Math.PI / 2);
-                advance(u, bearingTo(u, entry), sp, tr, dt);
-            }
-        } else if (u._land === "final") {
-            // Final is the same heading-based control as the intercept, just
-            // tighter: runway heading plus a small cross-track cut, throttled
-            // back, altitude slewing down the glide slope. No sideways position
-            // bleeding — the jet only ever moves where its nose points.
-            const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
-            let dLng = u.lng - base.lng;
-            while (dLng > 180) dLng -= 360;
-            while (dLng < -180) dLng += 360;
-            const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
-            const axx = Math.cos(ra), axy = Math.sin(ra);
-            const along = -(px * axx + py * axy);
-            const cross = -px * axy + py * axx;
-            u._alongD = along;
-            // Blown approach (short and still off the centerline) → go around.
-            if (along < 10 && Math.abs(cross) > 6) {
-                u._land = null;
-                u._alongD = null;
-                u.phase = "hold";
-                return;
-            }
-            // Short final: claim the strip. Occupied by someone else → go around.
-            if (along < 35) {
-                if (base.op == null) base.op = u.id;
-                else if (base.op !== u.id) {
-                    u._land = null;
-                    u._alongD = null;
-                    u.phase = "hold";
-                    return;
-                }
-            }
-            const desired = ra + Math.max(-0.6, Math.min(0.6, -cross / 25));
-            advance(u, desired, sp * 0.7, tr, dt);
-            u.alt = slew(u.alt, Math.max(0, Math.min(1, along / (APPROACH_KM * 0.85))), dt / 1.2);
-            u.vis = 1;
-            if (along <= sp * 0.7 * dt + 2 && Math.abs(cross) < 6) {
-                u._land = "rollout";
-                u._roll = 0;
-                u.alt = Math.min(u.alt, 0.05);
-            }
-        } else {                                         // touchdown — roll out and decelerate
-            const decel = Math.max(0.18, 1 - (u._roll || 0) / ROLLOUT_KM);
-            advance(u, ra, sp * 0.5 * decel, tr, dt);
-            u._roll = (u._roll || 0) + sp * 0.5 * decel * dt;
-            u.alt = 0;
-            u.vis = Math.max(0, 1 - (u._roll || 0) / (ROLLOUT_KM * 0.85));
-            if ((u._roll || 0) >= ROLLOUT_KM) {
-                // Taxi in — the airframe returns to hangar stock (stock rotation
-                // relaunches a fresh one if the patrol still wants it up).
-                const cap = hangarCapOf(base.type, u.type);
-                if ((base.hangar?.[u.type] || 0) < cap) base.hangar[u.type] = (base.hangar[u.type] || 0) + 1;
-                if (base.op === u.id) base.op = null;
-                u.hp = 0;
-            }
-        }
+        flyLandingPhase(u, base, ra, sp, tr, dt);
         return;
     }
 }

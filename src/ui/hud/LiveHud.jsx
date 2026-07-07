@@ -1,9 +1,12 @@
 import {useLayoutEffect, useRef, useState} from "react";
-import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityStatus} from "../../game/engine.js";
+import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityBreakdown, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtNet, fmtPop} from "../common/format.js";
 import {cn} from "../lib/cn.js";
+import AmmoBar from "./AmmoBar.jsx";
+import {iconButton, popoverCard} from "../lib/variants.js";
+import {vitColor} from "../common/status.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const SEC_PER_GS = 1800; // 30 in-game minutes per game-second
@@ -14,13 +17,6 @@ function gameDate(t) {
         date: `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`,
         time: `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`
     };
-}
-
-function leadColor(pct) {
-    if (pct == null) return undefined;
-    if (pct >= 67) return "#46d38a";
-    if (pct >= 34) return "#ffb020";
-    return "#ff3b3b";
 }
 
 function leadSub(lead) {
@@ -46,7 +42,7 @@ const NAV = [
     {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
 ];
 
-export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
+export default function LiveHud({world, api, myNation, panel, onPanel, keys, globe, onGlobe, onHelp, onMenu, meBadge}) {
     const K = resolveKeys(keys);
     const net = myNation ? netIncomeOf(world, myNation.slot) : 0;
     const pop = myNation ? populationOf(world, myNation.slot) : 0;
@@ -54,8 +50,12 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const ind = myNation ? industryOutputOf(world, myNation.slot) : 0;
     const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
     const stab = myNation ? stabilityStatus(world, myNation.slot) : null;
+    const stabInfo = myNation ? stabilityBreakdown(world, myNation.slot) : null;
     const alive = world.nations.filter((n) => n.alive).length;
     const {date, time} = gameDate(world.time);
+
+    // Which telemetry cell is showing its hover breakdown ("lead" | "stab" | null).
+    const [info, setInfo] = useState(null);
 
     // Adaptive fit: on smaller/laptop screens the command bar is wider than the lane
     // its gutters leave it, so scale the whole bar down just enough to fit. Uses
@@ -90,83 +90,141 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
         <div
             ref={barRef}
             style={fit.scale < 1 ? {transform: `scale(${fit.scale})`, transformOrigin: "top center", marginBottom: fit.mb} : undefined}
-            className="db-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbDropInY_300ms_var(--ease-drawer)]">
-            <div className="flex flex-col items-start leading-[1.15]"><span
-                className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span
-                className="text-sm font-bold font-mono">{date}</span><span
-                className="text-[10px] text-dim">{time}</span></div>
-            <div className="w-px self-stretch bg-line-soft"/>
-            <div className="flex flex-col items-start leading-[1.05]"><span
-                className="font-display text-2xl text-gold font-bold [text-shadow:var(--glow-gold)]">{Math.floor(myNation?.points ?? 0)}</span><span
-                className={cn("font-mono text-[10px] text-dim uppercase tracking-[1px]", net < 0 && "text-danger")}>PTS · {fmtNet(net)}/s</span>
-                {net < 0 && <span
-                    className="mt-[3px] font-mono text-[9px] font-bold tracking-[1.5px] leading-none text-red border border-red rounded-sm px-[5px] py-[2px]">DEFICIT</span>}
-            </div>
-            <div className="w-px self-stretch bg-line-soft"/>
-            <div className="flex gap-[3px] px-[3px] border-l border-r border-line-soft"
-                 title={`${keyLabel(K.pause)} — Pause · ${keyLabel(K.speedDown)}/${keyLabel(K.speedUp)} — Speed · 1–5 — Speed Level`}>
-                <button
-                    className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", world.paused && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
-                    onClick={api.pause}
-                    aria-pressed={world.paused}
-                    title={`Pause (${keyLabel(K.pause)})`}>⏸
-                </button>
-                <button
-                    className="min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]"
-                    onClick={api.play} aria-pressed={!world.paused}
-                    title={`Resume (${keyLabel(K.pause)})`}>▶</button>
-                {GAME_SPEEDS.map((s, i) => <button key={s}
-                                                   className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", !world.paused && world.speed === s && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
-                                                   aria-pressed={!world.paused && world.speed === s}
-                                                   onClick={() => api.setSpeed(s)}
-                                                   title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
-            </div>
-            <div className="w-px self-stretch bg-line-soft"/>
-            <div className="flex flex-col items-end leading-[1.15]"><span
-                className="text-[9px] tracking-[1px] uppercase text-faint">GDP</span><span
-                className="text-sm font-bold font-mono">${gdp.toFixed(2)}T</span><span
-                className="text-[10px] text-dim">Industry +{ind.toFixed(1)}/s</span></div>
-            <div className="w-px self-stretch bg-line-soft"/>
-            <div className="flex flex-col items-end leading-[1.15]"><span
-                className="text-[9px] tracking-[1px] uppercase text-faint">Population</span><span
-                className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span className="text-[10px] text-dim"
-                                                                                    aria-live="polite">{alive} Powers Left</span>
-            </div>
-            {lead && <>
+            className="db-livehud relative z-5 w-full flex flex-col bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbDropInY_300ms_var(--ease-drawer)]">
+            {/* Row 1 — telemetry: date + points on the left, national stats pushed right. */}
+            <div className="flex flex-nowrap items-center gap-3 whitespace-nowrap px-4 py-[7px] border-b border-hair">
+                <div className="flex flex-col items-start leading-[1.15]"><span
+                    className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span
+                    className="text-sm font-bold font-mono">{date}</span><span
+                    className="text-[10px] text-dim">{time}</span></div>
                 <div className="w-px self-stretch bg-line-soft"/>
-                <div className="flex flex-col items-end leading-[1.15]"
-                     title="National leadership surviving — evacuate to the bunker to protect it"><span
-                    className="text-[9px] tracking-[1px] uppercase text-faint">Leadership</span><span
-                    className="text-sm font-bold font-mono"
-                    style={{color: leadColor(lead.pct)}}>{lead.pct}%</span><span
-                    className="text-[10px] text-dim" aria-live="polite">{leadSub(lead)}</span>
+                <div className="flex flex-col items-start leading-[1.05]"><span
+                    className="font-display text-2xl text-gold font-bold [text-shadow:var(--glow-gold)]">{Math.floor(myNation?.points ?? 0)}</span><span
+                    className={cn("font-mono text-[10px] text-dim uppercase tracking-[1px]", net < 0 && "text-danger")}>PTS · {fmtNet(net)}/s</span>
+                    {net < 0 && <span
+                        className="mt-[3px] font-mono text-[9px] font-bold tracking-[1.5px] leading-none text-red border border-red rounded-sm px-[5px] py-[2px]">DEFICIT</span>}
                 </div>
-            </>}
-            {stab && <>
-                <div className="w-px self-stretch bg-line-soft"/>
-                <div className="flex flex-col items-end leading-[1.15]"
-                     title="National stability — population loss, war, leadership loss/bunkering, and deficits erode it. An ambient measure of national strain."><span
-                    className="text-[9px] tracking-[1px] uppercase text-faint">Stability</span><span
-                    className="text-sm font-bold font-mono"
-                    style={{color: leadColor(stab.pct)}}>{stab.pct}%</span><span
-                    className="text-[10px] text-dim"
-                    aria-live="polite">{stabSub(stab)}</span>
+                <div className="flex flex-nowrap items-center gap-3 ml-auto">
+                    <div className="w-px self-stretch bg-line-soft"/>
+                    <div className="flex flex-col items-end leading-[1.15]"><span
+                        className="text-[9px] tracking-[1px] uppercase text-faint">GDP</span><span
+                        className="text-sm font-bold font-mono">${gdp.toFixed(2)}T</span><span
+                        className="text-[10px] text-dim">Industry +{ind.toFixed(1)}/s</span></div>
+                    <div className="w-px self-stretch bg-line-soft"/>
+                    <div className="flex flex-col items-end leading-[1.15]"><span
+                        className="text-[9px] tracking-[1px] uppercase text-faint">Population</span><span
+                        className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span className="text-[10px] text-dim"
+                                                                                            aria-live="polite">{alive} Powers Left</span>
+                    </div>
+                    {lead && <>
+                        <div className="w-px self-stretch bg-line-soft"/>
+                        <div className="relative flex flex-col items-end leading-[1.15] cursor-help"
+                             onMouseEnter={() => setInfo("lead")} onMouseLeave={() => setInfo(null)}><span
+                            className="text-[9px] tracking-[1px] uppercase text-faint">Leadership</span><span
+                            className="text-sm font-bold font-mono"
+                            style={{color: vitColor(lead.pct)}}>{lead.pct}%</span><span
+                            className="text-[10px] text-dim" aria-live="polite">{leadSub(lead)}</span>
+                            {info === "lead" && (
+                                <div className={cn(popoverCard(), "absolute top-full right-0 mt-2 w-[240px] py-[11px] px-[13px] z-20 text-left cursor-default")}>
+                                    <div className="flex items-center justify-between font-display font-bold text-[13px]">
+                                        <span>National Leadership</span>
+                                        <span className="font-mono" style={{color: vitColor(lead.pct)}}>{lead.pct}%</span>
+                                    </div>
+                                    <div className="mt-1 text-[10px] uppercase tracking-[0.5px] text-faint">{lead.total - lead.lost} of {lead.total} tokens intact</div>
+                                    <div className="mt-[9px] flex flex-col gap-[5px] text-[11.5px]">
+                                        {lead.atCities.map((c) => (
+                                            <div key={c.name} className="flex items-center justify-between gap-3">
+                                                <span className="text-dim truncate">{c.cap ? "★ " : ""}{c.name}</span>
+                                                <b className="font-mono text-text flex-none">{c.n}</b>
+                                            </div>
+                                        ))}
+                                        {lead.sheltered > 0 && <div className="flex items-center justify-between gap-3"><span className="text-dim">In bunker</span><b className="font-mono text-text flex-none">{lead.sheltered}</b></div>}
+                                        {lead.inTransit > 0 && <div className="flex items-center justify-between gap-3"><span className="text-dim">In transit (evac)</span><b className="font-mono text-text flex-none">{lead.inTransit}</b></div>}
+                                        {lead.lost > 0 && <div className="flex items-center justify-between gap-3"><span className="text-danger">Killed</span><b className="font-mono text-danger flex-none">{lead.lost}</b></div>}
+                                        {!lead.atCities.length && !lead.sheltered && !lead.inTransit && !lead.lost &&
+                                            <div className="text-faint">No leaders located.</div>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </>}
+                    {stab && <>
+                        <div className="w-px self-stretch bg-line-soft"/>
+                        <div className="relative flex flex-col items-end leading-[1.15] cursor-help"
+                             onMouseEnter={() => setInfo("stab")} onMouseLeave={() => setInfo(null)}><span
+                            className="text-[9px] tracking-[1px] uppercase text-faint">Stability</span><span
+                            className="text-sm font-bold font-mono"
+                            style={{color: vitColor(stab.pct)}}>{stab.pct}%</span><span
+                            className="text-[10px] text-dim"
+                            aria-live="polite">{stabSub(stab)}</span>
+                            {info === "stab" && stabInfo && (
+                                <div className={cn(popoverCard(), "absolute top-full right-0 mt-2 w-[250px] py-[11px] px-[13px] z-20 text-left cursor-default")}>
+                                    <div className="flex items-center justify-between font-display font-bold text-[13px]">
+                                        <span>National Stability</span>
+                                        <span className="font-mono" style={{color: vitColor(stabInfo.pct)}}>{stabInfo.pct}%</span>
+                                    </div>
+                                    <div className="mt-[9px] flex flex-col gap-[6px] text-[11.5px]">
+                                        {stabInfo.factors.length ? stabInfo.factors.map((f) => (
+                                            <div key={f.key} className="flex items-start justify-between gap-3">
+                                                <span className="flex flex-col"><span className="text-dim">{f.label}</span><span className="text-faint text-[10px]">{f.detail}</span></span>
+                                                <b className="font-mono text-danger flex-none">&minus;{f.penalty}</b>
+                                            </div>
+                                        )) : <div className="text-faint">No active pressures — holding steady.</div>}
+                                    </div>
+                                    <div className="mt-[9px] pt-[8px] border-t border-hair flex items-center justify-between text-[10px] uppercase tracking-[0.5px] text-faint">
+                                        <span>Trending toward</span>
+                                        <b className="font-mono text-[11.5px]" style={{color: vitColor(stabInfo.target)}}>{stabInfo.target}%</b>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </>}
                 </div>
-            </>}
-            {onPanel && <>
-                <div className="w-px self-stretch bg-line-soft"/>
-                <div className="flex gap-[5px] flex-none">
-                    {NAV.map((n) => (
-                        <button key={n.id}
-                                className={cn("flex items-center gap-[6px] px-[11px] py-[6px] font-display font-semibold text-[10.5px] tracking-[0.6px] uppercase whitespace-nowrap text-dim bg-sunk border border-line rounded-sm cursor-pointer transition-[border-color,color,background] duration-150 ease-out-db hover:text-text hover:border-gold-line max-[1560px]:px-[9px]", panel === n.id && "text-gold-contrast bg-gold border-gold")}
-                                onClick={() => onPanel(n.id)} title={`${n.label} (${keyLabel(K[n.id])})`}
-                                aria-label={n.label}>
-                            <span className="text-[13px] leading-none max-[1560px]:text-sm">{n.glyph}</span>
-                            <span className="max-[1560px]:hidden">{n.label}</span>
-                        </button>
-                    ))}
+            </div>
+            {/* Row 2 — controls: speed + console nav on the left, arsenal + view controls right. */}
+            <div className="flex flex-nowrap items-center gap-3 whitespace-nowrap px-3 py-[7px]">
+                <div className="flex gap-[3px] pr-[3px] border-r border-line-soft"
+                     title={`${keyLabel(K.pause)} — Pause · ${keyLabel(K.speedDown)}/${keyLabel(K.speedUp)} — Speed · 1–5 — Speed Level`}>
+                    <button
+                        className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", world.paused && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
+                        onClick={api.pause}
+                        aria-pressed={world.paused}
+                        title={`Pause (${keyLabel(K.pause)})`}>⏸
+                    </button>
+                    <button
+                        className="min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]"
+                        onClick={api.play} aria-pressed={!world.paused}
+                        title={`Resume (${keyLabel(K.pause)})`}>▶</button>
+                    {GAME_SPEEDS.map((s, i) => <button key={s}
+                                                       className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", !world.paused && world.speed === s && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
+                                                       aria-pressed={!world.paused && world.speed === s}
+                                                       onClick={() => api.setSpeed(s)}
+                                                       title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
                 </div>
-            </>}
+                {onPanel && (
+                    <div className="flex gap-[5px] flex-none">
+                        {NAV.map((n) => (
+                            <button key={n.id}
+                                    className={cn("flex items-center gap-[6px] px-[11px] py-[6px] font-display font-semibold text-[10.5px] tracking-[0.6px] uppercase whitespace-nowrap text-dim bg-sunk border border-line rounded-sm cursor-pointer transition-[border-color,color,background] duration-150 ease-out-db hover:text-text hover:border-gold-line", panel === n.id && "text-gold-contrast bg-gold border-gold")}
+                                    onClick={() => onPanel(n.id)} title={`${n.label} (${keyLabel(K[n.id])})`}
+                                    aria-label={n.label}>
+                                <span className="text-[13px] leading-none">{n.glyph}</span>
+                                <span>{n.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                    <AmmoBar nation={myNation}/>
+                    {onGlobe && <button className={iconButton()} onClick={onGlobe} title="Globe / Flat view"
+                                        aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>}
+                    {onHelp && <button className={iconButton()} onClick={onHelp} title="Controls (?)"
+                                       aria-label="Show controls reference">?</button>}
+                    {onMenu && <button className={iconButton()} onClick={onMenu} title="Menu (Esc)"
+                                       aria-label="Open pause menu">☰</button>}
+                    {meBadge}
+                </div>
+            </div>
         </div>
     );
 }

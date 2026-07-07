@@ -4,14 +4,15 @@
 // pull it back out. Presentation only: all state still flows through the engine
 // via api.research / api.unqueue.
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
-import {canQueue, TECH_PATHS, TECHS, UNIT_ICON, UNITS, unitLabel} from "../../game/engine.js";
+import {TECH_PATHS, TECHS} from "../../game/engine.js";
 // ERAS is pure tech-tree metadata (era name / tier range / band color), imported
 // straight from the constants module alongside the rest of the tech-tree data.
 import {ERAS} from "../../game/data/constants.js";
-import UnitIcon from "../common/UnitIcon.jsx";
 import {useModal} from "../hooks/useModal.js";
 import {cn} from "../lib/cn.js";
 import {iconButton} from "../lib/variants.js";
+import Node from "./TechTreeNode.jsx";
+import TechTreeQueuePanel from "./TechTreeQueuePanel.jsx";
 
 const TIERS = Math.max(...Object.values(TECHS).map((t) => t.tier));
 const PATHS = TECH_PATHS.length;
@@ -57,131 +58,6 @@ function clampCam(x, y, k, vw, vh) {
     const cx = sw <= vw ? (vw - sw) / 2 : clamp(x, vw - sw, 0);
     const cy = sh <= vh ? (vh - sh) / 2 : clamp(y, vh - sh, 0);
     return {x: cx, y: cy};
-}
-
-// State literal kept on .db-tt-node so the CSS drafting layer (index.css @layer
-// vfx) can theme each state, plus the hover/active micro-motion for available
-// nodes expressed as self-referencing arbitrary variants off the same literal.
-const NODE_STATE_CLS = {
-    done: "done",
-    cur: "cur",
-    queued: "queued",
-    avail: "avail [&.avail:hover]:-translate-y-px [&.avail:active]:scale-[0.99]",
-    availPoor: "avail poor [&.avail:hover]:-translate-y-px [&.avail:active]:scale-[0.99]",
-    locked: "locked",
-};
-
-// A spec-sheet row: label ···· value, with a dotted engineering leader between
-// them (the drafting device that makes a blueprint read as a blueprint).
-function SpecRow({label, value, muted}) {
-    return (
-        <span className="relative flex items-center gap-1.5 font-mono text-[9px] leading-[1.5]">
-            <span className="text-faint tracking-[1px]">{label}</span>
-            <span className="db-tt-leader flex-1 self-center" aria-hidden="true"/>
-            <span className={cn("tabular-nums whitespace-nowrap overflow-hidden text-ellipsis",
-                muted ? "text-faint max-w-[104px]" : "text-dim")}>{value}</span>
-        </span>
-    );
-}
-
-// Blueprint / schematic tech node — a drafting card: hairline frame with corner
-// ticks, a designation code (OFF-03), a stamped status, a mono spec sheet with
-// dotted leaders, and a schematically-framed payload icon for unit unlocks.
-function Node({id, tech, nation, api, style}) {
-    const rr = nation?.research || {queue: [], done: [], current: null};
-    const done = rr.done.includes(id);
-    const isCur = rr.current?.id === id;
-    const qi = rr.queue.indexOf(id);
-    const avail = !done && !isCur && qi < 0 && canQueue(nation, id);
-    const locked = !done && !isCur && qi < 0 && !avail;
-    const poor = avail && (nation?.points ?? 0) < tech.cost;
-    const pct = Math.floor((rr.current?.progress ?? 0) * 100);
-    const stateCls = done ? NODE_STATE_CLS.done
-        : isCur ? NODE_STATE_CLS.cur
-            : qi >= 0 ? NODE_STATE_CLS.queued
-                : avail ? (poor ? NODE_STATE_CLS.availPoor : NODE_STATE_CLS.avail)
-                    : NODE_STATE_CLS.locked;
-    // Drafting designation, e.g. "OFF-03" — track code + zero-padded tier.
-    const code = `${tech.path.toUpperCase()}-${String(tech.tier).padStart(2, "0")}`;
-    const glyph = TECH_PATHS.find((p) => p.id === tech.path)?.glyph;
-    // Stamped status label sitting in the card header.
-    const stamp = done ? "FIELDED" : isCur ? `PLOTTING ${pct}%`
-        : qi >= 0 ? `QUEUED ${qi + 1}` : poor ? "LOW ◆" : avail ? "READY" : "LOCKED";
-    // Techs with `unlocks` grant a new buildable unit on completion — the payload.
-    const unlockType = tech.unlocks;
-    const unlockName = unlockType ? unitLabel(unlockType) : null;
-    const reqName = tech.req ? TECHS[tech.req]?.name : null;
-    // Full spoken description for screen readers: name → state → cost/time → payoff.
-    const state = done ? "Done"
-        : isCur ? `In Progress ${pct}%`
-            : qi >= 0 ? `Queued #${qi + 1}`
-                : avail ? (poor ? `Available — insufficient points (need ${tech.cost})` : "Available")
-                    : "Locked";
-    const ariaLabel = [
-        `${tech.name}.`, `${state}.`,
-        (!done && !isCur) ? `Costs ${tech.cost} points, ${tech.time} seconds.` : null,
-        (locked && reqName) ? `Requires ${reqName}.` : null,
-        unlockName ? `Unlocks ${unlockName}.` : null,
-    ].filter(Boolean).join(" ");
-    const onClick = () => {
-        if (avail && !poor) api.research(id);
-        else if (qi >= 0) api.unqueue(id);
-    };
-    return (
-        <button className={cn(
-            "db-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col text-left",
-            "px-[13px] pt-[9px] pb-[11px] rounded-[3px] text-text bg-sunk",
-            "transition-[transform,box-shadow] duration-150 ease-out-db",
-            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-2",
-            stateCls,
-        )}
-                style={style} onClick={onClick}
-                disabled={locked || done || isCur || (poor && avail)}
-                aria-label={ariaLabel}
-                title={locked ? "Requires the previous tech." : poor ? `Need ◆ ${tech.cost}` : tech.desc}>
-            {/* schematic plot-fill for the tech under active research */}
-            {isCur &&
-                <i className="db-tt-fill absolute inset-y-0 left-0 right-auto pointer-events-none"
-                   style={{width: `${Math.min(100, pct)}%`}} aria-hidden="true"/>}
-            {/* drafting frame — hairline border + corner tick marks */}
-            <span className="db-tt-frame absolute inset-0 pointer-events-none" aria-hidden="true"/>
-
-            {/* header: designation code + stamped status */}
-            <span className="relative flex items-center justify-between gap-2">
-                <span className="font-mono text-[9px] tracking-[1.4px] text-faint whitespace-nowrap">
-                    <span aria-hidden="true">{glyph}</span> {code}
-                </span>
-                <span className="db-tt-stamp flex-none font-mono text-[8px] tracking-[1.3px] whitespace-nowrap px-[5px] py-[1.5px]"
-                      aria-hidden="true">{stamp}</span>
-            </span>
-
-            {/* tech name + one-line brief */}
-            <span className="relative font-display font-bold text-[12.5px] leading-[1.14] mt-[6px]">{tech.name}</span>
-            <span className="relative text-[9.5px] text-dim leading-[1.3] mt-[2px] line-clamp-2">{tech.desc}</span>
-
-            {/* spec sheet */}
-            <span className="db-tt-rule relative block mt-[6px] mb-[4px]" aria-hidden="true"/>
-            <SpecRow label="COST" value={`◆ ${tech.cost}`}/>
-            <SpecRow label="TIME" value={`${tech.time}s`}/>
-            {(locked || avail) && reqName && <SpecRow label="REQ" value={reqName} muted/>}
-
-            {/* payload — the unit this tech puts in the field */}
-            {unlockType && (
-                <span className="db-tt-payload relative flex items-center gap-2 mt-[7px] pt-[7px]"
-                      title={`Unlocks: ${unlockName}`}>
-                    <span className="db-tt-payload-icon flex-none grid place-items-center w-[26px] h-[26px]">
-                        <UnitIcon name={UNIT_ICON[unlockType]} size={21}/>
-                    </span>
-                    <span className="flex flex-col gap-px overflow-hidden">
-                        <span className="font-mono text-[7.5px] tracking-[1.8px] uppercase text-faint leading-none">Payload</span>
-                        <span className="font-display font-semibold text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">
-                            {unlockName}
-                        </span>
-                    </span>
-                </span>
-            )}
-        </button>
-    );
 }
 
 export default function TechTree({world, api, mySlot, onClose}) {
@@ -439,59 +315,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                      aria-hidden="true"/>
 
                 {queueOpen && (rr.current || rr.queue.length > 0) && (
-                    <div className="absolute top-3.5 right-3.5 z-[3] w-[260px] max-h-[calc(100%-28px)] flex flex-col rounded border border-line bg-panel-solid shadow-[0_8px_28px_rgba(0,0,0,0.45)] overflow-hidden"
-                         id="db-tt-queue-panel"
-                         role="region" aria-label="Research queue">
-                        <div className="font-mono text-[11px] tracking-[2px] uppercase text-dim px-3 py-2.5 border-b border-line-soft">
-                            Research Queue
-                        </div>
-                        <ul className="db-scroll list-none m-0 p-1.5 overflow-y-auto flex flex-col gap-1">
-                            {rr.current && (() => {
-                                const t = TECHS[rr.current.id];
-                                if (!t) return null;
-                                const glyph = TECH_PATHS.find((p) => p.id === t.path)?.glyph;
-                                const pct = Math.floor((rr.current.progress ?? 0) * 100);
-                                return (
-                                    <li key="__current">
-                                        <div className="relative overflow-hidden flex items-center gap-2 w-full px-[9px] py-[7px] rounded-sm border border-gold bg-btn-bg cursor-default"
-                                             aria-label={`Now researching ${t.name}, ${pct} percent complete.`}>
-                                            <i className="absolute inset-y-0 left-0 right-auto z-0 bg-gold opacity-[0.16] pointer-events-none"
-                                               style={{width: `${pct}%`}}
-                                               aria-hidden="true"/>
-                                            <span className="relative z-[1] font-mono text-[11px] min-w-[22px] text-center text-gold"
-                                                  aria-hidden="true">▶</span>
-                                            <span className="relative z-[1] text-[13px] text-dim" aria-hidden="true">{glyph}</span>
-                                            <span className="relative z-[1] flex-1 text-xs whitespace-nowrap overflow-hidden text-ellipsis">{t.name}</span>
-                                            <span className="relative z-[1] font-mono text-[11px] text-gold">{pct}%</span>
-                                        </div>
-                                    </li>
-                                );
-                            })()}
-                            {rr.queue.map((qid, i) => {
-                                const t = TECHS[qid];
-                                if (!t) return null;
-                                const glyph = TECH_PATHS.find((p) => p.id === t.path)?.glyph;
-                                return (
-                                    <li key={qid}>
-                                        <button className="flex items-center gap-2 w-full px-[9px] py-[7px] rounded-sm border border-transparent bg-btn-bg text-text text-left cursor-pointer transition-[border-color,background] duration-150 ease-out-db hover:border-danger hover:bg-panel"
-                                                onClick={() => api.unqueue(qid)}
-                                                title={`Remove ${t.name} from the queue`}
-                                                aria-label={`Queue position ${i + 1}: ${t.name}, ${t.cost} points. Remove from queue.`}>
-                                            <span className="font-mono text-[11px] text-faint min-w-[22px]">#{i + 1}</span>
-                                            <span className="text-[13px] text-dim" aria-hidden="true">{glyph}</span>
-                                            <span className="flex-1 text-xs whitespace-nowrap overflow-hidden text-ellipsis">{t.name}</span>
-                                            <span className="font-mono text-[11px] text-gold">◆ {t.cost}</span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                            {!rr.queue.length && (
-                                <li className="list-none font-mono text-[10px] tracking-[0.4px] text-faint px-2.5 pt-2 pb-1.5">
-                                    Queue a tech to line it up next.
-                                </li>
-                            )}
-                        </ul>
-                    </div>
+                    <TechTreeQueuePanel rr={rr} api={api}/>
                 )}
             </div>
 
