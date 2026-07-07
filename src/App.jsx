@@ -351,12 +351,14 @@ export default function App() {
                                   }}
                                   onCancel={() => setScreen("menu")}/>}
             {screen === "lobby" && lobbyId &&
-                <LobbyScreen lobbyId={lobbyId} me={accountProfile} connecting={netStatus === "connecting"}
-                             data={data} onLaunch={joinMatch}
-                             onLeft={() => {
-                                 setLobbyId(null);
-                                 setScreen("menu");
-                             }}/>}
+                <ErrorBoundary onReset={() => { setLobbyId(null); setScreen("menu"); }}>
+                    <LobbyScreen lobbyId={lobbyId} me={accountProfile} connecting={netStatus === "connecting"}
+                                 data={data} onLaunch={joinMatch}
+                                 onLeft={() => {
+                                     setLobbyId(null);
+                                     setScreen("menu");
+                                 }}/>
+                </ErrorBoundary>}
             {screen === "playing" && world &&
                 <ErrorBoundary onReset={quitToMenu}>
                     <LiveGame key={session} world={world} net={netClient} globe={globe} keys={keys}
