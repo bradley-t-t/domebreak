@@ -8,7 +8,17 @@
 
 ## Status
 
-Accepted
+**Amended (2026-07-06) — real players only, bots removed.** The server-owned
+matchmaking, queue-grouping, no-host/no-browser, and auto-launch decisions below
+stand. The **bot-lobby backfill is removed**: a match now forms only once at
+least `MIN_PLAYERS` (default 2) real players are queued — admitting up to
+`MAX_PLAYERS` (default 6) — and a lone waiter simply keeps waiting. Each player
+claims their own nation inside the **full living world** (every other country is
+world AI, exactly as in single player), rather than the world being limited to
+the lobby roster. `TARGET_NATIONS` and all `BOT_*` tuning are gone; see
+`server/config.js` (`MIN_PLAYERS`/`MAX_PLAYERS`), `server/matchmaker.js`, and
+`server/match.js`. The "Bot Lobby Simulation" sections below are retained as
+historical record of the superseded approach.
 
 ## Date
 

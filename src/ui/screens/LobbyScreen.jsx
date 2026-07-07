@@ -7,12 +7,13 @@ import {fromGid3, toGid3} from "../../game/data/iso3.js";
 import {menuScreen, menuBg, menuInner, menuTitle, menuButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
-// War-room lobby: a live globe you claim your nation on. The roster (humans and
-// server-simulated bots, rendered identically — is_bot is never surfaced) sits
-// in a left command rail over the globe; clicking a country picks it as your
-// nation, every member's pick is tinted on the sphere, and a Ready button arms
-// the launch. There is no host and no manual start — the server auto-launches
-// once every member is ready (or on its lobby-ready timeout), per adr-004.
+// War-room lobby: a live globe you claim your nation on. The roster (real
+// players only — no bots) sits in a left command rail over the globe; clicking a
+// country picks it as your nation, every member's pick is tinted on the sphere,
+// and a Ready button arms the launch. There is no host and no manual start — the
+// server auto-launches once every member is ready (or on its lobby-ready
+// timeout), per adr-004. Each player claims their own nation inside the full
+// living world (every other country is world AI, as in single player).
 
 const RAIL_PAD = 360;       // left projection padding so the globe clears the rail
 
@@ -97,8 +98,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     useEffect(() => {
         if (readyOpt != null && myMember && !!myMember.ready === readyOpt) setReadyOpt(null);
     }, [myMember?.ready, myMember, readyOpt]);
-    const humans = members.filter((m) => !m.isBot).length;
-    const bots = members.length - humans;
+    const humans = members.length; // real players only — no bots
     const countryName = (iso) => data?.countries?.find((c) => c.iso === iso)?.name || iso;
 
     // Tint every member's claimed nation on the globe, keyed by slot color. A
@@ -240,7 +240,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                         Matchmaking · War Room
                     </div>
                     <h1 className={menuTitle({sm: true})}>WAR<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">ROOM</span></h1>
-                    <p className="text-dim tracking-[3px] uppercase text-[13px] mt-3 mb-0">{humans} commander{humans !== 1 ? "s" : ""} · {bots} joining</p>
+                    <p className="text-dim tracking-[3px] uppercase text-[13px] mt-3 mb-0">{humans} commander{humans !== 1 ? "s" : ""} in the war room</p>
                 </div>
 
                 {revertErr && <p className="text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm py-2 px-3 text-[12.5px] mt-2.5 pointer-events-auto">War server unreachable — try again.</p>}
