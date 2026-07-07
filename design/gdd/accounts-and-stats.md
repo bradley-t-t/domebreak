@@ -73,6 +73,19 @@ frames each session as a continuation rather than a cold start.
   match rows; RLS policies restrict `profiles` and `matches` `select` to `auth.uid() = id` /
   `auth.uid() = user_id` respectively.
 
+### Profile picture
+
+- The commander identity chip (top-right `MeBadge`, on menus and in the live HUD) shows a profile
+  picture: a unit icon of the player's choosing, tinted gold. With none chosen it falls back to the
+  first letter of the username.
+- The picture is a unit-icon slug (e.g. `tank`, `dome`), chosen from a curated set of the game's own
+  unit icons via a picker in the badge popover. It is a cosmetic identity choice only — it has no
+  gameplay effect.
+- Storage follows the username: the slug lives in the auth user's `user_metadata.avatar`, written
+  server-side through the `db-account` edge function (`set_avatar` action, service role), never by a
+  direct client table write. The server bounds the slug shape (`^[a-z0-9-]{1,32}$`); an empty value
+  clears it. Because it rides on the auth user, it persists across devices and reloads.
+
 ### Match reporting
 
 - Exactly one `matches` row is written per completed or abandoned game, via the `db-account` edge

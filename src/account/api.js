@@ -38,6 +38,13 @@ export async function fetchStats() {
     return data ?? {total_matches: 0, wins: 0, losses: 0, quits: 0, total_playtime_s: 0, last_match_at: null};
 }
 
+// The profile picture (a unit-icon slug) lives in auth user_metadata alongside
+// the username — read it straight off the current user, no table read needed.
+export async function fetchAvatar() {
+    const {data} = await supabase.auth.getUser();
+    return data?.user?.user_metadata?.avatar ?? null;
+}
+
 async function invokeAccount(body) {
     const {error} = await supabase.functions.invoke("db-account", {body});
     return {error: error?.message || null};
@@ -46,6 +53,15 @@ async function invokeAccount(body) {
 // Stamp last_login after a successful sign-in.
 export function touch() {
     return invokeAccount({action: "touch"});
+}
+
+// Set (or clear, with "") the profile picture. Writes go server-side; refresh
+// the local session afterward so user_metadata.avatar reflects the new value.
+export async function setAvatar(name) {
+    const {error} = await invokeAccount({action: "set_avatar", avatar: name ?? ""});
+    if (error) return {error};
+    await supabase.auth.refreshSession();
+    return {error: null};
 }
 
 // Report a finished/abandoned match. Fire-and-forget with one retry — a lost
