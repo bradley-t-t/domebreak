@@ -1025,6 +1025,7 @@ export const WARHEADS = {
     standard: {
         name: "Standard",
         short: "STD",
+        role: "Balanced",   // one-word niche, surfaced on the payload picker chip
         dmgMult: 1.0,
         prodCost: 30,
         prodTime: 4,
@@ -1037,6 +1038,7 @@ export const WARHEADS = {
     cluster: {
         name: "Cluster",
         short: "CLU",
+        role: "Area",
         dmgMult: 0.75,
         prodCost: 55,
         prodTime: 6,
@@ -1054,6 +1056,7 @@ export const WARHEADS = {
     hgv: {
         name: "Hypersonic Glide Vehicle",
         short: "HGV",
+        role: "Fast",
         dmgMult: 1.6,
         prodCost: 90,
         prodTime: 8,
@@ -1067,6 +1070,7 @@ export const WARHEADS = {
     thermo: {
         name: "Thermonuclear",
         short: "THR",
+        role: "Heavy",
         dmgMult: 2.4,
         prodCost: 130,
         prodTime: 11,

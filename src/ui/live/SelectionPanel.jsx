@@ -5,7 +5,7 @@
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
 import {allowedAmmo, armamentOf, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
-import {CAPTURE} from "../../game/data/constants.js";
+import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
@@ -54,7 +54,10 @@ export default function SelectionPanel({
             <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
                 {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
             </div>
-            {armament && <p className="font-mono text-[11px] tracking-[0.4px] text-dim mt-0 mb-2">Armament: {armament}</p>}
+            {/* Warhead-capable platforms get the interactive PAYLOAD picker below,
+                which is the source of truth for what they fire — the fixed armament
+                flavor line only shows for conventional units. */}
+            {armament && !def.warheads && <p className="font-mono text-[11px] tracking-[0.4px] text-dim mt-0 mb-2">Armament: {armament}</p>}
             {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
                 ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
                 : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
@@ -227,30 +230,52 @@ export default function SelectionPanel({
             })()}
             {UNITS[selectedUnit.type].kind === "offense" && (
                 <>
-                    {/* Warhead selector is only for missile units that draw the strategic
-                        arsenal (silo, launcher, etc.). Conventional units — tanks, aircraft,
-                        ships — fire their own munitions and get no warhead picker. */}
-                    {UNITS[selectedUnit.type].warheads && (
-                        <div className="flex gap-[5px] my-1 mb-[10px]">
-                            {/* Only the payloads this launcher is cleared to carry —
-                                never the full arsenal. Keeps the picker honest. */}
-                            {allowedAmmo(selectedUnit.type).map((k) => {
-                                const wh = WARHEADS[k];
-                                const stock = myNation?.ammo?.[k] || 0;
-                                const cur = (selectedUnit.warhead || "standard") === k;
-                                return <button key={k} className={cn(
-                                    "flex-1 flex items-center justify-center gap-1 font-mono text-[10.5px] py-[5px] px-1 border border-line bg-transparent text-dim rounded-sm [&_b]:text-text [&_b]:font-bold",
-                                    cur && "border-[var(--flame,#ff8a1a)] text-text bg-[color-mix(in_srgb,var(--flame,#ff8a1a)_14%,transparent)]"
-                                )}
-                                               style={{["--flame"]: wh.flame}}
-                                               aria-pressed={cur}
-                                               aria-label={`${wh.name} — ${stock} in stock`}
-                                               title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
-                                               onClick={() => api.setWarhead(selectedUnit.id, k)}><span
-                                    className="w-[7px] h-[7px] rounded-full bg-[var(--flame,#ff8a1a)] shadow-[0_0_6px_var(--flame,#ff8a1a)]"/>{wh.short}<b>{stock}</b></button>;
-                            })}
-                        </div>
-                    )}
+                    {/* Payload picker — only your own warhead-capable platforms (silo,
+                        launcher, sub, orbital). Each cleared round shows its real
+                        warhead icon, one-word role, and current stock, so the picker
+                        itself reads as the platform's identity: a launcher offers the
+                        fast HGV, a silo the heavy thermo — never the same generic set. */}
+                    {def.warheads && selectedUnit.slot === mySlot && (() => {
+                        const loaded = selectedUnit.warhead || "standard";
+                        const lw = WARHEADS[loaded];
+                        const loadedFallout = FALLOUT.warheads.includes(loaded);
+                        return (
+                            <div className="my-1 mb-[10px]">
+                                <div className="flex items-baseline justify-between mb-1.5">
+                                    <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">Payload</span>
+                                    <span className="font-mono text-[10.5px]" style={{color: lw.flame}}>{lw.name}</span>
+                                </div>
+                                <div className="flex gap-[5px]">
+                                    {allowedAmmo(selectedUnit.type).map((k) => {
+                                        const wh = WARHEADS[k];
+                                        const stock = myNation?.ammo?.[k] || 0;
+                                        const cur = loaded === k;
+                                        const empty = stock === 0;
+                                        return (
+                                            <button key={k} className={cn(
+                                                "flex-1 flex flex-col items-center gap-[3px] py-2 px-1 border border-line bg-transparent rounded-sm transition-[border-color,background] duration-[120ms] ease-out-db",
+                                                cur ? "border-[var(--flame,#ff8a1a)] bg-[color-mix(in_srgb,var(--flame,#ff8a1a)_14%,transparent)]" : "enabled:hover:border-blue",
+                                                empty && !cur && "opacity-45"
+                                            )}
+                                                    style={{["--flame"]: wh.flame}}
+                                                    aria-pressed={cur}
+                                                    aria-label={`${wh.name} — ${stock} in stock`}
+                                                    title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
+                                                    onClick={() => api.setWarhead(selectedUnit.id, k)}>
+                                                <UnitIcon name={WARHEAD_ICON[k]} color={wh.flame} size={20}/>
+                                                <span className={cn("font-mono text-[10.5px] font-bold", cur ? "text-text" : "text-dim")}>{wh.short}</span>
+                                                <span className="font-display text-[8px] tracking-[0.5px] uppercase text-faint">{wh.role}</span>
+                                                <span className={cn("font-mono text-[10px]", empty ? "text-danger" : "text-dim")}>{stock}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-[10.5px] leading-[1.45] text-dim mt-1.5 mb-0">
+                                    {lw.desc}{loadedFallout && <span className="text-danger"> · Leaves radioactive fallout.</span>}
+                                </p>
+                            </div>
+                        );
+                    })()}
                     {selectedUnit.targetId
                         ?
                         <button className={button()} onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold
