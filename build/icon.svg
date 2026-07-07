@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="8%" r="95%">
+      <stop offset="0%" stop-color="#20262f"/>
+      <stop offset="50%" stop-color="#0d0f13"/>
+      <stop offset="100%" stop-color="#060708"/>
+    </radialGradient>
+    <linearGradient id="hut" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d3d8de"/>
+    </linearGradient>
+  </defs>
+  <rect x="72" y="72" width="880" height="880" rx="200" fill="url(#bg)"/>
+  <rect x="73.5" y="73.5" width="877" height="877" rx="198.5" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="3"/>
+  <svg x="187" y="205" width="650" height="650" viewBox="0 0 512 512">
+    <path fill="url(#hut)"
+          d="M60 356 C70 250 150 165 300 152 C400 160 452 250 452 356 Z
+             M54 356 L458 356 Q468 356 468 366 L468 380 Q468 390 458 390 L54 390 Q44 390 44 380 L44 366 Q44 356 54 356 Z
+             M300 158 L293 158 C248 220 238 290 245 356 L252 356 C255 290 247 220 300 158 Z
+             M224 356 L288 356 L288 278 Q288 250 256 250 Q224 250 224 278 Z
+             M150 274 L150 300 Q150 312 162 312 L188 312 Q200 312 200 300 L200 274 Q200 262 188 262 L162 262 Q150 262 150 274 Z
+             M322 274 L322 300 Q322 312 334 312 L360 312 Q372 312 372 300 L372 274 Q372 262 360 262 L334 262 Q322 262 322 274 Z"/>
+  </svg>
+</svg>
