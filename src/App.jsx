@@ -151,8 +151,11 @@ export default function App() {
         reportedRef.current = false;
     };
 
-    const onStart = (iso, name) => {
+    const onStart = (iso) => {
         if (!data) return;
+        // Your in-game identity is your account username — no separate "commander
+        // name" is collected anywhere.
+        const name = accountProfile?.username || "Commander";
         // Full world: the player claims `iso`, every other country becomes a live AI
         // nation (buildSetup with no explicit roster enumerates the whole dataset).
         const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9));

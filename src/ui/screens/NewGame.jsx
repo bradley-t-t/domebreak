@@ -10,7 +10,6 @@ import {cn} from "../lib/cn.js";
 export default function NewGame({data, onStart, onBack, settings}) {
     const [q, setQ] = useState("");
     const [iso, setIso] = useState("US");
-    const [name, setName] = useState("Commander");
     const powers = useMemo(() => GREAT_POWERS
         .map((i) => data?.countries.find((c) => c.iso === i))
         .filter(Boolean), [data]);
@@ -31,10 +30,7 @@ export default function NewGame({data, onStart, onBack, settings}) {
             <div className={cn(card(), "gd-newgame w-[min(460px,94vw)] text-left max-h-[90vh] overflow-auto")}>
                 <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim">New Game</div>
                 {!data && <p className="text-dim m-0 mb-5 text-sm leading-[1.5]">Loading world data…</p>}
-                <label className={label()} htmlFor="gd-newgame-name">Commander Name</label>
-                <input id="gd-newgame-name" className={input()} value={name} maxLength={24}
-                       onChange={(e) => setName(e.target.value)}/>
-                <label className={cn(label(), "mt-4")} id="gd-newgame-nation-label">Choose Your Nation — Every Other Country Is
+                <label className={label()} id="gd-newgame-nation-label">Choose Your Nation — Every Other Country Is
                     a Live AI {sel &&
                         <span className={chip({subtle: true})}><Flag iso={sel.iso}/> {sel.name}</span>}</label>
                 <div className="gd-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
@@ -86,7 +82,7 @@ export default function NewGame({data, onStart, onBack, settings}) {
                 <div className={row()} style={{marginTop: 14}}>
                     <button className={button()} onClick={onBack}>Back</button>
                     <button className={button({variant: "primary"})} disabled={!sel}
-                            onClick={() => onStart(iso, name || "Commander")}>Start War
+                            onClick={() => onStart(iso)}>Start War
                     </button>
                 </div>
             </div>
