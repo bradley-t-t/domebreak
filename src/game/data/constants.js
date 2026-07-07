@@ -1035,7 +1035,9 @@ export const WARHEADS = {
         prodCost: 30,
         prodTime: 4,
         blastKm: 70,        // ground-zero blast radius; units inside take proximity-scaled damage
-        flame: "#ff8a1a",
+        flame: "#ff8a1a",   // exhaust/glow tint (SkyLayer --flame); trail is the smoke-plume color
+        trail: "#e3e7ec",
+        trailW: 2.4,
         desc: "Conventional single warhead. Cheap and quick to build."
     },
     cluster: {
@@ -1051,6 +1053,8 @@ export const WARHEADS = {
         primaryShare: 0.5,  // share of subs that stay on the primary target; the rest fan out
         blastKm: 0,         // area comes from the MIRV pattern (splash), not a single blast
         flame: "#61e0ff",
+        trail: "#bfe9f7",
+        trailW: 2.2,
         desc: "MIRV bus — splits into 8 warheads on reentry; half strike the target, half fan out to nearby targets."
     },
     hgv: {
@@ -1062,6 +1066,8 @@ export const WARHEADS = {
         blastKm: 90,        // kinetic terminal impact — a tight, hard-hitting blast
         evasion: 0.18,      // maneuvering glide body; added to the projectile's intercept-evasion
         flame: "#b98cff",
+        trail: "#cdb8ff",   // thin ionization streak — a glide body, not a rocket plume
+        trailW: 1.7,
         desc: "Maneuvering kinetic glide body — fast and very hard to intercept. Carried only by hypersonic launchers."
     },
     thermo: {
@@ -1072,6 +1078,8 @@ export const WARHEADS = {
         prodTime: 11,
         blastKm: 170,       // vast fireball — a wide blast on top of the lingering fallout cloud
         flame: "#ff3b6b",
+        trail: "#ffcdd6",   // heavy, dense plume off a big booster
+        trailW: 3.0,
         desc: "City-killer yield. Expensive and slow to produce."
     },
 };
