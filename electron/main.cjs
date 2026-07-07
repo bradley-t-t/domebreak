@@ -90,9 +90,27 @@ async function createWindow() {
     const win = new BrowserWindow({
         width: 1440, height: 920, minWidth: 1024, minHeight: 680,
         backgroundColor: "#05080f", title: "DomeBreak",
-        webPreferences: {contextIsolation: true, preload: path.join(__dirname, "preload.cjs")},
+        webPreferences: {
+            contextIsolation: true, preload: path.join(__dirname, "preload.cjs"),
+            devTools: false, spellcheck: false, backgroundThrottling: false,
+        },
     });
     win.setMenuBarVisibility(false);
+    // Native-app hardening: nothing that reveals a web runtime. No browser
+    // context menu, no pinch/keyboard zoom, no reload or devtools shortcuts.
+    // Game keys (WASD/arrows/space/etc.) are untouched.
+    win.webContents.on("context-menu", (e) => e.preventDefault());
+    win.webContents.setVisualZoomLevelLimits(1, 1);
+    win.webContents.on("before-input-event", (e, input) => {
+        const mod = input.control || input.meta;
+        const k = (input.key || "").toLowerCase();
+        const blocked =
+            (mod && ["r", "=", "-", "+", "0"].includes(k)) ||
+            k === "f5" || k === "f12" ||
+            (mod && input.shift && k === "i") ||
+            (input.meta && input.alt && k === "i");
+        if (blocked) e.preventDefault();
+    });
     win.webContents.setWindowOpenHandler(({url}) => {
         shell.openExternal(url);
         return {action: "deny"};
