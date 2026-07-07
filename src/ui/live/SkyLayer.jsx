@@ -64,7 +64,8 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
         };
         const pts = [];
         for (let i = 0; i <= SAMPLES; i++) pts.push(screenAt((p.progress * i) / SAMPLES));
-        trails.push({id: "p" + p.id, pts, color: "#e3e7ec", width: p.sub ? 1.3 : 2.4});
+        const wh = WARHEADS[p.warhead] || WARHEADS.standard;
+        trails.push({id: "p" + p.id, pts, color: wh.trail || "#e3e7ec", width: p.sub ? 1.3 : (wh.trailW || 2.4)});
         // Nose heading from an explicit behind-point on the actual flown track, so
         // the sprite faces its direction of travel in both flat and globe modes
         // even when trail samples are occluded or degenerate.
@@ -83,7 +84,8 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
                 deg: (dx || dy) ? (Math.atan2(dx, -dy) * 180) / Math.PI : 0,
                 kind: "missile",
                 sub: p.sub,
-                flame: (WARHEADS[p.warhead] || WARHEADS.standard).flame
+                warhead: WARHEADS[p.warhead] ? p.warhead : "standard",
+                flame: wh.flame
             });
         }
     }
@@ -141,7 +143,7 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
                     ["--flame"]: h.flame
                 }}>
                     {h.kind === "missile"
-                        ? <div className="db-missile"><span className="db-missile-glow"/><span
+                        ? <div className={`db-missile ${h.warhead || "standard"}`}><span className="db-missile-glow"/><span
                             className="db-missile-body"/><span className="db-missile-flame"/></div>
                         :
                         <div className={`db-interceptor ${h.variant || ""}`}><span className="db-int-body"/><span
