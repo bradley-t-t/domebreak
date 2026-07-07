@@ -489,45 +489,61 @@ export default function LiveGame({
     }, [overlayOpen, K.zoomIn, K.zoomOut]);
 
     // Camera pan: pan the flat map / rotate the globe while a pan key is held
-    // (bindings configurable in Settings; defaults W / A / S / D). Pixel-based
-    // panBy works in both projections (on the globe it rotates the camera).
+    // (bindings configurable in Settings; defaults W / A / S / D). Driven by ONE
+    // long constant-velocity ease per direction rather than a per-frame panBy.
+    // A per-frame panBy({duration:0}) fires a full movestart/move/moveend cycle
+    // every frame, forcing the vector map to re-settle tiles + labels ~60x/sec —
+    // that is the WASD stutter. A single ease keeps `move` flowing (overlays and
+    // unit markers still track the camera) but runs `moveend` (the heavy part)
+    // once per direction change, exactly like a mouse drag. Time-based, so the
+    // speed no longer varies with frame rate. panBy works in both projections.
     useEffect(() => {
-        const held = new Set();
         const dir = {[K.panUp]: "up", [K.panLeft]: "left", [K.panDown]: "down", [K.panRight]: "right"};
         const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+        const held = new Set();
+        // Re-aim the pan for whatever keys are currently held (idempotent for the
+        // same direction, so keydown auto-repeat and unrelated keys are no-ops).
+        const drive = () => {
+            const m = mapRef.current;
+            if (!m) return;
+            const dx = (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0);
+            const dy = (held.has("down") ? 1 : 0) - (held.has("up") ? 1 : 0);
+            if (!dx && !dy) {
+                m.stop(); // no direction held: settle once, like releasing a drag
+                return;
+            }
+            const len = Math.hypot(dx, dy);
+            // ~660 px/s (66000 px over 100 s; a hold never reaches the end in practice).
+            m.panBy([(dx / len) * 66000, (dy / len) * 66000], {duration: 100000, easing: (t) => t});
+        };
         const dn = (e) => {
-            if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+            if (e.repeat || overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
             const d = dir[keyToken(e)];
             if (d) {
                 held.add(d);
                 e.preventDefault();
+                drive();
             }
         };
         const up = (e) => {
             const d = dir[keyToken(e)];
-            if (d) held.delete(d);
-        };
-        const clear = () => held.clear();
-        let raf;
-        const loop = () => {
-            const m = mapRef.current;
-            if (m && held.size) {
-                const px = 11;
-                const dx = (held.has("right") ? px : 0) - (held.has("left") ? px : 0);
-                const dy = (held.has("down") ? px : 0) - (held.has("up") ? px : 0);
-                if (dx || dy) m.panBy([dx, dy], {duration: 0});
+            if (d) {
+                held.delete(d);
+                drive();
             }
-            raf = requestAnimationFrame(loop);
         };
-        raf = requestAnimationFrame(loop);
+        const clear = () => {
+            held.clear();
+            mapRef.current?.stop();
+        };
         window.addEventListener("keydown", dn);
         window.addEventListener("keyup", up);
         window.addEventListener("blur", clear);
         return () => {
-            cancelAnimationFrame(raf);
             window.removeEventListener("keydown", dn);
             window.removeEventListener("keyup", up);
             window.removeEventListener("blur", clear);
+            mapRef.current?.stop();
         };
     }, [overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
 
