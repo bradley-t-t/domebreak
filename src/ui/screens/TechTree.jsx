@@ -21,9 +21,15 @@ const PATHS = TECH_PATHS.length;
 const PAD = 46;
 const LANE_W = 150;   // left gutter for doctrine labels
 const NODE_W = 196;
-const NODE_H = 120;
+const NODE_H = 130;   // card min-height (also the horizontal wire-bus anchor)
+// The tallest card (2-line name + 2-line brief + full spec sheet + payload,
+// e.g. a locked "Early-Warning Satellite (DSP)") measures ~190px. ROW must
+// clear that so no card can ever overlap the doctrine row beneath it, and the
+// canvas must reserve NODE_H_MAX for the bottom row so tall cards aren't
+// clipped by the pan bounds.
+const NODE_H_MAX = 196;
 const COL = 312;      // horizontal step between tiers (wide enough to overflow the frame → drag to explore)
-const ROW = 178;      // vertical step between doctrine rows
+const ROW = 212;      // vertical step between doctrine rows (NODE_H_MAX + gutter)
 
 const nodeX = (tier) => PAD + LANE_W + tier * COL;          // tier: 0-based
 const nodeY = (row) => BAND_H + PAD + row * ROW;            // row: 0-based (below the era band)
@@ -31,7 +37,7 @@ const nodeY = (row) => BAND_H + PAD + row * ROW;            // row: 0-based (bel
 // height. BAND_H reserves vertical room at the top for the era header row.
 const BAND_H = 56;
 const CANVAS_W = PAD + LANE_W + (TIERS - 1) * COL + NODE_W + PAD;
-const CANVAS_H = BAND_H + PAD + (PATHS - 1) * ROW + NODE_H + PAD;
+const CANVAS_H = BAND_H + PAD + (PATHS - 1) * ROW + NODE_H_MAX + PAD;
 
 // Left/right world-space x of an era zone from its inclusive 1-based tier range.
 // Columns are laid out on 0-based indices (tier-1), so tiers [lo,hi] cover the
@@ -69,7 +75,7 @@ const NODE_STATE_CLS = {
 // them (the drafting device that makes a blueprint read as a blueprint).
 function SpecRow({label, value, muted}) {
     return (
-        <span className="relative flex items-center gap-1.5 font-mono text-[9px] leading-[1.6]">
+        <span className="relative flex items-center gap-1.5 font-mono text-[9px] leading-[1.5]">
             <span className="text-faint tracking-[1px]">{label}</span>
             <span className="gd-tt-leader flex-1 self-center" aria-hidden="true"/>
             <span className={cn("tabular-nums whitespace-nowrap overflow-hidden text-ellipsis",
@@ -150,24 +156,24 @@ function Node({id, tech, nation, api, style}) {
             </span>
 
             {/* tech name + one-line brief */}
-            <span className="relative font-display font-bold text-[12.5px] leading-[1.18] mt-[6px]">{tech.name}</span>
-            <span className="relative text-[9.5px] text-dim leading-[1.32] mt-[2px] line-clamp-2">{tech.desc}</span>
+            <span className="relative font-display font-bold text-[12.5px] leading-[1.14] mt-[6px]">{tech.name}</span>
+            <span className="relative text-[9.5px] text-dim leading-[1.3] mt-[2px] line-clamp-2">{tech.desc}</span>
 
             {/* spec sheet */}
-            <span className="gd-tt-rule relative block mt-[8px] mb-[5px]" aria-hidden="true"/>
+            <span className="gd-tt-rule relative block mt-[6px] mb-[4px]" aria-hidden="true"/>
             <SpecRow label="COST" value={`◆ ${tech.cost}`}/>
             <SpecRow label="TIME" value={`${tech.time}s`}/>
             {(locked || avail) && reqName && <SpecRow label="REQ" value={reqName} muted/>}
 
             {/* payload — the unit this tech puts in the field */}
             {unlockType && (
-                <span className="gd-tt-payload relative flex items-center gap-2 mt-[9px] pt-[8px]"
+                <span className="gd-tt-payload relative flex items-center gap-2 mt-[7px] pt-[7px]"
                       title={`Unlocks: ${unlockName}`}>
-                    <span className="gd-tt-payload-icon flex-none grid place-items-center w-[30px] h-[30px]">
-                        <UnitIcon name={UNIT_ICON[unlockType]} size={24}/>
+                    <span className="gd-tt-payload-icon flex-none grid place-items-center w-[26px] h-[26px]">
+                        <UnitIcon name={UNIT_ICON[unlockType]} size={21}/>
                     </span>
                     <span className="flex flex-col gap-px overflow-hidden">
-                        <span className="font-mono text-[7.5px] tracking-[1.8px] uppercase text-faint">Payload</span>
+                        <span className="font-mono text-[7.5px] tracking-[1.8px] uppercase text-faint leading-none">Payload</span>
                         <span className="font-display font-semibold text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">
                             {unlockName}
                         </span>
