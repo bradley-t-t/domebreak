@@ -11,7 +11,6 @@ import {LEADERSHIP} from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {ensureHangar, launchEscort, launchFerry} from "./aircraft.js";
-import {haversine} from "../geo/geo.js";
 
 // One airstrip may only launch a ferry every LEADERSHIP.launchGapSec — a takeoff
 // queue, so a strip staggers its departures instead of scrambling its whole
@@ -44,8 +43,7 @@ export function distributeLeadership(nations, cities) {
 }
 
 // Seeds a single nation's fresh leader-token pool across its own cities (passed in),
-// resetting its leadership state. Used at world creation (per nation) and by the
-// civil-war fracture to re-seed both successor governments from scratch.
+// resetting its leadership state. Used at world creation, per nation.
 export function seedLeadership(n, ownCities) {
     n.lead = {total: LEADERSHIP.startTokens, lost: 0, sheltered: 0};
     n.commandMult = 1;
@@ -159,48 +157,6 @@ export function releaseLeadership(w, slot) {
     if (!airstripsOf(w, slot).length) return {error: "Build an Airstrip first."};
     n._evac = "release";
     return {ok: true};
-}
-
-// Re-aim an in-flight leadership ferry at assets its CURRENT owner actually holds.
-// Called after a civil war splits a nation (stability.js): the ferry's slot may have
-// defected to the breakaway state, leaving its mission pointed at a now-enemy city,
-// bunker, or home strip. A laden ferry is redirected to drop at an owned bunker if
-// one survives, else the nearest owned living city; an empty one abandons its run
-// and returns to an owned airstrip. Its fighter escort follows it to the new owner.
-export function retargetFerry(w, u) {
-    const m = u.mission;
-    if (!m || m.role !== "leadershipFerry") return;
-    const slot = u.slot;
-    const bunker = bunkerOf(w, slot);
-    const strips = airstripsOf(w, slot);
-    // Nearest owned living city — the fallback drop when no bunker survives.
-    let city = null, best = Infinity;
-    for (const c of w.cities) {
-        if (c.slot !== slot || !c.alive) continue;
-        const d = haversine(u.lng, u.lat, c.lng, c.lat);
-        if (d < best) { best = d; city = c; }
-    }
-    // Home strip: keep the original if still owned, else the nearest owned one.
-    let home = strips.find((a) => a.id === m.homeId) || null;
-    if (!home && strips.length) {
-        let hb = Infinity;
-        for (const a of strips) {
-            const d = haversine(u.lng, u.lat, a.lng, a.lat);
-            if (d < hb) { hb = d; home = a; }
-        }
-    }
-    if (home) m.homeId = home.id;
-    if (m.cargo > 0) {
-        if (bunker) { m.mode = "shelter"; m.bunkerId = bunker.id; m.phase = "toDrop"; } // drop -> bunker
-        else if (city) { m.mode = "release"; m.capId = city.id; m.phase = "toDrop"; }    // drop -> owned city
-        else m.phase = "toHome"; // nothing owned to drop into; carry home and redeposit
-    } else {
-        m.phase = "toHome"; // empty mid-run — abandon the pickup, return to an owned base
-    }
-    // Keep the escort with its ferry's new allegiance.
-    for (const e of w.units) {
-        if (e.mission?.role === "leadershipEscort" && e.mission.leadId === u.id) e.slot = slot;
-    }
 }
 
 // Refreshes every living nation's stored command multiplier once per tick, so the

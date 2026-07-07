@@ -1,8 +1,7 @@
-// National Stability & Civil War: the live-target penalty model, easing/recovery,
-// and the civil-war fracture. Deterministic; the only RNG is the seeded rand used
-// for a new rebel's think timer. Spec: design/gdd/stability-and-civil-war.md.
+// National Stability: the live-target penalty model, easing/recovery, and the HUD
+// status readout. Deterministic — no RNG, no history. Spec: design/gdd/stability.md.
 import {describe, expect, it} from "vitest";
-import {fractureNation, stabilityStatus, stabilityTarget, updateStability} from "../../../src/game/engine.js";
+import {stabilityStatus, stabilityTarget, updateStability} from "../../../src/game/engine.js";
 import {evacTick} from "../../../src/game/sim/leadership.js";
 import {STABILITY} from "../../../src/game/data/constants.js";
 
@@ -96,164 +95,12 @@ describe("updateStability — easing and recovery", () => {
 });
 
 describe("stabilityStatus", () => {
-    it("test_reports_pct_and_not_collapsing_when_stable", () => {
+    it("test_reports_pct_and_target", () => {
         const n = nation({stability: 88});
         const w = world({nations: [n], cities: [city()]});
         const s = stabilityStatus(w, 5);
         expect(s.pct).toBe(88);
-        expect(s.collapsing).toBe(false);
-    });
-
-    it("test_reports_collapse_countdown", () => {
-        const n = nation({stability: 0, _unrest: 20});
-        const w = world({nations: [n], cities: [city()]});
-        const s = stabilityStatus(w, 5);
-        expect(s.collapsing).toBe(true);
-        expect(s.secToCivilWar).toBe(STABILITY.civilWarSec - 20);
-    });
-});
-
-describe("fractureNation — the civil war", () => {
-    // Four cities spread west→east; capital at the far west.
-    function fourCityWorld() {
-        const parent = nation({slot: 5, name: "Testland", points: 1000, gdp: 20});
-        const cities = [
-            city({id: "cap", slot: 5, cap: 1, lng: -10, pop: 4e6}),
-            city({id: "w2", slot: 5, lng: -5, pop: 2e6}),
-            city({id: "e1", slot: 5, lng: 5, pop: 2e6}),
-            city({id: "e2", slot: 5, lng: 10, pop: 3e6}),
-        ];
-        const units = [
-            {id: "uW", slot: 5, type: "battery", hp: 60, lng: -9, lat: 0}, // near capital → loyal
-            {id: "uE", slot: 5, type: "battery", hp: 60, lng: 8, lat: 0},  // in the east → defects
-        ];
-        return {parent, w: world({nations: [parent], cities, units})};
-    }
-
-    it("test_capital_half_stays_east_half_secedes", () => {
-        const {parent, w} = fourCityWorld();
-        const rebel = fractureNation(w, parent);
-        expect(rebel).toBeTruthy();
-        expect(w.nations.length).toBe(2);
-        expect(rebel.slot).toBe(6);
-        expect(rebel.rebel).toBe(true);
-        expect(rebel.isAi).toBe(true);
-        // Eastern cities changed hands; capital stayed loyal.
-        expect(w.cities.find((c) => c.id === "e1").slot).toBe(6);
-        expect(w.cities.find((c) => c.id === "e2").slot).toBe(6);
-        expect(w.cities.find((c) => c.id === "cap").slot).toBe(5);
-        expect(w.cities.find((c) => c.id === "w2").slot).toBe(5);
-    });
-
-    it("test_local_units_defect_others_stay", () => {
-        const {parent, w} = fourCityWorld();
-        fractureNation(w, parent);
-        expect(w.units.find((u) => u.id === "uE").slot).toBe(6); // eastern unit defects
-        expect(w.units.find((u) => u.id === "uW").slot).toBe(5); // western unit loyal
-    });
-
-    it("test_both_sides_at_war_and_reseeded", () => {
-        const {parent, w} = fourCityWorld();
-        const rebel = fractureNation(w, parent);
-        expect(parent.relations[6]).toBe("war");
-        expect(rebel.relations[5]).toBe("war");
-        // Fresh leadership for both, summing to the full pool over their cities.
-        expect(parent.lead.total).toBe(12);
-        expect(rebel.lead.total).toBe(12);
-        const parentLeaders = w.cities.filter((c) => c.slot === 5).reduce((s, c) => s + (c.leaders || 0), 0);
-        const rebelLeaders = w.cities.filter((c) => c.slot === 6).reduce((s, c) => s + (c.leaders || 0), 0);
-        expect(parentLeaders).toBe(12);
-        expect(rebelLeaders).toBe(12);
-        // Pressure relieved on both.
-        expect(parent.stability).toBe(STABILITY.resetStability);
-        expect(rebel.stability).toBe(STABILITY.resetStability);
-        expect(parent._unrest).toBe(0);
-    });
-
-    it("test_single_city_nation_cannot_fracture", () => {
-        const parent = nation({slot: 5, stability: 0, _unrest: 999});
-        const w = world({nations: [parent], cities: [city({id: "only", slot: 5, cap: 1})]});
-        const rebel = fractureNation(w, parent);
-        expect(rebel).toBe(null);
-        expect(w.nations.length).toBe(1);
-        expect(parent.stability).toBe(STABILITY.resetStability); // pressure relieved instead
-        expect(parent._unrest).toBe(0);
-    });
-
-    it("test_updateStability_triggers_civil_war_after_civilWarSec", () => {
-        const n = nation({slot: 5, stability: 0, relations: {100: "war", 101: "war", 102: "war", 103: "war", 104: "war", 105: "war", 106: "war", 107: "war", 108: "war", 109: "war"}});
-        const w = world({nations: [n], cities: [city({id: "a", slot: 5, cap: 1, lng: 0}), city({id: "b", slot: 5, lng: 10})]});
-        updateStability(w, STABILITY.civilWarSec); // one big tick past the threshold
-        expect(w.nations.length).toBe(2);
-        expect(w.nations.some((m) => m.rebel)).toBe(true);
-        expect(n.stability).toBe(STABILITY.resetStability);
-    });
-});
-
-describe("fractureNation — leadership ferries caught in transit", () => {
-    // Capital far west (loyal); east secedes. A bunker + a laden ferry sit in the
-    // east, a second laden ferry and an airstrip in the west, so we can assert each
-    // successor's in-flight planes get re-aimed at assets it actually owns.
-    function ferryWorld() {
-        const parent = nation({slot: 5, name: "Testland", points: 1000, gdp: 20});
-        const cities = [
-            city({id: "cap", slot: 5, cap: 1, lng: -10, pop: 4e6}),
-            city({id: "w2", slot: 5, lng: -6, pop: 2e6}),
-            city({id: "e1", slot: 5, lng: 6, pop: 2e6}),
-            city({id: "e2", slot: 5, lng: 10, pop: 3e6}),
-        ];
-        const ferry = ({id, lng, mission = {}}) => ({
-            id, slot: 5, type: "transport", hp: 50, lng, lat: 0,
-            mission: {role: "leadershipFerry", mode: "shelter", phase: "toPickup", capId: "cap", bunkerId: "bk", homeId: "as", timer: 0, cargo: 0, ...mission},
-        });
-        const units = [
-            {id: "bk", slot: 5, type: "bunker", hp: 200, lng: 9, lat: 0},    // east → defects to rebel
-            {id: "as", slot: 5, type: "airstrip", hp: 100, lng: -9, lat: 0}, // west → stays loyal
-            ferry({id: "fEast", lng: 8, mission: {cargo: 2}}),              // laden, defects to rebel
-            ferry({id: "fWest", lng: -8, mission: {cargo: 3}}),            // laden, stays loyal
-            ferry({id: "fEmpty", lng: -7, mission: {cargo: 0, phase: "toPickup"}}), // empty, loyal
-            {id: "escE", slot: 5, type: "fighter", hp: 40, lng: -9, lat: 0, mission: {role: "leadershipEscort", leadId: "fEast"}},
-        ];
-        return {parent, w: world({nations: [parent], cities, units})};
-    }
-    const ferryOf = (w, id) => w.units.find((u) => u.id === id).mission;
-
-    it("test_laden_rebel_ferry_delivers_to_its_own_bunker", () => {
-        const {parent, w} = ferryWorld();
-        fractureNation(w, parent);
-        expect(w.units.find((u) => u.id === "fEast").slot).toBe(6); // defected to the breakaway
-        expect(w.units.find((u) => u.id === "bk").slot).toBe(6);    // bunker went with the east
-        const m = ferryOf(w, "fEast");
-        expect(m.mode).toBe("shelter");   // dropping cargo INTO the bunker
-        expect(m.bunkerId).toBe("bk");
-        expect(m.phase).toBe("toDrop");
-    });
-
-    it("test_laden_ferry_with_no_owned_bunker_falls_back_to_owned_city", () => {
-        const {parent, w} = ferryWorld();
-        fractureNation(w, parent);
-        // The loyalist half lost its only bunker to the rebels → drop at an owned city.
-        expect(w.units.find((u) => u.id === "fWest").slot).toBe(5);
-        const m = ferryOf(w, "fWest");
-        expect(m.mode).toBe("release"); // release drops INTO a city
-        expect(m.phase).toBe("toDrop");
-        const dropCity = w.cities.find((c) => c.id === m.capId);
-        expect(dropCity.slot).toBe(5);   // and it's a city the loyalists actually own
-        expect(dropCity.alive).toBe(true);
-    });
-
-    it("test_empty_ferry_abandons_run_and_heads_home", () => {
-        const {parent, w} = ferryWorld();
-        fractureNation(w, parent);
-        expect(ferryOf(w, "fEmpty").phase).toBe("toHome");
-        expect(ferryOf(w, "fEmpty").homeId).toBe("as"); // an owned airstrip
-    });
-
-    it("test_escort_follows_its_ferry_to_the_new_state", () => {
-        const {parent, w} = ferryWorld();
-        fractureNation(w, parent);
-        // Escort sat in the west (would stay loyal on its own) but tracks fEast → rebel.
-        expect(w.units.find((u) => u.id === "escE").slot).toBe(6);
+        expect(s.target).toBe(100); // healthy nation trends to 100
     });
 });
 

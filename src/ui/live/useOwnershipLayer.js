@@ -1,12 +1,11 @@
 // Ownership territory overlay for the political map.
 //
 // The base map colors every province by its native flag (GID_0 -> colors.json),
-// which cannot show who actually *controls* land — conquered provinces and, above
-// all, a civil-war splinter (which shares its parent's ISO/flag) look identical to
-// their neighbours. This hook recolors a province only when its controller is NOT
-// its native nation: captured land takes the conqueror's flag color, a breakaway
-// state takes a distinct per-slot color. Peacetime territory is left untouched, so
-// the tuned flag map is unchanged until a border actually moves.
+// which cannot show who actually *controls* land — provinces captured in war look
+// identical to their neighbours. This hook recolors a province only when its
+// controller is NOT its native nation: captured land takes the conqueror's flag
+// color. Peacetime territory is left untouched, so the tuned flag map is unchanged
+// until a border actually moves.
 //
 // A city's province comes from public/assets/city-region.json (precomputed
 // point-in-polygon, see scripts/gen-city-region.mjs) — keyed by the engine's city
@@ -73,14 +72,14 @@ export function useOwnershipLayer(w) {
             const n = nationBySlot.get(owner);
             if (!n) continue;
             const nativeGid = gid1.split(".")[0]; // GADM: "USA.5_1" -> "USA"
-            let color = null;
-            if (n.rebel) {
-                color = colorForSlot(n.slot);                       // breakaway state: own identity
-            } else {
-                const ownerGid = toGid3(n.iso);
-                if (ownerGid && ownerGid !== nativeGid) color = flags[ownerGid] || colorForSlot(n.slot); // conquered
+            const ownerGid = toGid3(n.iso);
+            // Recolor only conquered land — a province held by a nation other than its
+            // native one, in the conqueror's flag color.
+            if (ownerGid && ownerGid !== nativeGid) {
+                const color = flags[ownerGid] || colorForSlot(n.slot);
+                pairs.push(gid1, color);
+                lineIds.push(gid1);
             }
-            if (color) { pairs.push(gid1, color); lineIds.push(gid1); }
         }
 
         setFill(pairs.length ? ["match", ["get", "GID_1"], ...pairs, EMPTY] : EMPTY);

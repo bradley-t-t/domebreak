@@ -196,4 +196,4 @@ export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {step, growCities} from "./sim/tick.js";
 
-export {updateStability, stabilityOf, stabilityStatus, stabilityTarget, fractureNation} from "./sim/stability.js";
+export {updateStability, stabilityOf, stabilityStatus, stabilityTarget} from "./sim/stability.js";

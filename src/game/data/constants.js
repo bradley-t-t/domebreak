@@ -195,13 +195,11 @@ export const LEADERSHIP = {
     penalizeResearch: true,     // scale research speed by the command factor too
 };
 
-// National Stability (see design/gdd/stability-and-civil-war.md). Each nation's
-// stability (0–100) eases toward a live target of 100 − Σ penalties, drawn from
-// population loss, wars beyond the first, leadership killed or bunkered, and points
-// deficits. A nation held at collapse for civilWarSec fractures into a breakaway AI
-// (civil war). All values are data-driven knobs — no stability number is hardcoded
-// in systems code. Pure/deterministic apart from the seeded rand used to stagger a
-// new rebel AI's think timer.
+// National Stability (see design/gdd/stability.md). Each nation's stability (0–100)
+// eases toward a live target of 100 − Σ penalties, drawn from population loss, wars
+// beyond the first, leadership killed or bunkered, and points deficits. It is an
+// ambient HUD pressure readout with no mechanical consequence of its own. All values
+// are data-driven knobs — no stability number is hardcoded in systems code.
 export const STABILITY = {
     easePerSec: 0.05,           // fraction of the gap to target closed per game-second
     freeWars: 1,                // simultaneous wars allowed before the "too many wars" penalty starts
@@ -210,10 +208,6 @@ export const STABILITY = {
     wLeadLoss: 40,              // stability lost at total leadership loss (linear in fraction lost)
     wBunkered: 10,              // stability lost while leadership is fully sheltered (small, linear)
     wDeficit: 15,               // flat stability lost while running a points deficit
-    collapseAt: 1,              // stability at/below this counts as collapse (starts the civil-war timer)
-    civilWarSec: 60,            // sustained game-seconds at collapse before a nation fractures
-    resetStability: 50,         // both halves' stability immediately after a civil-war split
-    minCitiesToFracture: 2,     // minimum living cities a nation needs to split in two
 };
 
 export const UNITS = {
