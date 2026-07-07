@@ -98,22 +98,29 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     // the map's own theming; the paint expression is rebuilt as picks change.
     useEffect(() => {
         const m = mapRef.current;
-        if (!m || !m.getLayer?.("lobby-pick")) return;
-        const picks = {};
-        for (const mem of members) {
-            const gid = toGid3(mem.iso);
-            if (gid) picks[gid] = SLOT_COLOR[mem.slot] || "#8ecae6"; // dedupe by GID_0 (match labels must be unique)
-        }
-        // Paint the optimistic pick immediately, before the server echo lands.
-        if (optimisticIso && myMember) {
-            const gid = toGid3(optimisticIso);
-            if (gid) picks[gid] = SLOT_COLOR[myMember.slot] || "#8ecae6";
-        }
-        const pairs = Object.entries(picks).flat();
-        const expr = pairs.length ? ["match", ["get", "GID_0"], ...pairs, "rgba(0,0,0,0)"] : "rgba(0,0,0,0)";
+        // Bail before touching the map unless its style is fully live. Calling
+        // getLayer/setPaintProperty on a map whose style is still loading OR being
+        // torn down (the lobby -> match handoff) throws inside MapLibre
+        // ("Cannot read properties of undefined (reading 'getLayer')") — and since
+        // LobbyScreen isn't inside an error boundary, that uncaught throw blanks the
+        // whole app. Guard on isStyleLoaded AND wrap so it can never escape.
+        if (!m || !m.isStyleLoaded?.()) return;
         try {
+            if (!m.getLayer("lobby-pick")) return;
+            const picks = {};
+            for (const mem of members) {
+                const gid = toGid3(mem.iso);
+                if (gid) picks[gid] = SLOT_COLOR[mem.slot] || "#8ecae6"; // dedupe by GID_0 (match labels must be unique)
+            }
+            // Paint the optimistic pick immediately, before the server echo lands.
+            if (optimisticIso && myMember) {
+                const gid = toGid3(optimisticIso);
+                if (gid) picks[gid] = SLOT_COLOR[myMember.slot] || "#8ecae6";
+            }
+            const pairs = Object.entries(picks).flat();
+            const expr = pairs.length ? ["match", ["get", "GID_0"], ...pairs, "rgba(0,0,0,0)"] : "rgba(0,0,0,0)";
             m.setPaintProperty("lobby-pick", "fill-color", expr);
-        } catch { /* style tearing down */
+        } catch { /* style not ready / tearing down */
         }
     }, [members, mapReady, optimisticIso, myMember?.slot]);
 
