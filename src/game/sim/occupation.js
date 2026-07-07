@@ -75,7 +75,11 @@ export function captureTick(w, dt) {
             c.capture.progress = Math.max(0, c.capture.progress - CAPTURE.decayPerSec * dt);
             continue;
         }
-        c.capture.progress += dt / CAPTURE.captureSec;
+        // The nearest captor pressing an assault on this very city (its attack
+        // order is set to it) drives the flip faster — boots kicking the door in.
+        const assault = captor.targetId === c.id ? (CAPTURE.assaultMult || 1) : 1;
+        c.capture.assault = assault > 1; // surfaced in the capture HUD
+        c.capture.progress += (dt / CAPTURE.captureSec) * assault;
         if (c.capture.progress >= 1) {
             const toSlot = captor.slot, fromSlot = c.slot;
             w.events.push({

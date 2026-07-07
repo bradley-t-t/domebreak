@@ -31,7 +31,7 @@ import {cva} from "class-variance-authority";
  * card-paper.css flips it to solid ink when nested in a modal card.
  */
 export const button = cva(
-    "gd-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-gd enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-45 disabled:cursor-not-allowed",
+    "gd-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-gd enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
     {
         variants: {
             variant: {
