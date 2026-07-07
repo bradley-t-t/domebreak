@@ -12,6 +12,7 @@ import {
     queueAmmo,
     queueUnit,
     scrapUnit,
+    setAutoResearch,
     setAwacsPatrol,
     setMarch,
     releaseLeadership,
@@ -77,6 +78,11 @@ export function useEngine(world) {
         },
         unqueue: (id) => {
             const r = unqueueResearch(ref.current, ref.current.mySlot, id);
+            force();
+            return r;
+        },
+        setAutoResearch: (on) => {
+            const r = setAutoResearch(ref.current, ref.current.mySlot, on);
             force();
             return r;
         },
