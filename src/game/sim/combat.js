@@ -88,7 +88,9 @@ export function launch(w, unit, target, warhead) {
         // the loaded warhead (an HGV payload is hard to intercept whatever fires it).
         // The defender subtracts this from its interceptor hit probability (tick.js).
         evasion: (n?.hypersonicEvasion ?? 0) + (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
-        speed: UNITS[unit.type].speed ?? MISSILE_SPEED,
+        // Boost-glide rounds (HGV) overspeed the platform's baseline; speedMult is
+        // data-driven on the warhead so a hypersonic payload is fast whatever fires it.
+        speed: (UNITS[unit.type].speed ?? MISSILE_SPEED) * (WARHEADS[warhead]?.speedMult ?? 1),
         tried: [],
         altNorm: 0,
         fromLng: unit.lng,
