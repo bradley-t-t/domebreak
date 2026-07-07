@@ -1,5 +1,10 @@
 # GDD — Strategic Payloads & Launch Platforms
 
+> **⚠ SUPERSEDED by `design/gdd/strategic-arsenal.md`.** This document describes
+> the earlier flat, one-round-per-platform model. The arsenal has since moved to a
+> two-axis model (delivery vehicle × warhead). Kept for history; do not implement
+> against it.
+
 ## 1. Overview
 
 DomeBreak's offense is a two-part system: **launch platforms** (the units that
