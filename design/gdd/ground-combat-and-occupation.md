@@ -23,7 +23,7 @@ Two coupled changes to the land war:
    not something a THAAD battery shoots down.
 2. **Occupation.** An Infantry or Tank battalion that holds an enemy city — after the
    city's local defenders have been cleared — captures it over time. Because territory in
-   GoldenDome is a Voronoi partition of living cities (see `inTerritory`), flipping a
+   DomeBreak is a Voronoi partition of living cities (see `inTerritory`), flipping a
    captured city's `slot` transfers its surrounding territory automatically. Capture flips
    the **entire state** the city belongs to, so a captured province becomes part of the
    occupier's nation — income, population, and map all follow.

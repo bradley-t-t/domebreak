@@ -82,17 +82,17 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
                 <h1 className={menuTitle({sm: true})}>War Room</h1>
                 {!timedOut ? (
                     <>
-                        <div className={cn("gd-searching-pulse flex justify-center gap-2.5 my-2.5 mb-[18px]", reduceMotion && "still")} aria-hidden="true">
+                        <div className={cn("db-searching-pulse flex justify-center gap-2.5 my-2.5 mb-[18px]", reduceMotion && "still")} aria-hidden="true">
                             <span className={cn("w-2.5 h-2.5 rounded-full bg-gold", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
                             <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.2s]", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
                             <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.4s]", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
                         </div>
                         <div role="status" aria-live="polite">
-                            <p className="gd-searching-label text-sm text-text m-0">Searching for commanders…</p>
-                            <p className="gd-searching-elapsed font-mono text-xl text-dim mt-2 tracking-[2px]" aria-label={`Elapsed time ${mm} minutes ${ss} seconds`}>{mm}:{ss}</p>
+                            <p className="db-searching-label text-sm text-text m-0">Searching for commanders…</p>
+                            <p className="db-searching-elapsed font-mono text-xl text-dim mt-2 tracking-[2px]" aria-label={`Elapsed time ${mm} minutes ${ss} seconds`}>{mm}:{ss}</p>
                         </div>
                         <div aria-live="assertive">
-                            {err && <p className="gd-friends-err text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm py-2 px-3 text-[12.5px] mt-2.5">{err}</p>}
+                            {err && <p className="db-friends-err text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm py-2 px-3 text-[12.5px] mt-2.5">{err}</p>}
                         </div>
                         <button className={cn(button(), "block mt-4 mx-auto")} disabled={busy} onClick={doCancel}
                                 aria-label="Cancel matchmaking search">
@@ -101,7 +101,7 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
                     </>
                 ) : (
                     <>
-                        <p className="gd-searching-label text-sm text-text m-0" role="status" aria-live="polite">Couldn't find a match — try again.</p>
+                        <p className="db-searching-label text-sm text-text m-0" role="status" aria-live="polite">Couldn't find a match — try again.</p>
                         <div className={row()}>
                             <button className={button({variant: "primary"})} disabled={busy} onClick={doRetry}>
                                 {busy ? "Retrying…" : "Retry"}

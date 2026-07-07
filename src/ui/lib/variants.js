@@ -1,15 +1,15 @@
 import {cva} from "class-variance-authority";
-// The .gd-card "paper" re-theme lives (unlayered) in src/index.css — the one
+// The .db-card "paper" re-theme lives (unlayered) in src/index.css — the one
 // stylesheet — so it is globally present; no per-module CSS import here.
 
 /**
- * GoldenDome shared primitive vocabulary (ADR-0005, Tailwind v4 migration).
+ * DomeBreak shared primitive vocabulary (ADR-0005, Tailwind v4 migration).
  *
  * Every export below is a `cva()` call translating one primitive class from
  * the legacy styles.css into Tailwind utilities + the `@theme` tokens in
  * index.css, reproducing the original rule exactly. Where a `@layer vfx`
  * rule in index.css targets a class by name (a `::before`/`::after`
- * pseudo-element, or a `.gd-card` descendant re-theme selector), that
+ * pseudo-element, or a `.db-card` descendant re-theme selector), that
  * literal class name is retained in the base string as a "VFX hook" —
  * removing it would silently break the pseudo-element/animation/re-theme
  * that keys off it. Each variant's doc comment says whether it carries one.
@@ -23,15 +23,15 @@ import {cva} from "class-variance-authority";
  */
 
 /* ---------------------------------------------------------------------- */
-/* button — .gd-btn / .gd-btn.primary (styles.css ~321-371)                */
+/* button — .db-btn / .db-btn.primary (styles.css ~321-371)                */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `gd-btn` (+ `primary`). `.gd-btn.primary::after`
- * in @layer vfx is the hover sheen sweep; `.gd-card .gd-btn.primary` in
+ * VFX hook: retains literal `db-btn` (+ `primary`). `.db-btn.primary::after`
+ * in @layer vfx is the hover sheen sweep; `.db-card .db-btn.primary` in
  * card-paper.css flips it to solid ink when nested in a modal card.
  */
 export const button = cva(
-    "gd-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-gd enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
+    "db-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-gd enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
     {
         variants: {
             variant: {
@@ -45,16 +45,16 @@ export const button = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* miniButton — .gd-mini (+ hover/danger/disabled) (styles.css ~525-548,   */
+/* miniButton — .db-mini (+ hover/danger/disabled) (styles.css ~525-548,   */
 /* 1339-1347)                                                              */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `gd-mini` (+ `danger`). `.gd-card .gd-mini` and
- * `.gd-card .gd-mini.danger` in card-paper.css re-theme it to the light
+ * VFX hook: retains literal `db-mini` (+ `danger`). `.db-card .db-mini` and
+ * `.db-card .db-mini.danger` in card-paper.css re-theme it to the light
  * paper surface when nested inside a `card()`.
  */
 export const miniButton = cva(
-    "gd-mini font-display text-[11px] font-semibold px-[9px] py-1 rounded-sm border border-line bg-linear-to-b from-[#17191d] to-[#0f1114] text-text enabled:hover:border-blue disabled:opacity-40 disabled:cursor-not-allowed",
+    "db-mini font-display text-[11px] font-semibold px-[9px] py-1 rounded-sm border border-line bg-linear-to-b from-[#17191d] to-[#0f1114] text-text enabled:hover:border-blue disabled:opacity-40 disabled:cursor-not-allowed",
     {
         variants: {
             danger: {
@@ -67,30 +67,30 @@ export const miniButton = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* iconButton — .gd-iconbtn (styles.css ~2472-2520)                       */
+/* iconButton — .db-iconbtn (styles.css ~2472-2520)                       */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-iconbtn. Utilities only.
+ * No VFX hook — no @layer vfx rule targets .db-iconbtn. Utilities only.
  */
 export const iconButton = cva(
     "w-[38px] h-[38px] rounded border border-line bg-panel text-text text-[17px] backdrop-blur-[8px] transition-transform duration-150 ease-out-gd hover:border-blue active:scale-95"
 );
 
 /* ---------------------------------------------------------------------- */
-/* menuButton — .gd-menu-btn (+ .back/.primary/.danger), .gd-menu-section  */
+/* menuButton — .db-menu-btn (+ .back/.primary/.danger), .db-menu-section  */
 /* (styles.css ~2104-2201, section heading ~2175-2185)                    */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `gd-menu-btn` (+ `primary`/`back`/`danger`).
- * `.gd-menu-btn::before/::after` in @layer vfx are the targeting-bracket
- * corners that snap in on hover/focus; `.gd-card .gd-menu-btn` and
- * `.gd-card .gd-menu-btn.primary` in card-paper.css re-theme it inside a
+ * VFX hook: retains literal `db-menu-btn` (+ `primary`/`back`/`danger`).
+ * `.db-menu-btn::before/::after` in @layer vfx are the targeting-bracket
+ * corners that snap in on hover/focus; `.db-card .db-menu-btn` and
+ * `.db-card .db-menu-btn.primary` in card-paper.css re-theme it inside a
  * `card()`. The `section` variant is a distinct static heading (no button
  * semantics, no hook needed) kept here for call-site convenience since it
  * always appears alongside menu buttons.
  */
 export const menuButton = cva(
-    "gd-menu-btn relative px-[18px] py-[13px] rounded-sm border border-line bg-[rgba(16,18,20,0.7)] text-text text-[12.5px] font-semibold tracking-[2.5px] uppercase transition-[transform,border-color,background] duration-150 ease-out-gd hover:border-blue hover:-translate-y-px focus-visible:border-blue focus-visible:-translate-y-px active:scale-[0.98]",
+    "db-menu-btn relative px-[18px] py-[13px] rounded-sm border border-line bg-[rgba(16,18,20,0.7)] text-text text-[12.5px] font-semibold tracking-[2.5px] uppercase transition-[transform,border-color,background] duration-150 ease-out-gd hover:border-blue hover:-translate-y-px focus-visible:border-blue focus-visible:-translate-y-px active:scale-[0.98]",
     {
         variants: {
             variant: {
@@ -107,10 +107,10 @@ export const menuButton = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* chip — .gd-chip (+ .subtle) (styles.css ~127-144)                      */
+/* chip — .db-chip (+ .subtle) (styles.css ~127-144)                      */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-chip.
+ * No VFX hook — no @layer vfx rule targets .db-chip.
  */
 export const chip = cva(
     "font-display text-xs font-semibold tracking-[1.5px] uppercase text-gold bg-gold-soft border border-gold-line px-3 py-[5px] rounded",
@@ -126,20 +126,20 @@ export const chip = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* card — .gd-card (+ .wide/.build/.result) (styles.css ~168-261)         */
+/* card — .db-card (+ .wide/.build/.result) (styles.css ~168-261)         */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `gd-card`. `.gd-card::before` in @layer vfx is
+ * VFX hook: retains literal `db-card`. `.db-card::before` in @layer vfx is
  * the gold top-seam. The scoped light-"paper" custom-property overrides
  * (originally styles.css ~171-187, ~197-236) are re-implemented verbatim as
  * a plain CSS ruleset in ./card-paper.css, side-effect-imported at the top
  * of this file — so importing variants.js anywhere in the app is enough for
- * `.gd-card` to carry the re-theme; no extra opt-in class/attribute needed
- * (this matches the legacy behavior exactly, where .gd-card always implied
+ * `.db-card` to carry the re-theme; no extra opt-in class/attribute needed
+ * (this matches the legacy behavior exactly, where .db-card always implied
  * paper). See card-paper.css's header comment for the full rationale.
  */
 export const card = cva(
-    "gd-card relative pointer-events-auto text-text bg-paper border border-[rgba(0,0,0,0.18)] rounded-lg shadow p-[26px] w-[min(560px,94vw)]",
+    "db-card relative pointer-events-auto text-text bg-paper border border-[rgba(0,0,0,0.18)] rounded-lg shadow p-[26px] w-[min(560px,94vw)]",
     {
         variants: {
             size: {
@@ -154,10 +154,10 @@ export const card = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* overlay — .gd-overlay (+ .center/.bottom) (styles.css ~147-164)        */
+/* overlay — .db-overlay (+ .center/.bottom) (styles.css ~147-164)        */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-overlay.
+ * No VFX hook — no @layer vfx rule targets .db-overlay.
  */
 // fixed (not absolute) so a modal is always anchored to the viewport, never to a
 // positioned ancestor. FriendsPanel opens from MeBadge, whose menu root is
@@ -176,10 +176,10 @@ export const overlay = cva("fixed inset-0 z-[4] flex pointer-events-none", {
 });
 
 /* ---------------------------------------------------------------------- */
-/* input — .gd-input (+ .mono) (search hit in styles.css ~281-309)       */
+/* input — .db-input (+ .mono) (search hit in styles.css ~281-309)       */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-input.
+ * No VFX hook — no @layer vfx rule targets .db-input.
  */
 export const input = cva(
     "w-full bg-sunk border border-line text-text rounded-sm px-[14px] py-3 text-[15px] outline-none placeholder:text-faint transition-[border-color,box-shadow,background] duration-150 ease-out-gd focus:border-text focus:bg-sunk focus:shadow-[0_0_0_3px_var(--gold-soft)]",
@@ -195,29 +195,29 @@ export const input = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* label — .gd-label (styles.css ~270-279)                                */
+/* label — .db-label (styles.css ~270-279)                                */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-label.
+ * No VFX hook — no @layer vfx rule targets .db-label.
  */
 export const label = cva(
     "block font-display uppercase tracking-[1.5px] text-[11px] font-semibold text-faint mb-[7px]"
 );
 
 /* ---------------------------------------------------------------------- */
-/* sub — .gd-sub (styles.css ~263-268)                                    */
+/* sub — .db-sub (styles.css ~263-268)                                    */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-sub.
+ * No VFX hook — no @layer vfx rule targets .db-sub.
  */
 export const sub = cva("text-dim m-0 mb-5 text-sm leading-[1.5]");
 
 /* ---------------------------------------------------------------------- */
-/* row — .gd-row (+ direct .gd-input child sizing) (styles.css ~311-319) */
+/* row — .db-row (+ direct .db-input child sizing) (styles.css ~311-319) */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-row. The original
- * `.gd-row .gd-input { flex: 1 }` is a descendant selector for a common
+ * No VFX hook — no @layer vfx rule targets .db-row. The original
+ * `.db-row .db-input { flex: 1 }` is a descendant selector for a common
  * "input + button" row shape; reproduce it at the call site by adding
  * `flex-1` directly to whichever child(ren) should stretch, since cva can't
  * express a descendant-scoped utility.
@@ -225,10 +225,10 @@ export const sub = cva("text-dim m-0 mb-5 text-sm leading-[1.5]");
 export const row = cva("flex gap-[10px] mt-4");
 
 /* ---------------------------------------------------------------------- */
-/* badge — .gd-badge (+ .you) (styles.css ~1323-1337)                     */
+/* badge — .db-badge (+ .you) (styles.css ~1323-1337)                     */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .gd-badge.
+ * No VFX hook — no @layer vfx rule targets .db-badge.
  */
 export const badge = cva(
     "font-display text-[11px] font-semibold text-dim px-[10px] py-1 border border-line rounded",
@@ -253,7 +253,7 @@ export const menuScreen = cva("absolute inset-0 z-10 grid place-items-center ove
 
 /**
  * Vignette + faint grid-texture backdrop behind a menu card. The 44px grid
- * lines are the legacy `.gd-menu-bg::after`, reproduced as an `after:` layer.
+ * lines are the legacy `.db-menu-bg::after`, reproduced as an `after:` layer.
  */
 export const menuBg = cva(
     "absolute inset-0 -z-10 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)] after:content-[''] after:absolute after:inset-0 after:opacity-[0.045] after:bg-[linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)] after:[background-size:44px_44px]"
@@ -265,12 +265,12 @@ export const menuInner = cva(
 );
 
 /**
- * Menu heading. RETAINS the literal `gd-menu-title` class — the `.gd-card`
- * paper re-theme (unlayered in index.css) and the `.gd-menu-title span` glow
+ * Menu heading. RETAINS the literal `db-menu-title` class — the `.db-card`
+ * paper re-theme (unlayered in index.css) and the `.db-menu-title span` glow
  * both key off it.
  */
 export const menuTitle = cva(
-    "gd-menu-title m-0 font-bold uppercase text-dim",
+    "db-menu-title m-0 font-bold uppercase text-dim",
     {
         variants: {
             sm: {

@@ -24,7 +24,7 @@ Trenton Taylor (creative/technical director), Sunday (agent)
 
 ## Summary
 
-GoldenDome needs a persistent player identity and lifetime match history, without letting a client
+DomeBreak needs a persistent player identity and lifetime match history, without letting a client
 forge its own stats. We stood up a dedicated Supabase project for accounts (isolated from any
 other project sharing the developer's organization) and route every write — login timestamp,
 match result — through a single edge function that derives identity from the verified JWT and
@@ -35,10 +35,10 @@ key; they never write directly to `profiles` or `matches`.
 
 | Field                     | Value                                                                                                                                                                                                                                            |
 | :--- | :--- |
-| **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                   |
+| **Engine**                | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                   |
 | **Domain**                | Networking / Persistence (accounts, stats) — pure client+cloud addition, not a simulation change                                                                                                                                                 |
 | **Knowledge Risk**        | LOW — Supabase Auth, Postgres RLS, and Deno edge functions are all stable, well-documented patterns                                                                                                                                              |
-| **References Consulted**  | `docs/spec.md` (existing multiplayer backend pattern), `supabase/functions/gd-match/index.ts` (prior art for edge-function-as-write-gate), `supabase/migrations/20260705190000_accounts_and_stats.sql`, `supabase/functions/gd-account/index.ts` |
+| **References Consulted**  | `docs/spec.md` (existing multiplayer backend pattern), `supabase/functions/db-match/index.ts` (prior art for edge-function-as-write-gate), `supabase/migrations/20260705190000_accounts_and_stats.sql`, `supabase/functions/db-account/index.ts` |
 | **Post-Cutoff APIs Used** | None                                                                                                                                                                                                                                             |
 | **Verification Required** | None — this is additive infrastructure with no engine-version dependency                                                                                                                                                                         |
 
@@ -59,13 +59,13 @@ observer of outcomes, not a participant in the simulation.
 | **Depends On**    | None — this is a foundational infrastructure decision                                                                                                                                                                                                                                   |
 | **Enables**       | `design/gdd/accounts-and-stats.md` (this ADR is its technical backing); future leaderboard/social features that need a stable player identity                                                                                                                                           |
 | **Blocks**        | Nothing open — all dependent implementation shipped with this ADR                                                                                                                                                                                                                       |
-| **Ordering Note** | All layers are implemented and verified: SQL migration + `gd-account` edge function deployed; LoginScreen gate, start-menu stats, match-reporting call sites, and the Electron preload bridge (`electron/preload.cjs`, `src/game/platform/localData.js`) landed in the same change set. |
+| **Ordering Note** | All layers are implemented and verified: SQL migration + `db-account` edge function deployed; LoginScreen gate, start-menu stats, match-reporting call sites, and the Electron preload bridge (`electron/preload.cjs`, `src/game/platform/localData.js`) landed in the same change set. |
 
 ## Context
 
 ### Problem Statement
 
-GoldenDome's existing multiplayer backend (`gd-match`, per `docs/spec.md`) already establishes the
+DomeBreak's existing multiplayer backend (`db-match`, per `docs/spec.md`) already establishes the
 pattern of a Supabase edge function as the sole server-authoritative write path for a shared
 resource. Accounts introduce a second, orthogonal need: a durable player identity and match
 history that exists independent of any single match, session, or device. Without this, there is no
@@ -81,7 +81,7 @@ win count or erase a loss by crafting a request. A naive design (client writes d
 
 Today there is no account system. `docs/spec.md` describes single-player as fully local (no
 account, autosave to local storage) and multiplayer as an unauthenticated, per-player-secret model
-(`gd_players.secret`) scoped to a single match's lifecycle in the shared `gd-match` function — that
+(`db_players.secret`) scoped to a single match's lifecycle in the shared `db-match` function — that
 model has no concept of a durable identity across matches, and predates this decision.
 
 ### Constraints
@@ -93,7 +93,7 @@ model has no concept of a durable identity across matches, and predates this dec
   on a write. Anything the client can set on a request, the client can forge.
 - **Solo-dev operational simplicity**: no separate long-running server process to operate; must
   run entirely on Supabase's managed Postgres + edge functions, consistent with the existing
-  `gd-match` pattern already proven in this codebase.
+  `db-match` pattern already proven in this codebase.
 - **Cross-platform session persistence**: must work identically in the Electron desktop build and
   the browser build, using each platform's natural persistence primitive.
 
@@ -113,8 +113,8 @@ model has no concept of a durable identity across matches, and predates this dec
 
 ## Decision
 
-Stand up a **dedicated Supabase project** ("Golden Dome", ref `bhzxnorbhylfsrdjzodv`) — separate
-from any other project in the developer's organization — holding only GoldenDome's accounts and
+Stand up a **dedicated Supabase project** ("DomeBreak", ref `bhzxnorbhylfsrdjzodv`) — separate
+from any other project in the developer's organization — holding only DomeBreak's accounts and
 match-history schema. Use **Supabase Auth** (email + password, autoconfirm enabled) as the identity
 provider. Collect the username at signup as auth user metadata; a Postgres trigger
 (`handle_new_user`) mints the corresponding `profiles` row on every `auth.users` insert, with an
@@ -125,7 +125,7 @@ Security — `profiles` and `matches` each carry a `select` policy scoped to `au
 keeps stats display cheap (no function round-trip to view your own record) while making
 cross-account reads structurally impossible regardless of client code.
 
-All **writes** happen through one edge function, `gd-account`, which accepts two actions:
+All **writes** happen through one edge function, `db-account`, which accepts two actions:
 `touch` (stamp `last_login`) and `report_match` (insert one `matches` row). The function verifies
 the caller's JWT via the Supabase client configured with the anon key and the caller's bearer
 token, extracts `user.id` from that verified token, and then performs the actual write using a
@@ -160,7 +160,7 @@ body. The client can put whatever it wants in the request payload; `user_id` is 
             │  writes: service-role key, user_id from verified JWT only
             │
 ┌───────────┴───────────────┐
-│  Edge function: gd-account │
+│  Edge function: db-account │
 │  actions: touch,           │
 │           report_match     │
 │  - verifies JWT (anon key) │
@@ -171,7 +171,7 @@ body. The client can put whatever it wants in the request payload; `user_id` is 
 ### Key Interfaces
 
 ```ts
-// Client -> gd-account edge function request shapes.
+// Client -> db-account edge function request shapes.
 // The client NEVER sends user_id; it is derived server-side from the bearer JWT.
 
 type TouchRequest = { action: "touch" };
@@ -206,7 +206,7 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 - The client's Supabase client instance should be configured once with the project URL and anon
   key; never embed the service-role key in any client bundle (web or Electron) under any
   circumstance.
-- The `gd-account` function must continue to construct two separate Supabase clients per request:
+- The `db-account` function must continue to construct two separate Supabase clients per request:
   one scoped to the caller's bearer token (for `auth.getUser()` verification only) and one scoped
   to the service role (for the actual write). Do not collapse these into one client — that would
   reintroduce the ability for a forged body field to influence the write identity.
@@ -233,7 +233,7 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 - **Cons**: Postgres RLS can constrain *which* `user_id` a row may carry, but it cannot validate
   the semantic correctness of the rest of the row (e.g. a client could still insert a `win` result
   for a match that was actually a loss, or fabricate `duration_s`). It only solves the identity-
-  spoofing half of the trust problem, not result-forgery. It also diverges from the `gd-match`
+  spoofing half of the trust problem, not result-forgery. It also diverges from the `db-match`
   precedent already established in this codebase, adding a second, inconsistent write pattern.
 - **Estimated Effort**: Lower short-term effort, but leaves a durable trust gap.
 - **Rejection Reason**: Does not fully close the "client cannot forge its own stats" requirement —
@@ -246,12 +246,12 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 - **Description**: Add `profiles`/`matches`/`player_stats` to the developer's existing shared
   Supabase project, namespaced by table prefix or schema, rather than provisioning a new project.
 - **Pros**: One fewer project to manage credentials and billing for; no new project setup step.
-- **Cons**: Couples GoldenDome's auth and data lifecycle to an unrelated app's project. A schema
+- **Cons**: Couples DomeBreak's auth and data lifecycle to an unrelated app's project. A schema
   migration mistake, an RLS policy bug, or an auth configuration change made for one app risks
   affecting the other. Blast radius of any incident (leaked service key, bad migration) is shared
   across unrelated products.
 - **Estimated Effort**: Marginally lower setup effort.
-- **Rejection Reason**: Isolation was an explicit constraint. A dedicated project for GoldenDome
+- **Rejection Reason**: Isolation was an explicit constraint. A dedicated project for DomeBreak
   accounts costs one extra Supabase project (free tier is sufficient at this scale) in exchange for
   a clean blast-radius boundary — accepted as clearly worth it for a small, fixed cost.
 
@@ -267,8 +267,8 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
   write-side integrity.
 - Isolation from the developer's other Supabase projects means an incident in one project (leaked
   key, bad migration, quota exhaustion) cannot cascade into the other.
-- The pattern mirrors the already-proven `gd-match` edge-function-as-write-gate approach in this
-  codebase, so there is one consistent mental model for "how does GoldenDome talk to Supabase"
+- The pattern mirrors the already-proven `db-match` edge-function-as-write-gate approach in this
+  codebase, so there is one consistent mental model for "how does DomeBreak talk to Supabase"
   across both multiplayer matches and accounts.
 - The engine remains fully decoupled — no simulation code has any awareness that accounts exist.
 
@@ -295,7 +295,7 @@ from public.player_stats;  -- implicitly filtered to auth.uid() via underlying R
 
 | Risk                                                                                     | Probability          | Impact                                                      | Mitigation                                                                                                                                                                                                                     |
 | :--- | :--- | :--- | :--- |
-| Service-role key leaked into a client bundle by mistake                                  | Low                  | Critical — would allow arbitrary writes/reads bypassing RLS | Service key only ever used inside the `gd-account` Deno edge function runtime; never referenced by any file under `src/` or bundled by Vite. Code review should grep for the service key env var name in any client-side diff. |
+| Service-role key leaked into a client bundle by mistake                                  | Low                  | Critical — would allow arbitrary writes/reads bypassing RLS | Service key only ever used inside the `db-account` Deno edge function runtime; never referenced by any file under `src/` or bundled by Vite. Code review should grep for the service key env var name in any client-side diff. |
 | Autoconfirm signup abused for account-farming or email-not-owned signups                 | Low at current scale | Low now, Medium if public multiplayer ships                 | Revisit before public launch — add email verification or rate-limit signups at that point; tracked as a follow-up decision, not blocking today.                                                                                |
 | Edge function cold-start latency makes `report_match` visibly slow                       | Low                  | Low — reporting is fire-and-forget, not user-facing         | Fire-and-forget design already absorbs this; no UI waits on the call.                                                                                                                                                          |
 | Two Supabase projects drift in schema conventions over time (accounts vs. match backend) | Low                  | Low                                                         | Both follow the same edge-function-as-write-gate pattern by convention; no shared code, so drift is cosmetic, not a bug risk.                                                                                                  |
@@ -315,7 +315,7 @@ This is new, additive infrastructure — there is no existing account or stats s
 away from. The rollout is:
 
 1. **Backend (done)**: `supabase/migrations/20260705190000_accounts_and_stats.sql` and
-   `supabase/functions/gd-account/index.ts` are deployed to the dedicated project. Verify: query
+   `supabase/functions/db-account/index.ts` are deployed to the dedicated project. Verify: query
    `player_stats` as an authenticated test user and confirm it returns zero rows with no error for
    a fresh account, and correct aggregates after inserting test match rows via the function.
 2. **Client — LoginScreen**: implement the login/signup screen gating the app shell. Verify: an
@@ -332,7 +332,7 @@ away from. The rollout is:
 
 **Rollback plan**: Because no existing system is being replaced, rollback is simply "do not ship
 the client-side LoginScreen gate" — the backend can remain deployed and unused with no impact on
-existing single-player or `gd-match` multiplayer flows, since neither reads from or writes to the
+existing single-player or `db-match` multiplayer flows, since neither reads from or writes to the
 accounts schema.
 
 ## Validation Criteria
@@ -340,7 +340,7 @@ accounts schema.
 - [ ] A client cannot successfully insert or update a row in `profiles` or `matches` using the
   anon key under any request shape (verified by attempting direct writes and confirming RLS
   rejection).
-- [ ] `gd-account`'s `report_match` action always stores the caller's own verified `user_id`,
+- [ ] `db-account`'s `report_match` action always stores the caller's own verified `user_id`,
   even when the request body includes a different `user_id` or `userId` field.
 - [ ] Session restore (Electron and browser) does not perform a network call before the start-menu
   shell can render when a session is already cached locally.
@@ -352,7 +352,7 @@ accounts schema.
 
 | GDD Document                       | System                  | Requirement                                                                                                                                        | How This ADR Satisfies It                                                                                                                                                                                                    |
 | :--- | :--- | :--- | :--- |
-| `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "The client never writes stats directly — every mutation flows through a server-side edge function that trusts only the caller's verified session" | `gd-account` derives `user_id` exclusively from the verified JWT via `auth.getUser()`, then writes with the service-role key; the request body's contents never influence write identity.                                    |
+| `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "The client never writes stats directly — every mutation flows through a server-side edge function that trusts only the caller's verified session" | `db-account` derives `user_id` exclusively from the verified JWT via `auth.getUser()`, then writes with the service-role key; the request body's contents never influence write identity.                                    |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "Duplicate username at signup... account creation never fails on a taken name"                                                                     | `handle_new_user` trigger catches `unique_violation` and retries with the `<truncated>_<id8>` fallback shape inside the same transaction.                                                                                    |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "A player can only ever see their own profile and match rows"                                                                                      | RLS policies `read_own_profile` and `read_own_matches` scope `select` to `auth.uid()`; the `player_stats` view is declared `security_invoker` so it cannot be used to bypass those policies.                                 |
 | `design/gdd/accounts-and-stats.md` | Accounts & Player Stats | "Reporting is fire-and-forget... one retry... a lost report is acceptable"                                                                         | Addressed at the client implementation layer per the Implementation Guidelines above; the edge function itself is stateless per-call and imposes no server-side retry logic, keeping the retry policy entirely client-owned. |
@@ -360,8 +360,8 @@ accounts schema.
 
 ## Related
 
-- `supabase/functions/gd-match/index.ts` — the prior-art edge-function-as-write-gate pattern this
+- `supabase/functions/db-match/index.ts` — the prior-art edge-function-as-write-gate pattern this
   ADR follows for a different resource (live match state rather than accounts).
 - `supabase/migrations/20260705190000_accounts_and_stats.sql` — the schema this decision describes.
-- `supabase/functions/gd-account/index.ts` — the edge function this decision describes.
+- `supabase/functions/db-account/index.ts` — the edge function this decision describes.
 - `design/gdd/accounts-and-stats.md` — the gameplay-facing design document this ADR backs.

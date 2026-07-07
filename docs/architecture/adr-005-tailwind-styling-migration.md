@@ -24,7 +24,7 @@ Trenton Taylor (creative/technical director), Sunday (agent)
 
 ## Summary
 
-GoldenDome's UI is styled by a single 5,695-line `src/styles.css` (plus seven small
+DomeBreak's UI is styled by a single 5,695-line `src/styles.css` (plus seven small
 component stylesheets, 6,023 lines total) — a bespoke, token-driven "command HUD" design
 system. We are migrating the project **entirely** to Tailwind CSS v4: the 55 CSS custom
 properties become a Tailwind `@theme` block, the ~4,100 lines of layout/type/color rules
@@ -43,7 +43,7 @@ chrome icons).
 
 | Field                     | Value                                                                                                                                                                                                                    |
 |:--------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine. This ADR touches **presentation only** (`src/ui/`, `src/main.jsx`); the simulation is not modified.      |
+| **Engine**                | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine. This ADR touches **presentation only** (`src/ui/`, `src/main.jsx`); the simulation is not modified.      |
 | **Domain**                | UI / Rendering (styling architecture, component chrome, data-viz). No gameplay, balance, or engine logic changes.                                                                                                        |
 | **Knowledge Risk**        | LOW — Tailwind v4 (`@tailwindcss/vite`, `@theme`, `@layer`), Recharts, Radix, and Motion are stable, well-documented libraries. The only bespoke risk is VFX fidelity, mitigated by moving keyframes verbatim.           |
 | **References Consulted**  | `src/styles.css`, `src/main.jsx`, `.claude/docs/technical-preferences.md`, `.claude/docs/coding-standards.md`, all 34 `src/ui/**/*.jsx`, the seven component `.css` files, Sunday `frontend` context card               |

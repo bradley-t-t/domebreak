@@ -1,4 +1,4 @@
-// GoldenDome account writes. The client NEVER touches profiles/matches
+// DomeBreak account writes. The client NEVER touches profiles/matches
 // directly — it calls here with a user JWT; we derive the user id from the
 // verified token and write with the service role. Actions:
 //   {action: "touch"}                      -> stamp last_login

@@ -9,11 +9,11 @@ export default function ScreenFrame({title, subtitle, onClose, children, foot, w
     const ref = useModal(onClose);
 
     return (
-        <div className="gd-screen absolute inset-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both]"
+        <div className="db-screen absolute inset-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both]"
              ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
-             aria-labelledby="gd-screenframe-title">
+             aria-labelledby="db-screenframe-title">
             <div className="flex items-baseline gap-[14px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
-                <span className="font-display font-bold text-[15px] tracking-[4px] text-text" id="gd-screenframe-title">{title}</span>
+                <span className="font-display font-bold text-[15px] tracking-[4px] text-text" id="db-screenframe-title">{title}</span>
                 {subtitle && <span className="font-mono text-[11px] tracking-[1px] text-dim">{subtitle}</span>}
                 {head}
                 <button className={cn(iconButton(), "ml-auto self-center")} onClick={onClose} title="Close (Esc)"

@@ -92,7 +92,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
         <div
             ref={barRef}
             style={fit.scale < 1 ? {transform: `scale(${fit.scale})`, transformOrigin: "top center", marginBottom: fit.mb} : undefined}
-            className="gd-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
+            className="db-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
             <div className="flex flex-col items-start leading-[1.15]"><span
                 className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span
                 className="text-sm font-bold font-mono">{date}</span><span

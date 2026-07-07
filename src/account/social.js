@@ -1,8 +1,8 @@
-// Friends surface: reads under RLS, writes through gd-social.
+// Friends surface: reads under RLS, writes through db-social.
 import {supabase} from "./client.js";
 
 async function invoke(body) {
-    const {data, error} = await supabase.functions.invoke("gd-social", {body});
+    const {data, error} = await supabase.functions.invoke("db-social", {body});
     return error ? {error: error.message} : (data ?? {ok: true});
 }
 

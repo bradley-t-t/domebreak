@@ -1,5 +1,5 @@
 // Lobby/matchmaking surface: reads + Realtime under RLS, writes through
-// gd-lobby. The lobby row is also how a started match hands the client its
+// db-lobby. The lobby row is also how a started match hands the client its
 // game server (server_url is a comma-separated WS URL list, best-first).
 //
 // Quick-match only: there is no lobby browser, no host, no create/find/set_ai.
@@ -9,7 +9,7 @@
 import {supabase} from "./client.js";
 
 async function invoke(body) {
-    const {data, error} = await supabase.functions.invoke("gd-lobby", {body});
+    const {data, error} = await supabase.functions.invoke("db-lobby", {body});
     return error ? {error: error.message} : (data ?? {ok: true});
 }
 

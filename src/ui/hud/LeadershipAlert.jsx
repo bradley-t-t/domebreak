@@ -49,7 +49,7 @@ export default function LeadershipAlert({world, api, mySlot}) {
     return (
         <div className={cn(
             "absolute top-[108px] left-1/2 -translate-x-1/2 z-[8] flex items-center gap-3 max-w-[min(560px,78vw)] py-2.5 px-3.5 rounded-[var(--radius)] bg-panel [backdrop-filter:blur(10px)] shadow-[var(--shadow)] text-text",
-            "border border-red animate-[gd-lead-pulse_1.8s_ease-in-out_infinite] motion-reduce:animate-none"
+            "border border-red animate-[db-lead-pulse_1.8s_ease-in-out_infinite] motion-reduce:animate-none"
         )} role="alert" aria-live="assertive">
             <div className="text-xl leading-none text-red flex-none">⚠</div>
             <div className="flex-1 min-w-0">

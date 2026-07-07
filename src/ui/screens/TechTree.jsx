@@ -59,7 +59,7 @@ function clampCam(x, y, k, vw, vh) {
     return {x: cx, y: cy};
 }
 
-// State literal kept on .gd-tt-node so the CSS drafting layer (index.css @layer
+// State literal kept on .db-tt-node so the CSS drafting layer (index.css @layer
 // vfx) can theme each state, plus the hover/active micro-motion for available
 // nodes expressed as self-referencing arbitrary variants off the same literal.
 const NODE_STATE_CLS = {
@@ -77,7 +77,7 @@ function SpecRow({label, value, muted}) {
     return (
         <span className="relative flex items-center gap-1.5 font-mono text-[9px] leading-[1.5]">
             <span className="text-faint tracking-[1px]">{label}</span>
-            <span className="gd-tt-leader flex-1 self-center" aria-hidden="true"/>
+            <span className="db-tt-leader flex-1 self-center" aria-hidden="true"/>
             <span className={cn("tabular-nums whitespace-nowrap overflow-hidden text-ellipsis",
                 muted ? "text-faint max-w-[104px]" : "text-dim")}>{value}</span>
         </span>
@@ -129,7 +129,7 @@ function Node({id, tech, nation, api, style}) {
     };
     return (
         <button className={cn(
-            "gd-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col text-left",
+            "db-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col text-left",
             "px-[13px] pt-[9px] pb-[11px] rounded-[3px] text-text bg-sunk",
             "transition-[transform,box-shadow] duration-150 ease-out-gd",
             "focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-2",
@@ -141,17 +141,17 @@ function Node({id, tech, nation, api, style}) {
                 title={locked ? "Requires the previous tech." : poor ? `Need ◆ ${tech.cost}` : tech.desc}>
             {/* schematic plot-fill for the tech under active research */}
             {isCur &&
-                <i className="gd-tt-fill absolute inset-y-0 left-0 right-auto pointer-events-none"
+                <i className="db-tt-fill absolute inset-y-0 left-0 right-auto pointer-events-none"
                    style={{width: `${Math.min(100, pct)}%`}} aria-hidden="true"/>}
             {/* drafting frame — hairline border + corner tick marks */}
-            <span className="gd-tt-frame absolute inset-0 pointer-events-none" aria-hidden="true"/>
+            <span className="db-tt-frame absolute inset-0 pointer-events-none" aria-hidden="true"/>
 
             {/* header: designation code + stamped status */}
             <span className="relative flex items-center justify-between gap-2">
                 <span className="font-mono text-[9px] tracking-[1.4px] text-faint whitespace-nowrap">
                     <span aria-hidden="true">{glyph}</span> {code}
                 </span>
-                <span className="gd-tt-stamp flex-none font-mono text-[8px] tracking-[1.3px] whitespace-nowrap px-[5px] py-[1.5px]"
+                <span className="db-tt-stamp flex-none font-mono text-[8px] tracking-[1.3px] whitespace-nowrap px-[5px] py-[1.5px]"
                       aria-hidden="true">{stamp}</span>
             </span>
 
@@ -160,16 +160,16 @@ function Node({id, tech, nation, api, style}) {
             <span className="relative text-[9.5px] text-dim leading-[1.3] mt-[2px] line-clamp-2">{tech.desc}</span>
 
             {/* spec sheet */}
-            <span className="gd-tt-rule relative block mt-[6px] mb-[4px]" aria-hidden="true"/>
+            <span className="db-tt-rule relative block mt-[6px] mb-[4px]" aria-hidden="true"/>
             <SpecRow label="COST" value={`◆ ${tech.cost}`}/>
             <SpecRow label="TIME" value={`${tech.time}s`}/>
             {(locked || avail) && reqName && <SpecRow label="REQ" value={reqName} muted/>}
 
             {/* payload — the unit this tech puts in the field */}
             {unlockType && (
-                <span className="gd-tt-payload relative flex items-center gap-2 mt-[7px] pt-[7px]"
+                <span className="db-tt-payload relative flex items-center gap-2 mt-[7px] pt-[7px]"
                       title={`Unlocks: ${unlockName}`}>
-                    <span className="gd-tt-payload-icon flex-none grid place-items-center w-[26px] h-[26px]">
+                    <span className="db-tt-payload-icon flex-none grid place-items-center w-[26px] h-[26px]">
                         <UnitIcon name={UNIT_ICON[unlockType]} size={21}/>
                     </span>
                     <span className="flex flex-col gap-px overflow-hidden">
@@ -189,7 +189,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
     const rr = nation?.research || {queue: [], done: [], current: null};
 
     // Modal a11y contract: focus trap + Escape-to-close + focus restore. Attached
-    // to the outer .gd-techtree container (which carries tabIndex={-1}).
+    // to the outer .db-techtree container (which carries tabIndex={-1}).
     const modalRef = useModal(onClose);
 
     const viewRef = useRef(null);
@@ -267,7 +267,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
     // Drag to pan — only when the press lands on empty canvas, so node clicks
     // still register. A small movement threshold keeps taps from being pans.
     const onPointerDown = (e) => {
-        if (e.button !== 0 || e.target.closest(".gd-tt-node")) return;
+        if (e.button !== 0 || e.target.closest(".db-tt-node")) return;
         const cur = camRef.current;
         dragRef.current = {sx: e.clientX, sy: e.clientY, ox: cur.x, oy: cur.y, moved: false};
         e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -295,11 +295,11 @@ export default function TechTree({world, api, mySlot, onClose}) {
     };
 
     return (
-        <div className="gd-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] m-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] [inset:clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
+        <div className="db-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] m-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] [inset:clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
              ref={modalRef} tabIndex={-1}
-             role="dialog" aria-modal="true" aria-labelledby="gd-tt-title">
+             role="dialog" aria-modal="true" aria-labelledby="db-tt-title">
             <div className="flex items-center gap-[18px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
-                <span className="font-display font-bold text-[15px] tracking-[4px] text-text" id="gd-tt-title">RESEARCH
+                <span className="font-display font-bold text-[15px] tracking-[4px] text-text" id="db-tt-title">RESEARCH
                     COMMAND</span>
                 <span className="font-mono text-[13px] text-gold">◆ {Math.floor(nation?.points ?? 0)}</span>
                 {rr.current && <span className="font-mono text-[11px] tracking-[1px] text-dim">
@@ -311,7 +311,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         queueOpen ? "text-text border-gold" : null,
                     )}
                             onClick={() => setQueueOpen((v) => !v)}
-                            aria-expanded={queueOpen} aria-controls="gd-tt-queue-panel"
+                            aria-expanded={queueOpen} aria-controls="db-tt-queue-panel"
                             title={queueOpen ? "Hide the research queue" : "Show the research queue"}>
                         {queueOpen ? "Hide Queue" : `Queue${rr.queue.length ? ` (${rr.queue.length})` : ""}`}
                     </button>
@@ -328,7 +328,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         nation?.autoResearch ? "text-gold" : "text-dim group-hover:text-text",
                     )}>Auto-Research</span>
                     <span className={cn(
-                        "gd-toggle w-11 h-6 rounded border border-line bg-btn-bg relative transition-[background,border-color] duration-150 ease-out-gd",
+                        "db-toggle w-11 h-6 rounded border border-line bg-btn-bg relative transition-[background,border-color] duration-150 ease-out-gd",
                         nation?.autoResearch && "on bg-gold-soft border-[rgba(244,192,42,0.4)]",
                     )}>
                         <span className={cn(
@@ -374,10 +374,10 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         const left = eraLeft(era.tierRange[0]);
                         const width = eraRight(era.tierRange[1]) - left;
                         return (
-                            <div key={era.id} className="gd-tt-era absolute" aria-hidden="true"
+                            <div key={era.id} className="db-tt-era absolute" aria-hidden="true"
                                  style={{left, top: 0, width, bottom: 0, "--era": era.color}}>
                                 <div className="absolute top-3 left-0 right-0 flex flex-col items-center gap-0.5 text-center">
-                                    <span className="gd-tt-era-name font-display font-bold text-sm tracking-[3px] uppercase">{era.name}</span>
+                                    <span className="db-tt-era-name font-display font-bold text-sm tracking-[3px] uppercase">{era.name}</span>
                                     <span className="font-mono text-[10px] tracking-[1.5px] text-faint">{era.years}</span>
                                 </div>
                             </div>
@@ -397,7 +397,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                 return (
                                     <line key={`${path.id}${i}`}
                                           className={cn(
-                                              "gd-tt-wire stroke-line transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
+                                              "db-tt-wire stroke-line transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
                                               lit ? "lit" : null,
                                           )}
                                           x1={nodeX(i) + NODE_W} y1={y} x2={nodeX(i + 1)} y2={y}/>
@@ -408,9 +408,9 @@ export default function TechTree({world, api, mySlot, onClose}) {
 
                     {TECH_PATHS.map((path, r) => (
                         <div key={`lane-${path.id}`}
-                             className="gd-tt-lane absolute flex flex-col justify-center gap-[6px] pointer-events-none"
+                             className="db-tt-lane absolute flex flex-col justify-center gap-[6px] pointer-events-none"
                              style={{left: PAD, top: nodeY(r), width: LANE_W - 18, height: NODE_H}}>
-                            <span className="gd-tt-lane-chip w-[34px] h-[34px] flex-none grid place-items-center text-[17px] text-dim"
+                            <span className="db-tt-lane-chip w-[34px] h-[34px] flex-none grid place-items-center text-[17px] text-dim"
                                   aria-hidden="true">{path.glyph}</span>
                             <span className="font-mono text-[9px] tracking-[2px] uppercase text-faint">TRK·{path.id.toUpperCase()}</span>
                             <span className="font-display font-semibold text-[11px] tracking-[1px] uppercase text-dim leading-[1.15]">{path.name}</span>
@@ -440,12 +440,12 @@ export default function TechTree({world, api, mySlot, onClose}) {
 
                 {queueOpen && (rr.current || rr.queue.length > 0) && (
                     <div className="absolute top-3.5 right-3.5 z-[3] w-[260px] max-h-[calc(100%-28px)] flex flex-col rounded border border-line bg-panel-solid shadow-[0_8px_28px_rgba(0,0,0,0.45)] overflow-hidden"
-                         id="gd-tt-queue-panel"
+                         id="db-tt-queue-panel"
                          role="region" aria-label="Research queue">
                         <div className="font-mono text-[11px] tracking-[2px] uppercase text-dim px-3 py-2.5 border-b border-line-soft">
                             Research Queue
                         </div>
-                        <ul className="gd-scroll list-none m-0 p-1.5 overflow-y-auto flex flex-col gap-1">
+                        <ul className="db-scroll list-none m-0 p-1.5 overflow-y-auto flex flex-col gap-1">
                             {rr.current && (() => {
                                 const t = TECHS[rr.current.id];
                                 if (!t) return null;

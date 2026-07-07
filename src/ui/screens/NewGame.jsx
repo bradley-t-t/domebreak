@@ -27,14 +27,14 @@ export default function NewGame({data, onStart, onBack, settings}) {
     return (
         <div className="absolute inset-0 z-10 grid place-items-center overflow-auto p-6">
             <div className="absolute inset-0 -z-1 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)]"/>
-            <div className={cn(card(), "gd-newgame w-[min(460px,94vw)] text-left max-h-[90vh] overflow-auto")}>
+            <div className={cn(card(), "db-newgame w-[min(460px,94vw)] text-left max-h-[90vh] overflow-auto")}>
                 <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim">New Game</div>
                 {!data && <p className="text-dim m-0 mb-5 text-sm leading-[1.5]">Loading world data…</p>}
-                <label className={label()} id="gd-newgame-nation-label">Choose Your Nation — Every Other Country Is
+                <label className={label()} id="db-newgame-nation-label">Choose Your Nation — Every Other Country Is
                     a Live AI {sel &&
                         <span className={chip({subtle: true})}><Flag iso={sel.iso}/> {sel.name}</span>}</label>
-                <div className="gd-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
-                     role="list" aria-labelledby="gd-newgame-nation-label">
+                <div className="db-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
+                     role="list" aria-labelledby="db-newgame-nation-label">
                     {!GREAT_POWERS.includes(iso) && sel && (
                         <button className={countryRow(true)} role="listitem" onClick={() => setIso(sel.iso)}
                                 aria-label={`${sel.name} — you`}>
@@ -54,11 +54,11 @@ export default function NewGame({data, onStart, onBack, settings}) {
                         </button>
                     ))}
                 </div>
-                <label className={cn(label(), "mt-4")} htmlFor="gd-newgame-search">Or Search Any Nation</label>
-                <input id="gd-newgame-search" className={input()} placeholder="Search countries…" value={q}
+                <label className={cn(label(), "mt-4")} htmlFor="db-newgame-search">Or Search Any Nation</label>
+                <input id="db-newgame-search" className={input()} placeholder="Search countries…" value={q}
                        onChange={(e) => setQ(e.target.value)}/>
                 {searchList.length > 0 && (
-                    <div className="gd-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
+                    <div className="db-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
                          role="list" style={{maxHeight: "18vh"}}>
                         {searchList.map((c) => (
                             <button key={c.iso} className={countryRow(iso === c.iso)}

@@ -34,7 +34,7 @@ Trenton Taylor (creative/technical director), Sunday (agent)
 
 ## Summary
 
-GoldenDome's online entry was a three-door Multiplayer screen (Find Game / Create
+DomeBreak's online entry was a three-door Multiplayer screen (Find Game / Create
 Lobby / live lobby browser) with a human host who set an AI-fill count and clicked
 Start. We are replacing all of it with a single **Play** button that enrolls the
 commander in a matchmaking queue. The **authoritative game server** (the same
@@ -53,7 +53,7 @@ entries.
 
 | Field                     | Value                                                                                                                                                                                                                                                    |
 | :--- | :--- |
-| **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                          |
+| **Engine**                | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                          |
 | **Domain**                | Networking / Matchmaking (control-plane orchestration + lobby simulation) — reuses the simulation and the AI draft, does not modify the engine                                                                                                          |
 | **Knowledge Risk**        | LOW — a queue table, an outbound Realtime subscription with the service-role key, and timed writes to `lobby_members` are all stable, well-understood patterns already proven by ADR-0003's claim path                                                   |
 | **References Consulted**  | `docs/architecture/adr-003-authoritative-server.md`, `docs/architecture/adr-001-supabase-accounts.md`, `design/gdd/multiplayer-matchmaking-social.md`, `src/game/sim/newGame.js` (AI draft), `src/game/sim/tick.js` (`aiTick`), `server/match.js`, `server/index.js`, `src/account/lobby.js` |
@@ -64,10 +64,10 @@ entries.
 
 | Field             | Value                                                                                                                                                                                                                                                                                    |
 | :--- | :--- |
-| **Depends On**    | ADR-0003 (Authoritative Game Server) — reuses its long-lived Node process, its outbound service-role Realtime subscription pattern, its lobby-claim CAS discipline, and its JWT verification; the matchmaker is a second subscription/loop inside that same process. Also ADR-0001 (Supabase Accounts) for JWT-derived identity in the `gd-lobby` enroll/cancel actions. |
+| **Depends On**    | ADR-0003 (Authoritative Game Server) — reuses its long-lived Node process, its outbound service-role Realtime subscription pattern, its lobby-claim CAS discipline, and its JWT verification; the matchmaker is a second subscription/loop inside that same process. Also ADR-0001 (Supabase Accounts) for JWT-derived identity in the `db-lobby` enroll/cancel actions. |
 | **Enables**       | The one-click quick-match flow in `design/gdd/multiplayer-matchmaking-social.md`; a future skill-based / rating-aware matchmaker; a future public-internet queue once ADR-0003's tunnel follow-up lands                                                                                    |
 | **Blocks**        | Any story implementing the Play button, the Searching state, the `quick_match`/`cancel` edge-function actions, the `matchmaking_queue` table, bot lobby members, or auto-launch — none of that can be built until this ADR is Accepted                                                     |
-| **Ordering Note** | This ADR assumes ADR-0003's server, `lobbies`/`lobby_members` schema, and `gd-lobby` edge function already exist; it adds the `matchmaking_queue` table, the `lobby_members.is_bot` column, two edge-function actions, and a matchmaker loop to that existing infrastructure               |
+| **Ordering Note** | This ADR assumes ADR-0003's server, `lobbies`/`lobby_members` schema, and `db-lobby` edge function already exist; it adds the `matchmaking_queue` table, the `lobby_members.is_bot` column, two edge-function actions, and a matchmaker loop to that existing infrastructure               |
 
 ## Context
 
@@ -86,7 +86,7 @@ the same lobby the humans see, filling seats and readying up, so a match against
 fill-in bots still feels like a war room of commanders rather than a difficulty
 slider.
 
-A GoldenDome-specific constraint carries over unchanged from ADR-0003: **the game
+A DomeBreak-specific constraint carries over unchanged from ADR-0003: **the game
 server has no public inbound path.** It lives on the Sunday host (Raspberry Pi 5)
 behind a home network / Tailscale. Any coordination between the Supabase control
 plane and the server must be initiated *from* the server (outbound). So the
@@ -99,7 +99,7 @@ lobbies.
 Per ADR-0003 and `design/gdd/multiplayer-matchmaking-social.md` as originally
 written:
 
-- `gd-lobby` exposes `create`, `join`, `leave`, `set_iso`, `ready`, `set_ai`,
+- `db-lobby` exposes `create`, `join`, `leave`, `set_iso`, `ready`, `set_ai`,
   `start`, `find`. `find` is a one-shot "join the oldest open lobby or create one";
   there is no persistent queue and no attempt to gather multiple humans arriving
   within a time window.
@@ -128,7 +128,7 @@ bots as lobby participants, or launches without a human pressing a button.
   This ADR adds *lobby-phase* bot behavior (join/pick/ready), not a new in-game AI.
 - **Identity stays JWT-derived.** The `quick_match`/`cancel` actions must derive the
   acting `user_id` from the verified JWT, never a client-supplied id — identical
-  discipline to `gd-account`/`gd-lobby` today.
+  discipline to `db-account`/`db-lobby` today.
 - **Bots are indistinguishable-by-default in the lobby.** `is_bot` is an internal
   flag for the server and match assembly; the lobby renders bot members with the
   same row treatment as humans (a plausible callsign, a nation, a ready flag). The
@@ -154,7 +154,7 @@ bots as lobby participants, or launches without a human pressing a button.
 Add a **matchmaker** to the ADR-0003 game server: a second outbound Realtime
 subscription (service-role key) on a new `matchmaking_queue` table, plus a
 timer-driven sweep, both living in the same Node process that already claims
-`starting` lobbies. The `gd-lobby` edge function gains exactly two player-facing
+`starting` lobbies. The `db-lobby` edge function gains exactly two player-facing
 actions — `quick_match` (enroll the JWT-derived caller as a `waiting` queue row)
 and `cancel` (delete the caller's `waiting` row) — and the old `create`, `find`,
 and host-only `set_ai` actions are removed from the quick-match flow. `start`
@@ -208,7 +208,7 @@ bot fill instead of from a human host clicking Start.
 
 ```
                           ┌──────────────────────────┐
-  Play ─────────────────► │  gd-lobby edge function  │
+  Play ─────────────────► │  db-lobby edge function  │
   (quick_match / cancel)  │  JWT ➜ user_id           │
                           │  writes matchmaking_queue │
                           └───────────┬──────────────┘
@@ -216,7 +216,7 @@ bot fill instead of from a human host clicking Start.
                                       │  matchmaking_queue row via Realtime)
                                       ▼
                           ┌───────────────────────────────────────────────┐
-                          │  Supabase "Golden Dome" project                │
+                          │  Supabase "DomeBreak" project                │
                           │  matchmaking_queue {user_id,iso?,enqueued_at,  │
                           │                     status,lobby_id?}           │
                           │  lobbies / lobby_members (+ is_bot column)      │
@@ -245,7 +245,7 @@ bot fill instead of from a human host clicking Start.
 ### Key Interfaces
 
 ```ts
-// gd-lobby gains two player-facing actions (identity from verified JWT only).
+// db-lobby gains two player-facing actions (identity from verified JWT only).
 // quick_match: enroll caller as a 'waiting' queue row (no-op if already waiting).
 // cancel:      delete caller's 'waiting' row (no-op if none / already matched).
 type LobbyAction =
@@ -315,14 +315,14 @@ type MatchmakerConfig = {
   exactly as today.
 - The `matchmaking_queue` table needs RLS consistent with the rest of the control
   plane: a caller may read/subscribe to **their own** row (to observe the `matched`
-  transition); all writes go through `gd-lobby` under the service-role path, never a
+  transition); all writes go through `db-lobby` under the service-role path, never a
   direct client insert/update.
 
 ## Alternatives Considered
 
-### Alternative 1: Edge-function matchmaker (form the match in `gd-lobby`)
+### Alternative 1: Edge-function matchmaker (form the match in `db-lobby`)
 
-- **Description**: Put the grouping/bot-fill/auto-launch logic in the `gd-lobby`
+- **Description**: Put the grouping/bot-fill/auto-launch logic in the `db-lobby`
   edge function itself — e.g. a `quick_match` call that, on the server side of
   Supabase, gathers waiters and writes the lobby.
 - **Pros**: No new server responsibility; keeps matchmaking in the already-managed,
@@ -422,7 +422,7 @@ type MatchmakerConfig = {
 | Two humans queueing within the window still land in different matches (window edge)    | Medium                 | Low — both still get a prompt match, just with more bots than intended                             | `matchWindowS` is a tuning knob; grouping anchors on the oldest waiter so overlap widens as population grows; acceptable at current small population                                                    |
 | Bots feel obviously fake (identical timing, robotic names, colliding nations)          | Medium                 | Low–Medium — undercuts the "war room of commanders" fantasy                                        | Staggered join/ready delays are randomized ranges, callsigns come from a plausible pool, and nation selection is guaranteed-distinct; all are knobs tunable from playtest feedback                     |
 | Server (matchmaker) offline — Play produces a queue row nobody ever forms into a match  | Low–Medium             | Medium — the player waits in Searching indefinitely                                                | A client-side searching timeout surfaces "couldn't find a match — try again" and offers to cancel/retry, mirroring ADR-0003's 30s `starting` watchdog; single-player remains available offline         |
-| `matchmaking_queue` RLS misconfigured, leaking others' queue rows                       | Low                    | Low — queue membership is not sensitive, but still should be own-row-only                          | RLS mirrors the rest of the control plane: read/subscribe own row only, all writes via `gd-lobby` service-role path; verified with a second test account                                               |
+| `matchmaking_queue` RLS misconfigured, leaking others' queue rows                       | Low                    | Low — queue membership is not sensitive, but still should be own-row-only                          | RLS mirrors the rest of the control plane: read/subscribe own row only, all writes via `db-lobby` service-role path; verified with a second test account                                               |
 
 ## Performance Implications
 
@@ -436,14 +436,14 @@ type MatchmakerConfig = {
 ## Migration Plan
 
 Additive to ADR-0003's rollout — the authoritative server, `lobbies`/
-`lobby_members`, and `gd-lobby` already exist. Steps:
+`lobby_members`, and `db-lobby` already exist. Steps:
 
 1. **Schema**: add the `matchmaking_queue` table (+ RLS: own-row read/subscribe,
-   writes via `gd-lobby` service-role) and the `lobby_members.is_bot` column
-   (default `false`) in the Golden Dome project. Verify: a `quick_match` call from a
+   writes via `db-lobby` service-role) and the `lobby_members.is_bot` column
+   (default `false`) in the DomeBreak project. Verify: a `quick_match` call from a
    real account creates exactly one `waiting` row keyed to the JWT identity, and a
    second account cannot read it.
-2. **Edge function**: add `quick_match` + `cancel` to `gd-lobby`; remove `create`,
+2. **Edge function**: add `quick_match` + `cancel` to `db-lobby`; remove `create`,
    `find`, `set_ai` from the player path. Verify: enroll/cancel idempotency and
    JWT-derived identity on a second account.
 3. **Matchmaker loop (server)**: outbound `waiting` subscription + sweep, group
@@ -486,7 +486,7 @@ the edge-function actions and hiding the Play entry restores the prior behavior;
   the caller from the queue; a caller may read/subscribe only to their own
   `matchmaking_queue` row.
 - [ ] The former surfaces — lobby browser, Create Lobby, host AI-count stepper, and
-  Start button — are absent from the client; `gd-lobby` no longer exposes
+  Start button — are absent from the client; `db-lobby` no longer exposes
   `create`/`find`/`set_ai` on the player path.
 - [ ] The matchmaker uses only outbound connections from the private host (a Realtime
   subscription + row writes with the service-role key); no inbound call into the game

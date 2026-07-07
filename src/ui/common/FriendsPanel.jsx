@@ -13,7 +13,7 @@ export default function FriendsPanel({onClose}) {
     const [addErr, setAddErr] = useState(null);
     const [busy, setBusy] = useState(false);
     const ref = useModal(onClose);
-    const titleId = "gd-friends-title";
+    const titleId = "db-friends-title";
 
     const load = () => fetchFriends().then((f) => {
         setFriends(f);
@@ -55,10 +55,10 @@ export default function FriendsPanel({onClose}) {
             <div className={cn(card(), "pointer-events-auto w-[min(380px,94vw)] text-left max-h-[84vh] overflow-auto")}
                  ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
                  aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
-                <div className="gd-menu-title sm text-[26px] tracking-[3px] mb-4 font-bold uppercase text-dim" id={titleId}>Command Network</div>
+                <div className="db-menu-title sm text-[26px] tracking-[3px] mb-4 font-bold uppercase text-dim" id={titleId}>Command Network</div>
                 <div className="flex gap-[10px] mt-4">
-                    <label className="sr-only" htmlFor="gd-friends-input">Username</label>
-                    <input id="gd-friends-input" className={cn(inputCls(), "flex-1")} placeholder="Add by username" value={input}
+                    <label className="sr-only" htmlFor="db-friends-input">Username</label>
+                    <input id="db-friends-input" className={cn(inputCls(), "flex-1")} placeholder="Add by username" value={input}
                            maxLength={24} onChange={(e) => setInput(e.target.value)}
                            onKeyDown={(e) => {
                                if (e.key === "Enter") add();
@@ -76,8 +76,8 @@ export default function FriendsPanel({onClose}) {
 
                 {incoming.length > 0 && (
                     <div className="mt-4">
-                        <div className={label()} id="gd-friends-requests-h">Requests</div>
-                        <div role="list" aria-labelledby="gd-friends-requests-h">
+                        <div className={label()} id="db-friends-requests-h">Requests</div>
+                        <div role="list" aria-labelledby="db-friends-requests-h">
                             {incoming.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (
@@ -103,8 +103,8 @@ export default function FriendsPanel({onClose}) {
 
                 {outgoing.length > 0 && (
                     <div className="mt-4">
-                        <div className={label()} id="gd-friends-pending-h">Pending</div>
-                        <div role="list" aria-labelledby="gd-friends-pending-h">
+                        <div className={label()} id="db-friends-pending-h">Pending</div>
+                        <div role="list" aria-labelledby="db-friends-pending-h">
                             {outgoing.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (
@@ -126,8 +126,8 @@ export default function FriendsPanel({onClose}) {
 
                 {accepted.length > 0 && (
                     <div className="mt-4">
-                        <div className={label()} id="gd-friends-list-h">Friends</div>
-                        <div role="list" aria-labelledby="gd-friends-list-h">
+                        <div className={label()} id="db-friends-list-h">Friends</div>
+                        <div role="list" aria-labelledby="db-friends-list-h">
                             {accepted.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (

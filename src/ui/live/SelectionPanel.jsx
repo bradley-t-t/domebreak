@@ -31,7 +31,7 @@ export default function SelectionPanel({
     // fire (ICBM / Hypersonic Glide Vehicle) as a plain armament line.
     const armament = armamentOf(selectedUnit.type);
     return (
-        <div className="gd-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdPop_220ms_var(--ease-out)]">
+        <div className="db-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdPop_220ms_var(--ease-out)]">
             <div className="font-display font-bold text-[15px] flex items-center gap-2"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
                                                   size={18}/>{labelOf(selectedUnit.type, selectedUnit.slot)}
             </div>

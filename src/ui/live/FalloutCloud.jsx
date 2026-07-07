@@ -5,11 +5,11 @@
 // with the cloud's lifecycle so it grows as the cloud ramps and dims as it decays.
 export default function FalloutCloud({intensity = 1}) {
     return (
-        <div className="gd-fallout" style={{"--i": intensity}}>
-            <span className="gd-fallout-glow"/>
-            <span className="gd-fallout-ring"/>
-            <span className="gd-fallout-ring two"/>
-            <span className="gd-fallout-core">☢</span>
+        <div className="db-fallout" style={{"--i": intensity}}>
+            <span className="db-fallout-glow"/>
+            <span className="db-fallout-ring"/>
+            <span className="db-fallout-ring two"/>
+            <span className="db-fallout-core">☢</span>
         </div>
     );
 }

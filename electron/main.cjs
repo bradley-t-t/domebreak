@@ -89,7 +89,7 @@ async function createWindow() {
     const port = await startServer();
     const win = new BrowserWindow({
         width: 1440, height: 920, minWidth: 1024, minHeight: 680,
-        backgroundColor: "#05080f", title: "GoldenDome",
+        backgroundColor: "#05080f", title: "DomeBreak",
         webPreferences: {contextIsolation: true, preload: path.join(__dirname, "preload.cjs")},
     });
     win.setMenuBarVisibility(false);

@@ -8,7 +8,7 @@
 
 ## Overview
 
-GoldenDome's online mode has exactly one entry point: a **Play** button that enrolls the commander
+DomeBreak's online mode has exactly one entry point: a **Play** button that enrolls the commander
 in a matchmaking queue and stays connected to other players as friends across sessions. There is no
 lobby browser, no hosting, and no manual AI-count configuration — the authoritative server groups
 players who queue within a short window into the same match, backfills any remaining seats with
@@ -50,7 +50,7 @@ empty or administrative.
   and specific to this system.
 - Friendship is modeled as a single `friendships` row per pair: `requester`, `addressee`, `status`
   (`pending` | `accepted`). All friend actions — `request`, `accept`, `remove` — are edge-function
-  calls (`gd-social`) keyed by the target's `username`, never a raw `user_id` supplied by the
+  calls (`db-social`) keyed by the target's `username`, never a raw `user_id` supplied by the
   client. The function resolves `username → user_id` server-side before writing.
 - `remove` deletes the `friendships` row regardless of status — it is the single action that both
   cancels a pending request (either direction) and unfriends an accepted one.
@@ -62,7 +62,7 @@ empty or administrative.
 - **Queue.** Clicking **Play** enrolls the caller in `matchmaking_queue`: `user_id` (JWT-derived),
   `iso` (optional nation preference, nullable), `enqueued_at`, `status` (`'waiting'` | `'matched'`),
   `lobby_id` (nullable, set once the matchmaker places the caller). A caller may read/subscribe to
-  their own row only; all writes go through `gd-lobby` under the service-role path — the client
+  their own row only; all writes go through `db-lobby` under the service-role path — the client
   never inserts or updates this table directly.
 - A lobby is a `lobbies` row: `status` (`starting` | `active` | `closed` — note there is no
   human-visible `open` state in the quick-match flow; a lobby only comes into existence
@@ -76,7 +76,7 @@ empty or administrative.
   unique per `lobby_id`. Bot rows are structurally identical to human rows in every field the
   client reads — this is exactly what lets the Lobby room render a bot member with the same row
   treatment as a human, with no visible "BOT" label anywhere in the UI.
-- All lobby/queue mutations go through the `gd-lobby` edge function; the client never writes
+- All lobby/queue mutations go through the `db-lobby` edge function; the client never writes
   `matchmaking_queue`, `lobbies`, or `lobby_members` directly. The player-facing action set is now
   **`quick_match`, `cancel`, `set_iso`, `ready`, `leave`** — `create`, `find`, and the host-only
   `set_ai` are removed entirely from the player-facing flow; `start` still exists as an internal
@@ -100,7 +100,7 @@ empty or administrative.
       a human-less lobby never reaches `starting` (see Edge Cases — "last human leaves a pre-launch
       lobby" — for the exact rule this overrides the otherwise-satisfiable all-bots-ready
       condition).
-- Every write derives the acting identity from the verified JWT, exactly as `gd-account` does in
+- Every write derives the acting identity from the verified JWT, exactly as `db-account` does in
   `accounts-and-stats.md` — no action ever trusts a client-supplied `user_id`.
 - Realtime is enabled on `matchmaking_queue`, `lobbies`, and `lobby_members`. The client's Searching
   state subscribes to the caller's own `matchmaking_queue` row (watching for `status = 'matched'`);
@@ -109,7 +109,7 @@ empty or administrative.
   revision — there is no lobby browser to subscribe a list of rows to anymore.
 - `matches` (from `accounts-and-stats.md`) gains a `mode` column: `'solo' | 'online'`. Online match
   reports are written by the game server (service-role key) at game-over, one row per human
-  participant — not by the client, and not through `gd-account`'s client-facing `report_match`
+  participant — not by the client, and not through `db-account`'s client-facing `report_match`
   path (see Game Server below).
 
 ### Game server (authoritative) — matchmaker + bot lobby simulation + claim
@@ -177,7 +177,7 @@ empty or administrative.
   WebSocket directly to the server. LAN/Tailscale reachability is the deployment target now; a
   public tunnel (e.g. reverse proxy / relay) is a noted follow-up, not in scope for this document.
 - Every inbound WebSocket connection presents its Supabase JWT. The server verifies it (same
-  verification pattern as `gd-account`/`gd-lobby` — a Supabase client call against the token, never
+  verification pattern as `db-account`/`db-lobby` — a Supabase client call against the token, never
   trusting a client-claimed identity), maps the resulting `user_id` to the slot recorded in
   `lobby_members` for that `match_id`, and rejects the connection if no matching slot exists.
 - The server **whitelists** which engine commands a connection may invoke:  `queueUnit`,
@@ -434,7 +434,7 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   include humans whose seat was never manually readied — they were force-launched as AI at
   `lobbyReadyTimeoutS` and are scored identically to a mid-match disconnect-without-return.
 - **Matchmaker/server offline**: if the game server process is down, `matchmaking_queue` rows can
-  still be written by `gd-lobby` (it is a stateless edge function, independent of the server), but
+  still be written by `db-lobby` (it is a stateless edge function, independent of the server), but
   nothing ever forms them into a lobby — the caller's row stays `'waiting'` indefinitely. The client
   applies a searching-timeout (mirroring the existing 30s `starting`-watchdog pattern — see Tuning
   Knobs) measured from the moment `quick_match` was called: if no `'matched'` transition is observed
@@ -452,7 +452,7 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   quick-match attempt from a clean queue enrollment.
 - **Duplicate friend request (unchanged)**: a `request` call where a `pending` or `accepted`
   `friendships` row already exists between the two users (in either direction) is **idempotent** —
-  it does not create a second row or error the caller; `gd-social` treats it as a no-op success (or,
+  it does not create a second row or error the caller; `db-social` treats it as a no-op success (or,
   for the specific case of an incoming pending request the caller already sent to *them*, it may
   auto-accept rather than silently no-op — either behavior is acceptable so long as the result is
   never a duplicate row or a client-visible error for re-sending a request that already exists).
@@ -469,15 +469,15 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   authenticated `user_id`/`username`, the `profiles` table (widened here to globally-readable for
   search — a change this document owns, not a silent edit to that GDD), and the existing `matches`
   table (this document adds the `mode` column and is the source of `mode: 'online'` rows, written
-  by the game server rather than the `gd-account` edge function). Requires from this system: the
+  by the game server rather than the `db-account` edge function). Requires from this system: the
   `mode` column addition and the online write path be documented here rather than in
   `accounts-and-stats.md`, since that document's `report_match` contract (client-triggered,
   fire-and-forget, one retry) is specific to single-player/local reporting and does not describe
   server-authored rows — a future revision of `accounts-and-stats.md` should cross-reference this
   document for the `mode: 'online'` case rather than this document silently diverging from it.
-- **Supabase project "Golden Dome"** (same project as `accounts-and-stats.md`) — provides the
+- **Supabase project "DomeBreak"** (same project as `accounts-and-stats.md`) — provides the
   `friendships`, `matchmaking_queue` (new), `lobbies`, `lobby_members` (gains `is_bot` and
-  `display_name`) tables, Realtime, and the `gd-social`/`gd-lobby` edge functions. Requires from
+  `display_name`) tables, Realtime, and the `db-social`/`db-lobby` edge functions. Requires from
   this system: standard Supabase client configuration (already present from the accounts system)
   plus a Realtime subscription client for the Searching state (own `matchmaking_queue` row), the
   Lobby room, and (service-role side) for the game server's two subscriptions (`matchmaking_queue`
@@ -515,7 +515,7 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   of mutating local state directly.
 - **UI: `LiveGame`, the Play button on the main menu / StartMenu, a Searching state, a Lobby room
   component (no host controls), a Friends panel, and a Me badge** — provide the player-facing
-  surfaces described in Detailed Rules. Require from this system: the `gd-lobby` action set
+  surfaces described in Detailed Rules. Require from this system: the `db-lobby` action set
   (`quick_match`, `cancel`, `set_iso`, `ready`, `leave`), Realtime subscriptions on the caller's own
   `matchmaking_queue` row (Searching state) and on `lobbies`/`lobby_members` (Lobby room), and (for
   the Me badge) the same `player_stats` values `accounts-and-stats.md` already exposes — no new stat
@@ -578,7 +578,7 @@ lobbyStuck(secondsInStarting) = secondsInStarting > 30
   ADR-0003 defines for an expired reconnect) — verified by leaving one seat unready for the full
   timeout and observing that nation is AI-piloted once `status` reaches `'active'`.
 - The retired surfaces — the lobby browser, Create Lobby, the host-only AI-count stepper, and the
-  Start button — are absent from the client, and `gd-lobby` no longer accepts `create`, `find`, or
+  Start button — are absent from the client, and `db-lobby` no longer accepts `create`, `find`, or
   `set_ai` on the player-facing path (calls to those actions are rejected or simply do not exist in
   the deployed function) — verified by code inspection and by attempting each retired action.
 - A running match enforces the command whitelist and slot-forcing: a scripted/forged WebSocket

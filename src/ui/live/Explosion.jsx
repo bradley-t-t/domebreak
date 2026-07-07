@@ -16,16 +16,16 @@ const SPARKS = Array.from({length: 8}, (_, i) => ({
 
 export default function Explosion({kind = "hit"}) {
     return (
-        <div className={`gd-boom ${kind}`}>
-            <span className="gd-boom-flash"/>
-            <span className="gd-boom-ring"/>
-            <span className="gd-boom-fire f1"/>
-            <span className="gd-boom-fire f2"/>
-            <span className="gd-boom-fire f3"/>
-            <span className="gd-boom-core"/>
-            <span className="gd-boom-smoke"/>
+        <div className={`db-boom ${kind}`}>
+            <span className="db-boom-flash"/>
+            <span className="db-boom-ring"/>
+            <span className="db-boom-fire f1"/>
+            <span className="db-boom-fire f2"/>
+            <span className="db-boom-fire f3"/>
+            <span className="db-boom-core"/>
+            <span className="db-boom-smoke"/>
             {SPARKS.map((s, i) => (
-                <i key={i} className="gd-boom-spark" style={{
+                <i key={i} className="db-boom-spark" style={{
                     "--a": `${s.a}deg`,
                     "--dist": `${s.dist}px`,
                     "--sz": `${s.sz}px`,

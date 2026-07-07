@@ -35,7 +35,7 @@ standing `Space Command HQ` via `requiresUnit`.
 
 | Field                     | Value                                                                 |
 | :--- | :--- |
-| **Engine**                | GoldenDome custom real-time tick engine (this repo's own JS)          |
+| **Engine**                | DomeBreak custom real-time tick engine (this repo's own JS)          |
 | **Domain**                | Core / Scripting (production + research systems)                      |
 | **Knowledge Risk**        | LOW — no third-party engine API; all in-repo code                     |
 | **References Consulted**  | `src/game/data/constants.js`, `src/game/sim/production.js`, `docs/spec.md` |

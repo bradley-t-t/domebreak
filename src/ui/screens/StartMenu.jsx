@@ -40,7 +40,7 @@ export default function StartMenu({
                 after:content-[''] after:absolute after:top-5 after:left-5 after:w-4 after:h-4 after:border-t after:border-l after:border-line-soft">
                 <div className="mb-[34px]">
                     <div className="flex items-center gap-[7px] mb-4 font-mono text-[10px] tracking-[2.5px] uppercase text-faint">
-                        <span className="gd-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
+                        <span className="db-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
                         System Online
                     </div>
                     <h1 className="text-[46px] tracking-[8px] leading-[0.96] text-dim">

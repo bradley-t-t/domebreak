@@ -8,7 +8,7 @@
 
 ## Overview
 
-Every commander has a persistent identity. GoldenDome authenticates players against a dedicated
+Every commander has a persistent identity. DomeBreak authenticates players against a dedicated
 Supabase project via email + password, collects a username at signup, and tracks lifetime match
 history (wins, losses, quits, playtime) against that identity. The client never writes stats
 directly — every mutation (login timestamp, match result) flows through a server-side edge
@@ -30,7 +30,7 @@ frames each session as a continuation rather than a cold start.
 
 ### Authentication
 
-- Auth runs against a Supabase project dedicated to GoldenDome (project "Golden Dome", ref
+- Auth runs against a Supabase project dedicated to DomeBreak (project "DomeBreak", ref
   `bhzxnorbhylfsrdjzodv`) — isolated from any other project sharing the developer's Supabase
   organization.
 - Sign-up requires: email, password, username. Username is submitted as auth user metadata at
@@ -75,7 +75,7 @@ frames each session as a continuation rather than a cold start.
 
 ### Match reporting
 
-- Exactly one `matches` row is written per completed or abandoned game, via the `gd-account` edge
+- Exactly one `matches` row is written per completed or abandoned game, via the `db-account` edge
   function's `report_match` action. The function derives `user_id` from the verified JWT — the
   client cannot supply or spoof a `user_id`.
 - A report is sent at each of these terminal events, and only these:
@@ -186,11 +186,11 @@ quitRate(stats)  = stats.quits  / stats.total_matches   if total_matches > 0, el
 
 ## Dependencies
 
-- **Supabase project "Golden Dome"** (auth, Postgres, edge functions) — this system's entire
+- **Supabase project "DomeBreak"** (auth, Postgres, edge functions) — this system's entire
   backend. Provides: authenticated sessions, `profiles`/`matches` tables, `player_stats` view,
-  `gd-account` edge function. Requires from GoldenDome: nothing beyond standard Supabase client
+  `db-account` edge function. Requires from DomeBreak: nothing beyond standard Supabase client
   configuration (URL + anon key).
-- **`gd-account` edge function** — the sole write path for `touch` (login timestamp) and
+- **`db-account` edge function** — the sole write path for `touch` (login timestamp) and
   `report_match`. Provides: server-verified, spoof-proof writes. Requires: a valid bearer JWT on
   every call, and (for `report_match`) a `result` in `win | loss | quit`.
 - **Engine / match lifecycle** (`src/game/engine.js`, `src/game/sim/`) — provides the terminal
@@ -247,7 +247,7 @@ quitRate(stats)  = stats.quits  / stats.total_matches   if total_matches > 0, el
 - A player cannot read another account's `profiles` or `matches` rows via the anon key, verified by
   attempting a direct `select` against another known `user_id` and confirming RLS returns zero rows.
 - A player cannot cause a `matches` row to be written under another account's `user_id`, verified
-  by attempting to call `gd-account` with a forged `user_id` in the request body and confirming the
+  by attempting to call `db-account` with a forged `user_id` in the request body and confirming the
   inserted row's `user_id` matches only the JWT's subject.
 - `winRate` for a zero-match account renders as a "no data" state (not `0%` presented as a real
   loss record, not `NaN`, not a thrown error).

@@ -62,7 +62,7 @@ at tick.js:296, even though the value only changes when a unit or city is built 
 keyed by slot), reuse it for the income accrual, the interceptor upkeep gate (tick.js:296), and aiTick; or cache
 per-nation net income with a dirty flag set on build/destroy.
 
-### [MAJOR][network-security] supabase/functions/gd-account/index.ts:38
+### [MAJOR][network-security] supabase/functions/db-account/index.ts:38
 
 report_match verifies only the caller's identity, never that a match actually happened — any signed-in client can POST
 unlimited fabricated {result:"win"} reports from dev tools with no rate limit and no dedup, so ADR-0001's stated
@@ -74,7 +74,7 @@ client-supplied idempotency key with a unique index so retries and spam dedup; l
 at game start and require it in report_match; amend ADR-0001's Consequences/Risks to document the residual
 self-reporting trust gap.
 
-### [MAJOR][network-security] supabase/functions/gd-account/index.ts:43
+### [MAJOR][network-security] supabase/functions/db-account/index.ts:43
 
 report_match does type checks but no range/size validation: startedAt accepts any string (a non-ISO value makes the
 Postgres insert fail 500 on both fire-and-forget attempts, and arbitrary past/future timestamps are stored), opponents
@@ -86,17 +86,17 @@ network rule "validate all incoming packet sizes and field ranges".
 to [0, 63]; clamp durationS to [0, a sane ceiling such as 30 days]; store {} when JSON.stringify(m.stats).length
 exceeds ~8 KB; mirror the ranges as check constraints in the migration as a backstop.
 
-### [MAJOR][network-security] supabase/functions/gd-match/index.ts:298
+### [MAJOR][network-security] supabase/functions/db-match/index.ts:298
 
 The create and join actions are fully unauthenticated with no rate limiting, letting anyone who finds the function URL
-insert unbounded gd_players/gd_matches/gd_match_players/gd_cities rows (5+ rows per create call), and since the
+insert unbounded db_players/db_matches/db_match_players/db_cities rows (5+ rows per create call), and since the
 multiplayer client (src/lib/api.js, Lobby/Home) was deleted this deployed function is now pure attack surface in the
 same Supabase project that hosts the accounts schema — quota exhaustion here degrades auth and stats for everyone.
 
-**Fix:** Undeploy or disable gd-match until the multiplayer client returns; if it must stay live, gate create/join
-behind the same verified-JWT check gd-account uses and add per-IP/per-user rate limiting.
+**Fix:** Undeploy or disable db-match until the multiplayer client returns; if it must stay live, gate create/join
+behind the same verified-JWT check db-account uses and add per-IP/per-user rate limiting.
 
-### [MAJOR][network-security] supabase/functions/gd-match/index.ts:413
+### [MAJOR][network-security] supabase/functions/db-match/index.ts:413
 
 Budget enforcement in the place action is a read-check-write race (TOCTOU): two concurrent place requests both read the
 same mp.spent, both pass the budget check, and both insert placements before either updates spent, so a client can
@@ -148,7 +148,7 @@ src/game/sim/tick.js, so the AI rules never activate when the AI code is edited.
 **Fix:** Change the frontmatter paths to cover the real AI location, e.g. `src/game/sim/**` (or at minimum
 `src/game/sim/tick.js`), and note in the file that aiTick is the AI entry point.
 
-### [MINOR][network-security] supabase/functions/gd-match/index.ts:469
+### [MINOR][network-security] supabase/functions/db-match/index.ts:469
 
 The state action returns every participant's spent, budget, and ready flags plus full city state to any caller who
 merely knows the matchId, with no credentials — leaking opponents' build-phase spending (strategic information) to other
@@ -157,15 +157,15 @@ players and to unauthenticated spectators.
 **Fix:** Return only the caller's own spent/budget (require playerId/secret for those fields) and strip per-player
 economy fields from unauthenticated responses until the match status is done.
 
-### [MINOR][network-security] supabase/functions/gd-match/index.ts:166
+### [MINOR][network-security] supabase/functions/db-match/index.ts:166
 
 If the invocation that wins the build->combat compare-and-swap crashes or hits the edge-function time limit
 mid-resolve (the function awaits one UPDATE per city in a loop plus several sequential queries), the match is wedged in
-status "combat" with no gd_results row and every subsequent resolve call returns {pending:true} forever — no
+status "combat" with no db_results row and every subsequent resolve call returns {pending:true} forever — no
 reconnection/recovery path as the network rules require.
 
 **Fix:** Make resolution idempotent and add a recovery path: permit re-running resolve when status="combat" and no
-gd_results row exists after a grace period, and batch the per-city HP writes into a single upsert to shrink the crash
+db_results row exists after a grace period, and batch the per-city HP writes into a single upsert to shrink the crash
 window.
 
 ### [MINOR][network-security] src/account/api.js:36
@@ -425,19 +425,19 @@ src/ui, src/map) and update quick-specs when code moves — otherwise path-scope
 
 ### [MAJOR][network-security] Edge-function inputs receive type checks but never range or size checks, violating the adapted network rule "validate all incoming packet sizes and field ranges" — values flow straight into Postgres where they either error (500s that consume the fire-and-forget retry budget) or persist as garbage.
 
-Examples: supabase/functions/gd-account/index.ts:43-48 (startedAt any string, opponents any finite number, durationS
-unbounded above, stats jsonb unbounded), supabase/functions/gd-match/index.ts:417 (place inserts body.lng/body.lat raw —
-NaN, strings, or out-of-range coordinates accepted), supabase/functions/gd-match/index.ts:365,380 (body.slot used
+Examples: supabase/functions/db-account/index.ts:43-48 (startedAt any string, opponents any finite number, durationS
+unbounded above, stats jsonb unbounded), supabase/functions/db-match/index.ts:417 (place inserts body.lng/body.lat raw —
+NaN, strings, or out-of-range coordinates accepted), supabase/functions/db-match/index.ts:365,380 (body.slot used
 unvalidated in removeParticipant/replaceWithAi lookups)
 
 **Recommendation:** Add a small shared validation helper set (clampInt, clampNumber, isoDateOrNull, boundedJson) used by
 both functions, and mirror the critical ranges as Postgres check constraints so a validator regression cannot corrupt
 stored data.
 
-### [MAJOR][network-security] No rate limiting or abuse controls on any backend endpoint — authenticated users can spam gd-account writes and anonymous callers can spam gd-match, in the same Supabase project that holds accounts, so abuse converts directly into quota exhaustion and forged aggregates.
+### [MAJOR][network-security] No rate limiting or abuse controls on any backend endpoint — authenticated users can spam db-account writes and anonymous callers can spam db-match, in the same Supabase project that holds accounts, so abuse converts directly into quota exhaustion and forged aggregates.
 
-Examples: supabase/functions/gd-account/index.ts:31 (touch) and :38 (report_match) — unlimited per authenticated user,
-supabase/functions/gd-match/index.ts:298 (create), :317 (join), :466 (state) — unlimited and unauthenticated
+Examples: supabase/functions/db-account/index.ts:31 (touch) and :38 (report_match) — unlimited per authenticated user,
+supabase/functions/db-match/index.ts:298 (create), :317 (join), :466 (state) — unlimited and unauthenticated
 
 **Recommendation:** Add per-user throttles inside the functions (cheap count-recent-rows checks before writes) and
 per-IP limits at the platform layer (Supabase edge rate limiting/WAF); pair writes with idempotency keys so client
@@ -445,8 +445,8 @@ retries never double-insert.
 
 ### [MINOR][network-security] Raw internal error text is returned to clients — Postgres and runtime error messages (schema names, constraint names, stack-ish details) leak in error responses instead of generic codes.
 
-Examples: supabase/functions/gd-account/index.ts:34 and :50 (return json({error: error.message}, 500)),
-supabase/functions/gd-match/index.ts:489 (catch-all returns String(e.message) for any thrown error)
+Examples: supabase/functions/db-account/index.ts:34 and :50 (return json({error: error.message}, 500)),
+supabase/functions/db-match/index.ts:489 (catch-all returns String(e.message) for any thrown error)
 
 **Recommendation:** console.error the full detail inside the edge runtime (visible in Supabase function logs, which
 contain no PII here) and return generic client-facing errors like {error: "write_failed"} with the appropriate status

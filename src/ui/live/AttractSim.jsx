@@ -198,8 +198,8 @@ function AttractWorld({data, onOver, framed}) {
                     const [lo, hi] = UNIT_FADE;
                     const o = Math.max(0, Math.min(1, (zoom - lo) / (hi - lo)));
                     const c = m.getContainer();
-                    c.style.setProperty("--gd-unit-opacity", o.toFixed(3));
-                    c.classList.toggle("gd-units-faded", o < 0.04);
+                    c.style.setProperty("--db-unit-opacity", o.toFixed(3));
+                    c.classList.toggle("db-units-faded", o < 0.04);
                 } catch { /* map tearing down */
                 }
             }
@@ -300,7 +300,7 @@ function AttractWorld({data, onOver, framed}) {
                     return (
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
                                 offset={air ? [0, -alt * 30] : undefined}>
-                            <div className="grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--gd-unit-opacity,1)">
+                            <div className="grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)">
                                 <span className="inline-flex transition-transform duration-[170ms] ease-linear"
                                       style={Object.keys(iconStyle).length ? iconStyle : undefined}>
                                     <UnitIcon name={UNIT_ICON[u.type]} color={factionColor(u.slot)} size={air ? 16 : 22}/>

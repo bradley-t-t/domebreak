@@ -16,7 +16,7 @@ export default class ErrorBoundary extends Component {
     }
 
     componentDidCatch(error, info) {
-        console.error("[GoldenDome] render crash:", error, info?.componentStack);
+        console.error("[DomeBreak] render crash:", error, info?.componentStack);
     }
 
     render() {

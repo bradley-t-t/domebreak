@@ -26,10 +26,10 @@ import {useOnlineCount} from "./ui/hooks/useOnlineCount.js";
 
 // DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
 // gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
-// strips it entirely; opt in per browser with localStorage.setItem('gd-dev-noauth','1')
+// strips it entirely; opt in per browser with localStorage.setItem('db-dev-noauth','1')
 // then reload. Online play still needs a real session (there is no fake JWT).
 const DEV_NOAUTH = import.meta.env.DEV
-    && typeof localStorage !== "undefined" && localStorage.getItem("gd-dev-noauth") === "1";
+    && typeof localStorage !== "undefined" && localStorage.getItem("db-dev-noauth") === "1";
 
 export default function App() {
     const [screen, setScreen] = useState("menu");
@@ -373,7 +373,7 @@ export default function App() {
                                                 players={netClient?.players}/>}/>
                 </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
-                <div className="gd-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[gdPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
+                <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[gdPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
                     <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>
                 </div>}
 

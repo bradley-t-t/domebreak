@@ -1,6 +1,6 @@
 // Ground occupation: infantry/tank battalions that hold an enemy city long
 // enough capture it, flipping the whole state to the occupier. Territory in
-// GoldenDome is a Voronoi partition of living cities (see inTerritory in
+// DomeBreak is a Voronoi partition of living cities (see inTerritory in
 // queries.js), so flipping a city's slot transfers its surrounding territory for
 // free — this module only has to move ownership. Pure/deterministic (no rng):
 // capture is a function of positions, ownership, war state, and dt, so replays

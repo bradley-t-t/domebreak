@@ -15,7 +15,7 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
     const slots = ["1", "2", "3"];
     const fmt = (m) => (m?.at ? new Date(m.at).toLocaleString() : "Empty");
     const auto = saves.find((x) => x.slot === AUTOSAVE);
-    const titleId = "gd-saveload-title";
+    const titleId = "db-saveload-title";
 
     useEffect(() => () => clearTimeout(confirmTimerRef.current), []);
 
@@ -36,7 +36,7 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
             <div className={card({size: "wide"})} ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
                  aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
                 <div className={menuTitle({sm: true})} id={titleId}>{mode === "save" ? "Save Game" : "Load Game"}</div>
-                <div className="gd-savelist flex flex-col gap-2 mt-1.5" role="list" aria-labelledby={titleId}>
+                <div className="db-savelist flex flex-col gap-2 mt-1.5" role="list" aria-labelledby={titleId}>
                     {slots.map((slot) => {
                         const s = saves.find((x) => x.slot === slot);
                         const summary = s
@@ -44,8 +44,8 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
                             : `Slot ${slot} — Empty`;
                         const confirming = confirmSlot === slot;
                         return (
-                            <div key={slot} className="gd-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={summary}>
-                                <div className="gd-saveinfo flex-1 flex flex-col min-w-0">
+                            <div key={slot} className="db-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={summary}>
+                                <div className="db-saveinfo flex-1 flex flex-col min-w-0">
                                     <b className="text-sm">Slot {slot}</b><span className="text-[11px] text-dim whitespace-nowrap overflow-hidden text-ellipsis">{s ? `${s.meta.playerName || "?"} · ${s.meta.nations || "?"} Powers · ${fmt(s.meta)}` : "Empty"}</span>
                                 </div>
                                 {mode === "save"
@@ -67,8 +67,8 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
                         );
                     })}
                     {auto && mode === "load" && (
-                        <div className="gd-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={`Autosave — ${fmt(auto.meta)}`}>
-                            <div className="gd-saveinfo flex-1 flex flex-col min-w-0"><b className="text-sm">Autosave</b><span className="text-[11px] text-dim whitespace-nowrap overflow-hidden text-ellipsis">{fmt(auto.meta)}</span></div>
+                        <div className="db-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={`Autosave — ${fmt(auto.meta)}`}>
+                            <div className="db-saveinfo flex-1 flex flex-col min-w-0"><b className="text-sm">Autosave</b><span className="text-[11px] text-dim whitespace-nowrap overflow-hidden text-ellipsis">{fmt(auto.meta)}</span></div>
                             <button className={miniButton()} aria-label="Load autosave"
                                     onClick={() => onLoad(AUTOSAVE)}>Load</button>
                         </div>

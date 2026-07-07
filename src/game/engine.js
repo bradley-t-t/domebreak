@@ -1,4 +1,4 @@
-// GoldenDome real-time simulation engine. Pure and deterministic given its seed.
+// DomeBreak real-time simulation engine. Pure and deterministic given its seed.
 // This module is the stable public facade: world creation lives here, and
 // every symbol the engine used to export directly is re-exported from the
 // focused modules it now lives in (constants/queries/production/aircraft/

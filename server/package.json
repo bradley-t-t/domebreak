@@ -1,9 +1,9 @@
 {
-  "name": "goldendome-server",
+  "name": "domebreak-server",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Authoritative GoldenDome match server — runs the same engine the client ships.",
+  "description": "Authoritative DomeBreak match server — runs the same engine the client ships.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

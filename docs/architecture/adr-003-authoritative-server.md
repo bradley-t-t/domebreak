@@ -24,7 +24,7 @@ Trenton Taylor (creative/technical director), Sunday (agent)
 
 ## Summary
 
-GoldenDome's online mode needs a shared, cheat-resistant simulation that every connected client
+DomeBreak's online mode needs a shared, cheat-resistant simulation that every connected client
 agrees on. We stood up a single authoritative Node game server that imports the same deterministic
 engine module the browser uses (`src/game/engine.js`), claims lobbies out of Supabase once they are
 marked `starting` (via an outbound Realtime subscription, since edge functions cannot reach the
@@ -35,10 +35,10 @@ client runs local prediction against the identical engine `step` for smoothness 
 
 | Field                     | Value                                                                                                                                                                                                                                                                                                                       |
 | :--- | :--- |
-| **Engine**                | GoldenDome custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                                                                                              |
+| **Engine**                | DomeBreak custom tick engine (`src/game/engine.js`, `src/game/sim/`) — JavaScript, no third-party game engine                                                                                                                                                                                                              |
 | **Domain**                | Networking / Core simulation (authoritative server, snapshot sync) — reuses the simulation, does not modify it                                                                                                                                                                                                              |
 | **Knowledge Risk**        | LOW — Node WebSocket servers, Supabase Realtime subscriptions with the service-role key, and JSON snapshot broadcast are all stable, well-documented patterns                                                                                                                                                               |
-| **References Consulted**  | `docs/spec.md` (existing `gd-match` edge-function-authoritative pattern), `docs/architecture/adr-001-supabase-accounts.md`, `src/game/engine.js`, `src/game/sim/tick.js`, `src/game/sim/production.js`, `src/ui/hooks/useEngine.js`, `design/gdd/multiplayer-matchmaking-social.md`, `design/gdd/sensors-and-fog-of-war.md` |
+| **References Consulted**  | `docs/spec.md` (existing `db-match` edge-function-authoritative pattern), `docs/architecture/adr-001-supabase-accounts.md`, `src/game/engine.js`, `src/game/sim/tick.js`, `src/game/sim/production.js`, `src/ui/hooks/useEngine.js`, `design/gdd/multiplayer-matchmaking-social.md`, `design/gdd/sensors-and-fog-of-war.md` |
 | **Post-Cutoff APIs Used** | None                                                                                                                                                                                                                                                                                                                        |
 | **Verification Required** | None beyond the Validation Criteria below — no engine-version dependency; the server consumes engine exports that already exist                                                                                                                                                                                             |
 
@@ -49,14 +49,14 @@ client runs local prediction against the identical engine `step` for smoothness 
 | **Depends On**    | ADR-0001 (Supabase Accounts) — reuses its JWT-verification pattern and its Supabase project; this ADR adds tables/functions to the same project rather than a new one                                                                                                                 |
 | **Enables**       | `design/gdd/multiplayer-matchmaking-social.md` (this ADR is its technical backing); a future delta-encoding ADR; a future server-side fog-of-war filtering ADR                                                                                                                        |
 | **Blocks**        | Any story implementing lobby `start`/game-server claim/snapshot broadcast — none of that can be built until this ADR is Accepted                                                                                                                                                      |
-| **Ordering Note** | This ADR assumes the control-plane schema (`friendships`, `lobbies`, `lobby_members`, `gd-social`, `gd-lobby`) described in `multiplayer-matchmaking-social.md` exists first; the game server is the consumer of `lobbies.status = 'starting'`, not the producer of the schema itself |
+| **Ordering Note** | This ADR assumes the control-plane schema (`friendships`, `lobbies`, `lobby_members`, `db-social`, `db-lobby`) described in `multiplayer-matchmaking-social.md` exists first; the game server is the consumer of `lobbies.status = 'starting'`, not the producer of the schema itself |
 
 ## Context
 
 ### Problem Statement
 
 Online play needs one agreed-upon outcome for every connected player, and it needs to resist a
-modified client lying about its own state. GoldenDome's engine (`src/game/engine.js`) is already
+modified client lying about its own state. DomeBreak's engine (`src/game/engine.js`) is already
 "pure and deterministic given its seed" (`docs/spec.md`), which makes it tempting to run the exact
 same simulation independently on every client and only exchange the small set of player commands —
 a **lockstep** model. That temptation has to be weighed against what actually matters for this
@@ -67,7 +67,7 @@ team with no budget for chasing lockstep desync bugs across browser JS floating-
 timer drift, and client patch skew. We need a design that is cheat-resistant, tractable for one
 developer to build and debug, and reuses the engine exactly as it already exists.
 
-A second, GoldenDome-specific problem: the existing control plane (Supabase edge functions) has
+A second, DomeBreak-specific problem: the existing control plane (Supabase edge functions) has
 **no way to reach the machine we intend to run the game server on**. The Sunday host is a
 Raspberry Pi 5 living behind a home network / Tailscale, not a public HTTPS endpoint edge functions
 can call into. Any design that assumes "the backend calls the server to start a match" is not
@@ -75,14 +75,14 @@ buildable as stated; the control flow has to invert.
 
 ### Current State
 
-Today (per `docs/spec.md` and ADR-0001) GoldenDome has two established server-authoritative
+Today (per `docs/spec.md` and ADR-0001) DomeBreak has two established server-authoritative
 patterns, neither of which is a game server in the sense this ADR introduces:
 
-- `gd-match`, a Supabase edge function, resolves an entire combat exchange **in one shot** — a
+- `db-match`, a Supabase edge function, resolves an entire combat exchange **in one shot** — a
   seeded, non-real-time simulation triggered once at a deadline or once all players ready up. It
   is authoritative, but it is not a live, ticking process; there is nothing to "connect to" during
   play.
-- `gd-account` (ADR-0001) is a stateless write-gate for accounts/stats — it verifies a JWT and
+- `db-account` (ADR-0001) is a stateless write-gate for accounts/stats — it verifies a JWT and
   performs a single database write per call. It has no concept of an ongoing session.
 
 Neither pattern supports a continuously-ticking, real-time match with many humans and AI nations
@@ -140,7 +140,7 @@ lobby row — this is the **only** way a client learns where to connect; there i
 `active` transition and open a WebSocket directly to `server_url`.
 
 Every WebSocket connection presents a Supabase JWT at handshake. The server verifies it the same
-way `gd-account` does (`auth.getUser()` against the anon-key-scoped client, never trusting a
+way `db-account` does (`auth.getUser()` against the anon-key-scoped client, never trusting a
 client-supplied identity), resolves the verified `user_id` to the `slot` recorded for it in
 `lobby_members`, and from then on forces every whitelisted command from that connection to act as
 that slot — never a slot named in the message body.
@@ -161,7 +161,7 @@ directly off the snapshot; this is an accepted **trusted-client compromise** for
 Consequences and Risks), not an oversight — closing it requires server-side per-recipient
 filtering, which is out of scope here and tracked as future work.
 
-On game over, the server — not the client, and not `gd-account`'s `report_match` path — writes one
+On game over, the server — not the client, and not `db-account`'s `report_match` path — writes one
 `matches` row per human participant directly with the service-role key, using the engine's own
 win/loss determination, `mode: 'online'`.
 
@@ -195,7 +195,7 @@ win/loss determination, `mode: 'online'`.
             │  status='active' + match_id + server_url back
             ▼
 ┌───────────────────────────────────────────────────────────────────┐
-│  Supabase "Golden Dome" project                                     │
+│  Supabase "DomeBreak" project                                     │
 │  lobbies, lobby_members, friendships (control plane — no inbound    │
 │  path to the game server; edge functions cannot call it)           │
 └───────────────────────────────────────────────────────────────────┘
@@ -247,12 +247,12 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
   change proposed through the normal engine-owning process, not a server-side workaround.
 - The Realtime subscription must use the **service-role key**, scoped to the game server process
   only; it must never be embedded in any client bundle, exactly as ADR-0001 already establishes for
-  `gd-account`'s service-role usage.
+  `db-account`'s service-role usage.
 - The lobby claim must be a guarded, conditional write (e.g. an `UPDATE ... WHERE id = :id AND
   match_id IS NULL`) — even though only one game server instance exists today, the claim step
   must not be skipped or treated as unnecessary, since it is the only thing standing between this
   design and a future multi-server deployment silently double-claiming a lobby.
-- WebSocket JWT verification must reuse the same verification call shape as `gd-account`
+- WebSocket JWT verification must reuse the same verification call shape as `db-account`
   (`auth.getUser()` against a client scoped to the caller's bearer token) — do not introduce a
   second, divergent JWT-verification implementation.
 - The command whitelist must be an explicit allowlist (not a denylist) enumerated in one place in
@@ -293,7 +293,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 
 ### Alternative 2: Edge function calls the game server directly to start a match
 
-- **Description**: `gd-lobby`'s `start` action makes an outbound HTTP call from the edge function
+- **Description**: `db-lobby`'s `start` action makes an outbound HTTP call from the edge function
   to the game server's own HTTP endpoint to hand off the match synchronously.
 - **Pros**: Simpler mental model — a direct call instead of a subscribe-and-claim pattern; no
   polling/subscription infrastructure needed on the server side.
@@ -322,7 +322,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
   reconciliation with proper misprediction correction rather than a hard snap.
 - **Cons**: Meaningfully more implementation complexity — delta computation, sequence
   acknowledgment, and misprediction-correction logic all have to be built and debugged from
-  scratch, none of which exists in the engine today. At GoldenDome's current expected scale (small
+  scratch, none of which exists in the engine today. At DomeBreak's current expected scale (small
   private lobbies, 2–16 seats, LAN/Tailscale reachability), full-snapshot bandwidth is not
   demonstrated to be a real problem yet.
 - **Estimated Effort**: Significantly higher upfront effort for a benefit that is not yet needed.
@@ -351,7 +351,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 
 - Full-snapshot broadcast costs more bandwidth than a delta-encoded approach would, scaling with
   world size (units, projectiles, cities) and player count; acceptable at the current small-lobby,
-  LAN/Tailscale target, but a real constraint if GoldenDome later targets larger lobbies over the
+  LAN/Tailscale target, but a real constraint if DomeBreak later targets larger lobbies over the
   public internet.
 - Fog-of-war is not enforced server-side in this version — a client that chooses to inspect its own
   network traffic (rather than relying on the UI's normal rendering path) can see data
@@ -368,7 +368,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 ### Neutral
 
 - The claim-and-write-back pattern (server observes `starting`, writes `active` + connection info)
-  is a new interaction shape in this codebase, distinct from both the `gd-match` and `gd-account`
+  is a new interaction shape in this codebase, distinct from both the `db-match` and `db-account`
   patterns; it is a deliberate, documented departure, not an inconsistency, driven entirely by the
   private-host constraint.
 - Delta encoding and server-side fog-of-war filtering are both explicitly deferred rather than
@@ -382,7 +382,7 @@ subscribe(table: "lobbies", filter: "status=eq.starting")
 | Trusted-client fog-of-war compromise is exploited (a modified client reads hidden data)    | Medium                    | Low at current stage (private lobbies among known players); Medium if this mode is later exposed to strangers/ranked play | Documented explicitly as accepted for this version; server-side per-recipient snapshot filtering is tracked as required future work before any public/ranked/leaderboard-relevant mode ships                                                                              |
 | Sunday host (Raspberry Pi 5) goes offline or loses power                                   | Low–Medium                | High for any in-progress match — no failover server exists today                                                          | The 30s "stuck in `starting`" client-side watchdog (per the GDD) surfaces this gracefully for matches that haven't started; in-progress matches have no current failover — accepted at solo-dev scale, flagged as a future high-availability concern if online play grows |
 | Full-snapshot bandwidth becomes a real bottleneck at higher seat counts (approaching 16)   | Low now, rises with scale | Medium — degraded snapshot rate or connection drops under load                                                            | Snapshot rate (2 Hz) and tick rate (10 Hz) are both tuning knobs (per the GDD); delta encoding is the documented escape hatch once real data justifies the added complexity                                                                                               |
-| Service-role key used by the game server's Realtime subscription leaks                     | Low                       | Critical — same blast radius as any service-role leak (arbitrary DB access)                                               | Key lives only in the game server process's environment, never in any client bundle; same operational discipline already established for `gd-account` per ADR-0001                                                                                                        |
+| Service-role key used by the game server's Realtime subscription leaks                     | Low                       | Critical — same blast radius as any service-role leak (arbitrary DB access)                                               | Key lives only in the game server process's environment, never in any client bundle; same operational discipline already established for `db-account` per ADR-0001                                                                                                        |
 | No public ingress means online play is limited to LAN/Tailscale for the foreseeable future | Certain (by design)       | Medium — limits the addressable set of matches to players who can reach the host                                          | Explicitly scoped as a known limitation, not a defect; a public tunnel/relay is noted as follow-up work, not blocking this ADR's acceptance                                                                                                                               |
 
 ## Performance Implications
@@ -400,7 +400,7 @@ This is new, additive infrastructure — there is no existing live game server t
 The rollout is:
 
 1. **Control plane schema** (per `design/gdd/multiplayer-matchmaking-social.md`): `friendships`,
-   `lobbies`, `lobby_members` tables, RLS, Realtime enablement, and the `gd-social`/`gd-lobby` edge
+   `lobbies`, `lobby_members` tables, RLS, Realtime enablement, and the `db-social`/`db-lobby` edge
    functions. Verify: lobby create/join/leave/ready/set_ai/find all behave per that GDD with two
    real test accounts, entirely without a game server running yet (the lobby can sit at
    `starting` and simply time out per the 30s watchdog until step 2 exists).
@@ -426,7 +426,7 @@ The rollout is:
 
 **Rollback plan**: Because no existing system is being replaced, rollback is "do not enable the
 Multiplayer screen / do not run the game server systemd service" — single-player and the existing
-`gd-match`/accounts systems are entirely unaffected, since neither reads from nor writes to the
+`db-match`/accounts systems are entirely unaffected, since neither reads from nor writes to the
 lobby/game-server schema this ADR introduces.
 
 ## Validation Criteria
@@ -451,7 +451,7 @@ lobby/game-server schema this ADR introduces.
 | GDD Document                                   | System                             | Requirement                                                                                                                            | How This ADR Satisfies It                                                                                                                                                                                                       |
 | :--- | :--- | :--- | :--- |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "An authoritative Node game server... imports the same engine code the client uses... spins up a match instance from the lobby config" | The game server imports `src/game/engine.js` unmodified and calls `createWorld(setup)` from claimed `lobbies`/`lobby_members` data, per the Decision/Architecture sections above.                                               |
-| `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "gd-lobby 'start' only sets lobby status='starting'; the game server holds a Realtime subscription... claims 'starting' rows"          | Directly implemented as the claim mechanism described in Decision/Key Interfaces — an outbound-only subscription, never an inbound call from an edge function.                                                                  |
+| `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "db-lobby 'start' only sets lobby status='starting'; the game server holds a Realtime subscription... claims 'starting' rows"          | Directly implemented as the claim mechanism described in Decision/Key Interfaces — an outbound-only subscription, never an inbound call from an edge function.                                                                  |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "whitelists commands... forcing the sender's own slot"                                                                                 | The command whitelist and slot-forcing rule are specified as a mandatory Implementation Guideline and a Key Interface (`ClientCommand`) above.                                                                                  |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "ticks the world at 10Hz, broadcasts compressed full-world snapshots at 2Hz"                                                           | Directly implemented as the tick/broadcast loop described in the Decision section; rates are documented as tuning knobs in the GDD, held fixed at these values in this ADR's initial implementation.                            |
 | `design/gdd/multiplayer-matchmaking-social.md` | Multiplayer, Matchmaking & Friends | "useNetGame hook exposes the exact same [world, api] contract as the local useEngine"                                                  | Explicitly required as an Implementation Guideline/Validation Criterion; the ADR's Engine Compatibility section states the engine itself gains no network code, which is what makes an identical facade possible on both sides. |
@@ -461,7 +461,7 @@ lobby/game-server schema this ADR introduces.
 
 - `docs/architecture/adr-001-supabase-accounts.md` — the JWT-verification and service-role-key
   patterns this ADR reuses for WebSocket authentication and the online `matches` write path.
-- `docs/spec.md` — the prior `gd-match` edge-function-authoritative pattern this ADR's Context
+- `docs/spec.md` — the prior `db-match` edge-function-authoritative pattern this ADR's Context
   section contrasts against for a live, continuously-ticking match.
 - `design/gdd/multiplayer-matchmaking-social.md` — the gameplay-facing design document this ADR
   backs; the source of the lobby schema, edge-function action set, and player-facing rules this

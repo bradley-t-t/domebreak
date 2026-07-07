@@ -1,4 +1,4 @@
-# GoldenDome — Tailwind CSS v4 Migration Spec
+# DomeBreak — Tailwind CSS v4 Migration Spec
 
 **Date:** 2026-07-06
 **Author:** Sunday (agent) with Trenton Taylor
@@ -9,7 +9,7 @@
 
 ## 1. Goal
 
-Move GoldenDome's presentation layer **entirely** to Tailwind CSS v4. Delete
+Move DomeBreak's presentation layer **entirely** to Tailwind CSS v4. Delete
 `src/styles.css` (5,695 lines) and all seven component `.css` files. End state: exactly one
 stylesheet, `src/index.css`, holding the Tailwind import, an `@theme` token block, and one
 scoped `@layer` for irreducible keyframe VFX. Adopt a curated library set (Recharts, Radix,

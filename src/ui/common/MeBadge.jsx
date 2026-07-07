@@ -19,9 +19,9 @@ const monthYear = (iso) => {
 // can't live on the parent — its ref would never attach).
 function MeBadgePopover({profile, stats, since, total, winRate, hours, inGame, players, onSignOut, onClose, onOpenFriends}) {
     const ref = useModal(onClose);
-    const titleId = "gd-mebadge-title";
+    const titleId = "db-mebadge-title";
     return (
-        <div className="gd-mebadge-pop absolute top-[calc(100%+8px)] right-0 w-[260px] px-4 py-[14px] border border-line rounded bg-panel-2 backdrop-blur-[14px] shadow animate-[gdPop_150ms_var(--ease-out)]"
+        <div className="db-mebadge-pop absolute top-[calc(100%+8px)] right-0 w-[260px] px-4 py-[14px] border border-line rounded bg-panel-2 backdrop-blur-[14px] shadow animate-[gdPop_150ms_var(--ease-out)]"
              ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
              aria-labelledby={titleId}>
             <div className="flex items-baseline justify-between gap-2">
@@ -39,8 +39,8 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, inGame, p
             </div>
             {inGame && players?.length > 0 && (
                 <div className="mt-[10px] pt-[10px] border-t border-line-soft">
-                    <div className="font-display text-[10px] tracking-[1.2px] uppercase text-faint mb-1.5" id="gd-mebadge-roster-h">In This War</div>
-                    <div role="list" aria-labelledby="gd-mebadge-roster-h">
+                    <div className="font-display text-[10px] tracking-[1.2px] uppercase text-faint mb-1.5" id="db-mebadge-roster-h">In This War</div>
+                    <div role="list" aria-labelledby="db-mebadge-roster-h">
                         {players.map((p) => (
                             <div key={p.slot} className="flex items-center gap-2 py-[3px] text-xs text-text" role="listitem"
                                  aria-label={`${p.username || "Commander"} — ${p.iso || "no nation"}`}>
