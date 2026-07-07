@@ -2,7 +2,7 @@
 // Target resolution (findTarget) also lives here since launch/impact/attack
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
-import {FALLOUT, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
+import {BLAST, FALLOUT, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 
@@ -84,9 +84,10 @@ export function launch(w, unit, target, warhead) {
         warhead: warhead || "standard",
         damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1) * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
         // Intercept-evasion: the firing nation's hypersonic-glide bonus (off8),
-        // stacked with any inherent evasion on the launcher's own unit type. The
-        // defender subtracts this from its interceptor hit probability (tick.js).
-        evasion: (n?.hypersonicEvasion ?? 0) + (UNITS[unit.type].evasion ?? 0),
+        // stacked with any inherent evasion on the launcher's own unit type and on
+        // the loaded warhead (an HGV payload is hard to intercept whatever fires it).
+        // The defender subtracts this from its interceptor hit probability (tick.js).
+        evasion: (n?.hypersonicEvasion ?? 0) + (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
         speed: UNITS[unit.type].speed ?? MISSILE_SPEED,
         tried: [],
         altNorm: 0,
@@ -136,16 +137,45 @@ export function directFire(w, unit, target) {
     });
 }
 
+// Ground-zero blast wave. Every living unit within the warhead's blastKm takes a
+// share of its yield — full at the core, falling linearly to BLAST.edgeFrac at the
+// edge — friend or foe alike, the way fallout irradiates indiscriminately. The
+// direct target (excludeId) is skipped since it absorbs the full hit separately,
+// and cluster sub-warheads (blastKm 0 / p.sub) contribute no extra blast because
+// their area already comes from the MIRV pattern. Cities are untouched by blast so
+// the existing scoring/economy balance holds. Deterministic — no rng.
+function applyBlast(w, p, lng, lat, excludeId) {
+    const bk = WARHEADS[p.warhead]?.blastKm || 0;
+    if (bk <= 0 || p.sub) return;
+    const peak = p.damage * BLAST.aoeShare;
+    for (const u of w.units) {
+        if (u.hp <= 0 || u.id === excludeId) continue;
+        const d = haversine(lng, lat, u.lng, u.lat);
+        if (d > bk) continue;
+        const dmg = peak * (1 - (1 - BLAST.edgeFrac) * (d / bk));
+        if (dmg <= 0) continue;
+        u.hp -= dmg;
+        if (u.hp <= 0) {
+            u.hp = 0;
+            w.events.push({
+                id: nextId(w, "e"), t: w.time, type: "destroy", kind: "unit",
+                cityId: u.id, lng: u.lng, lat: u.lat, slot: p.slot
+            });
+        }
+    }
+}
+
 // Projectile arrival: applies damage to the target city/unit, kills it at 0 hp
-// (cities permanently — alive=false), and emits the hit/destroy/fizzle event.
+// (cities permanently — alive=false), spreads a ground-zero blast to nearby units,
+// and emits the hit/destroy/fizzle event.
 export function resolveHit(w, p) {
     const target = findTarget(w, p.targetId);
-    // A qualifying warhead (thermonuclear) contaminates the ground where it goes
-    // off, whether or not a live target was there to absorb the blast — so the
-    // cloud is sited before the fizzle bail-out, at the impact point.
-    if (FALLOUT.warheads.includes(p.warhead)) {
-        spawnFallout(w, target ? target.lng : p.toLng, target ? target.lat : p.toLat, p.slot);
-    }
+    // Ground zero: the live target's spot, or the aim point if nothing survived to
+    // absorb the hit. Fallout and blast are both sited here, before the fizzle
+    // bail-out — a warhead detonates on the ground whether or not a target remains.
+    const gzLng = target ? target.lng : p.toLng, gzLat = target ? target.lat : p.toLat;
+    if (FALLOUT.warheads.includes(p.warhead)) spawnFallout(w, gzLng, gzLat, p.slot);
+    applyBlast(w, p, gzLng, gzLat, target && target.kind === "unit" ? target.ref.id : null);
     if (!target || !target.alive) {
         w.events.push({id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat});
         return;

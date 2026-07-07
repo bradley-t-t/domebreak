@@ -273,7 +273,8 @@ export const UNITS = {
     // never the unit's own name.
     launcher: {
         label: "Hypersonic Launcher",
-        warheads: true, // fires the selectable strategic arsenal (standard/cluster/thermo); conventional units don't
+        warheads: true, // fires the selectable strategic arsenal; conventional units don't
+        ammo: ["standard", "cluster", "hgv"], // road-mobile hypersonic — no strategic thermo payload
         desc: "Road-mobile launcher lofting hypersonic glide vehicles — fast, hard to intercept, regional reach.",
         kind: "offense",
         cost: 200,
@@ -290,6 +291,7 @@ export const UNITS = {
     silo: {
         label: "Missile Silo",
         warheads: true,
+        ammo: ["standard", "cluster", "thermo"], // heavy ICBM — the strategic city-killer, no hypersonic glide body
         desc: "Hardened launch silo. Global-reach ICBMs carrying the heaviest strategic payloads.",
         ballistic: true,
         kind: "offense",
@@ -491,6 +493,7 @@ export const UNITS = {
     hypersonicbty: {
         label: "Hypersonic Missile Battery",
         warheads: true,
+        ammo: ["standard", "hgv"], // dedicated glide-vehicle platform — its signature payload
         desc: "Boost-glide launcher fielding maneuvering hypersonic weapons — fast, low, and hard to intercept at regional reach.",
         kind: "offense",
         requiresTech: "off8",
@@ -635,6 +638,7 @@ export const UNITS = {
     orbitalstrike: {
         label: "Orbital Strike Platform",
         warheads: true,
+        ammo: ["standard", "thermo"], // orbital kinetic rods, up to a strategic thermo payload
         desc: "Global kinetic-bombardment platform — a rod-from-god that can strike anywhere on the board, slow to recycle.",
         kind: "offense",
         ballistic: true,
@@ -679,6 +683,7 @@ export const UNITS = {
     "sub-ssbn": {
         label: "Ballistic Missile Sub (SSBN)",
         warheads: true,
+        ammo: ["standard", "cluster", "thermo"], // survivable sea leg of the triad — full strategic loadout
         desc: "The survivable sea leg of the triad — a deep-stealth boomer carrying global-reach SLBMs for a guaranteed second strike.",
         kind: "offense",
         domain: "sea",
@@ -999,7 +1004,7 @@ export const UNIT_ICON = {
 };
 
 // Map warhead type -> public/icons SVG basename (production queue + arsenal UI).
-export const WARHEAD_ICON = {standard: "wh-standard", cluster: "wh-cluster", thermo: "wh-thermo"};
+export const WARHEAD_ICON = {standard: "wh-standard", cluster: "wh-cluster", hgv: "wh-hgv", thermo: "wh-thermo"};
 
 // Radar coverage overlay ring colors by sensor type. Dedicated ground sensors get
 // distinct hues so the two warning tiers read apart at a glance; every other
@@ -1025,6 +1030,7 @@ export const WARHEADS = {
         dmgMult: 1.0,
         prodCost: 30,
         prodTime: 4,
+        blastKm: 70,        // ground-zero blast radius; units inside take proximity-scaled damage
         flame: "#ff8a1a",
         desc: "Conventional single warhead. Cheap and quick to build."
     },
@@ -1039,8 +1045,20 @@ export const WARHEADS = {
         spread: 300,
         subDmgFrac: 0.25,   // each sub-warhead carries this fraction of the bus damage
         primaryShare: 0.5,  // share of subs that stay on the primary target; the rest fan out
+        blastKm: 0,         // area comes from the MIRV pattern (splash), not a single blast
         flame: "#61e0ff",
         desc: "MIRV bus — splits into 8 warheads on reentry; half strike the target, half fan out to nearby targets."
+    },
+    hgv: {
+        name: "Hypersonic Glide Vehicle",
+        short: "HGV",
+        dmgMult: 1.6,
+        prodCost: 90,
+        prodTime: 8,
+        blastKm: 90,        // kinetic terminal impact — a tight, hard-hitting blast
+        evasion: 0.18,      // maneuvering glide body; added to the projectile's intercept-evasion
+        flame: "#b98cff",
+        desc: "Maneuvering kinetic glide body — fast and very hard to intercept. Carried only by hypersonic launchers."
     },
     thermo: {
         name: "Thermonuclear",
@@ -1048,16 +1066,40 @@ export const WARHEADS = {
         dmgMult: 2.4,
         prodCost: 130,
         prodTime: 11,
+        blastKm: 170,       // vast fireball — a wide blast on top of the lingering fallout cloud
         flame: "#ff3b6b",
         desc: "City-killer yield. Expensive and slow to produce."
     },
 };
+// Ground-zero blast: on detonation every unit within a warhead's blastKm takes
+// proximity-scaled damage — a fraction of the warhead's yield at the core, linearly
+// down to the edge — on top of the direct hit. Cities keep direct-hit-only so the
+// existing scoring/economy balance is untouched. Data-driven per the coding
+// standards: the tick reads these numbers, they are never hardcoded in systems.
+export const BLAST = {
+    aoeShare: 0.6,   // peak blast damage as a fraction of the warhead's full yield, at ground zero
+    edgeFrac: 0.3,   // fraction of that peak still dealt at the blast edge (0..1); core is 1
+};
 // Fraction of flight at which a cluster bus reenters and releases its MIRVs.
 export const MIRV_SPLIT_AT = 0.72;
 // Warhead display/cycling order (arsenal UI, loadout toggles).
-export const WARHEAD_ORDER = ["standard", "cluster", "thermo"];
+export const WARHEAD_ORDER = ["standard", "cluster", "hgv", "thermo"];
 // Warhead stockpile every nation starts the match with.
-export const AMMO_START = {standard: 6, cluster: 0, thermo: 0};
+export const AMMO_START = {standard: 6, cluster: 0, hgv: 0, thermo: 0};
+
+// Which strategic warheads each launcher may load. Warhead-capable units carry an
+// explicit `ammo` allow-list on their UNITS entry; anything else falls back to the
+// full order. The strike UI, the fire logic, and the setWarhead command all gate on
+// this, so a platform can never load — or be shown — a payload it cannot carry.
+export function allowedAmmo(type) {
+    return UNITS[type]?.ammo || WARHEAD_ORDER;
+}
+// Reverse map for the production arsenal: the launcher unit types that can fire a
+// given warhead, in canonical unit order. Drives each munition card's "fires from"
+// icon row.
+export function launchersForAmmo(key) {
+    return Object.keys(UNITS).filter((t) => UNITS[t].warheads && allowedAmmo(t).includes(key));
+}
 
 // Radioactive fallout: certain warheads scatter long-lived contamination at
 // ground zero. The resulting cloud drifts on the prevailing wind and irradiates

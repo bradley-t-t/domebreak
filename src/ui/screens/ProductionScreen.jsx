@@ -14,6 +14,7 @@ import {
     incomeOf,
     industryCapOf,
     industryCountOf,
+    launchersForAmmo,
     UNIT_ICON,
     unitLabel,
     unitLockReason,
@@ -181,6 +182,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         const afford = points >= wh.prodCost;
         const qn = queuedOf("ammo", key);
         const fallout = FALLOUT.warheads.includes(key);
+        const users = launchersForAmmo(key); // launcher types cleared to fire this warhead
         return (
             <button key={key}
                     className={cn(
@@ -199,6 +201,16 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         <span className="gd-ucard-cost font-mono text-xs text-gold">◆ {wh.prodCost}</span>
                     </div>
                     <span className="gd-ucard-line text-[10.5px] leading-[1.3] text-dim">{wh.desc}</span>
+                    {users.length > 0 && (
+                        <div className="gd-ucard-fires flex items-center gap-1.5 mt-0.5" aria-label={`Fired by: ${users.map((t) => unitLabel(t, me?.iso)).join(", ")}`}>
+                            <span className="font-mono text-[9px] tracking-[0.4px] uppercase text-faint" aria-hidden="true">Fires from</span>
+                            <span className="flex items-center gap-1" aria-hidden="true">
+                                {users.map((t) => (
+                                    <span key={t} title={unitLabel(t, me?.iso)} className="grid place-items-center w-[15px] h-[15px] text-dim"><UnitIcon name={UNIT_ICON[t]} size={13}/></span>
+                                ))}
+                            </span>
+                        </div>
+                    )}
                     {fallout && <span className="gd-ucard-tag gd-contam self-start mt-0.5 font-mono text-[9px] tracking-[0.3px] py-px px-[5px] rounded-[3px] border border-[rgba(140,255,58,0.5)] bg-[rgba(140,255,58,0.1)] text-[#a6ff5c]">☢ Leaves fallout</span>}
                     <div className="gd-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
                         <span>⧗ {wh.prodTime}s</span>

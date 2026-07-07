@@ -4,6 +4,7 @@
 import {
     AI_TUNING,
     AIRSTRIP_RUNWAY,
+    allowedAmmo,
     DEFAULT_BUILD_TIME,
     DEFAULT_HIT_PROB,
     DEFAULT_RELOAD,
@@ -479,8 +480,10 @@ function aiTick(w, dt) {
             if (idle) {
                 const tgt = pickTarget(w, enemies);
                 if (tgt) {
-                    // City-killers only come off the shelf — no conjured warheads.
-                    if ((n.ammo.thermo || 0) > 0 && rand(w) < AI_TUNING.thermoChance) idle.warhead = "thermo";
+                    // City-killers only come off the shelf — no conjured warheads —
+                    // and only onto a launcher cleared to carry them (a silo/sub/orbital,
+                    // never a road-mobile hypersonic).
+                    if (allowedAmmo(idle.type).includes("thermo") && (n.ammo.thermo || 0) > 0 && rand(w) < AI_TUNING.thermoChance) idle.warhead = "thermo";
                     commandAttack(w, idle.id, tgt.id);
                 }
             }
