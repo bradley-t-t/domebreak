@@ -6,6 +6,7 @@
 // returns {ok: true, ...} on success or {error: "reason"} on refusal. Point
 // costs are charged on acceptance and refunded if delivery later fails.
 import {
+    allowedAmmo,
     AMMO_START,
     AUTO_RESEARCH_RESERVE_MULT,
     MOVE_COST_FRAC,
@@ -421,6 +422,9 @@ export function cancelProd(w, slot, index) {
 export function setWarhead(w, slot, unitId, type) {
     const u = w.units.find((x) => x.id === unitId && x.slot === slot);
     if (!u || UNITS[u.type].kind !== "offense" || !WARHEADS[type]) return {error: "Invalid order."};
+    // A launcher can only load a payload on its allow-list — a road-mobile
+    // hypersonic can't carry a thermonuclear city-killer, etc.
+    if (!allowedAmmo(u.type).includes(type)) return {error: "This launcher can't carry that warhead."};
     u.warhead = type;
     return {ok: true};
 }

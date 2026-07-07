@@ -107,6 +107,8 @@ export {
     MIRV_SPLIT_AT,
     WARHEAD_ORDER,
     AMMO_START,
+    allowedAmmo,
+    launchersForAmmo,
     unitLabel,
     armamentOf,
     TECH_PATHS,

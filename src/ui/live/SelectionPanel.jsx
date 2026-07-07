@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {armamentOf, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {allowedAmmo, armamentOf, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
 import {CAPTURE} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
@@ -232,7 +232,9 @@ export default function SelectionPanel({
                         ships — fire their own munitions and get no warhead picker. */}
                     {UNITS[selectedUnit.type].warheads && (
                         <div className="flex gap-[5px] my-1 mb-[10px]">
-                            {WARHEAD_ORDER.map((k) => {
+                            {/* Only the payloads this launcher is cleared to carry —
+                                never the full arsenal. Keeps the picker honest. */}
+                            {allowedAmmo(selectedUnit.type).map((k) => {
                                 const wh = WARHEADS[k];
                                 const stock = myNation?.ammo?.[k] || 0;
                                 const cur = (selectedUnit.warhead || "standard") === k;
