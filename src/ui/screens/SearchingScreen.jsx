@@ -10,7 +10,7 @@ const SEARCH_TIMEOUT_S = 40;
 // (mount + Retry) so App only needs to switch screens; purely observes the
 // caller's own matchmaking_queue row via Realtime (+ a poll fallback) for the
 // status:'matched' transition, per adr-004.
-export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
+export default function SearchingScreen({onMatched, onCancel, reduceMotion, preQueued}) {
     const [elapsedS, setElapsedS] = useState(0);
     const [timedOut, setTimedOut] = useState(false);
     const [err, setErr] = useState(null);
@@ -32,6 +32,7 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
         matchedRef.current = false;
         startedAtRef.current = Date.now();
         setElapsedS(0);
+        if (preQueued) return; // party is already enrolled by db-party — just watch the queue
         const r = await quickMatch();
         if (r?.error) setErr(r.error);
     };

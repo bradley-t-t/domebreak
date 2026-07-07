@@ -24,6 +24,7 @@ import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import {menuButton} from "./ui/lib/variants.js";
 import {usePresence} from "./ui/hooks/usePresence.js";
+import {useParty} from "./ui/hooks/useParty.js";
 
 // DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
 // gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
@@ -46,6 +47,9 @@ export default function App() {
     const [splashDone, setSplashDone] = useState(false);
     // Online play: current lobby room and the live match connection.
     const [lobbyId, setLobbyId] = useState(null);
+    // True while the search screen is watching a party's public queue (the party
+    // is already enrolled by db-party, so the search screen must not re-enqueue).
+    const [partySearch, setPartySearch] = useState(false);
     const [netClient, setNetClient] = useState(null);
     const [netStatus, setNetStatus] = useState(null); // null | "connecting" | "lost"
     // Honor both the OS motion preference and the in-game toggle.
@@ -75,7 +79,31 @@ export default function App() {
             : screen === "lobby" ? "lobby"
                 : screen === "searching" ? "searching"
                     : "menu";
-    const {count: onlineCount, byId: presence} = usePresence(authStatus === "signedIn", presenceActivity);
+    // The signed-in player's party (create / join / launch), kept live. Its
+    // open+joinable summary rides along in presence so friends can see and join.
+    const partyHook = useParty(authStatus === "signedIn");
+    const {party, members: partyMembers} = partyHook;
+    const partyInfo = party && party.status === "open" ? {
+        id: party.id, join_mode: party.join_mode, seats: partyMembers.length, max: party.max_seats,
+        leaderName: partyMembers.find((m) => m.is_leader)?.username || null,
+    } : null;
+    const {count: onlineCount, byId: presence} = usePresence(authStatus === "signedIn", presenceActivity, partyInfo);
+
+    // When the leader launches, every member's party flips to 'launching'; route
+    // each client into the match — straight to the lobby for a private launch, or
+    // the (already-enqueued) search screen for a public queue.
+    useEffect(() => {
+        if (!party || party.status !== "launching") return;
+        if (screen === "playing" || screen === "lobby") return;
+        if (party.lobby_id) {
+            setLobbyId(party.lobby_id);
+            setScreen("lobby");
+        } else {
+            setPartySearch(true);
+            setScreen("searching");
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [party?.status, party?.lobby_id]);
 
     useEffect(() => {
         loadGameData().then(setData).catch(() => {
@@ -359,7 +387,7 @@ export default function App() {
             {attract}
             {splash}
             {screen !== "playing" &&
-                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar} presence={presence}/>}
+                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}
             {screen === "menu" &&
                 <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue}
                            onPlay={() => setScreen("searching")}
@@ -371,12 +399,16 @@ export default function App() {
             {screen === "newgame" &&
                 <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")}/>}
             {screen === "searching" &&
-                <SearchingScreen reduceMotion={reduceMotion}
+                <SearchingScreen reduceMotion={reduceMotion} preQueued={partySearch}
                                   onMatched={(id) => {
+                                      setPartySearch(false);
                                       setLobbyId(id);
                                       setScreen("lobby");
                                   }}
-                                  onCancel={() => setScreen("menu")}/>}
+                                  onCancel={() => {
+                                      setPartySearch(false);
+                                      setScreen("menu");
+                                  }}/>}
             {screen === "lobby" && lobbyId &&
                 <ErrorBoundary onReset={() => { setLobbyId(null); setScreen("menu"); }}>
                     <LobbyScreen lobbyId={lobbyId} me={accountProfile} connecting={netStatus === "connecting"}
@@ -393,7 +425,7 @@ export default function App() {
                               onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
                               onGameEnd={onGameEnd}
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
-                                                players={netClient?.players} onSetAvatar={changeAvatar} presence={presence}/>}/>
+                                                players={netClient?.players} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}/>
                 </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
                 <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
