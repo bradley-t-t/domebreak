@@ -1,4 +1,10 @@
-# Quick Design Spec: Population Growth Over Time
+<h1 align="center">Population Growth Over Time</h1>
+
+<p align="center">
+  <b>Cities regrow their population over a match at a data-driven, vitality-scaled rate — capped at a multiple of their starting size — so protected nations ramp economically while bombed ones stagnate.</b>
+</p>
+
+<br />
 
 **Type**: Addition
 **System**: City Vitality / Population (`design/gdd/city-vitality.md`)

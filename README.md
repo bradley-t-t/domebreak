@@ -38,7 +38,7 @@ you win.
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, air, ground, and space — SAM batteries, the DomeBreak, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
+      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome shield, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">Out-tech, out-economy</h3>
@@ -90,7 +90,7 @@ npm run electron:build:all   # package macOS + Windows
 
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| **Land — defense**  | SAM battery and the DomeBreak, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                                |
+| **Land — defense**  | SAM battery and the Golden Dome shield, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                       |
 | **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the tech-gated hypersonic missile battery — each firing selectable warheads                      |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
