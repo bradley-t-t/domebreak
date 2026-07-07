@@ -19,7 +19,8 @@ export default function StartMenu({
                                       canContinue,
                                       profile,
                                       stats,
-                                      onSignOut
+                                      onSignOut,
+                                      onlineCount
                                   }) {
     // Menu is a small two-level tree: the root offers the three top-level modes;
     // Single Player and Multiplayer each open a sub-panel. Settings opens its
@@ -59,6 +60,11 @@ export default function StartMenu({
                         <>
                             <div className={menuButton({variant: "section"})}>Multiplayer</div>
                             <button className={cn(menuButton({variant: "primary"}), "text-left")} onClick={onPlay}>Play</button>
+                            <div className="flex items-center gap-[7px] px-1 py-0.5 font-mono text-[10px] tracking-[1.5px] uppercase text-faint"
+                                 aria-label={onlineCount != null ? `${onlineCount} commanders online` : "Commanders online — connecting"}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
+                                {onlineCount != null ? `${onlineCount} Online` : "Connecting…"}
+                            </div>
                             <button className={cn(menuButton({variant: "back"}), "text-left")} onClick={() => setSection(null)}>Back</button>
                         </>
                     )}
@@ -88,8 +94,7 @@ export default function StartMenu({
                         <span title="Total time in command" aria-label={hours != null ? `${hours} hours playtime` : "Playtime — unavailable"}>{hours != null ? `${hours}h Playtime` : "—"}</span>
                     </div>
                 </div>
-                <div className="mt-auto mb-0 max-w-[300px] text-[10px] leading-[1.6] pointer-events-auto text-faint">A TaylorURL game · made solo by Trenton Taylor · world map © Open
-                    Historia (MIT) · icons game-icons.net (CC BY)
+                <div className="mt-auto mb-0 max-w-[300px] text-[10px] leading-[1.6] pointer-events-auto text-faint">A TaylorURL game · made solo by Trenton Taylor · icons game-icons.net (CC BY)
                 </div>
             </aside>
         </div>

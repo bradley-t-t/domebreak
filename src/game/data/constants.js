@@ -43,6 +43,18 @@ export const INTERCEPTOR_SPEED = 520;
 export const RADAR_RANGE_MULT = 2.5;
 export const TERRITORY_RADIUS = 550;
 export const MOVE_COST_FRAC = 0.25;
+// Ground occupation (see design/gdd/ground-combat-and-occupation.md). A capture-
+// flagged ground unit (infantry/tank) that holds within holdKm of an enemy city
+// — with no hostile unit inside contestKm to fight it off — accrues capture
+// progress over captureSec game-seconds, then flips that city's whole state to
+// the occupier. Progress bleeds off at decayPerSec when unheld or contested.
+// Data-driven per coding standards — no capture number is hardcoded in systems.
+export const CAPTURE = {
+    holdKm: 70,
+    contestKm: 140,
+    captureSec: 22,
+    decayPerSec: 0.15,
+};
 export const MIN_SEP = 45;
 // City survivability: warhead damage subtracts from these; a city dies at 0.
 export const CITY_HP = 100;
@@ -409,10 +421,11 @@ export const UNITS = {
     },
     infantry: {
         label: "Infantry",
-        desc: "Rifle divisions — cheap, tough, and slow. Close-range assault on land targets only.",
+        desc: "Rifle divisions — cheap, tough, and slow. Close-range assault on land targets only. Holds a cleared city to capture its state.",
         kind: "offense",
         domain: "land",
         targets: "land",
+        capture: true, // boots on the ground: may occupy and flip an enemy city's state
         requires: "armybase",
         landSpeed: 18,
         cost: 110,
@@ -447,10 +460,11 @@ export const UNITS = {
     },
     tank: {
         label: "Tank Battalion",
-        desc: "Armored maneuver force — the fastest thing on the ground.",
+        desc: "Armored maneuver force — the fastest thing on the ground. Can seize and hold enemy cities.",
         kind: "offense",
         domain: "land",
         targets: "land",
+        capture: true, // armored maneuver arm: may occupy and flip an enemy city's state
         requires: "armybase",
         landSpeed: 26,
         cost: 190,
@@ -1109,13 +1123,15 @@ export function techTimeForTier(tier) {
 }
 
 // The five research tracks; TECHS entries reference these by path id.
+// `color` is the doctrine accent — a per-track tactical tint used for the lane
+// label + glyph chip so the five rows read as distinct doctrines at a glance.
+// (Node/era chroma is a separate axis: the era band tints columns by epoch.)
 export const TECH_PATHS = [
-    {id: "off", name: "Strategic Command", glyph: "▲"}, {id: "def", name: "Missile Shield", glyph: "⬡"},
-    {id: "eco", name: "War Economy", glyph: "$"}, {id: "det", name: "Early Warning", glyph: "❉"}, {
-        id: "cmd",
-        name: "Command & Control",
-        glyph: "✦"
-    },
+    {id: "off", name: "Strategic Command", glyph: "▲", color: "#e06a4f"}, // offense — warm strike red
+    {id: "def", name: "Missile Shield", glyph: "⬡", color: "#4f9be0"},    // defense — shield blue
+    {id: "eco", name: "War Economy", glyph: "$", color: "#59c08a"},       // economy — supply green
+    {id: "det", name: "Early Warning", glyph: "❉", color: "#e0b34f"},     // detection — radar amber
+    {id: "cmd", name: "Command & Control", glyph: "✦", color: "#9b7fe0"}, // C2 — command violet
 ];
 
 // Build a linear tech chain for a track. Each def is a 1-based tier; tier N

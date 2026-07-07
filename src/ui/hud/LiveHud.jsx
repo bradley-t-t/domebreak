@@ -60,26 +60,25 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     const {date, time} = gameDate(world.time);
 
     // Adaptive fit: on smaller/laptop screens the command bar is wider than the lane
-    // its gutters leave it, so shrink the whole bar (zoom) just enough to fit rather
-    // than letting it overflow into the corner clusters. Measured, not breakpoint-based,
-    // so it adapts to any width and to content changes. zoom (not transform) also
-    // collapses the layout height, so the ticker below sits flush. natural width is
-    // recovered as scrollWidth / current-zoom, making the measure→scale loop converge
-    // in one step with no oscillation.
+    // its gutters leave it, so scale the whole bar down just enough to fit. Uses
+    // transform: scale() (NOT the `zoom` property, which vanishes under backdrop-filter
+    // on some Chromium builds — that hid the whole bar) with a readable floor so it
+    // never shrinks to an illegible sliver; below the floor it may nudge slightly into
+    // the gutters rather than disappear. transform doesn't affect layout, so scrollWidth
+    // stays the true natural width (no measure->scale feedback), and a negative margin
+    // pulls the ticker up to the bar's scaled bottom so there's no gap.
+    const FIT_FLOOR = 0.82;
     const barRef = useRef(null);
-    const scaleRef = useRef(1);
-    const [scale, setScale] = useState(1);
+    const [fit, setFit] = useState({scale: 1, mb: 0});
     useLayoutEffect(() => {
         const measure = () => {
             const bar = barRef.current, lane = bar?.parentElement;
             if (!bar || !lane) return;
-            const avail = lane.clientWidth;
-            const natural = bar.scrollWidth / (scaleRef.current || 1);
+            const avail = lane.clientWidth, natural = bar.scrollWidth;
             if (!avail || !natural) return;
-            const next = Math.min(1, avail / natural);
-            if (Math.abs(next - scaleRef.current) < 0.004) return;
-            scaleRef.current = next;
-            setScale(next);
+            const scale = Math.max(FIT_FLOOR, Math.min(1, avail / natural));
+            const mb = scale < 1 ? -Math.round(bar.offsetHeight * (1 - scale)) : 0;
+            setFit((p) => (Math.abs(p.scale - scale) < 0.004 && p.mb === mb ? p : {scale, mb}));
         };
         measure();
         const bar = barRef.current, lane = bar?.parentElement;
@@ -92,7 +91,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
     return (
         <div
             ref={barRef}
-            style={scale < 1 ? {zoom: scale} : undefined}
+            style={fit.scale < 1 ? {transform: `scale(${fit.scale})`, transformOrigin: "top center", marginBottom: fit.mb} : undefined}
             className="gd-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
             <div className="flex flex-col items-start leading-[1.15]"><span
                 className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span

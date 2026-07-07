@@ -105,7 +105,6 @@ function AttractWorld({data, onOver, framed}) {
     const mapRef = useRef(null);
     const [mapReady, setMapReady] = useState(0);
     const [explosions, setExplosions] = useState([]);
-    const [counts, setCounts] = useState({strikes: 0, intercepts: 0});
     const seen = useRef(new Set());
 
     // War director: open with several fronts, then keep escalating.
@@ -119,26 +118,18 @@ function AttractWorld({data, onOver, framed}) {
     // per-slot visibility filter and no sound.
     useEffect(() => {
         const fresh = [];
-        let strikes = 0, intercepts = 0;
         for (const e of w.events) {
             if (seen.current.has(e.id)) continue;
             seen.current.add(e.id);
             if (e.type === "intercept") {
-                intercepts++;
                 fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "intercept"});
-            } else if (e.type === "hit" || e.type === "destroy") {
-                strikes++;
-                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type});
-            } else if (e.type === "mirv" || e.type === "miss") {
+            } else if (e.type === "hit" || e.type === "destroy" || e.type === "mirv" || e.type === "miss") {
                 fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type});
             }
         }
         if (seen.current.size > 500) seen.current = new Set(w.events.map((e) => e.id));
         if (w.over) onOver?.();
         if (!fresh.length) return;
-        if (strikes || intercepts) {
-            setCounts((c) => ({strikes: c.strikes + strikes, intercepts: c.intercepts + intercepts}));
-        }
         setExplosions((list) => [...list, ...fresh]);
         for (const e of fresh) {
             setTimeout(() => setExplosions((list) => list.filter((x) => x.id !== e.id)), 850);
@@ -251,11 +242,6 @@ function AttractWorld({data, onOver, framed}) {
         })),
     }), [w.cities, w.time]);
 
-    const wars = new Set();
-    for (const n of w.nations) for (const [s, r] of Object.entries(n.relations)) {
-        if (r === "war") wars.add(n.slot < +s ? `${n.slot}-${s}` : `${s}-${n.slot}`);
-    }
-
     return (
         <>
             <WorldMap globe onMap={(m) => {
@@ -335,9 +321,6 @@ function AttractWorld({data, onOver, framed}) {
                       interceptors={w.interceptors}
                       aircraft={w.units.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)}
                       tick={w.time}/>
-            <div className="absolute left-0 right-0 bottom-[14px] z-2 text-center font-mono text-[10px] tracking-[2.5px] text-faint [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]">
-                LIVE SIMULATION · {wars.size} FRONTS · {counts.strikes} STRIKES · {counts.intercepts} INTERCEPTS
-            </div>
         </>
     );
 }

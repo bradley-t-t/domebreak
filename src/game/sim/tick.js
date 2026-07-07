@@ -36,7 +36,8 @@ import {
     sensorsOf,
     vitalityOf
 } from "./queries.js";
-import {findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
+import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
+import {captureTick} from "./occupation.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
 import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
@@ -692,16 +693,25 @@ export function step(w, dt) {
             const n = nationOf(w, u.slot);
             if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
                 ensureProd(n);
-                // Missile units spend a warhead from the strategic arsenal (and can't
-                // fire when it's empty). Conventional units — tanks, aircraft, ships —
-                // fire their own munitions and never draw the arsenal.
-                const _wh = def.warheads ? (u.warhead || "standard") : "standard";
-                if (!def.warheads || (n.ammo[_wh] || 0) > 0) {
-                    if (def.warheads) n.ammo[_wh] -= 1;
-                    launch(w, u, t, _wh);
-                    // Ships rearming under a Replenishment Ship recycle faster.
-                    const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
-                    u.cooldown = def.reload * (n?.reloadMult ?? 1) * replen;
+                if (def.targets === "land") {
+                    // Ground forces (infantry/tank/artillery) fight like ground
+                    // forces: damage lands straight on the target — no interceptable
+                    // projectile, no SAM/THAAD engagement. Distinct from the missile
+                    // and warhead platforms that loft the interceptable arsenal.
+                    directFire(w, u, t);
+                    u.cooldown = def.reload * (n?.reloadMult ?? 1);
+                } else {
+                    // Missile units spend a warhead from the strategic arsenal (and can't
+                    // fire when it's empty). Conventional air/sea units — aircraft, ships —
+                    // fire their own munitions and never draw the arsenal.
+                    const _wh = def.warheads ? (u.warhead || "standard") : "standard";
+                    if (!def.warheads || (n.ammo[_wh] || 0) > 0) {
+                        if (def.warheads) n.ammo[_wh] -= 1;
+                        launch(w, u, t, _wh);
+                        // Ships rearming under a Replenishment Ship recycle faster.
+                        const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
+                        u.cooldown = def.reload * (n?.reloadMult ?? 1) * replen;
+                    }
                 }
             }
         }
@@ -922,6 +932,10 @@ export function step(w, dt) {
     // Dispatch/relaunch leadership evac ferries for nations actively sheltering
     // (player pressed Shelter, or an AI that has entered a war).
     evacTick(w);
+    // Advance ground occupation: capture-flagged units holding cleared enemy cities
+    // flip their state to the occupier. Runs before growth/tally so a captured city
+    // is counted for its new owner's income and domination share this same tick.
+    captureTick(w, dt);
     // Grow city populations for this tick before the tally reads them, so income,
     // industry cap, and the domination check all see the updated figures.
     growCities(w, dt);

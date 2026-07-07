@@ -22,6 +22,7 @@ import MeBadge from "./ui/common/MeBadge.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import {menuButton} from "./ui/lib/variants.js";
+import {useOnlineCount} from "./ui/hooks/useOnlineCount.js";
 
 // DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
 // gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
@@ -64,6 +65,9 @@ export default function App() {
     // guards win/loss/quit from ever double-firing for one game session.
     const wallStartedAtRef = useRef(null);
     const reportedRef = useRef(false);
+    // Live head-count of commanders online, shown in the Multiplayer menu. Only
+    // joins the presence channel once signed in.
+    const onlineCount = useOnlineCount(authStatus === "signedIn");
 
     useEffect(() => {
         loadGameData().then(setData).catch(() => {
@@ -340,7 +344,7 @@ export default function App() {
                                setSaveMode("load");
                                setOverlay("saveload");
                            }} onSettings={() => setOverlay("settings")} profile={accountProfile}
-                           stats={accountStats} onSignOut={signOut}/>}
+                           stats={accountStats} onSignOut={signOut} onlineCount={onlineCount}/>}
             {screen === "newgame" &&
                 <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")}/>}
             {screen === "searching" &&
