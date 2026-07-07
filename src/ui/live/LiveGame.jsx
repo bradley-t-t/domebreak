@@ -54,6 +54,7 @@ import {GAME_SPEEDS, PAN_PX_PER_SEC, START_CAM} from "../../game/data/constants.
 import {keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
+import {useOwnershipLayer} from "./useOwnershipLayer.js";
 import SelectionPanel from "./SelectionPanel.jsx";
 import {fmtPop} from "../common/format.js";
 
@@ -72,6 +73,10 @@ const COUNTRY_ZOOM = 4.2;
 // so by the time the entire globe is in frame the map reads clean). Tuning knob.
 const UNIT_FADE_ZOOM = [1.8, 3.0];
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;
+// Controlled-territory tint: strong enough to read the owner color at the whole-earth
+// view, easing off as you zoom in and the real relief takes over.
+const REGION_OWNER_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.7, 4, 0.52, 5.5, 0.32];
+const REGION_OWNER_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 2, 0.6, 6, 1.4];
 const DEFAULT_LAYERS = {countries: true, states: false, defense: false, radar: false, pop: false, backdrop: true};
 // Client-side amphibious lift radius — mirrors AMPHIB_LIFT_KM in production.js so
 // the context menu only offers embark on ground units the engine will accept.
@@ -680,6 +685,8 @@ export default function LiveGame({
     } = useLiveLayers({
         w, mySlot, myNation, backdrop, layers, placing, moving, cursor, selUnit, placeValid, teamColor, COAST_KM
     });
+    // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
+    const ownership = useOwnershipLayer(w);
 
     const onMove = (e) => {
         const m = mapRef.current;
@@ -1015,6 +1022,14 @@ export default function LiveGame({
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <Source id="db-regions" type="vector" url={REGIONS_URL}>
+                    {/* Controlled-territory recolor: conquered land in the conqueror's
+                        flag color, a civil-war breakaway in its own color, drawn under
+                        the national borders so those still read on top. */}
+                    {layers.countries && <Layer id="region-owner" type="fill" source-layer="regions" beforeId="country-line"
+                           paint={{"fill-color": ownership.fill, "fill-opacity": REGION_OWNER_OPACITY}}/>}
+                    {layers.countries && <Layer id="region-owner-line" type="line" source-layer="regions" beforeId="country-line"
+                           filter={["in", ["get", "GID_1"], ["literal", ownership.ids]]}
+                           paint={{"line-color": "#0a0c0f", "line-width": REGION_OWNER_LINE_WIDTH, "line-opacity": 0.55}}/>}
                     {layers.states && <Layer id="region-all" type="line" source-layer="regions" paint={{
                         "line-color": "#6b7079",
                         "line-opacity": 0.3,

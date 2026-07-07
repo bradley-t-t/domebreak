@@ -190,6 +190,73 @@ describe("fractureNation — the civil war", () => {
     });
 });
 
+describe("fractureNation — leadership ferries caught in transit", () => {
+    // Capital far west (loyal); east secedes. A bunker + a laden ferry sit in the
+    // east, a second laden ferry and an airstrip in the west, so we can assert each
+    // successor's in-flight planes get re-aimed at assets it actually owns.
+    function ferryWorld() {
+        const parent = nation({slot: 5, name: "Testland", points: 1000, gdp: 20});
+        const cities = [
+            city({id: "cap", slot: 5, cap: 1, lng: -10, pop: 4e6}),
+            city({id: "w2", slot: 5, lng: -6, pop: 2e6}),
+            city({id: "e1", slot: 5, lng: 6, pop: 2e6}),
+            city({id: "e2", slot: 5, lng: 10, pop: 3e6}),
+        ];
+        const ferry = ({id, lng, mission = {}}) => ({
+            id, slot: 5, type: "transport", hp: 50, lng, lat: 0,
+            mission: {role: "leadershipFerry", mode: "shelter", phase: "toPickup", capId: "cap", bunkerId: "bk", homeId: "as", timer: 0, cargo: 0, ...mission},
+        });
+        const units = [
+            {id: "bk", slot: 5, type: "bunker", hp: 200, lng: 9, lat: 0},    // east → defects to rebel
+            {id: "as", slot: 5, type: "airstrip", hp: 100, lng: -9, lat: 0}, // west → stays loyal
+            ferry({id: "fEast", lng: 8, mission: {cargo: 2}}),              // laden, defects to rebel
+            ferry({id: "fWest", lng: -8, mission: {cargo: 3}}),            // laden, stays loyal
+            ferry({id: "fEmpty", lng: -7, mission: {cargo: 0, phase: "toPickup"}}), // empty, loyal
+            {id: "escE", slot: 5, type: "fighter", hp: 40, lng: -9, lat: 0, mission: {role: "leadershipEscort", leadId: "fEast"}},
+        ];
+        return {parent, w: world({nations: [parent], cities, units})};
+    }
+    const ferryOf = (w, id) => w.units.find((u) => u.id === id).mission;
+
+    it("test_laden_rebel_ferry_delivers_to_its_own_bunker", () => {
+        const {parent, w} = ferryWorld();
+        fractureNation(w, parent);
+        expect(w.units.find((u) => u.id === "fEast").slot).toBe(6); // defected to the breakaway
+        expect(w.units.find((u) => u.id === "bk").slot).toBe(6);    // bunker went with the east
+        const m = ferryOf(w, "fEast");
+        expect(m.mode).toBe("shelter");   // dropping cargo INTO the bunker
+        expect(m.bunkerId).toBe("bk");
+        expect(m.phase).toBe("toDrop");
+    });
+
+    it("test_laden_ferry_with_no_owned_bunker_falls_back_to_owned_city", () => {
+        const {parent, w} = ferryWorld();
+        fractureNation(w, parent);
+        // The loyalist half lost its only bunker to the rebels → drop at an owned city.
+        expect(w.units.find((u) => u.id === "fWest").slot).toBe(5);
+        const m = ferryOf(w, "fWest");
+        expect(m.mode).toBe("release"); // release drops INTO a city
+        expect(m.phase).toBe("toDrop");
+        const dropCity = w.cities.find((c) => c.id === m.capId);
+        expect(dropCity.slot).toBe(5);   // and it's a city the loyalists actually own
+        expect(dropCity.alive).toBe(true);
+    });
+
+    it("test_empty_ferry_abandons_run_and_heads_home", () => {
+        const {parent, w} = ferryWorld();
+        fractureNation(w, parent);
+        expect(ferryOf(w, "fEmpty").phase).toBe("toHome");
+        expect(ferryOf(w, "fEmpty").homeId).toBe("as"); // an owned airstrip
+    });
+
+    it("test_escort_follows_its_ferry_to_the_new_state", () => {
+        const {parent, w} = ferryWorld();
+        fractureNation(w, parent);
+        // Escort sat in the west (would stay loyal on its own) but tracks fEast → rebel.
+        expect(w.units.find((u) => u.id === "escE").slot).toBe(6);
+    });
+});
+
 describe("AI leadership doctrine (evacTick)", () => {
     it("test_ai_shelters_when_at_war_with_exposed_leaders", () => {
         const ai = nation({slot: 0, isAi: true, relations: {1: "war"}, lead: {total: 12, lost: 0, sheltered: 0}, _evac: false});
