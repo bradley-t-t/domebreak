@@ -62,7 +62,7 @@ export function startMatchmaker(db, log) {
         let waiting;
         try {
             const {data, error} = await db.from("matchmaking_queue")
-                .select("user_id, iso, enqueued_at")
+                .select("user_id, iso, enqueued_at, party_id")
                 .eq("status", "waiting")
                 .order("enqueued_at");
             if (error) throw error;
@@ -75,13 +75,34 @@ export function startMatchmaker(db, log) {
         // waiting until a second real player queues.
         if (waiting.length < MIN_PLAYERS) return;
 
-        const anchor = waiting[0];
-        const anchorAgeMs = Date.now() - Date.parse(anchor.enqueued_at);
-        const groupFull = waiting.length >= MAX_PLAYERS;
+        // Build the next group keeping publicly-queued parties intact — never
+        // split a party across the MAX_PLAYERS boundary. Solo waiters (no party_id)
+        // fill remaining seats, so an all-solo lobby behaves exactly as before
+        // (the first MAX_PLAYERS in FIFO order).
+        const players = [];
+        const usedParties = new Set();
+        for (const r of waiting) {
+            if (players.length >= MAX_PLAYERS) break;
+            if (!r.party_id) {
+                players.push(r);
+                continue;
+            }
+            if (usedParties.has(r.party_id)) continue;
+            const partyRows = waiting.filter((w) => w.party_id === r.party_id);
+            if (players.length === 0 && partyRows.length >= MAX_PLAYERS) {
+                players.push(...partyRows.slice(0, MAX_PLAYERS)); // a full party fills the match alone
+                break;
+            }
+            if (players.length + partyRows.length > MAX_PLAYERS) continue; // won't fit now — hold for a fresh group
+            usedParties.add(r.party_id);
+            players.push(...partyRows);
+        }
+        if (players.length < MIN_PLAYERS) return;
+
+        const anchorAgeMs = Date.now() - Date.parse(players[0].enqueued_at);
+        const groupFull = players.length >= MAX_PLAYERS;
         const windowElapsed = anchorAgeMs >= MATCH_WINDOW_MS;
         if (!groupFull && !windowElapsed) return; // MIN met — hold briefly for more
-
-        const players = waiting.slice(0, MAX_PLAYERS);
         for (const p of players) claiming.add(p.user_id);
         try {
             await formLobby(db, log, players);

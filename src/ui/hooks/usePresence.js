@@ -6,17 +6,19 @@
 //
 // Returns {count, byId}:
 //   count — distinct online users (the Multiplayer-menu head count; null until sync)
-//   byId  — { [userId]: {at, activity} } for everyone currently online
+//   byId  — { [userId]: {at, activity, party} } for everyone currently online,
+//           where party (when set) is {id, join_mode, seats, max, leaderName} so
+//           a friend can see and join an open party with room.
 import {useEffect, useRef, useState} from "react";
 import {supabase} from "../../account/client.js";
 import {heartbeat} from "../../account/api.js";
 
 const HEARTBEAT_MS = 90_000;
 
-export function usePresence(enabled, activity) {
+export function usePresence(enabled, activity, party) {
     const [state, setState] = useState({count: null, byId: {}});
     const chRef = useRef(null);
-    const activityRef = useRef(activity);
+    const payloadRef = useRef({activity, party: party ?? null});
 
     useEffect(() => {
         if (!enabled) {
@@ -41,7 +43,7 @@ export function usePresence(enabled, activity) {
                 .on("presence", {event: "leave"}, sync)
                 .subscribe((status) => {
                     if (status !== "SUBSCRIBED") return;
-                    ch.track({at: Date.now(), activity: activityRef.current});
+                    ch.track({at: Date.now(), ...payloadRef.current});
                     heartbeat();
                     hb = setInterval(heartbeat, HEARTBEAT_MS);
                 });
@@ -54,11 +56,14 @@ export function usePresence(enabled, activity) {
         };
     }, [enabled]);
 
-    // Re-broadcast whenever my activity changes (menu → in a match, etc.).
+    // Re-broadcast whenever my activity or party changes (menu → in a match;
+    // created/joined/left a party). Keyed on a serialized digest of both.
+    const key = `${activity}|${party ? `${party.id}:${party.seats}/${party.max}:${party.join_mode}` : ""}`;
     useEffect(() => {
-        activityRef.current = activity;
-        if (chRef.current) chRef.current.track({at: Date.now(), activity});
-    }, [activity]);
+        payloadRef.current = {activity, party: party ?? null};
+        if (chRef.current) chRef.current.track({at: Date.now(), ...payloadRef.current});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
 
     return state;
 }
