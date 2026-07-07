@@ -13,7 +13,7 @@ const keyFile = (key) => path.join(DATA_DIR, encodeURIComponent(key) + ".json");
 function registerLocalStore() {
     // Owner-only: the folder holds the auth session token alongside saves.
     fs.mkdirSync(DATA_DIR, {recursive: true, mode: 0o700});
-    ipcMain.handle("gd:list", () => {
+    ipcMain.handle("db:list", () => {
         const out = {};
         for (const f of fs.readdirSync(DATA_DIR)) {
             if (!f.endsWith(".json")) continue;
@@ -24,13 +24,13 @@ function registerLocalStore() {
         }
         return out;
     });
-    ipcMain.handle("gd:set", (_e, key, value) => {
+    ipcMain.handle("db:set", (_e, key, value) => {
         fs.writeFileSync(keyFile(key), String(value), {mode: 0o600});
     });
-    ipcMain.handle("gd:del", (_e, key) => {
+    ipcMain.handle("db:del", (_e, key) => {
         fs.rmSync(keyFile(key), {force: true});
     });
-    ipcMain.handle("gd:dir", () => DATA_DIR);
+    ipcMain.handle("db:dir", () => DATA_DIR);
 }
 
 const MIME = {
