@@ -149,15 +149,25 @@ to 40. A peaceful, undamaged nation with leaders home and a surplus sits at
 - **Single-city nation at 0%**: cannot fracture; pressure is relieved to
   `resetStability` so it doesn't retrigger every tick.
 - **Fracture while sheltering / mid-airlift**: both successor governments are
-  re-seeded fresh; in-flight ferries finish their flight and reconcile against the
-  new pool. Leadership continuity is intentionally reset by the schism.
+  re-seeded fresh. Every leadership ferry caught in transit is re-aimed at an asset
+  its (possibly newly seceded) owner actually holds — a surviving owned bunker if
+  there is one, otherwise the nearest owned living city — and its fighter escort
+  follows it to the new state (`retargetFerry`, `leadership.js`). A ferry with no
+  cargo abandons its run and returns to an owned airstrip. This prevents a defected
+  or orphaned plane from flying command into what is now enemy hands. Leadership
+  continuity is otherwise intentionally reset by the schism.
 - **Player fractures**: `w.mySlot` is unchanged — the player keeps the loyal,
   capital-holding half and immediately faces a new hostile AI on the seceded half.
   Not a defeat; the player fights the rebellion.
 - **New nation mid-match**: the rebel is a full nation object appended to
-  `w.nations`; it is picked up by diplomacy, AI, combat, rendering, and win-
-  condition loops on the following tick. Its color comes from `colorForSlot(slot)`
-  (golden-angle hue — any slot is distinct).
+  `w.nations`; it is picked up by diplomacy, AI, combat, and win-condition loops on
+  the following tick. On the map, the seceded half is redrawn as its own territory:
+  the ownership overlay recolors every province the breakaway controls in its own
+  color (`colorForSlot(slot)`, golden-angle hue — any slot is distinct) with a
+  border along the real province edges, so the schism reads as two countries rather
+  than one. Because the rebel shares its parent's ISO/flag, this owner-driven recolor
+  — not the static per-ISO flag map — is what makes the new state visible (see
+  ADR-0006 and `ui/live/useOwnershipLayer.js`).
 - **Determinism**: Stability and the fracture geometry are pure functions of stored
   state; the only RNG is the seeded `rand(w)` used to stagger the new AI's think
   timer, preserving replay/save reproducibility.
@@ -172,8 +182,12 @@ to 40. A peaceful, undamaged nation with leaders home and a surplus sits at
 - **Diplomacy / war** (`queries.js atWar`, `production.js declareWar/makePeace`,
   `tick.js diploTick`) — war count, and the civil-war war declaration.
 - **Leadership** (`leadership.js`) — `lead.lost` and `lead.sheltered` feed the
-  penalties; `seedLeadership` re-seeds both successor states; `evacTick` gains the
+  penalties; `seedLeadership` re-seeds both successor states; `retargetFerry`
+  re-aims in-flight ferries onto owned assets at the split; `evacTick` gains the
   AI shelter-at-war / release-at-peace doctrine. (See `design/gdd/leadership.md`.)
+- **Map ownership overlay** (`ui/live/useOwnershipLayer.js`, `scripts/gen-city-region.mjs`,
+  ADR-0006) — recolors provinces the breakaway (or any conqueror) controls, so the
+  new borders show on the political map.
 - **Economy** (`queries.js netIncomeOf`) — the deficit penalty.
 - **Nation state / colors** (`engine.js`, `constants.js colorForSlot`) — the
   `stability` field and the runtime-created rebel nation.
@@ -216,5 +230,13 @@ to 40. A peaceful, undamaged nation with leaders home and a surplus sits at
    war. A nation with < `minCitiesToFracture` cities does not fracture. (unit-tested)
 6. An AI shelters its leadership when at war with exposed leaders and releases it
    when at peace with sheltered leaders. (unit-tested)
-7. `npm run lint` is clean (0 errors) and `npm run build` succeeds; the Stability
+7. On a fracture, the seceded half is drawn on the map as its own territory — its
+   provinces recolored in the breakaway's color with a border along the real province
+   edges (like any two neighbouring countries), while the loyal half keeps the parent
+   flag. The same overlay shows land captured in ordinary war in the conqueror's color.
+8. Any leadership ferry in transit at the split delivers its cargo to an asset its
+   owner actually holds — a surviving owned bunker, else the nearest owned living
+   city — or, if empty, returns to an owned airstrip; its escort follows it.
+   (unit-tested)
+9. `npm run lint` is clean (0 errors) and `npm run build` succeeds; the Stability
    readout and a fracture are observed in the Electron build.

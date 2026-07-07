@@ -10,7 +10,7 @@
 import {STABILITY, colorForSlot} from "../data/constants.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {netIncomeOf, populationOf} from "./queries.js";
-import {bunkerOf, seedLeadership} from "./leadership.js";
+import {bunkerOf, retargetFerry, seedLeadership} from "./leadership.js";
 import {haversine} from "../geo/geo.js";
 
 // Wars a nation is currently fighting.
@@ -184,6 +184,13 @@ export function fractureNation(w, parent) {
     // Make sure the bunker check is valid post-split (parent may have lost its bunker
     // to the rebel half); reconciliation next tick handles any orphaned sheltered.
     if (parent.lead && !bunkerOf(w, parent.slot)) parent.lead.sheltered = 0;
+    // Re-aim any leadership ferry caught in transit at the split: each successor's
+    // planes now deliver to an asset it actually owns (a surviving bunker, else its
+    // nearest owned city) instead of flying command into what is now enemy hands.
+    for (const u of w.units) {
+        if (u.type === "transport" && u.mission?.role === "leadershipFerry"
+            && (u.slot === parent.slot || u.slot === newSlot)) retargetFerry(w, u);
+    }
     w.events.push({
         id: nextId(w, "e"), t: w.time, type: "civilwar",
         slot: parent.slot, rebelSlot: newSlot, name: rebelNation.name,
