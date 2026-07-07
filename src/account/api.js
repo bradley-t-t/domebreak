@@ -39,10 +39,11 @@ export async function fetchStats() {
 }
 
 // The profile picture (a unit-icon slug) lives in auth user_metadata alongside
-// the username — read it straight off the current user, no table read needed.
+// the username. Read it from the cached local session (no network call, no
+// contention on the auth lock) — setAvatar refreshes that session on write.
 export async function fetchAvatar() {
-    const {data} = await supabase.auth.getUser();
-    return data?.user?.user_metadata?.avatar ?? null;
+    const {data} = await supabase.auth.getSession();
+    return data?.session?.user?.user_metadata?.avatar ?? null;
 }
 
 async function invokeAccount(body) {

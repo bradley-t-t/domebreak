@@ -107,9 +107,13 @@ export default function App() {
         if (authStatus !== "signedIn" || DEV_NOAUTH) return;
         touch(); // fire-and-forget last_login stamp
         // Profile row (username, joined date) plus the avatar slug from auth
-        // metadata, merged into one object for MeBadge.
-        Promise.all([fetchProfile(), fetchAvatar()])
-            .then(([prof, avatar]) => setAccountProfile(prof ? {...prof, avatar} : prof));
+        // metadata. allSettled so a hiccup fetching the avatar can never block
+        // the profile itself — the username must always render.
+        Promise.allSettled([fetchProfile(), fetchAvatar()]).then(([pr, av]) => {
+            const prof = pr.status === "fulfilled" ? pr.value : null;
+            const avatar = av.status === "fulfilled" ? av.value : null;
+            setAccountProfile(prof ? {...prof, avatar} : prof);
+        });
         fetchStats().then(setAccountStats);
     }, [authStatus]);
 
