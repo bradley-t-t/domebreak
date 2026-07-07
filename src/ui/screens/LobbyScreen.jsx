@@ -41,6 +41,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     // moment you click, so selection never waits on the set-iso round-trip and its
     // realtime echo. Cleared once the server's lobby row catches up (or on error).
     const [optimisticIso, setOptimisticIso] = useState(null);
+    // Optimistic ready toggle: the button reflects the intent the instant you click
+    // instead of waiting for the ready write + its realtime echo (which made a
+    // working click look like nothing happened). null = follow the server row.
+    const [readyOpt, setReadyOpt] = useState(null);
     const mapRef = useRef(null);
     const [mapReady, setMapReady] = useState(0);
     // Guards so realtime's repeated callbacks can never double-fire the
@@ -89,6 +93,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     useEffect(() => {
         if (optimisticIso && myMember?.iso === optimisticIso) setOptimisticIso(null);
     }, [myMember?.iso, optimisticIso]);
+    // Drop the optimistic ready state once the server row agrees.
+    useEffect(() => {
+        if (readyOpt != null && myMember && !!myMember.ready === readyOpt) setReadyOpt(null);
+    }, [myMember?.ready, myMember, readyOpt]);
     const humans = members.filter((m) => !m.isBot).length;
     const bots = members.length - humans;
     const countryName = (iso) => data?.countries?.find((c) => c.iso === iso)?.name || iso;
@@ -155,8 +163,16 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
 
     const onMapClick = (e) => {
         const m = mapRef.current;
-        const feat = e.features?.find((f) => f.layer?.id === "country-fill")
-            || (m ? m.queryRenderedFeatures(e.point, {layers: ["country-fill"]})[0] : null);
+        if (!m) return;
+        // Forgiving hit test: the exact click point first, then a small box around
+        // it — so a near-miss on a small country (or the curved globe) still selects
+        // instead of doing nothing and making the player click over and over.
+        let feat = e.features?.find((f) => f.layer?.id === "country-fill")
+            || m.queryRenderedFeatures(e.point, {layers: ["country-fill"]})[0];
+        if (!feat) {
+            const r = 16, p = e.point;
+            feat = m.queryRenderedFeatures([[p.x - r, p.y - r], [p.x + r, p.y + r]], {layers: ["country-fill"]})[0];
+        }
         const iso = fromGid3(feat?.properties?.GID_0);
         if (!iso || !data?.countries?.some((c) => c.iso === iso)) return;
         if (iso === myIso) return;
@@ -175,7 +191,11 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
 
     const toggleReady = () => {
         if (!myIso || !myMember) return;
-        setReady(!myMember.ready);
+        const next = readyOpt ?? !myMember.ready;
+        setReadyOpt(!next);                 // flip + reflect instantly
+        Promise.resolve(setReady(!next))
+            .then((r) => { if (r?.error) setReadyOpt(null); }) // failed — fall back to server truth
+            .catch(() => setReadyOpt(null));
     };
 
     if (lobby === undefined) {
@@ -201,7 +221,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
         );
     }
 
-    const ready = !!myMember?.ready;
+    const ready = readyOpt ?? !!myMember?.ready;
 
     return (
         <div className="absolute inset-0 z-10 block overflow-hidden p-0">
