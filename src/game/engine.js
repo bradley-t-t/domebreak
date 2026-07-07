@@ -117,6 +117,8 @@ export {
 
 export {haversine} from "./geo/geo.js";
 
+export {countryGidAt} from "./geo/countryOwner.js";
+
 export {
     airborne,
     atWar,
@@ -133,6 +135,7 @@ export {
     netIncomeOf,
     populationOf,
     inTerritory,
+    inOwnCountry,
     radarRangeOf,
     radarLinked,
     sensorsOf,

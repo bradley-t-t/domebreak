@@ -1,6 +1,8 @@
 // Read-only world accessors: economy (gdp/income/upkeep), territory, sensor
 // coverage, and defense-range queries. No mutation of world state.
 import {haversine} from "../geo/geo.js";
+import {countryGidAt} from "../geo/countryOwner.js";
+import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
 import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
 
@@ -145,6 +147,17 @@ export function inTerritory(w, slot, lng, lat) {
         }
     }
     return nearestSlot === slot && nearest <= TERRITORY_RADIUS;
+}
+
+// True when a land point sits inside slot's own POLITICAL border — the same
+// national outline the human player is bound to when placing (LiveGame gates the
+// player on the GID_0 country polygon under the cursor). Reads the rasterized
+// country grid, so the AI can be held to its real borders instead of the Voronoi
+// `inTerritory` disk, which spills across frontiers into neighbours' land. Ocean
+// points return null → false here (naval placement uses inTerritory instead).
+export function inOwnCountry(w, slot, lng, lat) {
+    const gid = toGid3(nationOf(w, slot)?.iso);
+    return gid != null && countryGidAt(lng, lat) === gid;
 }
 
 // Radar emission radius of a unit type (km): dedicated sensors use their range;
