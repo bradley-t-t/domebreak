@@ -109,6 +109,33 @@ export function launch(w, unit, target, warhead) {
     });
 }
 
+// Direct fire: ground combatants (infantry/tank/artillery — targets:"land") deal
+// their damage straight onto the target instead of lofting an interceptable
+// projectile through the missile-defense loop. A tank shell is not something a
+// SAM battery shoots down. Reuses the same hit/destroy event contract as
+// resolveHit, so map explosions, kill toasts, and the news ticker all fire —
+// only the in-flight, interceptable phase is skipped. Deterministic (no rng).
+export function directFire(w, unit, target) {
+    const n = nationOf(w, unit.slot);
+    const dmg = (UNITS[unit.type].damage || 0) * (n?.dmgMult ?? 1);
+    target.ref.hp -= dmg;
+    const dead = target.ref.hp <= 0;
+    if (dead) {
+        target.ref.hp = 0;
+        if (target.kind === "city") target.ref.alive = false;
+    }
+    w.events.push({
+        id: nextId(w, "e"),
+        t: w.time,
+        type: dead ? "destroy" : "hit",
+        kind: target.kind,
+        cityId: target.ref.id,
+        lng: target.lng,
+        lat: target.lat,
+        slot: unit.slot
+    });
+}
+
 // Projectile arrival: applies damage to the target city/unit, kills it at 0 hp
 // (cities permanently — alive=false), and emits the hit/destroy/fizzle event.
 export function resolveHit(w, p) {

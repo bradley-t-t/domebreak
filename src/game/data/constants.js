@@ -43,6 +43,18 @@ export const INTERCEPTOR_SPEED = 520;
 export const RADAR_RANGE_MULT = 2.5;
 export const TERRITORY_RADIUS = 550;
 export const MOVE_COST_FRAC = 0.25;
+// Ground occupation (see design/gdd/ground-combat-and-occupation.md). A capture-
+// flagged ground unit (infantry/tank) that holds within holdKm of an enemy city
+// — with no hostile unit inside contestKm to fight it off — accrues capture
+// progress over captureSec game-seconds, then flips that city's whole state to
+// the occupier. Progress bleeds off at decayPerSec when unheld or contested.
+// Data-driven per coding standards — no capture number is hardcoded in systems.
+export const CAPTURE = {
+    holdKm: 70,
+    contestKm: 140,
+    captureSec: 22,
+    decayPerSec: 0.15,
+};
 export const MIN_SEP = 45;
 // City survivability: warhead damage subtracts from these; a city dies at 0.
 export const CITY_HP = 100;
@@ -409,10 +421,11 @@ export const UNITS = {
     },
     infantry: {
         label: "Infantry",
-        desc: "Rifle divisions — cheap, tough, and slow. Close-range assault on land targets only.",
+        desc: "Rifle divisions — cheap, tough, and slow. Close-range assault on land targets only. Holds a cleared city to capture its state.",
         kind: "offense",
         domain: "land",
         targets: "land",
+        capture: true, // boots on the ground: may occupy and flip an enemy city's state
         requires: "armybase",
         landSpeed: 18,
         cost: 110,
@@ -447,10 +460,11 @@ export const UNITS = {
     },
     tank: {
         label: "Tank Battalion",
-        desc: "Armored maneuver force — the fastest thing on the ground.",
+        desc: "Armored maneuver force — the fastest thing on the ground. Can seize and hold enemy cities.",
         kind: "offense",
         domain: "land",
         targets: "land",
+        capture: true, // armored maneuver arm: may occupy and flip an enemy city's state
         requires: "armybase",
         landSpeed: 26,
         cost: 190,
