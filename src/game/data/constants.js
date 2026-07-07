@@ -510,7 +510,7 @@ export const UNITS = {
         damage: 40,
         reload: 18,
         fireCost: 26,
-        speed: 90,
+        speed: 120,       // in-flight projectile base speed; the HGV round's speedMult scales it up further
         hp: 50,
         upkeep: 3,
         glyph: "➤"
@@ -1073,11 +1073,12 @@ export const WARHEADS = {
         prodCost: 90,
         prodTime: 8,
         blastKm: 90,        // kinetic terminal impact — a tight, hard-hitting blast
-        evasion: 0.18,      // maneuvering glide body; added to the projectile's intercept-evasion
+        evasion: 0.32,      // maneuvering glide body; added to the projectile's intercept-evasion
+        speedMult: 1.8,     // boost-glide overspeed — multiplies the firing platform's projectile speed
         flame: "#b98cff",
         trail: "#cdb8ff",   // thin ionization streak — a glide body, not a rocket plume
         trailW: 1.7,
-        desc: "Maneuvering kinetic glide body — fast and very hard to intercept. The Hypersonic Battery's signature round."
+        desc: "Maneuvering kinetic glide body — the fastest round in the arsenal and very hard to intercept. The Hypersonic Battery's signature round."
     },
     thermo: {
         name: "Thermonuclear",

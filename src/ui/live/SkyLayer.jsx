@@ -5,7 +5,7 @@ import {trackPoint, WARHEADS} from "../../game/engine.js";
 // Renders missiles/interceptors and their contrails in SCREEN space with a
 // ballistic altitude baked into every point, so the trail arcs up off the
 // ground track (correct in globe + flat) and the sprite pitches with the arc.
-const ALT = {silo: 92, launcher: 48};
+const ALT = {silo: 92, launcher: 48, hypersonicbty: 26};
 const SAMPLES = 22;
 
 function seg(pts, color, width) {
