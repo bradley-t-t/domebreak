@@ -23,6 +23,7 @@ export function createWorld(setup) {
         relations: {},
         _ai: 2 + n.slot * 0.3,
         research: {queue: [], current: null, done: []},
+        autoResearch: false, // player Auto-Research toggle (tech tree); see sim/production.js
         ammo: {...AMMO_START},
         prod: {queue: [], current: null},
         dmgMult: 1,
@@ -170,6 +171,7 @@ export {
     canQueue,
     enqueueResearch,
     unqueueResearch,
+    setAutoResearch,
     hangarCount,
     queueAircraft,
     queueAmmo,
