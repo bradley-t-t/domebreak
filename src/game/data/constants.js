@@ -1140,8 +1140,9 @@ export const BLAST = {
     aoeShare: 0.6,   // peak blast damage as a fraction of the warhead's full yield, at ground zero
     edgeFrac: 0.3,   // fraction of that peak still dealt at the blast edge (0..1); core is 1
 };
-// Fraction of flight at which a cluster bus reenters and releases its MIRVs.
-export const MIRV_SPLIT_AT = 0.72;
+// Fraction of flight at which a MIRV bus (cluster / thermo-MIRV) releases its
+// warheads — split early so the submunitions fan out over a long terminal run.
+export const MIRV_SPLIT_AT = 0.3;
 // Warhead display/cycling order (arsenal UI, loadout toggles).
 export const WARHEAD_ORDER = ["standard", "cluster", "thermo", "thermomirv", "hgv", "sicbm"];
 // Warhead stockpile every nation starts the match with.
