@@ -23,9 +23,14 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
     const [, force] = useReducer((x) => x + 1, 0);
     useEffect(() => {
         if (!map) return;
-        const h = () => force();
+        let raf = null;
+        const h = () => { // coalesce MapLibre's many per-frame move events into one render
+            if (raf != null) return;
+            raf = requestAnimationFrame(() => { raf = null; force(); });
+        };
         map.on("move", h);
         return () => {
+            if (raf != null) cancelAnimationFrame(raf);
             try {
                 map.off("move", h);
             } catch { /* map gone */

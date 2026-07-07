@@ -4,7 +4,7 @@
 // invalidation. Nothing here owns state; it only derives GeoJSON from engine
 // state (w) and the handful of UI toggles/inputs the map layers care about.
 import {useMemo} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail} from "../../game/geo/geo.js";
 
@@ -80,8 +80,11 @@ export function useLiveLayers({
     // and vanish back into the fog otherwise (spec §8c). Everything drawn from
     // w.units below goes through visUnits so hidden forces never leak a pixel.
     const mySensors = useMemo(() => sensorsOf(w, mySlot), [w.units, w.time, mySlot]);
-    const visUnits = useMemo(() => w.units.filter((u) => unitVisibleTo(w, mySlot, u)),
-        [w.units, w.time, mySlot, mySensors]);
+    const mySubSensors = useMemo(() => subSensorsOf(w, mySlot), [w.units, w.time, mySlot]);
+    // Precomputed sensor lists are threaded into unitVisibleTo so the fog filter
+    // is O(units) instead of O(units^2) (it would otherwise rebuild sensorsOf per unit).
+    const visUnits = useMemo(() => w.units.filter((u) => unitVisibleTo(w, mySlot, u, mySensors, mySubSensors)),
+        [w.units, w.time, mySlot, mySensors, mySubSensors]);
 
     // Radar coverage is MY detection picture — only my own emitters, never an
     // enemy's radars that my sensors happen to reveal.
