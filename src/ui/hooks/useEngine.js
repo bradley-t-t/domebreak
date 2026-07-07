@@ -4,10 +4,12 @@ import {
     commandAttack,
     declareWar,
     disembark,
+    dismissWarPopup,
     embark,
     enqueueResearch,
-    makePeace,
     moveUnit,
+    offerPeace,
+    respondPeace,
     queueAircraft,
     queueAmmo,
     queueUnit,
@@ -125,8 +127,18 @@ export function useEngine(world) {
             declareWar(ref.current, ref.current.mySlot, slot);
             force();
         },
-        makePeace: (slot) => {
-            makePeace(ref.current, ref.current.mySlot, slot);
+        offerPeace: (slot) => {
+            const r = offerPeace(ref.current, ref.current.mySlot, slot);
+            force();
+            return r;
+        },
+        respondPeace: (foe, accept) => {
+            const r = respondPeace(ref.current, ref.current.mySlot, foe, accept);
+            force();
+            return r;
+        },
+        dismissWarPopup: (id) => {
+            dismissWarPopup(ref.current, id);
             force();
         },
         scrap: (uid) => {
