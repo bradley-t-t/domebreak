@@ -3,6 +3,12 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
+// Name the app before it's ready so the menu bar / About panel read "DomeBreak"
+// instead of the Electron default in dev. The packaged bundle already carries
+// the name via electron-builder's productName (its Dock/taskbar label is the
+// bundle name — a dev run shows "Electron" because it's the generic binary).
+app.setName("DomeBreak");
+
 const DIST = path.join(__dirname, "..", "dist");
 // App logo (leadership-bunker mark). Bundled under electron/ so it resolves in
 // dev and in the packaged app. Drives the window/taskbar icon on Windows/Linux;
