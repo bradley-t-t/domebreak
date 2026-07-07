@@ -4,6 +4,11 @@ const fs = require("fs");
 const path = require("path");
 
 const DIST = path.join(__dirname, "..", "dist");
+// App logo (leadership-bunker mark). Bundled under electron/ so it resolves in
+// dev and in the packaged app. Drives the window/taskbar icon on Windows/Linux;
+// on macOS the packaged Dock uses the .icns generated from build/icon.png, so we
+// only set the Dock icon here to fix the generic-Electron icon during dev runs.
+const ICON = path.join(__dirname, "icon.png");
 
 // Machine-local data folder: auth session + mirrored saves/settings live here
 // as one JSON file per key (key is URI-encoded to stay filename-safe).
@@ -89,6 +94,7 @@ async function createWindow() {
     const port = await startServer();
     const win = new BrowserWindow({
         width: 1440, height: 920, minWidth: 1024, minHeight: 680,
+        icon: ICON,
         backgroundColor: "#05080f", title: "DomeBreak",
         titleBarStyle: "hidden",
         trafficLightPosition: {x: 14, y: 18},
@@ -122,6 +128,14 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+    // Dev runs launch the generic Electron binary, so the Dock shows its default
+    // icon — set ours. The packaged .app already carries the bunker .icns.
+    if (process.platform === "darwin" && !app.isPackaged && app.dock) {
+        try {
+            app.dock.setIcon(ICON);
+        } catch { /* non-fatal — dock icon is cosmetic */
+        }
+    }
     registerLocalStore();
     createWindow();
 });
