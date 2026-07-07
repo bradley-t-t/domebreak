@@ -918,6 +918,20 @@ export default function LiveGame({
     const handleMap = (m) => {
         mapRef.current = m;
         setMapReady((x) => x + 1);
+        // Force the canvas to match its container. MapLibre can initialize at its
+        // 400x300 fallback when the container's size isn't resolved on the exact
+        // frame the map is created (a layout race on the screen->match handoff);
+        // without this the globe renders tiny in the corner and the rest of the
+        // view is black. Re-fit now, next frame, and shortly after to cover any
+        // late layout (the lobby map does the same via its own resize()).
+        const fit = () => {
+            try {
+                m.resize();
+            } catch { /* map tearing down */ }
+        };
+        fit();
+        requestAnimationFrame(fit);
+        setTimeout(fit, 200);
         frameOnCapital(m);
         let settled = false;
         const reveal = () => {
