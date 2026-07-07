@@ -91,8 +91,16 @@
 /* Maps the palette/typography/radius tokens onto Tailwind's namespace so
    utilities generate (bg-panel, text-dim, border-line, font-mono, etc.).
    Every value is a var() reference back to :root above — one source of
-   truth, no duplicated literals. */
-@theme {
+   truth, no duplicated literals.
+
+   `inline` is load-bearing: it makes each utility emit the underlying
+   var(--x) directly (e.g. `.bg-sunk { background: var(--sunk) }`) instead of
+   a pre-resolved `--color-sunk`. Without it, Tailwind resolves `var(--sunk)`
+   once at :root (dark) and the value never re-resolves, so the `.gd-card`
+   paper re-theme below — which overrides the base vars — silently fails and
+   modal cards render dark guts on a light surface. With `inline`, the base-var
+   override cascades into every utility inside .gd-card, as intended. */
+@theme inline {
     --color-bg: var(--bg);
     --color-bg-2: var(--bg-2);
     --color-panel: var(--panel);
@@ -634,130 +642,190 @@
         transition: transform 620ms var(--ease-out);
     }
 
-    /* --- Tech-tree era banding (Cold War -> Modern -> Space Age) --- */
-    /* One tinted zone per era spans its tier columns; --era carries the era
-       color. Zones sit behind the wires/nodes and read left->right as
-       advancing time. A soft top-weighted wash + a bright header spine give
-       each epoch a sense of place rather than a flat rectangle. */
+    /* ============================================================
+       Tech tree — blueprint / schematic language. The atlas reads as
+       an engineering drawing: neutral hairlines, graph-paper ghosting,
+       drafting corner ticks, designation codes, dotted spec leaders and
+       stamped status. Chroma is held to a single muted "plotting" cyan
+       (--bp-live) for the tech under active research; everything else is
+       monochrome to match the stark HUD.
+       ============================================================ */
+
+    /* Era band — neutral chronological zone (Cold War -> Modern -> Space).
+       The wash is monochrome; only the epoch's name + top rule carry a
+       whisper of --era so the three bands stay distinguishable. */
     .gd-tt-era {
         position: absolute;
         pointer-events: none;
-        background: linear-gradient(180deg,
-            color-mix(in srgb, var(--era) 12%, transparent) 0,
-            color-mix(in srgb, var(--era) 5%, transparent) 90px,
-            color-mix(in srgb, var(--era) 3%, transparent) 100%);
-        border-left: 1px solid color-mix(in srgb, var(--era) 30%, transparent);
-        border-right: 1px solid color-mix(in srgb, var(--era) 30%, transparent);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent 130px);
+        border-left: 1px solid var(--hair);
+        border-right: 1px solid var(--hair);
     }
 
-    /* Era header spine — a bright top rule that names the epoch's band. */
     .gd-tt-era::before {
         content: "";
         position: absolute;
         left: 0;
         right: 0;
         top: 0;
-        height: 2px;
-        background: linear-gradient(90deg,
-            transparent, color-mix(in srgb, var(--era) 55%, transparent) 22%,
-            color-mix(in srgb, var(--era) 55%, transparent) 78%, transparent);
+        height: 1px;
+        background: color-mix(in srgb, var(--era) 38%, transparent);
     }
 
     .gd-tt-era-name {
-        color: color-mix(in srgb, var(--era) 78%, #fff 22%);
-        text-shadow: 0 0 14px color-mix(in srgb, var(--era) 34%, transparent);
+        color: color-mix(in srgb, var(--era) 42%, var(--dim));
     }
 
-    /* Node era-spine — the thin chronological accent down each node's left edge. */
-    .gd-tt-accent {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: linear-gradient(180deg,
-            color-mix(in srgb, var(--era) 82%, transparent),
-            color-mix(in srgb, var(--era) 46%, transparent));
-        pointer-events: none;
+    /* Blueprint node — tokens for the drafting frame. */
+    .gd-tt-node {
+        --bp-tick: rgba(158, 178, 198, 0.5);   /* corner bracket ink */
+        --bp-grid: rgba(150, 172, 196, 0.05);  /* graph-paper ghost */
+        --bp-live: #6fb3d9;                    /* the one accent: active research */
+    }
+
+    /* The drafting frame overlay: hairline border + graph grid + corner
+       tick marks, all on one element so the node body stays a plain surface. */
+    .gd-tt-frame {
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background:
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 0 0 / 9px 1px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 0 0 / 1px 9px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 100% 0 / 9px 1px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 100% 0 / 1px 9px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 0 100% / 9px 1px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 0 100% / 1px 9px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 100% 100% / 9px 1px no-repeat,
+            linear-gradient(var(--bp-tick), var(--bp-tick)) 100% 100% / 1px 9px no-repeat,
+            repeating-linear-gradient(0deg, var(--bp-grid) 0 1px, transparent 1px 14px),
+            repeating-linear-gradient(90deg, var(--bp-grid) 0 1px, transparent 1px 14px);
     }
 
     .gd-tt-node.avail:hover {
-        border-color: color-mix(in srgb, var(--era) 55%, var(--gold));
-        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 0 0 1px color-mix(in srgb, var(--era) 22%, transparent);
-        background: linear-gradient(180deg, color-mix(in srgb, var(--era) 9%, transparent), transparent 70%), var(--sunk);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
     }
 
-    /* Completed tech — era-tinted so a researched column reads in its epoch's
-       color (Cold War cyan / Modern gold / Space violet), not orphaned gold. */
-    .gd-tt-node.done {
-        border-color: color-mix(in srgb, var(--era) 42%, var(--line));
-        background: linear-gradient(180deg,
-            color-mix(in srgb, var(--era) 11%, transparent),
-            color-mix(in srgb, var(--era) 2%, transparent) 62%), var(--sunk);
+    .gd-tt-node.avail:hover .gd-tt-frame {
+        border-color: var(--gold-line);
+        --bp-tick: rgba(212, 222, 232, 0.85);
     }
 
-    /* Currently researching — era border + a slow breathing ring so the active
-       project is unmistakably alive on the atlas. */
+    /* Completed — solid brighter frame, faint fielded wash. */
+    .gd-tt-node.done .gd-tt-frame {
+        border-color: color-mix(in srgb, var(--text) 24%, var(--line));
+        background-color: rgba(255, 255, 255, 0.014);
+        --bp-tick: rgba(210, 220, 230, 0.7);
+    }
+
+    /* Under active research — the only chromatic node. Cyan frame + a slow
+       breathing ring; the fill below plots the progress in a hatch. */
+    .gd-tt-node.cur .gd-tt-frame {
+        border-color: color-mix(in srgb, var(--bp-live) 52%, var(--line));
+        --bp-tick: color-mix(in srgb, var(--bp-live) 72%, #fff 8%);
+    }
+
     .gd-tt-node.cur {
-        border-color: color-mix(in srgb, var(--era) 66%, var(--gold));
-        box-shadow: 0 0 0 1px color-mix(in srgb, var(--era) 40%, transparent), 0 8px 22px rgba(0, 0, 0, 0.45);
         animation: gdTtLive 2.6s ease-in-out infinite;
     }
 
-    /* Live progress fill — era-tinted, with a sheen that sweeps across the
-       filled portion to signal work in motion. */
+    /* Queued — a touch brighter than idle so lined-up work reads. */
+    .gd-tt-node.queued .gd-tt-frame {
+        border-color: color-mix(in srgb, var(--text) 14%, var(--line));
+    }
+
+    /* Locked — provisional/undrafted: dashed frame, dimmed. */
+    .gd-tt-node.locked {
+        opacity: 0.5;
+    }
+
+    .gd-tt-node.locked .gd-tt-frame {
+        border-style: dashed;
+        --bp-tick: rgba(158, 178, 198, 0.28);
+    }
+
+    .gd-tt-node.poor {
+        opacity: 0.62;
+    }
+
+    /* Progress plot — a diagonal hatch filling to the researched fraction, with
+       a bright leading edge, like a plot pen drawing across the sheet. */
     .gd-tt-fill {
         overflow: hidden;
-        background: linear-gradient(90deg,
-            color-mix(in srgb, var(--era) 15%, transparent),
-            color-mix(in srgb, var(--era) 24%, transparent));
+        background: repeating-linear-gradient(135deg,
+            color-mix(in srgb, var(--bp-live) 22%, transparent) 0 2px, transparent 2px 6px);
+        border-right: 1px solid color-mix(in srgb, var(--bp-live) 50%, transparent);
     }
 
-    .gd-tt-fill::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(90deg, transparent,
-            color-mix(in srgb, var(--era) 34%, transparent) 50%, transparent);
-        animation: gdTtScan 2.2s linear infinite;
+    /* Stamped status chip in the node header. */
+    .gd-tt-stamp {
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        color: var(--faint);
+        background: rgba(255, 255, 255, 0.02);
     }
 
-    /* Lit wire — a completed prerequisite feeding the next tier. Era-tinted and
-       flowing forward (marching dashes) to read as tech energy advancing. */
+    .gd-tt-node.done .gd-tt-stamp {
+        color: var(--text);
+        border-color: color-mix(in srgb, var(--text) 38%, var(--line));
+    }
+
+    .gd-tt-node.cur .gd-tt-stamp {
+        color: color-mix(in srgb, var(--bp-live) 82%, #fff);
+        border-color: color-mix(in srgb, var(--bp-live) 52%, var(--line));
+    }
+
+    .gd-tt-node.avail .gd-tt-stamp {
+        color: var(--dim);
+    }
+
+    .gd-tt-node.locked .gd-tt-stamp {
+        border-style: dashed;
+    }
+
+    /* Engineering divider under the header brief. */
+    .gd-tt-rule {
+        height: 1px;
+        background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 8px);
+    }
+
+    /* Dotted leader between a spec label and its value. */
+    .gd-tt-leader {
+        height: 0;
+        border-bottom: 1px dotted color-mix(in srgb, var(--text) 16%, transparent);
+    }
+
+    /* Lane track label down the left gutter — neutral, mono track code. */
+    .gd-tt-lane-chip {
+        border: 1px solid var(--line-soft);
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Wire — a technical connector; lit (prereq met) flows forward as a
+       neutral marching dash. */
+    .gd-tt-wire {
+        stroke-width: 1.5;
+    }
+
     .gd-tt-wire.lit {
-        stroke: color-mix(in srgb, var(--era) 62%, #fff 10%);
-        stroke-dasharray: 5 7;
-        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--era) 45%, transparent));
+        stroke: color-mix(in srgb, var(--text) 40%, var(--line));
+        stroke-dasharray: 4 6;
         animation: gdTtFlow 1.1s linear infinite;
     }
 
-    /* Doctrine lane label — each of the five tracks carries its own accent
-       (--doc) so the rows read as distinct doctrines down the left gutter. */
-    .gd-tt-lane {
-        color: color-mix(in srgb, var(--doc) 40%, var(--dim));
+    /* --- Payload block (unit unlock) --- */
+    /* The unit this tech puts in the field. A schematic-framed icon carrying a
+       muted brass tint — the one warm note, so "you get a weapon" still reads
+       as a reward without breaking the monochrome drawing. */
+    .gd-tt-payload {
+        border-top: 1px dashed var(--line);
     }
 
-    .gd-tt-lane-chip {
-        color: color-mix(in srgb, var(--doc) 66%, #fff 34%);
-        background: color-mix(in srgb, var(--doc) 15%, transparent);
-        border-color: color-mix(in srgb, var(--doc) 40%, var(--line-soft));
-        box-shadow: inset 0 0 10px color-mix(in srgb, var(--doc) 12%, transparent);
-    }
-
-    /* --- Unlock medallion on a tech node --- */
-    /* Techs that grant a new buildable unit show a framed unit icon + label.
-       The medal keeps the one warm real-gold pop in the tree — it always means
-       "you get a weapon," a reward accent held constant across every era. */
-    .gd-tt-unlock {
-        background: linear-gradient(180deg, rgba(245, 197, 49, 0.14), rgba(245, 197, 49, 0.045));
-        border: 1px solid rgba(245, 197, 49, 0.4);
-    }
-
-    .gd-tt-unlock-medal {
-        background: radial-gradient(circle at 50% 34%, rgba(245, 197, 49, 0.24), rgba(245, 197, 49, 0.06));
-        border: 1px solid rgba(245, 197, 49, 0.5);
-        box-shadow: inset 0 0 8px rgba(245, 197, 49, 0.16);
-        color: #ffe6a0; /* tints the CSS-mask unit icon */
+    .gd-tt-payload-icon {
+        border: 1px solid color-mix(in srgb, #d9c9a8 30%, var(--line));
+        border-radius: 2px;
+        background: rgba(217, 201, 168, 0.05);
+        color: #d9c9a8; /* tints the CSS-mask unit icon */
     }
 
     /* ---- boot-scan bar ---- */
@@ -1031,34 +1099,24 @@
         }
     }
 
-    /* --- Tech-tree life: breathing active node, scanning fill, flowing wire --- */
+    /* --- Tech-tree: breathing active node + flowing prereq wire --- */
     @keyframes gdTtLive {
         50% {
-            box-shadow: 0 0 0 1px color-mix(in srgb, var(--era) 60%, transparent),
-            0 0 20px -3px color-mix(in srgb, var(--era) 42%, transparent),
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--bp-live) 50%, transparent),
+            0 0 16px -4px color-mix(in srgb, var(--bp-live) 45%, transparent),
             0 8px 22px rgba(0, 0, 0, 0.45);
-        }
-    }
-
-    @keyframes gdTtScan {
-        from {
-            transform: translateX(-100%);
-        }
-        to {
-            transform: translateX(100%);
         }
     }
 
     @keyframes gdTtFlow {
         to {
-            stroke-dashoffset: -24;
+            stroke-dashoffset: -20;
         }
     }
 
-    /* Honor reduced-motion: keep the era chroma, drop the animation. */
+    /* Honor reduced-motion: hold the schematic, drop the animation. */
     @media (prefers-reduced-motion: reduce) {
         .gd-tt-node.cur,
-        .gd-tt-fill::after,
         .gd-tt-wire.lit {
             animation: none;
         }

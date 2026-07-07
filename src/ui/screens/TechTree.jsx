@@ -25,11 +25,6 @@ const NODE_H = 120;
 const COL = 312;      // horizontal step between tiers (wide enough to overflow the frame → drag to explore)
 const ROW = 178;      // vertical step between doctrine rows
 
-// Era accent color for a tier (nodes carry a thin era-tinted spine so the
-// chronological bands read on each node, not just the background zones).
-const eraColorForTier = (tier) =>
-    (ERAS.find((e) => tier >= e.tierRange[0] && tier <= e.tierRange[1]) || {}).color || "var(--line)";
-
 const nodeX = (tier) => PAD + LANE_W + tier * COL;          // tier: 0-based
 const nodeY = (row) => BAND_H + PAD + row * ROW;            // row: 0-based (below the era band)
 // The era band header sits above the top lane; the tinted era zones run its full
@@ -58,25 +53,35 @@ function clampCam(x, y, k, vw, vh) {
     return {x: cx, y: cy};
 }
 
-// Per-state utility strings for .gd-tt-node — the `avail` literal is kept
-// whenever the node is available so the vfx-layer `.gd-tt-node.avail:hover`
-// color-mix hook (index.css) keeps matching (that rule supplies border-color/
-// box-shadow/background on hover only); the plain hover translate + active
-// scale for `.avail` are re-expressed here as self-referencing arbitrary
-// variants keyed off the same literal class.
+// State literal kept on .gd-tt-node so the CSS drafting layer (index.css @layer
+// vfx) can theme each state, plus the hover/active micro-motion for available
+// nodes expressed as self-referencing arbitrary variants off the same literal.
 const NODE_STATE_CLS = {
-    // `.done` and `.cur` are styled era-tinted in index.css (@layer vfx) off the
-    // node's --era var, so a researched column reads in its epoch's color rather
-    // than the orphaned gold literal this used to carry.
     done: "done",
     cur: "cur",
-    queued: "queued border-blue",
-    avail: "avail [&.avail:hover]:-translate-y-0.5 [&.avail:active]:scale-[0.985]",
-    availPoor: "avail poor opacity-[0.42] [&.avail:hover]:-translate-y-0.5 [&.avail:active]:scale-[0.985]",
-    locked: "locked opacity-[0.42] saturate-[0.55]",
+    queued: "queued",
+    avail: "avail [&.avail:hover]:-translate-y-px [&.avail:active]:scale-[0.99]",
+    availPoor: "avail poor [&.avail:hover]:-translate-y-px [&.avail:active]:scale-[0.99]",
+    locked: "locked",
 };
 
-function Node({id, tech, nation, api, style, eraColor}) {
+// A spec-sheet row: label ···· value, with a dotted engineering leader between
+// them (the drafting device that makes a blueprint read as a blueprint).
+function SpecRow({label, value, muted}) {
+    return (
+        <span className="relative flex items-center gap-1.5 font-mono text-[9px] leading-[1.6]">
+            <span className="text-faint tracking-[1px]">{label}</span>
+            <span className="gd-tt-leader flex-1 self-center" aria-hidden="true"/>
+            <span className={cn("tabular-nums whitespace-nowrap overflow-hidden text-ellipsis",
+                muted ? "text-faint max-w-[104px]" : "text-dim")}>{value}</span>
+        </span>
+    );
+}
+
+// Blueprint / schematic tech node — a drafting card: hairline frame with corner
+// ticks, a designation code (OFF-03), a stamped status, a mono spec sheet with
+// dotted leaders, and a schematically-framed payload icon for unit unlocks.
+function Node({id, tech, nation, api, style}) {
     const rr = nation?.research || {queue: [], done: [], current: null};
     const done = rr.done.includes(id);
     const isCur = rr.current?.id === id;
@@ -84,28 +89,30 @@ function Node({id, tech, nation, api, style, eraColor}) {
     const avail = !done && !isCur && qi < 0 && canQueue(nation, id);
     const locked = !done && !isCur && qi < 0 && !avail;
     const poor = avail && (nation?.points ?? 0) < tech.cost;
+    const pct = Math.floor((rr.current?.progress ?? 0) * 100);
     const stateCls = done ? NODE_STATE_CLS.done
         : isCur ? NODE_STATE_CLS.cur
             : qi >= 0 ? NODE_STATE_CLS.queued
                 : avail ? (poor ? NODE_STATE_CLS.availPoor : NODE_STATE_CLS.avail)
                     : NODE_STATE_CLS.locked;
-    // Techs with `unlocks` grant a new buildable unit on completion — surface it
-    // as a badge so players can read the arsenal payoff straight off the node.
+    // Drafting designation, e.g. "OFF-03" — track code + zero-padded tier.
+    const code = `${tech.path.toUpperCase()}-${String(tech.tier).padStart(2, "0")}`;
+    const glyph = TECH_PATHS.find((p) => p.id === tech.path)?.glyph;
+    // Stamped status label sitting in the card header.
+    const stamp = done ? "FIELDED" : isCur ? `PLOTTING ${pct}%`
+        : qi >= 0 ? `QUEUED ${qi + 1}` : poor ? "LOW ◆" : avail ? "READY" : "LOCKED";
+    // Techs with `unlocks` grant a new buildable unit on completion — the payload.
     const unlockType = tech.unlocks;
     const unlockName = unlockType ? unitLabel(unlockType) : null;
-    // Prerequisite name (for the "Requires: …" line and the aria-label), shown
-    // only while the tech is still gated by an unmet earlier tier.
     const reqName = tech.req ? TECHS[tech.req]?.name : null;
-    // Full spoken description: name → state → cost/time (when relevant) → payoff.
-    // Screen readers get the same picture sighted players read off color + badges.
+    // Full spoken description for screen readers: name → state → cost/time → payoff.
     const state = done ? "Done"
-        : isCur ? `In Progress ${Math.floor((rr.current?.progress ?? 0) * 100)}%`
+        : isCur ? `In Progress ${pct}%`
             : qi >= 0 ? `Queued #${qi + 1}`
                 : avail ? (poor ? `Available — insufficient points (need ${tech.cost})` : "Available")
                     : "Locked";
     const ariaLabel = [
-        `${tech.name}.`,
-        `${state}.`,
+        `${tech.name}.`, `${state}.`,
         (!done && !isCur) ? `Costs ${tech.cost} points, ${tech.time} seconds.` : null,
         (locked && reqName) ? `Requires ${reqName}.` : null,
         unlockName ? `Unlocks ${unlockName}.` : null,
@@ -116,50 +123,52 @@ function Node({id, tech, nation, api, style, eraColor}) {
     };
     return (
         <button className={cn(
-            "gd-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col gap-[3px] text-left",
-            "pl-4 pr-[13px] py-[11px] border border-line rounded-[10px] text-text",
-            "bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_62%),var(--sunk)]",
-            "transition-[border-color,transform,box-shadow,background] duration-150 ease-out-gd",
+            "gd-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col text-left",
+            "px-[13px] pt-[9px] pb-[11px] rounded-[3px] text-text bg-sunk",
+            "transition-[transform,box-shadow] duration-150 ease-out-gd",
             "focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-2",
             stateCls,
-            unlockType ? "has-unlock border-[color-mix(in_srgb,var(--gold)_42%,var(--line))]" : null,
-            unlockType && avail ? "[&.avail:hover]:border-gold" : null,
         )}
-                style={{...style, "--era": eraColor}} onClick={onClick}
-                disabled={locked || done || isCur || poor && avail}
+                style={style} onClick={onClick}
+                disabled={locked || done || isCur || (poor && avail)}
                 aria-label={ariaLabel}
                 title={locked ? "Requires the previous tech." : poor ? `Need ◆ ${tech.cost}` : tech.desc}>
+            {/* schematic plot-fill for the tech under active research */}
             {isCur &&
                 <i className="gd-tt-fill absolute inset-y-0 left-0 right-auto pointer-events-none"
-                   style={{width: `${Math.min(100, (rr.current?.progress ?? 0) * 100)}%`}}/>}
-            <span className="gd-tt-accent absolute left-0 top-0 bottom-0 w-[3px] pointer-events-none" aria-hidden="true"/>
-            <span className="relative flex items-start justify-between gap-1.5">
-                <span className="relative font-display font-bold text-[13px] leading-[1.2]">{tech.name}</span>
-                {done && <span className="flex-none text-[11px] leading-[1.3] text-gold" aria-hidden="true">✓</span>}
+                   style={{width: `${Math.min(100, pct)}%`}} aria-hidden="true"/>}
+            {/* drafting frame — hairline border + corner tick marks */}
+            <span className="gd-tt-frame absolute inset-0 pointer-events-none" aria-hidden="true"/>
+
+            {/* header: designation code + stamped status */}
+            <span className="relative flex items-center justify-between gap-2">
+                <span className="font-mono text-[9px] tracking-[1.4px] text-faint whitespace-nowrap">
+                    <span aria-hidden="true">{glyph}</span> {code}
+                </span>
+                <span className="gd-tt-stamp flex-none font-mono text-[8px] tracking-[1.3px] whitespace-nowrap px-[5px] py-[1.5px]"
+                      aria-hidden="true">{stamp}</span>
             </span>
-            <span className="relative text-[10.5px] text-dim leading-[1.35]">{tech.desc}</span>
-            <span className={cn(
-                "relative font-mono text-[10px] tracking-[0.5px] text-faint mt-0.5",
-                (done || isCur) ? "text-gold" : null,
-            )}>
-                {done ? "✓ Fielded" : isCur ? `${Math.floor((rr.current?.progress ?? 0) * 100)}%`
-                    : qi >= 0 ? `#${qi + 1} in queue` : `◆ ${tech.cost} · ${tech.time}s`}
-            </span>
-            {(locked || avail) && reqName &&
-                <span className="font-mono text-[10px] tracking-[0.4px] text-faint mt-0.5 leading-[1.2] whitespace-nowrap overflow-hidden text-ellipsis">
-                    Requires: {reqName}
-                </span>}
+
+            {/* tech name + one-line brief */}
+            <span className="relative font-display font-bold text-[12.5px] leading-[1.18] mt-[6px]">{tech.name}</span>
+            <span className="relative text-[9.5px] text-dim leading-[1.32] mt-[2px] line-clamp-2">{tech.desc}</span>
+
+            {/* spec sheet */}
+            <span className="gd-tt-rule relative block mt-[8px] mb-[5px]" aria-hidden="true"/>
+            <SpecRow label="COST" value={`◆ ${tech.cost}`}/>
+            <SpecRow label="TIME" value={`${tech.time}s`}/>
+            {(locked || avail) && reqName && <SpecRow label="REQ" value={reqName} muted/>}
+
+            {/* payload — the unit this tech puts in the field */}
             {unlockType && (
-                <span className="gd-tt-unlock relative flex items-center gap-2 mt-2 py-[5px] pr-[9px] pl-[5px] rounded-[9px]"
+                <span className="gd-tt-payload relative flex items-center gap-2 mt-[9px] pt-[8px]"
                       title={`Unlocks: ${unlockName}`}>
-                    <span className="gd-tt-unlock-medal flex-none grid place-items-center w-[34px] h-[34px] rounded-lg text-[#ffe6a0]">
-                        <UnitIcon name={UNIT_ICON[unlockType]} size={26}/>
+                    <span className="gd-tt-payload-icon flex-none grid place-items-center w-[30px] h-[30px]">
+                        <UnitIcon name={UNIT_ICON[unlockType]} size={24}/>
                     </span>
                     <span className="flex flex-col gap-px overflow-hidden">
-                        <span className="font-mono text-[8px] tracking-[1.6px] uppercase text-[rgba(245,197,49,0.72)]">
-                            Unlocks
-                        </span>
-                        <span className="font-display font-semibold text-[11.5px] text-gold overflow-hidden text-ellipsis whitespace-nowrap">
+                        <span className="font-mono text-[7.5px] tracking-[1.8px] uppercase text-faint">Payload</span>
+                        <span className="font-display font-semibold text-[11px] overflow-hidden text-ellipsis whitespace-nowrap">
                             {unlockName}
                         </span>
                     </span>
@@ -361,10 +370,9 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                 return (
                                     <line key={`${path.id}${i}`}
                                           className={cn(
-                                              "gd-tt-wire stroke-line stroke-2 transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
+                                              "gd-tt-wire stroke-line transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
                                               lit ? "lit" : null,
                                           )}
-                                          style={{"--era": eraColorForTier(from.tier)}}
                                           x1={nodeX(i) + NODE_W} y1={y} x2={nodeX(i + 1)} y2={y}/>
                                 );
                             }),
@@ -373,10 +381,12 @@ export default function TechTree({world, api, mySlot, onClose}) {
 
                     {TECH_PATHS.map((path, r) => (
                         <div key={`lane-${path.id}`}
-                             className="gd-tt-lane absolute flex flex-col justify-center gap-[7px] font-display font-semibold text-xs tracking-[1.5px] uppercase pointer-events-none"
-                             style={{left: PAD, top: nodeY(r), width: LANE_W - 18, height: NODE_H, "--doc": path.color}}>
-                            <span className="gd-tt-lane-chip text-[18px] w-[34px] h-[34px] flex-none grid place-items-center rounded-sm border">{path.glyph}</span>
-                            <span>{path.name}</span>
+                             className="gd-tt-lane absolute flex flex-col justify-center gap-[6px] pointer-events-none"
+                             style={{left: PAD, top: nodeY(r), width: LANE_W - 18, height: NODE_H}}>
+                            <span className="gd-tt-lane-chip w-[34px] h-[34px] flex-none grid place-items-center text-[17px] text-dim"
+                                  aria-hidden="true">{path.glyph}</span>
+                            <span className="font-mono text-[9px] tracking-[2px] uppercase text-faint">TRK·{path.id.toUpperCase()}</span>
+                            <span className="font-display font-semibold text-[11px] tracking-[1px] uppercase text-dim leading-[1.15]">{path.name}</span>
                         </div>
                     ))}
 
@@ -387,7 +397,6 @@ export default function TechTree({world, api, mySlot, onClose}) {
                             if (!tech) return null;
                             return (
                                 <Node key={id} id={id} tech={tech} nation={nation} api={api}
-                                      eraColor={eraColorForTier(tech.tier)}
                                       style={{
                                           position: "absolute",
                                           left: nodeX(i),
