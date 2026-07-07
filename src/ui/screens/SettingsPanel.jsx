@@ -95,7 +95,7 @@ export default function SettingsPanel({settings, onChange, onClose}) {
                             aria-pressed={settings.reduceMotion} aria-label="Reduce motion"
                             onClick={() => set("reduceMotion", !settings.reduceMotion)}>
                         <span className={cn(
-                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-gd",
+                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-db",
                             settings.reduceMotion && "translate-x-5 bg-gold"
                         )}/>
                     </button>

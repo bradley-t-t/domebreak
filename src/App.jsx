@@ -323,7 +323,7 @@ export default function App() {
     if (authStatus === "loading") {
         return <div className="relative z-[1] flex flex-col h-full">{splash}
             <div className="absolute inset-0 grid place-items-center bg-bg">
-                <span className="font-display tracking-[6px] uppercase text-[13px] text-dim animate-[gdRowIn_400ms_var(--ease-out)_both]">Connecting…</span>
+                <span className="font-display tracking-[6px] uppercase text-[13px] text-dim animate-[dbRowIn_400ms_var(--ease-out)_both]">Connecting…</span>
             </div>
         </div>;
     }
@@ -373,7 +373,7 @@ export default function App() {
                                                 players={netClient?.players}/>}/>
                 </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
-                <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[gdPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
+                <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
                     <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>
                 </div>}
 

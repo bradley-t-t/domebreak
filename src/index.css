@@ -138,7 +138,7 @@
     --shadow-DEFAULT: var(--shadow);
     --shadow-sm: var(--shadow-sm);
 
-    --ease-out-gd: var(--ease-out);
+    --ease-out-db: var(--ease-out);
     --ease-drawer: var(--ease-drawer);
     --ease-io: var(--ease-io);
 }
@@ -267,7 +267,7 @@
         border-radius: 0 0 50% 50%;
         background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff 0%, #ffe07a 22%, #ff8a1a 52%, #ff3a10 78%, transparent 100%);
         box-shadow: 0 0 12px 4px rgba(255, 110, 20, 0.8);
-        animation: gdFlame 0.1s infinite alternate;
+        animation: dbFlame 0.1s infinite alternate;
     }
 
     .db-missile-glow {
@@ -326,7 +326,7 @@
         border-radius: 0 0 50% 50%;
         background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff, #aaffcf 40%, #25e084 75%, transparent);
         box-shadow: 0 0 8px 2px rgba(60, 230, 140, 0.85);
-        animation: gdFlame 0.09s infinite alternate;
+        animation: dbFlame 0.09s infinite alternate;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -349,7 +349,7 @@
         height: 10px;
         background: linear-gradient(180deg, #ffffff, #b8f4ff 55%, #37b6ef);
         box-shadow: 0 0 6px rgba(120, 226, 255, 0.95);
-        animation: gdThaadCore 0.5s infinite alternate;
+        animation: dbThaadCore 0.5s infinite alternate;
     }
 
     .db-interceptor.thaad .db-int-body::before {
@@ -367,7 +367,7 @@
         height: 8px;
         background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff, #cdf3ff 35%, #33b4ef 75%, transparent);
         box-shadow: 0 0 9px 2px rgba(90, 205, 255, 0.9);
-        animation: gdFlame 0.07s infinite alternate;
+        animation: dbFlame 0.07s infinite alternate;
     }
 
     /* Kinetic-kill spark: a bright shimmering point of light riding the nose,
@@ -382,7 +382,7 @@
         border-radius: 50%;
         background: radial-gradient(circle, #fff 0%, #d6f4ff 45%, transparent 75%);
         box-shadow: 0 0 7px 2px rgba(150, 232, 255, 0.95);
-        animation: gdThaadSpark 0.32s infinite alternate;
+        animation: dbThaadSpark 0.32s infinite alternate;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -436,7 +436,7 @@
     /* white-hot detonation flash */
     .db-boom-flash {
         background: radial-gradient(circle, #fff 0%, rgba(255, 244, 214, 0.9) 34%, rgba(255, 210, 120, 0) 66%);
-        animation: gdBoomFlash 0.17s ease-out forwards;
+        animation: dbBoomFlash 0.17s ease-out forwards;
     }
 
     /* expanding shock ring */
@@ -445,7 +445,7 @@
         border: 1.5px solid rgba(255, 214, 140, 0.9);
         box-shadow: 0 0 4px rgba(255, 180, 90, 0.6);
         opacity: 0;
-        animation: gdBoomRing 0.42s ease-out forwards;
+        animation: dbBoomRing 0.42s ease-out forwards;
     }
 
     /* billowing flame — hot white center falling to deep red/black edge */
@@ -458,28 +458,28 @@
     }
 
     .db-boom-fire.f1 {
-        animation: gdBoomFireA 0.58s ease-out forwards;
+        animation: dbBoomFireA 0.58s ease-out forwards;
     }
 
     .db-boom-fire.f2 {
-        animation: gdBoomFireB 0.52s ease-out 0.04s forwards;
+        animation: dbBoomFireB 0.52s ease-out 0.04s forwards;
     }
 
     .db-boom-fire.f3 {
-        animation: gdBoomFireC 0.5s ease-out 0.06s forwards;
+        animation: dbBoomFireC 0.5s ease-out 0.06s forwards;
     }
 
     /* persistent white-hot core */
     .db-boom-core {
         background: radial-gradient(circle, #fff 0%, #fff0b8 40%, rgba(255, 200, 90, 0) 72%);
-        animation: gdBoomCore 0.3s ease-out forwards;
+        animation: dbBoomCore 0.3s ease-out forwards;
     }
 
     /* short, faint smoke wisp rising off the burn — fire stays the star */
     .db-boom-smoke {
         opacity: 0;
         background: radial-gradient(circle, rgba(60, 54, 48, 0.7) 0%, rgba(48, 44, 40, 0.3) 46%, rgba(40, 36, 32, 0) 74%);
-        animation: gdBoomSmoke 0.6s ease-out 0.16s forwards;
+        animation: dbBoomSmoke 0.6s ease-out 0.16s forwards;
     }
 
     /* flung embers — fly outward along --a to --dist, shrinking */
@@ -493,7 +493,7 @@
         border-radius: 50%;
         background: #ffd873;
         box-shadow: 0 0 4px 1px #ff8a1a;
-        animation: gdBoomSpark 0.5s ease-out var(--delay, 0ms) forwards;
+        animation: dbBoomSpark 0.5s ease-out var(--delay, 0ms) forwards;
     }
 
     /* interception accent: keep the fire, but tint the shock ring + embers
@@ -538,13 +538,13 @@
 
     .db-fallout-glow {
         background: radial-gradient(circle, rgba(160, 255, 74, 0.5) 0%, rgba(120, 220, 40, 0.22) 42%, rgba(90, 180, 30, 0) 72%);
-        animation: gdFalloutGlow 2.4s ease-in-out infinite;
+        animation: dbFalloutGlow 2.4s ease-in-out infinite;
     }
 
     .db-fallout-ring {
         border: 1px solid rgba(182, 255, 92, 0.75);
         box-shadow: 0 0 6px rgba(140, 255, 58, 0.5);
-        animation: gdFalloutRing 2.8s ease-out infinite;
+        animation: dbFalloutRing 2.8s ease-out infinite;
     }
 
     .db-fallout-ring.two {
@@ -559,7 +559,7 @@
         line-height: 1;
         color: #c9ff7a;
         text-shadow: 0 0 5px rgba(140, 255, 58, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
-        animation: gdFalloutCore 2.4s ease-in-out infinite;
+        animation: dbFalloutCore 2.4s ease-in-out infinite;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -725,7 +725,7 @@
     }
 
     .db-tt-node.cur {
-        animation: gdTtLive 2.6s ease-in-out infinite;
+        animation: dbTtLive 2.6s ease-in-out infinite;
     }
 
     /* Queued — a touch brighter than idle so lined-up work reads. */
@@ -810,7 +810,7 @@
     .db-tt-wire.lit {
         stroke: color-mix(in srgb, var(--text) 40%, var(--line));
         stroke-dasharray: 4 6;
-        animation: gdTtFlow 1.1s linear infinite;
+        animation: dbTtFlow 1.1s linear infinite;
     }
 
     /* --- Payload block (unit unlock) --- */
@@ -831,45 +831,45 @@
     /* ---- boot-scan bar ---- */
     .db-boot-bar i {
         background: linear-gradient(90deg, transparent, var(--text), transparent);
-        animation: gdBootScan 1.15s ease-in-out infinite;
+        animation: dbBootScan 1.15s ease-in-out infinite;
     }
 
     /* ---- all @keyframes (26), verbatim ---- */
-    @keyframes gdDropInY {
+    @keyframes dbDropInY {
         from {
             opacity: 0;
             transform: translateY(-12px);
         }
     }
 
-    @keyframes gdDropIn {
+    @keyframes dbDropIn {
         from {
             opacity: 0;
             transform: translate(-50%, -12px);
         }
     }
 
-    @keyframes gdRowIn {
+    @keyframes dbRowIn {
         from {
             opacity: 0;
             transform: translateY(7px);
         }
     }
 
-    @keyframes gdPulse {
+    @keyframes dbPulse {
         50% {
             opacity: 0.4;
         }
     }
 
-    @keyframes gdPop {
+    @keyframes dbPop {
         from {
             opacity: 0;
             transform: scale(0.95);
         }
     }
 
-    @keyframes gdFlame {
+    @keyframes dbFlame {
         from {
             transform: scaleY(0.8) scaleX(0.9);
             opacity: 0.8;
@@ -880,7 +880,7 @@
         }
     }
 
-    @keyframes gdThaadCore {
+    @keyframes dbThaadCore {
         from {
             box-shadow: 0 0 5px rgba(120, 226, 255, 0.75);
         }
@@ -889,7 +889,7 @@
         }
     }
 
-    @keyframes gdThaadSpark {
+    @keyframes dbThaadSpark {
         from {
             opacity: 0.55;
             transform: scale(0.7);
@@ -900,7 +900,7 @@
         }
     }
 
-    @keyframes gdBoomFlash {
+    @keyframes dbBoomFlash {
         from {
             transform: scale(0.3);
             opacity: 1;
@@ -911,7 +911,7 @@
         }
     }
 
-    @keyframes gdBoomRing {
+    @keyframes dbBoomRing {
         0% {
             transform: scale(0.2);
             opacity: 0.9;
@@ -922,7 +922,7 @@
         }
     }
 
-    @keyframes gdBoomCore {
+    @keyframes dbBoomCore {
         0% {
             transform: scale(0.4);
             opacity: 1;
@@ -937,7 +937,7 @@
         }
     }
 
-    @keyframes gdBoomFireA {
+    @keyframes dbBoomFireA {
         0% {
             transform: scale(0.3);
             opacity: 0.95;
@@ -952,7 +952,7 @@
         }
     }
 
-    @keyframes gdBoomFireB {
+    @keyframes dbBoomFireB {
         0% {
             transform: translate(-6%, -4%) scale(0.2);
             opacity: 0;
@@ -966,7 +966,7 @@
         }
     }
 
-    @keyframes gdBoomFireC {
+    @keyframes dbBoomFireC {
         0% {
             transform: translate(6%, 4%) scale(0.2);
             opacity: 0;
@@ -980,7 +980,7 @@
         }
     }
 
-    @keyframes gdBoomSmoke {
+    @keyframes dbBoomSmoke {
         0% {
             transform: scale(0.5);
             opacity: 0;
@@ -994,7 +994,7 @@
         }
     }
 
-    @keyframes gdBoomSpark {
+    @keyframes dbBoomSpark {
         0% {
             transform: rotate(var(--a)) translateY(0) scale(1);
             opacity: 1;
@@ -1005,7 +1005,7 @@
         }
     }
 
-    @keyframes gdFalloutGlow {
+    @keyframes dbFalloutGlow {
         0%, 100% {
             transform: scale(0.9);
             opacity: 0.7;
@@ -1016,7 +1016,7 @@
         }
     }
 
-    @keyframes gdFalloutRing {
+    @keyframes dbFalloutRing {
         0% {
             transform: scale(0.35);
             opacity: 0.85;
@@ -1027,7 +1027,7 @@
         }
     }
 
-    @keyframes gdFalloutCore {
+    @keyframes dbFalloutCore {
         0%, 100% {
             transform: scale(0.95);
             opacity: 0.85;
@@ -1038,7 +1038,7 @@
         }
     }
 
-    @keyframes gdTitleGlow {
+    @keyframes dbTitleGlow {
         from {
             filter: brightness(1);
         }
@@ -1047,7 +1047,7 @@
         }
     }
 
-    @keyframes gdRailIn {
+    @keyframes dbRailIn {
         from {
             opacity: 0;
             transform: translateX(-18px);
@@ -1058,7 +1058,7 @@
         }
     }
 
-    @keyframes gdBlink {
+    @keyframes dbBlink {
         0%, 100% {
             opacity: 1;
         }
@@ -1067,21 +1067,21 @@
         }
     }
 
-    @keyframes gdCtxIn {
+    @keyframes dbCtxIn {
         from {
             opacity: 0;
             transform: scale(0.96) translateY(-4px);
         }
     }
 
-    @keyframes gdSplashIn {
+    @keyframes dbSplashIn {
         from {
             opacity: 0;
             transform: scale(0.985);
         }
     }
 
-    @keyframes gdBootScan {
+    @keyframes dbBootScan {
         from {
             transform: translateX(-130%);
         }
@@ -1100,7 +1100,7 @@
     }
 
     /* --- Tech-tree: breathing active node + flowing prereq wire --- */
-    @keyframes gdTtLive {
+    @keyframes dbTtLive {
         50% {
             box-shadow: 0 0 0 1px color-mix(in srgb, var(--bp-live) 50%, transparent),
             0 0 16px -4px color-mix(in srgb, var(--bp-live) 45%, transparent),
@@ -1108,7 +1108,7 @@
         }
     }
 
-    @keyframes gdTtFlow {
+    @keyframes dbTtFlow {
         to {
             stroke-dashoffset: -20;
         }

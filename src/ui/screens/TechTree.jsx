@@ -131,7 +131,7 @@ function Node({id, tech, nation, api, style}) {
         <button className={cn(
             "db-tt-node relative overflow-hidden w-[196px] flex-none flex flex-col text-left",
             "px-[13px] pt-[9px] pb-[11px] rounded-[3px] text-text bg-sunk",
-            "transition-[transform,box-shadow] duration-150 ease-out-gd",
+            "transition-[transform,box-shadow] duration-150 ease-out-db",
             "focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-2",
             stateCls,
         )}
@@ -295,7 +295,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
     };
 
     return (
-        <div className="db-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] m-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] [inset:clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[gdRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
+        <div className="db-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] m-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] [inset:clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[dbRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
              ref={modalRef} tabIndex={-1}
              role="dialog" aria-modal="true" aria-labelledby="db-tt-title">
             <div className="flex items-center gap-[18px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
@@ -307,7 +307,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                 </span>}
                 {(rr.current || rr.queue.length > 0) && (
                     <button className={cn(
-                        "font-mono text-[11px] tracking-[1px] text-dim px-[10px] py-1 rounded-sm border border-line bg-btn-bg cursor-pointer transition-[border-color,color] duration-150 ease-out-gd hover:text-text hover:border-line",
+                        "font-mono text-[11px] tracking-[1px] text-dim px-[10px] py-1 rounded-sm border border-line bg-btn-bg cursor-pointer transition-[border-color,color] duration-150 ease-out-db hover:text-text hover:border-line",
                         queueOpen ? "text-text border-gold" : null,
                     )}
                             onClick={() => setQueueOpen((v) => !v)}
@@ -328,11 +328,11 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         nation?.autoResearch ? "text-gold" : "text-dim group-hover:text-text",
                     )}>Auto-Research</span>
                     <span className={cn(
-                        "db-toggle w-11 h-6 rounded border border-line bg-btn-bg relative transition-[background,border-color] duration-150 ease-out-gd",
+                        "db-toggle w-11 h-6 rounded border border-line bg-btn-bg relative transition-[background,border-color] duration-150 ease-out-db",
                         nation?.autoResearch && "on bg-gold-soft border-[rgba(244,192,42,0.4)]",
                     )}>
                         <span className={cn(
-                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-gd",
+                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-db",
                             nation?.autoResearch && "translate-x-5 bg-gold",
                         )}/>
                     </span>
@@ -360,7 +360,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                  onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
                 <div className={cn(
                     "absolute top-0 left-0 origin-top-left will-change-transform",
-                    eased ? "eased transition-transform duration-[260ms] ease-out-gd motion-reduce:transition-none" : null,
+                    eased ? "eased transition-transform duration-[260ms] ease-out-db motion-reduce:transition-none" : null,
                 )}
                      style={{
                          width: CANVAS_W, height: CANVAS_H,
@@ -397,7 +397,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                 return (
                                     <line key={`${path.id}${i}`}
                                           className={cn(
-                                              "db-tt-wire stroke-line transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
+                                              "db-tt-wire stroke-line transition-[stroke] duration-300 ease-out-db motion-reduce:transition-none",
                                               lit ? "lit" : null,
                                           )}
                                           x1={nodeX(i) + NODE_W} y1={y} x2={nodeX(i + 1)} y2={y}/>
@@ -473,7 +473,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                 const glyph = TECH_PATHS.find((p) => p.id === t.path)?.glyph;
                                 return (
                                     <li key={qid}>
-                                        <button className="flex items-center gap-2 w-full px-[9px] py-[7px] rounded-sm border border-transparent bg-btn-bg text-text text-left cursor-pointer transition-[border-color,background] duration-150 ease-out-gd hover:border-danger hover:bg-panel"
+                                        <button className="flex items-center gap-2 w-full px-[9px] py-[7px] rounded-sm border border-transparent bg-btn-bg text-text text-left cursor-pointer transition-[border-color,background] duration-150 ease-out-db hover:border-danger hover:bg-panel"
                                                 onClick={() => api.unqueue(qid)}
                                                 title={`Remove ${t.name} from the queue`}
                                                 aria-label={`Queue position ${i + 1}: ${t.name}, ${t.cost} points. Remove from queue.`}>

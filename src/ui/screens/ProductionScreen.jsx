@@ -136,7 +136,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         return (
             <button key={key}
                     className={cn(
-                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd",
+                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-db",
                         !lock && "hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
                         placing === key ? "active border-gold bg-[rgba(245,197,49,0.07)]"
                             : lock ? "locked opacity-[0.55] grayscale-[0.85] cursor-not-allowed border-dashed"
@@ -186,7 +186,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         return (
             <button key={key}
                     className={cn(
-                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-gd hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
+                        "db-ucard relative flex gap-[11px] items-start text-left p-3 border border-line rounded bg-sunk text-text cursor-pointer transition-[border-color,transform,box-shadow] duration-150 ease-out-db hover:border-gold-line hover:-translate-y-px hover:shadow-[0_6px_18px_rgba(0,0,0,0.4)] active:scale-[0.99]",
                         !afford && "poor opacity-50"
                     )}
                     onClick={(e) => {
@@ -269,7 +269,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         {CATS.map((c) => (
                             <button key={c.id}
                                     className={cn(
-                                        "db-prod-cat flex items-center gap-[10px] py-[9px] px-[11px] border border-transparent rounded-sm bg-transparent text-dim cursor-pointer text-left transition-[color,background-color,border-color] duration-150 ease-out-gd hover:text-text hover:bg-sunk active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue",
+                                        "db-prod-cat flex items-center gap-[10px] py-[9px] px-[11px] border border-transparent rounded-sm bg-transparent text-dim cursor-pointer text-left transition-[color,background-color,border-color] duration-150 ease-out-db hover:text-text hover:bg-sunk active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue",
                                         cat === c.id && "active text-text bg-sunk border-gold-line"
                                     )}
                                     role="tab" aria-selected={cat === c.id}
@@ -299,7 +299,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         {!cur && queue.length === 0 && <div className="db-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line is idle. Pick a system to
                             build it.</div>}
                         {cur && (
-                            <button className="db-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(-1)}
+                            <button className="db-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-db hover:border-red" onClick={() => api.cancelProd(-1)}
                                     title="Building — click to cancel for a refund">
                                 <i className="db-qitem-fill absolute inset-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none" style={{width: `${Math.round(cur.progress * 100)}%`}}/>
                                 <UnitIcon name={icon(cur.item)} size={16}/>
@@ -308,7 +308,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                             </button>
                         )}
                         {queue.map((it, i) => (
-                            <button key={i} className="db-qitem group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-gd hover:border-red" onClick={() => api.cancelProd(i)}
+                            <button key={i} className="db-qitem group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-db hover:border-red" onClick={() => api.cancelProd(i)}
                                     title={`${label(it)} · ${timeOf(it)}s — click to cancel`}>
                                 <span className="db-qitem-n w-3.5 font-mono text-[10px] text-faint">{i + 2}</span>
                                 <UnitIcon name={icon(it)} size={16}/>

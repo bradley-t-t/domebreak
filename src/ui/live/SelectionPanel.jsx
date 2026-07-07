@@ -31,7 +31,7 @@ export default function SelectionPanel({
     // fire (ICBM / Hypersonic Glide Vehicle) as a plain armament line.
     const armament = armamentOf(selectedUnit.type);
     return (
-        <div className="db-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdPop_220ms_var(--ease-out)]">
+        <div className="db-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbPop_220ms_var(--ease-out)]">
             <div className="font-display font-bold text-[15px] flex items-center gap-2"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
                                                   size={18}/>{labelOf(selectedUnit.type, selectedUnit.slot)}
             </div>
@@ -48,7 +48,7 @@ export default function SelectionPanel({
                 </div>
                 <div className="h-[3px] bg-line rounded-[2px] overflow-hidden" role="progressbar" aria-label="Integrity"
                      aria-valuenow={Math.round(hpFrac * 100)} aria-valuemin={0} aria-valuemax={100}>
-                    <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd", hpFrac <= 0.35 ? "bg-danger" : "bg-good")}
+                    <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-db", hpFrac <= 0.35 ? "bg-danger" : "bg-good")}
                        style={{width: `${Math.round(hpFrac * 100)}%`}}/></div>
             </div>
             <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
@@ -80,8 +80,8 @@ export default function SelectionPanel({
                                         {airborne > 0 && <span className="font-mono text-[10px] text-text bg-[rgba(255,255,255,0.08)] border border-line rounded-full px-1.5 leading-[15px]">{airborne}▲</span>}
                                         <span className="font-mono text-[11px] text-dim">{stock}/{cap}</span>
                                         {!full &&
-                                            <span className="font-mono text-[9px] tracking-[0.5px] text-faint opacity-60 transition-[opacity,color] duration-[140ms] ease-out-gd group-hover:opacity-100 group-hover:text-dim" aria-hidden="true">⇧×5</span>}
-                                        <button className="w-[22px] h-[22px] grid place-items-center text-sm leading-none text-text bg-transparent border border-line rounded-sm transition-[background,color,border-color] duration-[120ms] ease-out-gd enabled:hover:bg-text enabled:hover:text-panel-solid enabled:hover:border-text disabled:opacity-35 disabled:cursor-default" disabled={full}
+                                            <span className="font-mono text-[9px] tracking-[0.5px] text-faint opacity-60 transition-[opacity,color] duration-[140ms] ease-out-db group-hover:opacity-100 group-hover:text-dim" aria-hidden="true">⇧×5</span>}
+                                        <button className="w-[22px] h-[22px] grid place-items-center text-sm leading-none text-text bg-transparent border border-line rounded-sm transition-[background,color,border-color] duration-[120ms] ease-out-db enabled:hover:bg-text enabled:hover:text-panel-solid enabled:hover:border-text disabled:opacity-35 disabled:cursor-default" disabled={full}
                                                 aria-label={full ? `${labelOf(at, mySlot)} hangar full` : `Order ${labelOf(at, mySlot)} — ${UNITS[at].cost} points, ${UNITS[at].buildTime}s. Shift-click orders five.`}
                                                 title={full ? "The hangar is at capacity for that type." : `Order one — ◆ ${UNITS[at].cost}, ${UNITS[at].buildTime}s on the line. Shift-click: ×5.`}
                                                 onClick={(e) => {
@@ -213,7 +213,7 @@ export default function SelectionPanel({
                         </div>
                         <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mb-2" role="progressbar"
                              aria-label="Capture progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                            <i className="block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd"
+                            <i className="block h-full rounded-[2px] transition-[width] duration-200 ease-out-db"
                                style={{width: `${pct}%`, background: teamColor(mySlot)}}/>
                         </div>
                         <button className={cn(button({variant: assaulting ? "primary" : "default"}), "w-full")}

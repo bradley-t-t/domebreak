@@ -35,7 +35,7 @@ export default function SplashSequence({reduceMotion, onDone}) {
 
     const cardCls = cn(
         "text-center motion-reduce:animate-none",
-        reduceMotion ? "animate-none" : "animate-[gdSplashIn_700ms_var(--ease-out-gd)_both]"
+        reduceMotion ? "animate-none" : "animate-[dbSplashIn_700ms_var(--ease-out-db)_both]"
     );
     return (
         <div className={cn(

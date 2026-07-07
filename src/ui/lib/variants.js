@@ -31,7 +31,7 @@ import {cva} from "class-variance-authority";
  * card-paper.css flips it to solid ink when nested in a modal card.
  */
 export const button = cva(
-    "db-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-gd enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
+    "db-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-db enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
     {
         variants: {
             variant: {
@@ -73,7 +73,7 @@ export const miniButton = cva(
  * No VFX hook — no @layer vfx rule targets .db-iconbtn. Utilities only.
  */
 export const iconButton = cva(
-    "w-[38px] h-[38px] rounded border border-line bg-panel text-text text-[17px] backdrop-blur-[8px] transition-transform duration-150 ease-out-gd hover:border-blue active:scale-95"
+    "w-[38px] h-[38px] rounded border border-line bg-panel text-text text-[17px] backdrop-blur-[8px] transition-transform duration-150 ease-out-db hover:border-blue active:scale-95"
 );
 
 /* ---------------------------------------------------------------------- */
@@ -90,7 +90,7 @@ export const iconButton = cva(
  * always appears alongside menu buttons.
  */
 export const menuButton = cva(
-    "db-menu-btn relative px-[18px] py-[13px] rounded-sm border border-line bg-[rgba(16,18,20,0.7)] text-text text-[12.5px] font-semibold tracking-[2.5px] uppercase transition-[transform,border-color,background] duration-150 ease-out-gd hover:border-blue hover:-translate-y-px focus-visible:border-blue focus-visible:-translate-y-px active:scale-[0.98]",
+    "db-menu-btn relative px-[18px] py-[13px] rounded-sm border border-line bg-[rgba(16,18,20,0.7)] text-text text-[12.5px] font-semibold tracking-[2.5px] uppercase transition-[transform,border-color,background] duration-150 ease-out-db hover:border-blue hover:-translate-y-px focus-visible:border-blue focus-visible:-translate-y-px active:scale-[0.98]",
     {
         variants: {
             variant: {
@@ -182,7 +182,7 @@ export const overlay = cva("fixed inset-0 z-[4] flex pointer-events-none", {
  * No VFX hook — no @layer vfx rule targets .db-input.
  */
 export const input = cva(
-    "w-full bg-sunk border border-line text-text rounded-sm px-[14px] py-3 text-[15px] outline-none placeholder:text-faint transition-[border-color,box-shadow,background] duration-150 ease-out-gd focus:border-text focus:bg-sunk focus:shadow-[0_0_0_3px_var(--gold-soft)]",
+    "w-full bg-sunk border border-line text-text rounded-sm px-[14px] py-3 text-[15px] outline-none placeholder:text-faint transition-[border-color,box-shadow,background] duration-150 ease-out-db focus:border-text focus:bg-sunk focus:shadow-[0_0_0_3px_var(--gold-soft)]",
     {
         variants: {
             mono: {
@@ -259,9 +259,9 @@ export const menuBg = cva(
     "absolute inset-0 -z-10 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)] after:content-[''] after:absolute after:inset-0 after:opacity-[0.045] after:bg-[linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)] after:[background-size:44px_44px]"
 );
 
-/** The glass menu card itself; carries the gdRowIn entrance. No literal hook needed. */
+/** The glass menu card itself; carries the dbRowIn entrance. No literal hook needed. */
 export const menuInner = cva(
-    "text-center animate-[gdRowIn_400ms_var(--ease-out)_both] pt-[38px] px-[46px] pb-[26px] border border-line-soft rounded-[var(--radius)] bg-[rgba(7,9,13,0.48)] [backdrop-filter:blur(10px)_saturate(1.15)] shadow-[0_30px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]"
+    "text-center animate-[dbRowIn_400ms_var(--ease-out)_both] pt-[38px] px-[46px] pb-[26px] border border-line-soft rounded-[var(--radius)] bg-[rgba(7,9,13,0.48)] [backdrop-filter:blur(10px)_saturate(1.15)] shadow-[0_30px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]"
 );
 
 /**

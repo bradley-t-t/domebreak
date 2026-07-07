@@ -34,7 +34,7 @@ export default function ProductionBar({world, api, mySlot}) {
     });
     return (
         <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-5 flex items-center gap-[6px] max-w-[min(620px,52vw)] bg-panel border border-line rounded-lg px-[10px] py-[7px] shadow overflow-x-auto backdrop-blur-[12px] motion-safe:animate-[gdPop_220ms_var(--ease-out)] max-[1180px]:bottom-[76px]">
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-5 flex items-center gap-[6px] max-w-[min(620px,52vw)] bg-panel border border-line rounded-lg px-[10px] py-[7px] shadow overflow-x-auto backdrop-blur-[12px] motion-safe:animate-[dbPop_220ms_var(--ease-out)] max-[1180px]:bottom-[76px]">
             <span
                 className="font-display text-[9px] tracking-[1.5px] uppercase text-faint mr-1 whitespace-nowrap">Production</span>
             {/* Polite live region: re-announces only when the item on the line
@@ -51,7 +51,7 @@ export default function ProductionBar({world, api, mySlot}) {
                     aria-label={`Building ${label(cur.item)} — ${pct}%, ${eta}s remaining. Click to cancel for a refund.`}
                     title={`${label(cur.item)} — building. Click to cancel for a refund.`}
                     onClick={() => api.cancelProd(-1)}>
-                    <i className="absolute left-0 top-0 bottom-0 bg-[var(--flame,var(--gold-soft))] opacity-[0.22] transition-[width] duration-300 ease-out-gd pointer-events-none"
+                    <i className="absolute left-0 top-0 bottom-0 bg-[var(--flame,var(--gold-soft))] opacity-[0.22] transition-[width] duration-300 ease-out-db pointer-events-none"
                        style={{width: `${pct}%`}}/>
                     <UnitIcon name={icon(cur.item)} size={14}/>
                     <span
@@ -74,7 +74,7 @@ export default function ProductionBar({world, api, mySlot}) {
                     {g.count > 1 && <b
                         className="flex-none font-mono text-[10px] leading-none px-[5px] py-0.5 rounded-full bg-gold-soft text-text">×{g.count}</b>}
                     <span
-                        className="text-danger text-xs leading-none opacity-0 transition-opacity duration-[120ms] ease-out-gd group-hover:opacity-100">×</span>
+                        className="text-danger text-xs leading-none opacity-0 transition-opacity duration-[120ms] ease-out-db group-hover:opacity-100">×</span>
                 </button>
             ))}
         </div>

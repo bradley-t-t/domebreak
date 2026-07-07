@@ -43,7 +43,7 @@ export default function ContextMenu({x, y, title, items, onClose}) {
                 onClose();
             }}/>
             <div ref={menuRef}
-                 className="db-ctx fixed z-41 min-w-[190px] bg-panel-solid border border-line rounded shadow overflow-hidden p-[5px] motion-safe:animate-[gdCtxIn_120ms_var(--ease-out)]"
+                 className="db-ctx fixed z-41 min-w-[190px] bg-panel-solid border border-line rounded shadow overflow-hidden p-[5px] motion-safe:animate-[dbCtxIn_120ms_var(--ease-out)]"
                  role="menu" aria-label={title || "Actions"}
                  onKeyDown={onKeyDown} style={{
                 left: Math.min(x, window.innerWidth - 210),
