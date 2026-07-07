@@ -57,8 +57,8 @@ export default function FriendsPanel({onClose}) {
                  aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
                 <div className="gd-menu-title sm text-[26px] tracking-[3px] mb-4 font-bold uppercase text-dim" id={titleId}>Command Network</div>
                 <div className="flex gap-[10px] mt-4">
-                    <label className="sr-only" htmlFor="gd-friends-input">Commander username</label>
-                    <input id="gd-friends-input" className={cn(inputCls(), "flex-1")} placeholder="Commander username" value={input}
+                    <label className="sr-only" htmlFor="gd-friends-input">Username</label>
+                    <input id="gd-friends-input" className={cn(inputCls(), "flex-1")} placeholder="Add by username" value={input}
                            maxLength={24} onChange={(e) => setInput(e.target.value)}
                            onKeyDown={(e) => {
                                if (e.key === "Enter") add();
