@@ -998,7 +998,7 @@ export default function LiveGame({
                 The wrapper is click-through (pointer-events-none) so the empty space around
                 the ticker/alert doesn't block the map; each child re-enables its own. */}
             <div className="absolute top-[40px] left-[272px] right-4 z-6 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
-                <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K}
+                <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
                          onPanel={(id) => setPanel((p) => (p === id ? null : id))}
                          globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
                          onMenu={onPause} meBadge={meBadge}/>

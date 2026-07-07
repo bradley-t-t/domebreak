@@ -42,7 +42,7 @@ const NAV = [
     {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
 ];
 
-export default function LiveHud({world, api, myNation, panel, onPanel, keys, globe, onGlobe, onHelp, onMenu, meBadge}) {
+export default function LiveHud({world, api, myNation, panel, onPanel, keys, online, globe, onGlobe, onHelp, onMenu, meBadge}) {
     const K = resolveKeys(keys);
     const net = myNation ? netIncomeOf(world, myNation.slot) : 0;
     const pop = myNation ? populationOf(world, myNation.slot) : 0;
@@ -183,24 +183,35 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, glo
             </div>
             {/* Row 2 — controls: speed + console nav on the left, arsenal + view controls right. */}
             <div className="flex flex-nowrap items-center gap-3 whitespace-nowrap px-3 py-[7px]">
-                <div className="flex gap-[3px] pr-[3px] border-r border-line-soft"
-                     title={`${keyLabel(K.pause)} — Pause · ${keyLabel(K.speedDown)}/${keyLabel(K.speedUp)} — Speed · 1–5 — Speed Level`}>
-                    <button
-                        className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", world.paused && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
-                        onClick={api.pause}
-                        aria-pressed={world.paused}
-                        title={`Pause (${keyLabel(K.pause)})`}>⏸
-                    </button>
-                    <button
-                        className="min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]"
-                        onClick={api.play} aria-pressed={!world.paused}
-                        title={`Resume (${keyLabel(K.pause)})`}>▶</button>
-                    {GAME_SPEEDS.map((s, i) => <button key={s}
-                                                       className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", !world.paused && world.speed === s && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
-                                                       aria-pressed={!world.paused && world.speed === s}
-                                                       onClick={() => api.setSpeed(s)}
-                                                       title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
-                </div>
+                {online ? (
+                    <div className="flex items-center pr-3 border-r border-line-soft"
+                         title="Online matches run locked at 1× — no pausing" aria-live="polite">
+                        {world.startsIn > 0
+                            ? <span
+                                className="font-mono text-xs font-bold text-gold [text-shadow:var(--glow-gold)] tabular-nums">Battle begins in {world.startsIn}s</span>
+                            : <span
+                                className="font-mono text-[11px] font-semibold tracking-[1px] uppercase text-dim">Live · 1×</span>}
+                    </div>
+                ) : (
+                    <div className="flex gap-[3px] pr-[3px] border-r border-line-soft"
+                         title={`${keyLabel(K.pause)} — Pause · ${keyLabel(K.speedDown)}/${keyLabel(K.speedUp)} — Speed · 1–5 — Speed Level`}>
+                        <button
+                            className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", world.paused && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
+                            onClick={api.pause}
+                            aria-pressed={world.paused}
+                            title={`Pause (${keyLabel(K.pause)})`}>⏸
+                        </button>
+                        <button
+                            className="min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]"
+                            onClick={api.play} aria-pressed={!world.paused}
+                            title={`Resume (${keyLabel(K.pause)})`}>▶</button>
+                        {GAME_SPEEDS.map((s, i) => <button key={s}
+                                                           className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", !world.paused && world.speed === s && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
+                                                           aria-pressed={!world.paused && world.speed === s}
+                                                           onClick={() => api.setSpeed(s)}
+                                                           title={`Speed ${s}× (${i + 1})`}>{s}×</button>)}
+                    </div>
+                )}
                 {onPanel && (
                     <div className="flex gap-[5px] flex-none">
                         {NAV.map((n) => (
