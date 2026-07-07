@@ -23,7 +23,7 @@ import TitleBarDrag from "./ui/common/TitleBarDrag.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import {menuButton} from "./ui/lib/variants.js";
-import {useOnlineCount} from "./ui/hooks/useOnlineCount.js";
+import {usePresence} from "./ui/hooks/usePresence.js";
 
 // DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
 // gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
@@ -66,9 +66,16 @@ export default function App() {
     // guards win/loss/quit from ever double-firing for one game session.
     const wallStartedAtRef = useRef(null);
     const reportedRef = useRef(false);
-    // Live head-count of commanders online, shown in the Multiplayer menu. Only
-    // joins the presence channel once signed in.
-    const onlineCount = useOnlineCount(authStatus === "signedIn");
+    // Live presence: head-count for the Multiplayer menu + a per-user map so the
+    // Friends panel can show who's online and what they're doing. My own activity
+    // is broadcast so friends see me as In menus / Single-player / Multiplayer /
+    // Lobby / Searching. Only joins the presence channel once signed in.
+    const presenceActivity = authStatus !== "signedIn" ? null
+        : screen === "playing" ? (netClient ? "multi" : "single")
+            : screen === "lobby" ? "lobby"
+                : screen === "searching" ? "searching"
+                    : "menu";
+    const {count: onlineCount, byId: presence} = usePresence(authStatus === "signedIn", presenceActivity);
 
     useEffect(() => {
         loadGameData().then(setData).catch(() => {
@@ -352,7 +359,7 @@ export default function App() {
             {attract}
             {splash}
             {screen !== "playing" &&
-                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar}/>}
+                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar} presence={presence}/>}
             {screen === "menu" &&
                 <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue}
                            onPlay={() => setScreen("searching")}
@@ -386,7 +393,7 @@ export default function App() {
                               onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
                               onGameEnd={onGameEnd}
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
-                                                players={netClient?.players} onSetAvatar={changeAvatar}/>}/>
+                                                players={netClient?.players} onSetAvatar={changeAvatar} presence={presence}/>}/>
                 </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
                 <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.

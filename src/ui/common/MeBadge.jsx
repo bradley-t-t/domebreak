@@ -124,7 +124,7 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, initial, 
 // with stats, the friends roster, and (in-match) the human roster. The
 // top offset (42px) clears TitleBarDrag's 34px OS-drag strip so the chip
 // never sits underneath the undraggable-but-on-top drag region.
-export default function MeBadge({profile, stats, onSignOut, inGame, players, onSetAvatar}) {
+export default function MeBadge({profile, stats, onSignOut, inGame, players, onSetAvatar, presence}) {
     const [open, setOpen] = useState(false);
     const [friendsOpen, setFriendsOpen] = useState(false);
     const rootRef = useRef(null);
@@ -163,7 +163,7 @@ export default function MeBadge({profile, stats, onSignOut, inGame, players, onS
                                 hours={hours} initial={initial} inGame={inGame} players={players} onSignOut={onSignOut}
                                 onSetAvatar={onSetAvatar} onClose={() => setOpen(false)} onOpenFriends={() => setFriendsOpen(true)}/>
             )}
-            {friendsOpen && <FriendsPanel onClose={() => setFriendsOpen(false)}/>}
+            {friendsOpen && <FriendsPanel onClose={() => setFriendsOpen(false)} presence={presence}/>}
         </div>
     );
 }

@@ -4,9 +4,31 @@ import {useModal} from "../hooks/useModal.js";
 import {overlay, card, button, miniButton, input as inputCls, label, sub} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
-// Command network: add/accept/decline/remove friends. A simple modal card —
-// opened from MeBadge, closes on backdrop click or Escape.
-export default function FriendsPanel({onClose}) {
+// What each broadcast activity code reads as in a friend's row.
+const ACTIVITY_LABEL = {
+    menu: "In menus",
+    searching: "Searching for a match",
+    lobby: "In a lobby",
+    single: "In a single-player game",
+    multi: "In a multiplayer match",
+};
+
+// Coarse "x ago" for a last_seen timestamp — enough to read at a glance.
+function relTime(iso) {
+    if (!iso) return "";
+    const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return "just now";
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+}
+
+// Command network: add/accept/decline/remove friends, with live presence. A
+// simple modal card — opened from MeBadge, closes on backdrop click or Escape.
+// `presence` is the { [userId]: {activity, at} } map of who is currently online.
+export default function FriendsPanel({onClose, presence}) {
     const [friends, setFriends] = useState([]);
     const [loading, setLoading] = useState(true);
     const [input, setInput] = useState("");
@@ -20,8 +42,12 @@ export default function FriendsPanel({onClose}) {
         setLoading(false);
     });
 
+    // Load on open, then poll so a friend accepting/removing shows up without a
+    // reopen. Online status itself updates live through the `presence` prop.
     useEffect(() => {
         load();
+        const t = setInterval(load, 15_000);
+        return () => clearInterval(t);
     }, []);
 
     const add = async () => {
@@ -49,6 +75,23 @@ export default function FriendsPanel({onClose}) {
     const incoming = friends.filter((f) => f.direction === "in" && f.status === "pending");
     const outgoing = friends.filter((f) => f.direction === "out" && f.status === "pending");
     const accepted = friends.filter((f) => f.status === "accepted");
+
+    // Live status line for one friend: green dot + activity if online, else a
+    // dim dot + "Last online x ago" (or "Offline" when never seen).
+    const Presence = ({friend}) => {
+        const meta = presence?.[friend.other?.id];
+        const online = !!meta;
+        const text = online
+            ? (ACTIVITY_LABEL[meta.activity] || "Online")
+            : (friend.other?.last_seen ? `Last online ${relTime(friend.other.last_seen)}` : "Offline");
+        return (
+            <span className="flex items-center gap-1.5 text-[11px] text-dim mt-[3px]">
+                <span className={cn("inline-block w-2 h-2 rounded-full shrink-0",
+                    online ? "bg-[#46d38a] shadow-[0_0_6px_rgba(70,211,138,0.9)]" : "bg-line")}/>
+                <span className="truncate">{text}</span>
+            </span>
+        );
+    };
 
     return (
         <div className={overlay({placement: "center"})} onClick={onClose}>
@@ -130,10 +173,14 @@ export default function FriendsPanel({onClose}) {
                         <div role="list" aria-labelledby="db-friends-list-h">
                             {accepted.map((f) => {
                                 const uname = f.other?.username || "Commander";
+                                const online = !!presence?.[f.other?.id];
                                 return (
                                     <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[dbRowIn_220ms_var(--ease-out)_both]" role="listitem"
-                                         aria-label={`${uname} — friend`}>
-                                        <span className="text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{uname}</span>
+                                         aria-label={`${uname} — ${online ? "online" : "offline"}`}>
+                                        <div className="min-w-0 flex flex-col">
+                                            <span className="text-[13px] text-text truncate">{uname}</span>
+                                            <Presence friend={f}/>
+                                        </div>
                                         <div className="flex gap-1.5 shrink-0">
                                             <button className={miniButton({danger: true})} disabled={busy}
                                                     aria-label={`Remove ${uname} from friends`}
