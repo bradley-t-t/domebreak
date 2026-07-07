@@ -1109,13 +1109,15 @@ export function techTimeForTier(tier) {
 }
 
 // The five research tracks; TECHS entries reference these by path id.
+// `color` is the doctrine accent — a per-track tactical tint used for the lane
+// label + glyph chip so the five rows read as distinct doctrines at a glance.
+// (Node/era chroma is a separate axis: the era band tints columns by epoch.)
 export const TECH_PATHS = [
-    {id: "off", name: "Strategic Command", glyph: "▲"}, {id: "def", name: "Missile Shield", glyph: "⬡"},
-    {id: "eco", name: "War Economy", glyph: "$"}, {id: "det", name: "Early Warning", glyph: "❉"}, {
-        id: "cmd",
-        name: "Command & Control",
-        glyph: "✦"
-    },
+    {id: "off", name: "Strategic Command", glyph: "▲", color: "#e06a4f"}, // offense — warm strike red
+    {id: "def", name: "Missile Shield", glyph: "⬡", color: "#4f9be0"},    // defense — shield blue
+    {id: "eco", name: "War Economy", glyph: "$", color: "#59c08a"},       // economy — supply green
+    {id: "det", name: "Early Warning", glyph: "❉", color: "#e0b34f"},     // detection — radar amber
+    {id: "cmd", name: "Command & Control", glyph: "✦", color: "#9b7fe0"}, // C2 — command violet
 ];
 
 // Build a linear tech chain for a track. Each def is a 1-based tier; tier N
