@@ -40,7 +40,7 @@ import {
 import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {captureTick} from "./occupation.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
-import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {autoResearchTick, canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {replenishmentBuff} from "./queries.js";
 import {evacTick, reconcileLeadership, updateCommand} from "./leadership.js";
 import {updateStability} from "./stability.js";
@@ -636,6 +636,7 @@ export function step(w, dt) {
 
     for (const n of w.nations) {
         if (!n.alive) continue;
+        autoResearchTick(w, n); // hands-off queue feeding (player toggle; no-op otherwise)
         const rr = n.research;
         if (!rr.current && rr.queue.length) rr.current = {id: rr.queue.shift(), progress: 0};
         if (rr.current) {
