@@ -21,7 +21,7 @@ Two modes share one engine:
 
 ## Client architecture
 
-- **React 19 + Vite 7.** The map is MapLibre GL + PMTiles (reused from Open Historia) rendered as the board, with
+- **React 19 + Vite 7.** The map is MapLibre GL + PMTiles rendered as the board, with
   `react-map-gl` bindings.
 - **Simulation engine** (`src/game/engine.js`) — pure and deterministic given its seed. `useEngine` steps the world in
   an animation-frame loop at a selectable speed (0.5× to 10×) and re-renders on a throttled tick.
@@ -94,8 +94,7 @@ rather than a Supabase account. It is retained for reference; the shipping clien
 
 ## Attribution & licensing
 
-GoldenDome is authored by Trenton Taylor. The reused map engine and tiles come
-from [Open Historia](https://github.com/Open-Historia/open-historia) under the MIT License, and unit icons are
+GoldenDome is authored by Trenton Taylor. Unit icons are
 from [game-icons.net](https://game-icons.net) (Lorc, Delapouite) under CC BY 3.0. The repository does not yet ship its
 own license file.
 
