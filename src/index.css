@@ -637,26 +637,47 @@
     /* --- Tech-tree era banding (Cold War -> Modern -> Space Age) --- */
     /* One tinted zone per era spans its tier columns; --era carries the era
        color. Zones sit behind the wires/nodes and read left->right as
-       advancing time. */
+       advancing time. A soft top-weighted wash + a bright header spine give
+       each epoch a sense of place rather than a flat rectangle. */
     .gd-tt-era {
         position: absolute;
         pointer-events: none;
-        background: color-mix(in srgb, var(--era) 7%, transparent);
+        background: linear-gradient(180deg,
+            color-mix(in srgb, var(--era) 12%, transparent) 0,
+            color-mix(in srgb, var(--era) 5%, transparent) 90px,
+            color-mix(in srgb, var(--era) 3%, transparent) 100%);
         border-left: 1px solid color-mix(in srgb, var(--era) 30%, transparent);
         border-right: 1px solid color-mix(in srgb, var(--era) 30%, transparent);
     }
 
-    .gd-tt-era-name {
-        color: color-mix(in srgb, var(--era) 78%, #fff 22%);
+    /* Era header spine — a bright top rule that names the epoch's band. */
+    .gd-tt-era::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 2px;
+        background: linear-gradient(90deg,
+            transparent, color-mix(in srgb, var(--era) 55%, transparent) 22%,
+            color-mix(in srgb, var(--era) 55%, transparent) 78%, transparent);
     }
 
+    .gd-tt-era-name {
+        color: color-mix(in srgb, var(--era) 78%, #fff 22%);
+        text-shadow: 0 0 14px color-mix(in srgb, var(--era) 34%, transparent);
+    }
+
+    /* Node era-spine — the thin chronological accent down each node's left edge. */
     .gd-tt-accent {
         position: absolute;
         left: 0;
         top: 0;
         bottom: 0;
         width: 3px;
-        background: color-mix(in srgb, var(--era) 72%, transparent);
+        background: linear-gradient(180deg,
+            color-mix(in srgb, var(--era) 82%, transparent),
+            color-mix(in srgb, var(--era) 46%, transparent));
         pointer-events: none;
     }
 
@@ -666,13 +687,67 @@
         background: linear-gradient(180deg, color-mix(in srgb, var(--era) 9%, transparent), transparent 70%), var(--sunk);
     }
 
+    /* Completed tech — era-tinted so a researched column reads in its epoch's
+       color (Cold War cyan / Modern gold / Space violet), not orphaned gold. */
+    .gd-tt-node.done {
+        border-color: color-mix(in srgb, var(--era) 42%, var(--line));
+        background: linear-gradient(180deg,
+            color-mix(in srgb, var(--era) 11%, transparent),
+            color-mix(in srgb, var(--era) 2%, transparent) 62%), var(--sunk);
+    }
+
+    /* Currently researching — era border + a slow breathing ring so the active
+       project is unmistakably alive on the atlas. */
+    .gd-tt-node.cur {
+        border-color: color-mix(in srgb, var(--era) 66%, var(--gold));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--era) 40%, transparent), 0 8px 22px rgba(0, 0, 0, 0.45);
+        animation: gdTtLive 2.6s ease-in-out infinite;
+    }
+
+    /* Live progress fill — era-tinted, with a sheen that sweeps across the
+       filled portion to signal work in motion. */
+    .gd-tt-fill {
+        overflow: hidden;
+        background: linear-gradient(90deg,
+            color-mix(in srgb, var(--era) 15%, transparent),
+            color-mix(in srgb, var(--era) 24%, transparent));
+    }
+
+    .gd-tt-fill::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent,
+            color-mix(in srgb, var(--era) 34%, transparent) 50%, transparent);
+        animation: gdTtScan 2.2s linear infinite;
+    }
+
+    /* Lit wire — a completed prerequisite feeding the next tier. Era-tinted and
+       flowing forward (marching dashes) to read as tech energy advancing. */
     .gd-tt-wire.lit {
-        filter: drop-shadow(0 0 5px rgba(245, 197, 49, 0.5));
+        stroke: color-mix(in srgb, var(--era) 62%, #fff 10%);
+        stroke-dasharray: 5 7;
+        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--era) 45%, transparent));
+        animation: gdTtFlow 1.1s linear infinite;
+    }
+
+    /* Doctrine lane label — each of the five tracks carries its own accent
+       (--doc) so the rows read as distinct doctrines down the left gutter. */
+    .gd-tt-lane {
+        color: color-mix(in srgb, var(--doc) 40%, var(--dim));
+    }
+
+    .gd-tt-lane-chip {
+        color: color-mix(in srgb, var(--doc) 66%, #fff 34%);
+        background: color-mix(in srgb, var(--doc) 15%, transparent);
+        border-color: color-mix(in srgb, var(--doc) 40%, var(--line-soft));
+        box-shadow: inset 0 0 10px color-mix(in srgb, var(--doc) 12%, transparent);
     }
 
     /* --- Unlock medallion on a tech node --- */
-    /* Techs that grant a new buildable unit show a framed unit icon + label
-       so the arsenal payoff reads straight off the node. */
+    /* Techs that grant a new buildable unit show a framed unit icon + label.
+       The medal keeps the one warm real-gold pop in the tree — it always means
+       "you get a weapon," a reward accent held constant across every era. */
     .gd-tt-unlock {
         background: linear-gradient(180deg, rgba(245, 197, 49, 0.14), rgba(245, 197, 49, 0.045));
         border: 1px solid rgba(245, 197, 49, 0.4);
@@ -953,6 +1028,39 @@
         }
         50% {
             box-shadow: 0 0 0 4px rgba(224, 87, 79, 0.22);
+        }
+    }
+
+    /* --- Tech-tree life: breathing active node, scanning fill, flowing wire --- */
+    @keyframes gdTtLive {
+        50% {
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--era) 60%, transparent),
+            0 0 20px -3px color-mix(in srgb, var(--era) 42%, transparent),
+            0 8px 22px rgba(0, 0, 0, 0.45);
+        }
+    }
+
+    @keyframes gdTtScan {
+        from {
+            transform: translateX(-100%);
+        }
+        to {
+            transform: translateX(100%);
+        }
+    }
+
+    @keyframes gdTtFlow {
+        to {
+            stroke-dashoffset: -24;
+        }
+    }
+
+    /* Honor reduced-motion: keep the era chroma, drop the animation. */
+    @media (prefers-reduced-motion: reduce) {
+        .gd-tt-node.cur,
+        .gd-tt-fill::after,
+        .gd-tt-wire.lit {
+            animation: none;
         }
     }
 }
