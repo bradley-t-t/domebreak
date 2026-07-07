@@ -8,6 +8,7 @@
 import {
     allowedAmmo,
     AMMO_START,
+    AMPHIB_LIFT_KM,
     AUTO_RESEARCH_RESERVE_MULT,
     MOVE_COST_FRAC,
     PATROL_SIZES,
@@ -137,8 +138,7 @@ export function unitLockReason(w, slot, type) {
 }
 
 // --- Amphibious lift: embark / disembark ground units (spec §8d) -----------
-// Distance (km) within which a transport may take on or set down a ground unit.
-const AMPHIB_LIFT_KM = 120;
+// Range (AMPHIB_LIFT_KM) is a data-driven tuning knob in data/constants.js.
 
 // Load a friendly ground unit into an Amphibious Transport. The transport must
 // have spare capacity and be within lift range of the (land-domain, mobile)
@@ -261,10 +261,6 @@ export function setAwacsPatrol(w, slot, unitId, on) {
     ensureHangar(w, u);
     u.awacsPatrol = on == null ? !u.awacsPatrol : !!on;
     return {ok: true, awacsPatrol: u.awacsPatrol};
-}
-
-export function basedAircraft(w, baseId) {
-    return w.units.filter((u) => u.baseId === baseId && u.hp > 0);
 }
 
 // Dismantles a unit, refunding SCRAP_REFUND_FRAC of its build cost.

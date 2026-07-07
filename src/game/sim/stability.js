@@ -25,32 +25,53 @@ function basePopOf(w, slot) {
     return p;
 }
 
-// The stability a nation is trending toward right now: 100 minus every active
-// penalty. Pure function of current state — no RNG, no history.
-export function stabilityTarget(w, n) {
-    let penalty = 0;
+// Every active stability penalty for a nation, itemized — the reasoning behind the
+// target. One entry per pressure that is currently dragging stability down (nothing
+// is listed when a factor is inactive). Pure; stabilityTarget just sums these, so
+// the HUD breakdown and the simulated target can never diverge.
+export function stabilityFactors(w, n) {
+    const f = [];
     // Population loss (captures depopulation AND cities/territory lost to war).
     const base = basePopOf(w, n.slot);
     if (base > 0) {
         const lostFrac = Math.max(0, Math.min(1, 1 - populationOf(w, n.slot) / base));
-        penalty += lostFrac * STABILITY.wPopLoss;
+        if (lostFrac > 0) f.push({
+            key: "pop", label: "Population lost", penalty: lostFrac * STABILITY.wPopLoss,
+            detail: `${Math.round(lostFrac * 100)}% of citizens gone`,
+        });
     }
     // Too many simultaneous wars (the first freeWars are "normal").
-    penalty += Math.max(0, warCount(n) - STABILITY.freeWars) * STABILITY.wPerWar;
+    const wars = warCount(n);
+    if (wars - STABILITY.freeWars > 0) f.push({
+        key: "war", label: "Too many wars", penalty: (wars - STABILITY.freeWars) * STABILITY.wPerWar,
+        detail: `${wars} active fronts`,
+    });
     // Leadership killed (heavy) and the softer cost of keeping leaders bunkered.
     const total = n.lead?.total || 0;
     if (total > 0) {
-        penalty += ((n.lead.lost || 0) / total) * STABILITY.wLeadLoss;
-        penalty += ((n.lead.sheltered || 0) / total) * STABILITY.wBunkered;
+        if ((n.lead.lost || 0) > 0) f.push({
+            key: "lead", label: "Leadership killed", penalty: (n.lead.lost / total) * STABILITY.wLeadLoss,
+            detail: `${n.lead.lost} of ${total} lost`,
+        });
+        if ((n.lead.sheltered || 0) > 0) f.push({
+            key: "bunker", label: "Leadership bunkered", penalty: (n.lead.sheltered / total) * STABILITY.wBunkered,
+            detail: `${n.lead.sheltered} sheltered, not governing`,
+        });
     }
     // Running a points deficit.
-    if (netIncomeOf(w, n.slot) < 0) penalty += STABILITY.wDeficit;
-    return Math.max(0, Math.min(100, 100 - penalty));
+    if (netIncomeOf(w, n.slot) < 0) f.push({
+        key: "deficit", label: "Points deficit", penalty: STABILITY.wDeficit,
+        detail: "spending outpaces income",
+    });
+    return f;
 }
 
-// Stability as a rounded 0..100 percentage for display.
-export function stabilityOf(n) {
-    return Math.round(n?.stability ?? 100);
+// The stability a nation is trending toward right now: 100 minus every active
+// penalty. Pure function of current state — no RNG, no history.
+export function stabilityTarget(w, n) {
+    let penalty = 0;
+    for (const f of stabilityFactors(w, n)) penalty += f.penalty;
+    return Math.max(0, Math.min(100, 100 - penalty));
 }
 
 // HUD status for a nation: current % and the live target it is easing toward.
@@ -60,6 +81,19 @@ export function stabilityStatus(w, slot) {
     return {
         pct: Math.round(n.stability ?? 100),
         target: Math.round(stabilityTarget(w, n)),
+    };
+}
+
+// HUD breakdown for the Stability readout: current %, the target it eases toward,
+// and every active penalty itemized (penalties rounded to whole points for display).
+// `factors` is empty when nothing is dragging stability down.
+export function stabilityBreakdown(w, slot) {
+    const n = nationOf(w, slot);
+    if (!n) return null;
+    return {
+        pct: Math.round(n.stability ?? 100),
+        target: Math.round(stabilityTarget(w, n)),
+        factors: stabilityFactors(w, n).map((f) => ({...f, penalty: Math.round(f.penalty)})),
     };
 }
 

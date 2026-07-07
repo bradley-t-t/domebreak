@@ -9,8 +9,6 @@
 
 const bridge = typeof window !== "undefined" ? window.dbLocal : undefined;
 
-export const isDesktop = !!bridge;
-
 // Seed localStorage from the on-disk store. Must complete before first render
 // so saves/settings/auth read their persisted values. No-op in the browser.
 export async function hydrateLocalData() {

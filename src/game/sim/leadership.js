@@ -132,6 +132,8 @@ export function leadershipStatus(w, slot) {
         hasBunker: !!bunkerOf(w, slot),
         hasAirstrip: airstripsOf(w, slot).length > 0,
         sites: citiesWithLeaders(w, slot).map((c) => c.name),
+        // Per-location leader counts for the HUD breakdown — where each token sits.
+        atCities: citiesWithLeaders(w, slot).map((c) => ({name: c.name, cap: !!c.cap, n: c.leaders || 0})),
     };
 }
 

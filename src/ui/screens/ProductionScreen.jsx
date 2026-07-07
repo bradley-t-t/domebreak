@@ -23,8 +23,9 @@ import {
     WARHEAD_ORDER,
     WARHEADS,
 } from "../../game/engine.js";
-import {DEFAULT_BUILD_TIME, FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
+import {FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
 import {fmtNet} from "../common/format.js";
+import {prodIcon, prodLabel, prodTime} from "../common/prod.js";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
 
@@ -82,9 +83,9 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         ? Object.values(groups).reduce((a, g) => a + g.length, 0) + WARHEAD_ORDER.length
         : id === "Munitions" ? WARHEAD_ORDER.length : (groups[id]?.length || 0);
 
-    const label = (it) => (it.kind === "ammo" ? WARHEADS[it.type].name : unitLabel(it.type, me?.iso));
-    const icon = (it) => (it.kind === "ammo" ? WARHEAD_ICON[it.type] : UNIT_ICON[it.type]);
-    const timeOf = (it) => (it.kind === "ammo" ? WARHEADS[it.type].prodTime : (UNITS[it.type].buildTime || DEFAULT_BUILD_TIME));
+    const label = (it) => prodLabel(it, me?.iso);
+    const icon = prodIcon;
+    const timeOf = prodTime;
 
     // Research-adjusted stat sheet for a unit *type* (nothing placed yet, so we
     // read UNITS[type] and apply this nation's research multipliers directly —

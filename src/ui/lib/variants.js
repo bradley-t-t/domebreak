@@ -77,6 +77,15 @@ export const iconButton = cva(
 );
 
 /* ---------------------------------------------------------------------- */
+/* popoverCard — shared glass shell for hover-readout popups: the map's    */
+/* city/country/unit readouts and the top-bar stat breakdowns. Callers add */
+/* their own positioning (fixed vs absolute) and sizing via cn().          */
+/* ---------------------------------------------------------------------- */
+export const popoverCard = cva(
+    "bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]"
+);
+
+/* ---------------------------------------------------------------------- */
 /* menuButton — .db-menu-btn (+ .back/.primary/.danger), .db-menu-section  */
 /* (styles.css ~2104-2201, section heading ~2175-2185)                    */
 /* ---------------------------------------------------------------------- */

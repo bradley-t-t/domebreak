@@ -16,6 +16,7 @@ import {atWar, createWorld, declareWar, UNIT_ICON, UNITS, vitalityOf} from "../.
 import {buildSetup} from "../../game/sim/newGame.js";
 import {MAX_SLOTS} from "../../game/data/constants.js";
 import {useEngine} from "../hooks/useEngine.js";
+import {vitPaint} from "../common/status.js";
 
 const CAST_SIZE = MAX_SLOTS; // fill every belligerent slot the engine supports (16)
 const SIM_SPEED = 4;         // wall-clock drama without the 10× blur
@@ -273,7 +274,7 @@ function AttractWorld({data, onOver, framed}) {
                         "circle-radius": ["case", ["==", ["get", "cap"], 1], 8, 6],
                         "circle-color": "rgba(0,0,0,0)",
                         "circle-stroke-width": ["interpolate", ["linear"], ["get", "vit"], 0, 3, 1, 0.6],
-                        "circle-stroke-color": ["interpolate", ["linear"], ["get", "vit"], 0, "#ff3b3b", 0.5, "#ffb020", 1, "#46d38a"],
+                        "circle-stroke-color": vitPaint(),
                         "circle-stroke-opacity": ["interpolate", ["linear"], ["get", "vit"], 0, 0.95, 0.9, 0.85, 1, 0],
                     }}/>
                     <Layer id="attract-cities" type="circle" paint={{

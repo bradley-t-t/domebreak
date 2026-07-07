@@ -1,5 +1,6 @@
 import {useEffect, useLayoutEffect, useRef, useState} from "react";
 import {TECHS, unitLabel} from "../../game/data/constants.js";
+import {nationName} from "../../game/engine.js";
 import {cn} from "../lib/cn.js";
 
 // Turn one engine event into a headline, or null to ignore it. Kept high-signal:
@@ -7,7 +8,7 @@ import {cn} from "../lib/cn.js";
 // missiles inbound on the player — the world-scale news, not every projectile.
 // tone drives the colour accent: danger / alert / good / info.
 export function headline(e, world, mySlot) {
-    const nn = (slot) => world.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`;
+    const nn = (slot) => nationName(world, slot);
     switch (e.type) {
         case "destroy": {
             if (e.kind === "city") {

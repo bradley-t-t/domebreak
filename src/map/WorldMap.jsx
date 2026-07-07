@@ -13,6 +13,7 @@ import {Protocol} from "pmtiles";
 import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {startWater} from "./water.js";
+import {WORLD_ZOOM} from "../game/data/constants.js";
 
 let pmtilesRegistered = false;
 
@@ -137,6 +138,7 @@ function buildStyle(globe) {
 export default function WorldMap({
                                      globe = true, onMapClick, onMouseMove, onContextMenu, onMap,
                                      cursor = "grab", interactiveLayerIds, children,
+                                     minZoom = WORLD_ZOOM.menuMin,
                                  }) {
     const mapRef = useRef(null);
     const stopWater = useRef(null);
@@ -165,8 +167,8 @@ export default function WorldMap({
         <Map
             ref={mapRef}
             initialViewState={{longitude: 12, latitude: 30, zoom: 2.2}}
-            minZoom={1.1}
-            maxZoom={7}
+            minZoom={minZoom}
+            maxZoom={WORLD_ZOOM.max}
             mapStyle={mapStyle}
             attributionControl={false}
             dragRotate={false}
