@@ -518,9 +518,20 @@ export default function LiveGame({
                 return;
             }
             const len = Math.hypot(dx, dy);
-            const dist = (PAN_PX_PER_SEC * SEG_MS) / 1000;
-            m.panBy([(dx / len) * dist, (dy / len) * dist], {duration: SEG_MS, easing: (t) => t});
-            timer = setTimeout(runSeg, SEG_MS - 60); // slight overlap → seamless continuous motion
+            let dist = (PAN_PX_PER_SEC * SEG_MS) / 1000;
+            let seg = SEG_MS;
+            // On the globe a pixel panBy targets a point ON the visible sphere; a
+            // large offset lands off the disc and the pan fails (worst straight over
+            // a pole — only some orientations work). Cap the per-segment offset so it
+            // stays inside the sphere in every orientation, shortening the segment to
+            // hold the same px/s. The globe is used zoomed out, so the extra moveends
+            // are cheap there.
+            if (globe && dist > 200) {
+                dist = 200;
+                seg = (dist / PAN_PX_PER_SEC) * 1000;
+            }
+            m.panBy([(dx / len) * dist, (dy / len) * dist], {duration: seg, easing: (t) => t});
+            timer = setTimeout(runSeg, Math.max(40, seg - 60)); // slight overlap → seamless continuous motion
         };
         // (Re)start the segment chain only when the held direction actually changes
         // (keydown auto-repeat and unrelated keys are no-ops).
@@ -564,7 +575,7 @@ export default function LiveGame({
             if (timer) clearTimeout(timer);
             mapRef.current?.stop();
         };
-    }, [overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
+    }, [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
 
     // Countries layer visibility (keep fill queryable at opacity 0 so land/water tests still work).
     useEffect(() => {
