@@ -119,6 +119,14 @@ export default function LiveGame({
     // (map "idle"), so the player only sees the world once it's fully drawn and
     // already framed on their capital. Failsafe timer lifts it regardless.
     const [booting, setBooting] = useState(true);
+    // Failsafe: never let the loading veil stick, even if the map's onLoad never
+    // fires (a WebGL/style hiccup on the lobby->match handoff would otherwise leave
+    // a permanent black screen). handleMap also lifts it on the map's first idle;
+    // whichever fires first wins. Mount-scoped so it's independent of the map.
+    useEffect(() => {
+        const t = setTimeout(() => setBooting(false), START_CAM.bootMs);
+        return () => clearTimeout(t);
+    }, []);
     // Seed with whatever the world already carries (loaded saves keep their last
     // 60 events) so mount doesn't replay a backlog of explosions and sounds.
     const seen = useRef(null);
@@ -922,7 +930,7 @@ export default function LiveGame({
         } catch {
             reveal();
         }
-        setTimeout(reveal, START_CAM.bootMs);
+        // (the mount-scoped failsafe above also lifts the veil after bootMs)
     };
 
     return (
