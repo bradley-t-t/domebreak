@@ -959,9 +959,9 @@ export function step(w, dt) {
     // Grow city populations for this tick before the tally reads them, so income,
     // industry cap, and the domination check all see the updated figures.
     growCities(w, dt);
-    // Ease each nation's stability toward its live target and fracture any that has
-    // sat at collapse too long (civil war). Runs after growth/leadership/diplomacy so
-    // it reads this tick's population, wars, leadership, and deficit state.
+    // Ease each nation's stability toward its live target. Runs after
+    // growth/leadership/diplomacy so it reads this tick's population, wars,
+    // leadership, and deficit state.
     updateStability(w, dt);
     // One pass over cities: which slots still hold a living city, and the population
     // tally for the domination check. O(cities), not O(nations × cities) — the naive

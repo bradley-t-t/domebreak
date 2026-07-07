@@ -31,11 +31,9 @@ function leadSub(lead) {
     return "Secure";
 }
 
-// Stability shares Leadership's traffic-light palette; a collapsing nation (unrest
-// timer running toward civil war) always shows red with a warning word.
+// Stability shares Leadership's traffic-light palette, with a one-word mood.
 function stabSub(stab) {
     if (!stab) return "";
-    if (stab.collapsing) return "Collapse imminent";
     if (stab.pct >= 67) return "Stable";
     if (stab.pct >= 34) return "Strained";
     return "Unrest";
@@ -147,11 +145,11 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
             {stab && <>
                 <div className="w-px self-stretch bg-line-soft"/>
                 <div className="flex flex-col items-end leading-[1.15]"
-                     title="National stability — population loss, war, leadership loss/bunkering, and deficits erode it; hold at 0% too long and your nation fractures in civil war"><span
+                     title="National stability — population loss, war, leadership loss/bunkering, and deficits erode it. An ambient measure of national strain."><span
                     className="text-[9px] tracking-[1px] uppercase text-faint">Stability</span><span
                     className="text-sm font-bold font-mono"
-                    style={{color: stab.collapsing ? "#ff3b3b" : leadColor(stab.pct)}}>{stab.pct}%</span><span
-                    className={cn("text-[10px] text-dim", stab.collapsing && "text-red font-bold")}
+                    style={{color: leadColor(stab.pct)}}>{stab.pct}%</span><span
+                    className="text-[10px] text-dim"
                     aria-live="polite">{stabSub(stab)}</span>
                 </div>
             </>}

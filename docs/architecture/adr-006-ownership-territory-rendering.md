@@ -26,9 +26,14 @@ Trenton (studio owner); Sunday (implementation).
 
 Territory control is now shown on the map. A province is recolored only when its
 controller is not its native nation: land captured in war takes the conqueror's flag
-color, and a civil-war breakaway takes its own per-slot color, each with a border
-along the real province edges. Peacetime territory is untouched, so the existing
-per-ISO flag map (colors.json) is unchanged until a border actually moves.
+color, with a border along the real province edges. Peacetime territory is untouched,
+so the existing per-ISO flag map (colors.json) is unchanged until a border actually
+moves.
+
+> Note: this rendering was originally built to also show a civil-war splinter as its
+> own colored country. That civil-war mechanic was subsequently removed; the overlay
+> is retained because it correctly shows land captured in ordinary war, which is
+> valuable on its own.
 
 ## Engine Compatibility
 
@@ -40,22 +45,18 @@ No new runtime dependency.
 ## Context
 
 Ownership in the sim is per-city (`city.slot`); territory is a Voronoi partition of
-living cities, and conquest/secession simply flip `city.slot`. The **map**, however,
-colored political territory by the static `GID_0` (ISO3) baked into the country tiles
-via a `["match", GID_0, …]` lookup into `colors.json`. Slot ownership never reached
-the map.
+living cities, and conquest simply flips `city.slot`. The **map**, however, colored
+political territory by the static `GID_0` (ISO3) baked into the country tiles via a
+`["match", GID_0, …]` lookup into `colors.json`. Slot ownership never reached the map,
+so land captured in war stayed painted in its original nation's flag color — conquest
+was invisible.
 
-This broke the civil-war feature specifically: `fractureNation` spawns the breakaway
-with `iso: parent.iso`, so it shares the parent's `GID_0` and flag color. On the map
-the seceded half was indistinguishable from the loyal half — no new country, no new
-border. Conquest was likewise invisible.
-
-To draw a splinter as its own entity we need (a) sub-national geometry to color, and
-(b) a color source keyed to control rather than ISO. The `regions` tiles already carry
-per-province geometry (`GID_1`); the missing piece is a robust province → owner join.
-City province names (`city.state`) match GADM `NAME_1` only ~80% globally and 0% for
-several countries (Poland, Greece, Taiwan…), so name-joining is not acceptable for a
-feature that must work for a civil war anywhere.
+To draw controlled territory as its own entity we need (a) sub-national geometry to
+color, and (b) a color source keyed to control rather than ISO. The `regions` tiles
+already carry per-province geometry (`GID_1`); the missing piece is a robust province →
+owner join. City province names (`city.state`) match GADM `NAME_1` only ~80% globally
+and 0% for several countries (Poland, Greece, Taiwan…), so name-joining is not
+acceptable for a feature that must work anywhere on the map.
 
 ## Decision
 
@@ -68,10 +69,10 @@ feature that must work for a civil war anywhere.
 2. **Compute province ownership at runtime, recolor only overrides.**
    `ui/live/useOwnershipLayer.js` groups living cities by `GID_1`, takes the
    population-majority slot as the province owner, and emits a color **only** when the
-   owner is non-native: a rebel gets `colorForSlot(slot)`, any other controller gets
-   its flag color (`colors.json[GID_0]`). Native-held provinces emit nothing and keep
-   the base flag map. The heavy recompute is gated behind a cheap per-tick ownership
-   checksum, so it runs only when a border moves.
+   owner is non-native (a nation other than the province's native one), using that
+   controller's flag color (`colors.json[GID_0]`). Native-held provinces emit nothing
+   and keep the base flag map. The heavy recompute is gated behind a cheap per-tick
+   ownership checksum, so it runs only when a border moves.
 
 3. **Render as a `match` overlay under the national borders.** Two layers on the
    existing `db-regions` source in `LiveGame`: a fill whose `fill-color` is a
@@ -85,23 +86,23 @@ feature that must work for a civil war anywhere.
   visually; rejected as heavier plumbing than a rebuilt `match` expression, given
   overrides are sparse and change rarely.
 - **Voronoi territory overlay from cities** (generated GeoJSON per slot). Handles any
-  number of owners but renders as rounded blobs, not real borders — fails the "looks
-  like two countries" bar.
+  number of owners but renders as rounded blobs, not real borders — fails the
+  looks-like-real-countries bar.
 - **Name-join `city.state` ↔ `NAME_1`.** Simple but only ~80% global / 0% for whole
-  countries; unacceptable for an anywhere-civil-war feature. Rejected in favor of the
-  geometric precompute.
+  countries; unacceptable for a feature that must work anywhere. Rejected in favor of
+  the geometric precompute.
 - **Recolor every province by owner (drop the flag map).** Would erase the tuned flag
   identity in peacetime. Rejected: recolor only non-native control.
 
 ## Consequences
 
-- Civil-war splinters and war conquests are now visible on the political map with real
-  province borders; the flag map is unchanged in peacetime.
+- Land captured in war is now visible on the political map with real province borders;
+  the flag map is unchanged in peacetime.
 - A new build artifact (`public/assets/city-region.json`, ~45 KB) is committed and must
   be regenerated (`node scripts/gen-city-region.mjs`) if `cities.json` or the region
   geometry changes.
-- Province ownership is population-majority, so a province split mid-fracture snaps to
-  one owner along real borders — a slight approximation of the sim's exact
-  city-Voronoi, chosen for a cleaner, real-border look.
+- Province ownership is population-majority, so a province held by mixed owners snaps to
+  one along real borders — a slight approximation of the sim's exact city-Voronoi,
+  chosen for a cleaner, real-border look.
 - The overlay is presentation-only: it reads engine state and never mutates it, keeping
   the tick deterministic.

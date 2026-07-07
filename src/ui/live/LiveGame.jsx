@@ -1022,9 +1022,9 @@ export default function LiveGame({
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <Source id="db-regions" type="vector" url={REGIONS_URL}>
-                    {/* Controlled-territory recolor: conquered land in the conqueror's
-                        flag color, a civil-war breakaway in its own color, drawn under
-                        the national borders so those still read on top. */}
+                    {/* Controlled-territory recolor: land captured in war in the
+                        conqueror's flag color, drawn under the national borders so
+                        those still read on top. */}
                     {layers.countries && <Layer id="region-owner" type="fill" source-layer="regions" beforeId="country-line"
                            paint={{"fill-color": ownership.fill, "fill-opacity": REGION_OWNER_OPACITY}}/>}
                     {layers.countries && <Layer id="region-owner-line" type="line" source-layer="regions" beforeId="country-line"
