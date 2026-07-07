@@ -23,6 +23,13 @@ import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import {menuButton} from "./ui/lib/variants.js";
 
+// DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
+// gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
+// strips it entirely; opt in per browser with localStorage.setItem('gd-dev-noauth','1')
+// then reload. Online play still needs a real session (there is no fake JWT).
+const DEV_NOAUTH = import.meta.env.DEV
+    && typeof localStorage !== "undefined" && localStorage.getItem("gd-dev-noauth") === "1";
+
 export default function App() {
     const [screen, setScreen] = useState("menu");
     const [overlay, setOverlay] = useState(null);
@@ -67,6 +74,11 @@ export default function App() {
     // Session bootstrap + subscription. getSession() covers the already-signed-in
     // reload case; onAuth covers sign-in/sign-out happening while mounted.
     useEffect(() => {
+        if (DEV_NOAUTH) {
+            setAuthStatus("signedIn");
+            setAccountProfile({username: "DevTester", iso: "US", created_at: new Date().toISOString()});
+            return;
+        }
         let alive = true;
         getSession().then((s) => {
             if (alive) setAuthStatus(s ? "signedIn" : "signedOut");
@@ -87,7 +99,7 @@ export default function App() {
     // Fresh profile/stats on every sign-in, and a stats refresh whenever the
     // player lands back on the menu (so post-game numbers are current).
     useEffect(() => {
-        if (authStatus !== "signedIn") return;
+        if (authStatus !== "signedIn" || DEV_NOAUTH) return;
         touch(); // fire-and-forget last_login stamp
         fetchProfile().then(setAccountProfile);
         fetchStats().then(setAccountStats);
