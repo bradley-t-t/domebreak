@@ -120,8 +120,10 @@ export const AI_TUNING = {
     thinkMin: 3, thinkSpan: 3,       // seconds between decisions: min + rand·span
     queueMax: 2,                     // keep the production line short — plan, don't hoard
     thermoChance: 0.25,              // odds per decision to arm/order a thermo warhead
+    hgvChance: 0.3,                  // odds per decision to arm/order a hypersonic glide warhead
     stdStockTarget: 4, stdReserve: 60,
     thermoStockTarget: 1, thermoReserve: 300,
+    hgvStockTarget: 2, hgvReserve: 200,
     radarReserve: 100, othReserve: 150,
     industryTarget: 3, factoryReserve: 120,
     researchMinPoints: 350, researchChance: 0.55,
@@ -273,6 +275,7 @@ export const UNITS = {
         label: "Hypersonic Launcher",
         warheads: true, // fires the selectable strategic arsenal; conventional units don't
         ammo: ["standard", "cluster", "hgv"], // road-mobile hypersonic — no strategic thermo payload
+        signature: "hgv", // the round this platform is built to deliver (picker badge + AI arming)
         desc: "Road-mobile launcher lofting hypersonic glide vehicles — fast, hard to intercept, regional reach.",
         kind: "offense",
         cost: 200,
@@ -290,6 +293,7 @@ export const UNITS = {
         label: "Missile Silo",
         warheads: true,
         ammo: ["standard", "cluster", "thermo"], // heavy ICBM — the strategic city-killer, no hypersonic glide body
+        signature: "thermo",
         desc: "Hardened launch silo. Global-reach ICBMs carrying the heaviest strategic payloads.",
         ballistic: true,
         kind: "offense",
@@ -492,6 +496,7 @@ export const UNITS = {
         label: "Hypersonic Missile Battery",
         warheads: true,
         ammo: ["standard", "hgv"], // dedicated glide-vehicle platform — its signature payload
+        signature: "hgv",
         desc: "Boost-glide launcher fielding maneuvering hypersonic weapons — fast, low, and hard to intercept at regional reach.",
         kind: "offense",
         requiresTech: "off8",
@@ -637,6 +642,7 @@ export const UNITS = {
         label: "Orbital Strike Platform",
         warheads: true,
         ammo: ["standard", "thermo"], // orbital kinetic rods, up to a strategic thermo payload
+        signature: "thermo",
         desc: "Global kinetic-bombardment platform — a rod-from-god that can strike anywhere on the board, slow to recycle.",
         kind: "offense",
         ballistic: true,
@@ -681,8 +687,9 @@ export const UNITS = {
     "sub-ssbn": {
         label: "Ballistic Missile Sub (SSBN)",
         warheads: true,
-        ammo: ["standard", "cluster", "thermo"], // survivable sea leg of the triad — full strategic loadout
-        desc: "The survivable sea leg of the triad — a deep-stealth boomer carrying global-reach SLBMs for a guaranteed second strike.",
+        ammo: ["cluster", "thermo"], // strategic-only second-strike boomer — no conventional round; MIRV + city-killer SLBMs
+        signature: "thermo",
+        desc: "The survivable sea leg of the triad — a deep-stealth boomer whose tubes carry only strategic SLBMs: MIRV buses and city-killers for a guaranteed second strike.",
         kind: "offense",
         domain: "sea",
         ballistic: true,
@@ -1103,6 +1110,18 @@ export const AMMO_START = {standard: 6, cluster: 0, hgv: 0, thermo: 0};
 // this, so a platform can never load — or be shown — a payload it cannot carry.
 export function allowedAmmo(type) {
     return UNITS[type]?.ammo || WARHEAD_ORDER;
+}
+// The warhead a freshly built platform comes loaded with. Ready-to-fire platforms
+// default to the cheap Standard round they always have in stock; a strategic-only
+// platform not cleared for Standard (the SSBN) loads its signature round instead —
+// so the default is never a payload the platform can't carry. This is the single
+// source of truth for the initial/fallback warhead; nothing hardcodes "standard".
+export function initialWarhead(type) {
+    const u = UNITS[type];
+    if (!u?.warheads) return "standard";
+    const allowed = allowedAmmo(type);
+    if (allowed.includes("standard")) return "standard";
+    return u.signature && allowed.includes(u.signature) ? u.signature : allowed[0];
 }
 // Reverse map for the production arsenal: the launcher unit types that can fire a
 // given warhead, in canonical unit order. Drives each munition card's "fires from"

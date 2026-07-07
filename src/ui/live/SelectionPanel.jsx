@@ -4,7 +4,7 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {allowedAmmo, armamentOf, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
+import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
 import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
@@ -27,9 +27,6 @@ export default function SelectionPanel({
                                        }) {
     const def = UNITS[selectedUnit.type];
     const hpFrac = Math.max(0, Math.min(1, selectedUnit.hp / def.hp));
-    // Strategic launchers draw from the nation arsenal — surface the round they
-    // fire (ICBM / Hypersonic Glide Vehicle) as a plain armament line.
-    const armament = armamentOf(selectedUnit.type);
     return (
         <div className="db-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbPop_220ms_var(--ease-out)]">
             <div className="font-display font-bold text-[15px] flex items-center gap-2"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
@@ -54,10 +51,6 @@ export default function SelectionPanel({
             <div className="grid grid-cols-2 [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono mt-3 mb-3 gap-x-[14px] gap-y-[9px] [&_b]:text-[12.5px]">
                 {unitStats(selectedUnit).map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}
             </div>
-            {/* Warhead-capable platforms get the interactive PAYLOAD picker below,
-                which is the source of truth for what they fire — the fixed armament
-                flavor line only shows for conventional units. */}
-            {armament && !def.warheads && <p className="font-mono text-[11px] tracking-[0.4px] text-dim mt-0 mb-2">Armament: {armament}</p>}
             {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
                 ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
                 : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
@@ -236,14 +229,15 @@ export default function SelectionPanel({
                         itself reads as the platform's identity: a launcher offers the
                         fast HGV, a silo the heavy thermo — never the same generic set. */}
                     {def.warheads && selectedUnit.slot === mySlot && (() => {
-                        const loaded = selectedUnit.warhead || "standard";
+                        const loaded = selectedUnit.warhead || initialWarhead(selectedUnit.type);
                         const lw = WARHEADS[loaded];
                         const loadedFallout = FALLOUT.warheads.includes(loaded);
+                        const sig = def.signature; // the round this platform is built to deliver
                         return (
                             <div className="my-1 mb-[10px]">
                                 <div className="flex items-baseline justify-between mb-1.5">
                                     <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">Payload</span>
-                                    <span className="font-mono text-[10.5px]" style={{color: lw.flame}}>{lw.name}</span>
+                                    <span className="font-mono text-[10.5px]" style={{color: lw.flame}}>{lw.name}{sig === loaded && <span className="text-faint"> · signature</span>}</span>
                                 </div>
                                 <div className="flex gap-[5px]">
                                     {allowedAmmo(selectedUnit.type).map((k) => {
@@ -251,17 +245,19 @@ export default function SelectionPanel({
                                         const stock = myNation?.ammo?.[k] || 0;
                                         const cur = loaded === k;
                                         const empty = stock === 0;
+                                        const isSig = sig === k;
                                         return (
                                             <button key={k} className={cn(
-                                                "flex-1 flex flex-col items-center gap-[3px] py-2 px-1 border border-line bg-transparent rounded-sm transition-[border-color,background] duration-[120ms] ease-out-db",
+                                                "relative flex-1 flex flex-col items-center gap-[3px] py-2 px-1 border border-line bg-transparent rounded-sm transition-[border-color,background] duration-[120ms] ease-out-db",
                                                 cur ? "border-[var(--flame,#ff8a1a)] bg-[color-mix(in_srgb,var(--flame,#ff8a1a)_14%,transparent)]" : "enabled:hover:border-blue",
                                                 empty && !cur && "opacity-45"
                                             )}
                                                     style={{["--flame"]: wh.flame}}
                                                     aria-pressed={cur}
-                                                    aria-label={`${wh.name} — ${stock} in stock`}
-                                                    title={`${wh.name} — ${wh.desc}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
+                                                    aria-label={`${wh.name} — ${stock} in stock${isSig ? " · this platform's signature round" : ""}`}
+                                                    title={`${wh.name} — ${wh.desc}${isSig ? " · This platform's signature payload." : ""}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
                                                     onClick={() => api.setWarhead(selectedUnit.id, k)}>
+                                                {isSig && <span className="absolute top-[3px] right-[4px] text-[9px] leading-none text-[var(--flame,#ff8a1a)]" title="Signature payload">★</span>}
                                                 <UnitIcon name={WARHEAD_ICON[k]} color={wh.flame} size={20}/>
                                                 <span className={cn("font-mono text-[10.5px] font-bold", cur ? "text-text" : "text-dim")}>{wh.short}</span>
                                                 <span className="font-display text-[8px] tracking-[0.5px] uppercase text-faint">{wh.role}</span>

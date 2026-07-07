@@ -199,7 +199,10 @@ export default function LiveGame({
             rows.push(["Status", u.dest ? "On the March" : "Holding"]);
         }
         if (def.airSpeed) rows.push(["Air Speed", `${def.airSpeed} kn`]);
-        const arm = armOf(u.type, u.slot);
+        // Your own warhead platforms surface their loadout through the PAYLOAD picker
+        // (the source of truth), so don't also print a fixed one-round "Armament" line
+        // that would contradict it. Enemy platforms keep the flavor readout.
+        const arm = def.warheads && u.slot === mySlot ? null : armOf(u.type, u.slot);
         if (arm) rows.push(["Armament", arm]);
         rows.push(["Upkeep", `${def.upkeep}/s`]);
         return rows;
