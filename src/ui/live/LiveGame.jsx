@@ -2,6 +2,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import WorldMap, {COUNTRY_FILL_OPACITY} from "../../map/WorldMap.jsx";
 import LiveHud from "../hud/LiveHud.jsx";
 import LayerBar from "../hud/LayerBar.jsx";
+import WarBar from "../hud/WarBar.jsx";
 import ProductionBar from "../hud/ProductionBar.jsx";
 import NationPanel from "../hud/NationPanel.jsx";
 import NewsTicker from "../hud/NewsTicker.jsx";
@@ -1019,7 +1020,10 @@ export default function LiveGame({
                                   }} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "diplomacy" &&
                 <DiplomacyScreen world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
-            <LayerBar layers={layers} onToggle={toggleLayer}/>
+            <div className="absolute bottom-4 right-4 z-5 flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
+                {!w.over && <WarBar world={w} mySlot={mySlot}/>}
+                <LayerBar layers={layers} onToggle={toggleLayer}/>
+            </div>
             {!w.over && <ProductionBar world={w} api={api} mySlot={mySlot}/>}
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
 
