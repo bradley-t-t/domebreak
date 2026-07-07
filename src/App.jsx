@@ -227,7 +227,7 @@ export default function App() {
         const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9));
         const w = createWorld(setup);
         w.speed = settings.speed;
-        w.paused = false;
+        w.paused = true; // solo matches load in paused — the commander presses play to begin
         w.meta = {playerIso: iso, playerName: name, belligerents: setup.belligerents};
         enterGame(w, setup.belligerents, {name, iso});
     };
@@ -235,7 +235,7 @@ export default function App() {
         const s = loadGame(slot);
         if (!s?.world) return;
         const w = s.world;
-        w.paused = false;
+        w.paused = true; // loaded solo games resume paused so nothing advances before the player is ready
         enterGame(w, s.meta?.belligerents || w.meta?.belligerents || [], {
             name: s.meta?.playerName || "Commander",
             iso: s.meta?.playerIso
@@ -257,11 +257,13 @@ export default function App() {
         });
     };
     const pause = () => {
-        if (world) world.paused = true;
+        // Online matches never pause — the server is authoritative and would just
+        // overwrite it on the next snapshot; only the menu overlay opens.
+        if (world && !netClient) world.paused = true;
         setOverlay("pause");
     };
     const resume = () => {
-        if (world) world.paused = false;
+        if (world && !netClient) world.paused = false;
         setOverlay(null);
     };
     // Cheap, null-safe snapshot of the player's standing at report time — not

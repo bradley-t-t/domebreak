@@ -7,7 +7,8 @@ import {createWorld, step} from "../src/game/engine.js";
 import {buildSetup, GREAT_POWERS} from "../src/game/sim/newGame.js";
 import {gameData} from "./data.js";
 import {COMMANDS} from "./commands.js";
-import {ABANDON_GRACE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
+import {openingFreeze} from "./matchStart.js";
+import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
 
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
@@ -59,8 +60,14 @@ export class Match {
             n.isAi = p ? (p.ready === false) : true;
         });
         this.world = createWorld(setup);
+        // Online speed is permanently locked to 1x: no speed/pause command exists
+        // in the whitelist (COMMANDS) and clients can't send one, so nothing ever
+        // mutates it. The match opens on a fixed pause so everyone loads in first.
         this.world.speed = 1;
-        this.world.paused = false;
+        this.startPauseUntil = Date.now() + MATCH_START_PAUSE_S * 1000;
+        const freeze = openingFreeze(Date.now(), this.startPauseUntil);
+        this.world.paused = freeze.paused;
+        this.world.startsIn = freeze.startsIn; // whole-second countdown shown to players; 0 = live
         this.world.meta = {matchId: this.id, mode: "online"};
 
         let last = Date.now();
@@ -68,6 +75,15 @@ export class Match {
             const now = Date.now();
             const dt = Math.min(0.25, (now - last) / 1000);
             last = now;
+            if (this.world.paused) {
+                // Opening freeze: hold the sim and count down, then release to live
+                // play. Once released, this branch never runs again (nothing can
+                // re-pause an online match).
+                const state = openingFreeze(now, this.startPauseUntil);
+                this.world.paused = state.paused;
+                this.world.startsIn = state.startsIn;
+                if (state.paused) return;
+            }
             if (!this.world.over) step(this.world, dt * this.world.speed);
             if (this.world.over) this.finish();
         }, TICK_MS);

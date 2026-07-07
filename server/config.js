@@ -23,6 +23,10 @@ export const ABANDON_GRACE_S = parseInt(process.env.GD_ABANDON_GRACE_S || "120",
 export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
 export const TICK_MS = 100;      // simulation step cadence
 export const SNAPSHOT_MS = 500;  // full-world broadcast cadence
+// Opening freeze (seconds): an online match holds paused this long at the start
+// so every commander loads in before the war begins, then releases to
+// permanently-locked 1x play (online has no pause/speed control at all).
+export const MATCH_START_PAUSE_S = parseInt(process.env.GD_MATCH_START_PAUSE_S || "30", 10);
 
 // ---- matchmaker (ADR-0004: real-players-only) -------------------------------
 // Human-only matchmaking: NO bots. A match forms once at least MIN_PLAYERS real
