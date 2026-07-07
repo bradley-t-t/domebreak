@@ -29,6 +29,7 @@ import {
     defenseMinRange,
     falloutIntensity,
     falloutProximity,
+    inOwnCountry,
     inTerritory,
     netIncomeOf,
     placementBlocked,
@@ -152,7 +153,7 @@ function aiBuildUnlocked(w, n, myUnits, cities, front) {
         // cities, space/command to the safe interior — and spreads same-role apart.
         const p = aiPlace(w, n, type, myUnits, cities, front);
         if (!p) continue;
-        if (queueUnit(w, n.slot, type, p.lng, p.lat).ok) return true;
+        if (queueUnit(w, n.slot, type, p.lng, p.lat, true).ok) return true;
     }
     return false;
 }
@@ -387,7 +388,10 @@ function crowdsSameRole(role, myUnits, lng, lat) {
 
 // Sample a valid build spot around an anchor city — biased toward the front (sensors,
 // forward offense) or away into the interior (industry, command), and spread from
-// same-role units. Falls back to any valid nearby spot so a build is never dropped.
+// same-role units. Every candidate must sit inside the nation's own POLITICAL border
+// (inOwnCountry) — the same rule the human player is bound to — so the AI never sites
+// a unit on a neighbour's (or the player's) land. Falls back to any valid in-country
+// spot; returns null if none is found (the caller simply skips the build this tick).
 function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
     const cosLat = Math.max(0.2, Math.cos((anchor.lat * Math.PI) / 180));
     let brng = null;
@@ -400,7 +404,7 @@ function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
             const ang = brng != null ? brng + (rand(w) - 0.5) * 1.6 : rand(w) * Math.PI * 2;
             const lat = anchor.lat + Math.cos(ang) * rDeg;
             const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
-            if (!inTerritory(w, slot, lng, lat)) continue;
+            if (!inOwnCountry(w, slot, lng, lat)) continue;
             if (placementBlocked(w, lng, lat, null)) continue;
             if (crowdsSameRole(role, myUnits, lng, lat)) continue;
             return {lng, lat};
@@ -409,7 +413,7 @@ function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
     // Spread constraint too tight for the room available — take any valid spot.
     for (let k = 0; k < 12; k++) {
         const lng = anchor.lng + (rand(w) - 0.5) * 2.2, lat = anchor.lat + (rand(w) - 0.5) * 2.2;
-        if (inTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
+        if (inOwnCountry(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
     }
     return null;
 }
@@ -497,13 +501,19 @@ function aiTick(w, dt) {
         // cities (value-sorted), the front it faces, and a role-aware placer.
         const cities = aiCities(w, n.slot);
         const front = frontPos(w, n, caps);
+        // aiPlace validates the spot against the nation's own political border
+        // (land) or coastal waters (sea) before returning it, so every queueUnit
+        // below passes territoryOk:true — territory is checked once, in the placer,
+        // exactly as the human path does (LiveGame gates on GID_0, then buyPlace(…,
+        // true)). This avoids queueUnit re-applying the looser Voronoi inTerritory
+        // rule and silently starving valid in-country builds near a frontier.
         const place = (type) => aiPlace(w, n, type, myUnits, cities, front);
         // In the red, everything else waits — industry is the only way back out
         // (the same deficit gate the player lives under, enforced in queueUnit).
         if (net < 0) {
             if (n.points >= UNITS.factory.cost) {
                 const p = place("factory");
-                if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat).ok) return;
+                if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat, true).ok) return;
             }
             continue;
         }
@@ -518,7 +528,7 @@ function aiTick(w, dt) {
         // 1. Cover the capital first — never leave the heart of the nation open.
         if (defenders === 0 && n.points >= UNITS.dome.cost) {
             const p = place("dome");
-            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat).ok) return;
+            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat, true).ok) return;
         }
         // 2. Warheads — fed through the same line, same cost/time as the player.
         const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense") || prodCount(n, "unit", "silo") > 0 || prodCount(n, "unit", "launcher") > 0;
@@ -534,14 +544,14 @@ function aiTick(w, dt) {
         const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
         if (defenders > 0 && radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
             const p = place("radar");
-            if (p && queueUnit(w, n.slot, "radar", p.lng, p.lat).ok) return;
+            if (p && queueUnit(w, n.slot, "radar", p.lng, p.lat, true).ok) return;
         }
         // 4. Industry — build the economy early (safe interior, factories spread) so
         // the nation can actually afford the rest of its doctrine.
         const industry = myUnits.filter((u) => UNITS[u.type].kind === "industry").length + prodCount(n, "unit", "factory");
         if (defenders > 0 && industry < AI_TUNING.industryTarget && n.points >= UNITS.factory.cost + AI_TUNING.factoryReserve) {
             const p = place("factory");
-            if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat).ok) return;
+            if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat, true).ok) return;
         }
         // 5. Leadership bunker — one hardened command node, deep in the interior. A
         // solvent nation (positive net income) banks toward it before lesser builds
@@ -553,7 +563,7 @@ function aiTick(w, dt) {
         if (wantBunker) {
             if (n.points >= UNITS.bunker.cost + AI_TUNING.bunkerReserve) {
                 const p = place("bunker");
-                if (p && queueUnit(w, n.slot, "bunker", p.lng, p.lat).ok) return;
+                if (p && queueUnit(w, n.slot, "bunker", p.lng, p.lat, true).ok) return;
             } else if (net > 0) {
                 continue; // income positive — bank toward the bunker before lesser builds
             }
@@ -566,7 +576,7 @@ function aiTick(w, dt) {
         if (hasBunker && !hasStrip && defenders > 0) {
             if (n.points >= UNITS.airstrip.cost + AI_TUNING.bunkerReserve) {
                 const p = place("airstrip");
-                if (p && queueUnit(w, n.slot, "airstrip", p.lng, p.lat).ok) return;
+                if (p && queueUnit(w, n.slot, "airstrip", p.lng, p.lat, true).ok) return;
             } else if (net > 0) {
                 continue; // bank toward the evac airfield before lesser builds
             }
@@ -575,13 +585,13 @@ function aiTick(w, dt) {
         // (via aiPlace) at the most valuable point not yet inside a friendly envelope.
         if (defenders < defenseTarget && n.points >= UNITS.dome.cost) {
             const p = place("dome");
-            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat).ok) return;
+            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat, true).ok) return;
         }
         // 7. One over-the-horizon array for strategic warning (safe interior).
         const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");
         if (radars > 0 && oths === 0 && n.points >= UNITS.oth.cost + AI_TUNING.othReserve) {
             const p = place("oth");
-            if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat).ok) return;
+            if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat, true).ok) return;
         }
         // 8. Tech-gated unlocked units (space HQ, subs, modern defenses…), by role.
         if (aiBuildUnlocked(w, n, myUnits, cities, front)) return;
@@ -591,7 +601,7 @@ function aiTick(w, dt) {
         if (!enemies.length) continue;
         if (n.points >= UNITS.silo.cost + AI_TUNING.siloReserve && net > AI_TUNING.siloMinNet) {
             const p = place("silo");
-            if (p) queueUnit(w, n.slot, "silo", p.lng, p.lat);
+            if (p) queueUnit(w, n.slot, "silo", p.lng, p.lat, true);
         }
     }
 }
