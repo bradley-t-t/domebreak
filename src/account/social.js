@@ -16,7 +16,7 @@ export async function fetchFriends() {
     const {data: {user} = {user: null}} = await supabase.auth.getUser();
     if (!user) return [];
     const {data} = await supabase.from("friendships")
-        .select("id, status, requester, addressee, req:profiles!friendships_requester_fkey(id, username), add:profiles!friendships_addressee_fkey(id, username)");
+        .select("id, status, requester, addressee, req:profiles!friendships_requester_fkey(id, username, last_seen), add:profiles!friendships_addressee_fkey(id, username, last_seen)");
     return (data ?? []).map((f) => {
         const out = f.requester === user.id;
         const other = out ? f.add : f.req;

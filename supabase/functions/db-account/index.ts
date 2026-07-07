@@ -41,6 +41,15 @@ Deno.serve(async (req) => {
         return json({ok: true});
     }
 
+    // Presence heartbeat: stamp last_seen so a friend who has gone offline still
+    // shows a "last online" time. Called periodically by the client while online.
+    if (body.action === "heartbeat") {
+        const {error} = await service.from("profiles")
+            .update({last_seen: new Date().toISOString()}).eq("id", user.id);
+        if (error) return json({error: error.message}, 500);
+        return json({ok: true});
+    }
+
     if (body.action === "report_match") {
         const m = body.match ?? {};
         if (!["win", "loss", "quit"].includes(m.result)) return json({error: "bad result"}, 400);

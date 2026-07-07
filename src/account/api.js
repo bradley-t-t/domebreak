@@ -69,6 +69,12 @@ export function touch() {
     return invokeAccount({action: "touch"});
 }
 
+// Presence heartbeat — stamp last_seen while online, so offline friends still
+// show a "last online" time. Fire-and-forget; a missed beat is harmless.
+export function heartbeat() {
+    return invokeAccount({action: "heartbeat"});
+}
+
 // Set (or clear, with "") the profile picture. Writes go server-side; refresh
 // the local session afterward so user_metadata.avatar reflects the new value.
 export async function setAvatar(name) {
