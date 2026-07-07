@@ -2,6 +2,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import StartMenu from "./ui/screens/StartMenu.jsx";
 import NewGame from "./ui/screens/NewGame.jsx";
 import LiveGame from "./ui/live/LiveGame.jsx";
+import ErrorBoundary from "./ui/common/ErrorBoundary.jsx";
 import PauseMenu from "./ui/screens/PauseMenu.jsx";
 import SettingsPanel from "./ui/screens/SettingsPanel.jsx";
 import SaveLoadPanel from "./ui/screens/SaveLoadPanel.jsx";
@@ -342,12 +343,14 @@ export default function App() {
                                  setScreen("menu");
                              }}/>}
             {screen === "playing" && world &&
-                <LiveGame key={session} world={world} net={netClient} globe={globe} keys={keys}
-                          onToggleGlobe={() => setGlobe((g) => !g)}
-                          onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
-                          onGameEnd={onGameEnd}
-                          meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
-                                            players={netClient?.players}/>}/>}
+                <ErrorBoundary onReset={quitToMenu}>
+                    <LiveGame key={session} world={world} net={netClient} globe={globe} keys={keys}
+                              onToggleGlobe={() => setGlobe((g) => !g)}
+                              onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
+                              onGameEnd={onGameEnd}
+                              meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
+                                                players={netClient?.players}/>}/>
+                </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
                 <div className="gd-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[gdPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
                     <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>

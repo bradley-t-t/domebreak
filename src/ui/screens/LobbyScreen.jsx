@@ -37,7 +37,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     const [lobby, setLobby] = useState(undefined);
     const [revertErr, setRevertErr] = useState(false);
     const [leaving, setLeaving] = useState(false);
-    const [picking, setPicking] = useState(false);
+    // Optimistic nation pick: reflected instantly on the globe/label/camera the
+    // moment you click, so selection never waits on the set-iso round-trip and its
+    // realtime echo. Cleared once the server's lobby row catches up (or on error).
+    const [optimisticIso, setOptimisticIso] = useState(null);
     const mapRef = useRef(null);
     const [mapReady, setMapReady] = useState(0);
     // Guards so realtime's repeated callbacks can never double-fire the
@@ -80,7 +83,12 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
 
     const members = useMemo(() => (lobby?.members ? [...lobby.members].sort((a, b) => a.slot - b.slot) : []), [lobby]);
     const myMember = members.find((m) => me?.id === m.userId);
-    const myIso = myMember?.iso || null;
+    const myIso = optimisticIso || myMember?.iso || null;
+
+    // Drop the optimistic pick once the authoritative lobby row reflects it.
+    useEffect(() => {
+        if (optimisticIso && myMember?.iso === optimisticIso) setOptimisticIso(null);
+    }, [myMember?.iso, optimisticIso]);
     const humans = members.filter((m) => !m.isBot).length;
     const bots = members.length - humans;
     const countryName = (iso) => data?.countries?.find((c) => c.iso === iso)?.name || iso;
@@ -96,13 +104,18 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             const gid = toGid3(mem.iso);
             if (gid) picks[gid] = SLOT_COLOR[mem.slot] || "#8ecae6"; // dedupe by GID_0 (match labels must be unique)
         }
+        // Paint the optimistic pick immediately, before the server echo lands.
+        if (optimisticIso && myMember) {
+            const gid = toGid3(optimisticIso);
+            if (gid) picks[gid] = SLOT_COLOR[myMember.slot] || "#8ecae6";
+        }
         const pairs = Object.entries(picks).flat();
         const expr = pairs.length ? ["match", ["get", "GID_0"], ...pairs, "rgba(0,0,0,0)"] : "rgba(0,0,0,0)";
         try {
             m.setPaintProperty("lobby-pick", "fill-color", expr);
         } catch { /* style tearing down */
         }
-    }, [members, mapReady]);
+    }, [members, mapReady, optimisticIso, myMember?.slot]);
 
     // Fly the globe to the nation the local player just claimed.
     useEffect(() => {
@@ -139,9 +152,10 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             || (m ? m.queryRenderedFeatures(e.point, {layers: ["country-fill"]})[0] : null);
         const iso = fromGid3(feat?.properties?.GID_0);
         if (!iso || !data?.countries?.some((c) => c.iso === iso)) return;
-        if (iso === myIso || picking) return;
-        setPicking(true);
-        Promise.resolve(setLobbyIso(iso)).finally(() => setPicking(false));
+        if (iso === myIso) return;
+        // Instant local feedback; the write and its realtime echo catch up after.
+        setOptimisticIso(iso);
+        Promise.resolve(setLobbyIso(iso)).catch(() => { /* realtime refetch will resync */ });
     };
 
     const doLeave = async () => {
