@@ -607,6 +607,7 @@ export default function LiveGame({
         backdropFC,
         liveFC,
         falloutFC,
+        captureFC,
         mySensors,
         visUnits,
         radarFC,
@@ -1052,6 +1053,21 @@ export default function LiveGame({
                         "line-width": 1,
                         "line-dasharray": [2, 2],
                         "line-opacity": ["*", ["get", "intensity"], 0.55]
+                    }}/>
+                </Source>
+                {/* Ground occupation: a ring around each city being captured, filling
+                    toward solid in the occupier's color as capture progress climbs.
+                    Drawn under the cities so the city dot stays legible on top. */}
+                <Source id="capture-src" type="geojson" data={captureFC}>
+                    <Layer id="capture-fill" type="fill" paint={{
+                        "fill-color": ["get", "color"],
+                        "fill-opacity": ["*", ["get", "progress"], 0.3]
+                    }}/>
+                    <Layer id="capture-ring" type="line" paint={{
+                        "line-color": ["get", "color"],
+                        "line-width": 1.5,
+                        "line-dasharray": [3, 2],
+                        "line-opacity": ["+", 0.35, ["*", ["get", "progress"], 0.55]]
                     }}/>
                 </Source>
                 <Source id="live-src" type="geojson" data={liveFC}>

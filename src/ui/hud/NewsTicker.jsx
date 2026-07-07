@@ -29,6 +29,13 @@ export function headline(e, world, mySlot) {
             const name = TECHS[e.techId]?.name;
             return {tone: "info", text: name ? `${nn(e.slot)} completes ${name}` : `${nn(e.slot)} achieves a breakthrough`};
         }
+        case "captured": {
+            const where = e.state || world.cities.find((x) => x.id === e.cityId)?.name || "territory";
+            const mine = e.slot === mySlot, lost = e.fromSlot === mySlot;
+            if (mine) return {tone: "good", text: `Your forces occupy ${where} — ${nn(e.fromSlot)} loses the province`};
+            if (lost) return {tone: "danger", text: `${where} falls — ${nn(e.slot)} occupies your territory`};
+            return {tone: "alert", text: `${nn(e.slot)} occupies ${where} from ${nn(e.fromSlot)}`};
+        }
         case "launch":
             if (e.tgtSlot === mySlot && (!e.seen || e.seen.includes(mySlot)))
                 return {tone: "danger", text: `Inbound — ${nn(e.slot)} missile tracking your territory`};
