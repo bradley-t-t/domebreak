@@ -63,6 +63,20 @@ export function stabilityFactors(w, n) {
         key: "deficit", label: "Points deficit", penalty: STABILITY.wDeficit,
         detail: "spending outpaces income",
     });
+    // Recent military defeats: a morale hit that eases linearly to zero over defeatSec
+    // (one in-game year). Each lost war decays independently and they stack. See
+    // sim/warResolution.js, which stamps `defeatPenalties` on the loser.
+    if (n.defeatPenalties?.length) {
+        let sum = 0;
+        for (const p of n.defeatPenalties) {
+            const frac = 1 - (w.time - p.t0) / STABILITY.defeatSec;
+            if (frac > 0) sum += STABILITY.wDefeat * frac;
+        }
+        if (sum > 0) f.push({
+            key: "defeat", label: "Recent defeat", penalty: sum,
+            detail: n.defeatPenalties.length > 1 ? `${n.defeatPenalties.length} wars lost` : "morale after losing a war",
+        });
+    }
     return f;
 }
 
@@ -104,6 +118,10 @@ export function updateStability(w, dt) {
     for (const n of w.nations) {
         if (!n.alive) continue;
         if (n.stability == null) n.stability = 100;
+        // Prune fully-decayed defeat penalties so saved state stays small.
+        if (n.defeatPenalties?.length) {
+            n.defeatPenalties = n.defeatPenalties.filter((p) => w.time - p.t0 < STABILITY.defeatSec);
+        }
         const target = stabilityTarget(w, n);
         n.stability += (target - n.stability) * k;
         if (n.stability < 0) n.stability = 0;

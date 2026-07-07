@@ -178,9 +178,9 @@ export const DIPLOMACY = {
     playerGraceSec: 45,              // opening window before AIs may declare on the player
     wGdp: 0.6, wWeak: 0.8,           // rival weighting exponents: prefer wealthier / weaker
     wMin: 0.15, wMax: 8,             // clamp on any single rival's selection weight
-    peaceLossThreshold: 0.35,        // sue for peace below this surviving-city fraction
-    minWarSec: 90,                   // minimum war duration before a random ceasefire
-    peaceChance: 0.06,               // odds per diplo tick of a ceasefire once past minWarSec
+    surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction
+    minWarSec: 90,                   // minimum war duration before a white-peace offer
+    peaceOfferChance: 0.06,          // odds per diplo tick an AI offers white peace once past minWarSec
     // Level-of-detail: a nation at war or within activeRangeKm of the player runs its
     // build/attack AI (aiTick) at the normal cadence; everyone else runs on the slow
     // idle cadence — bounding heavy AI work to the action actually on the map.
@@ -227,6 +227,9 @@ export const STABILITY = {
     wLeadLoss: 40,              // stability lost at total leadership loss (linear in fraction lost)
     wBunkered: 10,              // stability lost while leadership is fully sheltered (small, linear)
     wDeficit: 15,               // flat stability lost while running a points deficit
+    wDefeat: 30,                // peak stability lost the instant a war is lost (see sim/warResolution.js)
+    defeatSec: 17520,           // game-seconds the Defeat penalty decays over — one in-game year
+                                // (HUD clock: 1 game-sec = 30 in-game min → 365·24·60/30 = 17520)
 };
 
 export const UNITS = {

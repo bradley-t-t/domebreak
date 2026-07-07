@@ -56,6 +56,7 @@ export function createWorld(setup) {
         cap: c.cap ? 1 : 0,
         pop: c.pop || 0,
         pop0: c.pop || 0,   // starting population — growth ceiling baseline (see POPULATION)
+        owner0: c.slot,     // original owner — war-resolution reference ("occupied" ≡ slot !== owner0)
         econ: c.econ || 0,
         lng: c.lng,
         lat: c.lat,
@@ -81,6 +82,8 @@ export function createWorld(setup) {
         interceptors: [],
         effects: [],
         events: [],
+        warPopups: [],       // player-facing war outcomes/offers queued for the modal (see sim/warResolution.js)
+        pendingPeace: [],     // open white-peace offers: {from, to, t}
         winnerSlot: null,
         over: false
     };
@@ -198,3 +201,5 @@ export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 export {step, growCities} from "./sim/tick.js";
 
 export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";
+
+export {endWar, offerPeace, respondPeace, dismissWarPopup} from "./sim/warResolution.js";

@@ -42,7 +42,8 @@ import {
 import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {captureTick} from "./occupation.js";
 import {ensureHangar, flyAircraft, polarFrom, runAirbase, steamShip} from "./aircraft.js";
-import {autoResearchTick, canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, makePeace, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {autoResearchTick, canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {offerPeace, warTick} from "./warResolution.js";
 import {replenishmentBuff} from "./queries.js";
 import {evacTick, reconcileLeadership, updateCommand} from "./leadership.js";
 import {updateStability} from "./stability.js";
@@ -183,16 +184,6 @@ function capPositions(w) {
     return caps;
 }
 
-// Total cities a slot started with (baseline for the sue-for-peace loss ratio).
-// Static — every city is alive at setup — so it's computed once and cached.
-function startCityCounts(w) {
-    if (w._startCities) return w._startCities;
-    const m = {};
-    for (const c of w.cities) m[c.slot] = (m[c.slot] || 0) + 1;
-    w._startCities = m;
-    return m;
-}
-
 // Living-city count per slot right now — one pass, reused across a diplomacy round.
 function aliveCityCounts(w) {
     const m = new Map();
@@ -251,21 +242,22 @@ function diploTick(w, dt) {
     if (!firing) return;
     const caps = capPositions(w);
     const alive = aliveCityCounts(w);
-    const start = startCityCounts(w);
     for (const n of firing) {
-        diploMakePeace(w, n, alive, start);
+        diploOfferPeace(w, n);
         diploDeclareWar(w, n, caps, alive);
     }
 }
 
-function diploMakePeace(w, n, alive, start) {
-    const frac = (alive.get(n.slot) || 0) / (start[n.slot] || 1);
-    const losing = frac < DIPLOMACY.peaceLossThreshold;
+// An AI's negotiated exit: once a war is older than minWarSec it may offer white peace
+// (peaceOfferChance) to a foe. Surrender/Defeat when a nation is collapsing is handled
+// separately and continuously by warTick — this is only the no-loss, mutual ceasefire.
+// offerPeace resolves an AI↔AI offer at once and routes an AI→player offer to a popup.
+function diploOfferPeace(w, n) {
     for (const s in n.relations) {
         if (n.relations[s] !== "war") continue;
         const foe = +s;
         const age = w.time - (n._warStart?.[foe] ?? 0);
-        if (losing || (age > DIPLOMACY.minWarSec && rand(w) < DIPLOMACY.peaceChance)) makePeace(w, n.slot, foe);
+        if (age > DIPLOMACY.minWarSec && rand(w) < DIPLOMACY.peaceOfferChance) offerPeace(w, n.slot, foe);
     }
 }
 
@@ -1059,6 +1051,11 @@ export function step(w, dt) {
     // flip their state to the occupier. Runs before growth/tally so a captured city
     // is counted for its new owner's income and domination share this same tick.
     captureTick(w, dt);
+    // Resolve wars whose loser has collapsed below the surrender threshold (Defeat /
+    // Victory + territory transfer). Runs right after occupation so it reads this
+    // tick's flips, and before the growth/tally so ceded territory counts for its new
+    // owner immediately. See sim/warResolution.js.
+    warTick(w);
     // Grow city populations for this tick before the tally reads them, so income,
     // industry cap, and the domination check all see the updated figures.
     growCities(w, dt);

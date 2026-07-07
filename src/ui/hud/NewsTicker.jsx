@@ -25,7 +25,12 @@ export function headline(e, world, mySlot) {
         case "war":
             return {tone: "danger", text: `${nn(e.a)} declares war on ${nn(e.b)}`};
         case "peace":
-            return {tone: "good", text: `${nn(e.a)} and ${nn(e.b)} agree to a ceasefire`};
+            return {tone: "good", text: `${nn(e.a)} and ${nn(e.b)} agree to a white peace`};
+        case "conquest": {
+            if (e.winner === mySlot) return {tone: "good", text: `${nn(e.loser)} surrenders to you — their occupied territory is yours`};
+            if (e.loser === mySlot) return {tone: "danger", text: `You surrender to ${nn(e.winner)} — occupied territory is lost`};
+            return {tone: "alert", text: `${nn(e.loser)} surrenders to ${nn(e.winner)}`};
+        }
         case "research": {
             const name = TECHS[e.techId]?.name;
             return {tone: "info", text: name ? `${nn(e.slot)} completes ${name}` : `${nn(e.slot)} achieves a breakthrough`};

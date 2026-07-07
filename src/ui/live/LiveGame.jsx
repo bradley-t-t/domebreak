@@ -7,6 +7,7 @@ import ProductionBar from "../hud/ProductionBar.jsx";
 import NationPanel from "../hud/NationPanel.jsx";
 import NewsTicker from "../hud/NewsTicker.jsx";
 import LeadershipAlert from "../hud/LeadershipAlert.jsx";
+import WarOutcomeModal from "../hud/WarOutcomeModal.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
@@ -294,6 +295,23 @@ export default function LiveGame({
     // Battle audio + toast/explosion pipeline for fresh world.events — see
     // useEventEffects (same [w.time]-keyed effect, moved out verbatim).
     useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGameEnd});
+
+    // A war-outcome popup pauses the sim in single-player while the player reads it,
+    // then resumes on dismiss — unless they were already paused (manual pause is
+    // preserved). Online matches are speed-locked and never pause: the modal is
+    // non-blocking there. Keyed on whether the queue is non-empty.
+    const hasWarPopup = (w.warPopups?.length ?? 0) > 0;
+    const warAutoPaused = useRef(false);
+    useEffect(() => {
+        if (net) return;                       // online: never pause
+        if (hasWarPopup && !w.paused) {
+            warAutoPaused.current = true;
+            api.pause();
+        } else if (!hasWarPopup && warAutoPaused.current) {
+            warAutoPaused.current = false;
+            api.play();
+        }
+    }, [hasWarPopup, net]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Escape cascade, command-screen hotkeys, controls-reference toggle, game
     // speed hotkeys and keyboard zoom — see useKeyboardControls (same handlers,
@@ -1019,7 +1037,7 @@ export default function LiveGame({
                                       setSelUnit(null);
                                   }} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "diplomacy" &&
-                <DiplomacyScreen world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
+                <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} onClose={() => setPanel(null)}/>}
             <div className="absolute bottom-4 right-4 z-5 flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
                 {!w.over && <WarBar world={w} mySlot={mySlot}/>}
                 <LayerBar layers={layers} onToggle={toggleLayer}/>
@@ -1111,6 +1129,7 @@ export default function LiveGame({
                 err.kind === "warn" && "bg-[rgba(140,255,58,0.12)] border-[rgba(140,255,58,0.55)] text-[#d6ff9e]"
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
+            {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
             {w.over && (
                 <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">
                     <div className={cn(card({size: "wide"}), "motion-safe:animate-[dbPop_240ms_var(--ease-out)]")}>

@@ -37,11 +37,19 @@ export function declareWar(w, a, b) {
     return {ok: true};
 }
 
+// Low-level relation primitive: clear the war between a and b (and its age stamps).
+// Territory, stability, events, and popups are the caller's job — every real war
+// ending routes through sim/warResolution.js `endWar`, which wraps this.
 export function makePeace(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
-    if (na) na.relations[b] = "peace";
-    if (nb) nb.relations[a] = "peace";
-    w.events.push({id: nextId(w, "e"), t: w.time, type: "peace", a, b});
+    if (na) {
+        na.relations[b] = "peace";
+        if (na._warStart) delete na._warStart[b];
+    }
+    if (nb) {
+        nb.relations[a] = "peace";
+        if (nb._warStart) delete nb._warStart[a];
+    }
     return {ok: true};
 }
 

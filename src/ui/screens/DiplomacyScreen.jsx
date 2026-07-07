@@ -1,7 +1,7 @@
 // Diplomacy — full-screen theatre manager. A roster of every power in the world:
 // flag, name, the seat commanding it (You / AI today, human players in multiplayer),
 // holdings, fielded forces, GDP, standing toward you, and the war/peace control.
-// Presentation only — declareWar/makePeace go through the api.
+// Presentation only — declareWar/offerPeace go through the api.
 import {useState} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
@@ -9,7 +9,7 @@ import {colorForSlot} from "../../game/data/constants.js";
 import {miniButton, input} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
-export default function DiplomacyScreen({world, api, mySlot, onClose}) {
+export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     const [q, setQ] = useState("");
     const me = world.nations.find((n) => n.slot === mySlot);
     // Precompute holdings/forces per slot in one pass each — the roster is the whole
@@ -103,8 +103,10 @@ export default function DiplomacyScreen({world, api, mySlot, onClose}) {
                                 <span className="text-right" role="cell">
                                     {isMe || !n.alive ? <span className="text-faint">—</span>
                                         : war
-                                            ? <button className={miniButton()} aria-label={`Sue for peace with ${n.name}`}
-                                                      onClick={() => api.makePeace(n.slot)}>Sue for Peace</button>
+                                            ? (online
+                                                ? <span className="font-mono text-[10px] text-faint" title="Peace terms are single-player only for now">Peace: solo only</span>
+                                                : <button className={miniButton()} aria-label={`Offer white peace to ${n.name}`}
+                                                          onClick={() => api.offerPeace(n.slot)}>Offer Peace</button>)
                                             : <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
                                                       onClick={() => api.declareWar(n.slot)}>Declare War</button>}
                                 </span>
