@@ -41,8 +41,7 @@ async function claimLobby(row) {
         .eq("id", row.id).eq("status", "starting").select().maybeSingle();
     if (!claimed) return;
 
-    // LEFT join to profiles (not !inner): bot rows have user_id = null and no
-    // matching profiles row at all, and must still be included in the roster.
+    // Real players only (no bots): every member has a user_id + profile.
     const {data: members} = await db.from("lobby_members")
         .select("user_id, slot, iso, ready, is_bot, display_name, profiles(username)")
         .eq("lobby_id", row.id).order("slot");
@@ -73,8 +72,7 @@ async function claimLobby(row) {
     });
     matches.set(match.id, match);
     await db.from("lobbies").update({match_id: match.id, server_url: WS_URLS.join(",")}).eq("id", row.id);
-    const humanCount = roster.filter((r) => !r.isBot).length;
-    log("match started", match.id, "lobby", row.id, "humans", humanCount, "bots", roster.length - humanCount);
+    log("match started", match.id, "lobby", row.id, "players", roster.length);
 }
 
 async function pollStarting() {

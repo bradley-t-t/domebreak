@@ -27,12 +27,11 @@ function resolveIsos(picks) {
 }
 
 export class Match {
-    // roster: [{userId, username, iso, isBot, ready}] in slot order (0..n-1).
-    // Every roster entry becomes a nation/slot — bots and unready humans
-    // (force-launched at the lobby-ready timeout) are drafted isAi; a ready
-    // human is player-controlled. There is no separate aiCount: bot seats are
-    // already roster members by the time the matchmaker hands off the lobby
-    // (ADR-0004).
+    // roster: [{userId, username, iso, ready}] — REAL PLAYERS ONLY (no bots). The
+    // match is the FULL living world (every country is world AI, as in single
+    // player); each player claims their own nation within it. A player's slot is
+    // that nation's slot in the full world (by GDP order), NOT the roster index —
+    // so two players can be arbitrarily far apart on the map.
     constructor({lobbyId, roster, onFinished}) {
         this.id = randomUUID();
         this.lobbyId = lobbyId;
@@ -44,16 +43,20 @@ export class Match {
         this.reported = false;
         this.abandonTimer = null;   // reaps the match if no human is ever present
 
+        // Unique, valid nation per player (bad/duplicate picks resolve to a free
+        // great power), then build the full world seeded on the first player.
         const isos = resolveIsos(roster.map((r) => r.iso));
-        this.players = roster.map((r, i) => ({...r, slot: i, iso: isos[i]}));
+        const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1);
+        const slotOfIso = new Map(setup.nations.map((n) => [n.iso, n.slot]));
+        this.players = roster.map((r, i) => ({...r, iso: isos[i], slot: slotOfIso.get(isos[i])}));
 
-        const setup = buildSetup(gameData(), isos[0], isos.slice(1), (Math.random() * 1e9) | 0 || 1);
+        // Hand each player their nation; a human who never readied (force-launched)
+        // stays AI until they connect (attach flips isAi=false). Every other nation
+        // in the world stays AI.
+        const bySlot = new Map(this.players.map((p) => [p.slot, p]));
         setup.nations.forEach((n) => {
-            const p = this.players[n.slot];
-            // Bots are always AI; humans are AI only if they never readied by
-            // the time the lobby force-launched (same conversion ADR-0003
-            // already performs for an expired reconnect grace window).
-            n.isAi = !!p?.isBot || p?.ready === false;
+            const p = bySlot.get(n.slot);
+            n.isAi = p ? (p.ready === false) : true;
         });
         this.world = createWorld(setup);
         this.world.speed = 1;
@@ -186,7 +189,7 @@ export class Match {
             started_at: this.startedAt,
             result: this.quit.has(p.userId) ? "quit" : this.world.winnerSlot === p.slot ? "win" : "loss",
             nation_iso: p.iso,
-            opponents: this.world.nations.length - 1,
+            opponents: this.players.length - 1, // real-player opponents (the rest of the world is AI)
             duration_s: Math.round(this.world.time),
             mode: "online",
             match_id: this.id,
