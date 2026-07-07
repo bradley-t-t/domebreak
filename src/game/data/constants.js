@@ -36,6 +36,10 @@ export const START_CAM = {
     bootMs: 6000,   // failsafe: lift the loading veil after this even if the map never idles
 };
 
+// Keyboard (WASD) map-pan speed, in screen pixels per second. The pan is driven
+// by short constant-velocity ease segments (see LiveGame's pan effect).
+export const PAN_PX_PER_SEC = 1500;
+
 // --- Core sim tuning (moved from engine.js — behavior-preserving extraction) ---
 export const START_POINTS = 500;
 export const MISSILE_SPEED = 140;

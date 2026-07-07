@@ -50,7 +50,7 @@ import {
     vitalityOf
 } from "../../game/engine.js";
 import {toGid3} from "../../game/data/iso3.js";
-import {GAME_SPEEDS, START_CAM} from "../../game/data/constants.js";
+import {GAME_SPEEDS, PAN_PX_PER_SEC, START_CAM} from "../../game/data/constants.js";
 import {keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
@@ -489,32 +489,47 @@ export default function LiveGame({
     }, [overlayOpen, K.zoomIn, K.zoomOut]);
 
     // Camera pan: pan the flat map / rotate the globe while a pan key is held
-    // (bindings configurable in Settings; defaults W / A / S / D). Driven by ONE
-    // long constant-velocity ease per direction rather than a per-frame panBy.
+    // (bindings configurable in Settings; defaults W / A / S / D). Driven by short
+    // constant-velocity ease SEGMENTS chained back-to-back at PAN_PX_PER_SEC.
     // A per-frame panBy({duration:0}) fires a full movestart/move/moveend cycle
-    // every frame, forcing the vector map to re-settle tiles + labels ~60x/sec —
-    // that is the WASD stutter. A single ease keeps `move` flowing (overlays and
-    // unit markers still track the camera) but runs `moveend` (the heavy part)
-    // once per direction change, exactly like a mouse drag. Time-based, so the
-    // speed no longer varies with frame rate. panBy works in both projections.
+    // every frame, re-settling the vector map's tiles + labels ~60x/sec — that was
+    // the WASD stutter. One giant ease killed the stutter but crawled (a far target
+    // clamps at the poles and distorts velocity). Short segments keep `move`
+    // flowing (overlays + unit markers track the camera) at a true, constant px/s,
+    // while `moveend` (the heavy part) runs ~once/sec, like a mouse drag. panBy
+    // works in both projections.
     useEffect(() => {
         const dir = {[K.panUp]: "up", [K.panLeft]: "left", [K.panDown]: "down", [K.panRight]: "right"};
         const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
         const held = new Set();
-        // Re-aim the pan for whatever keys are currently held (idempotent for the
-        // same direction, so keydown auto-repeat and unrelated keys are no-ops).
-        const drive = () => {
+        const SEG_MS = 800; // ease-segment length; the next starts just before it ends so motion never idles
+        let timer = 0, curKey = "";
+        const vec = () => [
+            (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0),
+            (held.has("down") ? 1 : 0) - (held.has("up") ? 1 : 0),
+        ];
+        const runSeg = () => {
             const m = mapRef.current;
-            if (!m) return;
-            const dx = (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0);
-            const dy = (held.has("down") ? 1 : 0) - (held.has("up") ? 1 : 0);
-            if (!dx && !dy) {
-                m.stop(); // no direction held: settle once, like releasing a drag
+            const [dx, dy] = vec();
+            curKey = `${dx},${dy}`;
+            if (!m || (!dx && !dy)) {
+                timer = 0;
+                m?.stop(); // nothing held: settle once, like releasing a drag
                 return;
             }
             const len = Math.hypot(dx, dy);
-            // ~660 px/s (66000 px over 100 s; a hold never reaches the end in practice).
-            m.panBy([(dx / len) * 66000, (dy / len) * 66000], {duration: 100000, easing: (t) => t});
+            const dist = (PAN_PX_PER_SEC * SEG_MS) / 1000;
+            m.panBy([(dx / len) * dist, (dy / len) * dist], {duration: SEG_MS, easing: (t) => t});
+            timer = setTimeout(runSeg, SEG_MS - 60); // slight overlap → seamless continuous motion
+        };
+        // (Re)start the segment chain only when the held direction actually changes
+        // (keydown auto-repeat and unrelated keys are no-ops).
+        const refresh = () => {
+            const [dx, dy] = vec();
+            if (`${dx},${dy}` === curKey && timer) return;
+            if (timer) clearTimeout(timer);
+            timer = 0;
+            runSeg();
         };
         const dn = (e) => {
             if (e.repeat || overlayOpen || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
@@ -522,18 +537,21 @@ export default function LiveGame({
             if (d) {
                 held.add(d);
                 e.preventDefault();
-                drive();
+                refresh();
             }
         };
         const up = (e) => {
             const d = dir[keyToken(e)];
             if (d) {
                 held.delete(d);
-                drive();
+                refresh();
             }
         };
         const clear = () => {
             held.clear();
+            if (timer) clearTimeout(timer);
+            timer = 0;
+            curKey = "";
             mapRef.current?.stop();
         };
         window.addEventListener("keydown", dn);
@@ -543,6 +561,7 @@ export default function LiveGame({
             window.removeEventListener("keydown", dn);
             window.removeEventListener("keyup", up);
             window.removeEventListener("blur", clear);
+            if (timer) clearTimeout(timer);
             mapRef.current?.stop();
         };
     }, [overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
