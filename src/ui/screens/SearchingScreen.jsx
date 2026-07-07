@@ -94,7 +94,7 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
                         <div aria-live="assertive">
                             {err && <p className="gd-friends-err text-danger bg-[rgba(224,87,79,0.1)] border border-danger rounded-sm py-2 px-3 text-[12.5px] mt-2.5">{err}</p>}
                         </div>
-                        <button className={cn(button(), "block mt-4")} disabled={busy} onClick={doCancel}
+                        <button className={cn(button(), "block mt-4 mx-auto")} disabled={busy} onClick={doCancel}
                                 aria-label="Cancel matchmaking search">
                             {busy ? "Cancelling…" : "Cancel"}
                         </button>
