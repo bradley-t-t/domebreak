@@ -19,6 +19,7 @@ import {fetchProfile, fetchStats, getSession, onAuth, reportMatch, signOut, touc
 import {connectMatch} from "./net/gameClient.js";
 import {supabase} from "./account/client.js";
 import MeBadge from "./ui/common/MeBadge.jsx";
+import TitleBarDrag from "./ui/common/TitleBarDrag.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import {menuButton} from "./ui/lib/variants.js";
@@ -321,18 +322,19 @@ export default function App() {
     // Login is required — no offline bypass. Loading shows a minimal splash;
     // signed-out renders the gate in place of every other screen.
     if (authStatus === "loading") {
-        return <div className="relative z-[1] flex flex-col h-full">{splash}
+        return <div className="relative z-[1] flex flex-col h-full"><TitleBarDrag/>{splash}
             <div className="absolute inset-0 grid place-items-center bg-bg">
                 <span className="font-display tracking-[6px] uppercase text-[13px] text-dim animate-[dbRowIn_400ms_var(--ease-out)_both]">Connecting…</span>
             </div>
         </div>;
     }
     if (authStatus === "signedOut") {
-        return <div className="relative z-[1] flex flex-col h-full">{attract}<LoginScreen/>{splash}</div>;
+        return <div className="relative z-[1] flex flex-col h-full"><TitleBarDrag/>{attract}<LoginScreen/>{splash}</div>;
     }
 
     return (
         <div className="relative z-[1] flex flex-col h-full">
+            <TitleBarDrag/>
             {attract}
             {splash}
             {screen !== "playing" &&

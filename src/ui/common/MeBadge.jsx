@@ -62,7 +62,9 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, inGame, p
 
 // Persistent identity chip: fixed top-right on menu screens, inline (chip-only)
 // when mounted inside the live HUD's top-button strip. Click opens a popover
-// with stats, the friends roster, and (in-match) the human roster.
+// with stats, the friends roster, and (in-match) the human roster. The
+// top offset (42px) clears TitleBarDrag's 34px OS-drag strip so the chip
+// never sits underneath the undraggable-but-on-top drag region.
 export default function MeBadge({profile, stats, onSignOut, inGame, players}) {
     const [open, setOpen] = useState(false);
     const [friendsOpen, setFriendsOpen] = useState(false);
@@ -88,7 +90,7 @@ export default function MeBadge({profile, stats, onSignOut, inGame, players}) {
 
     return (
         <div ref={rootRef}
-             className={cn("z-20", inGame ? "static" : "fixed top-[14px] right-4")}>
+             className={cn("z-20", inGame ? "static" : "fixed top-[42px] right-4")}>
             <button className={cn(
                 "flex items-center gap-2 h-[38px] rounded border border-line bg-panel text-text backdrop-blur-[8px] transition-[border-color,transform] duration-150 ease-out-db hover:border-blue active:scale-[0.96]",
                 inGame ? "w-[38px] p-0 justify-center" : "p-0 pr-3"
