@@ -170,7 +170,7 @@ export default function NewsTicker({world, mySlot}) {
 
     return (
         <div
-            className="db-ticker z-4 flex items-stretch w-[min(720px,100%)] h-7 bg-panel-2 border border-line rounded shadow overflow-hidden pointer-events-auto motion-safe:animate-[gdDropInY_340ms_var(--ease-drawer)] max-[900px]:hidden"
+            className="db-ticker z-4 flex items-stretch w-[min(720px,100%)] h-7 bg-panel-2 border border-line rounded shadow overflow-hidden pointer-events-auto motion-safe:animate-[dbDropInY_340ms_var(--ease-drawer)] max-[900px]:hidden"
             aria-label="News feed" aria-live="polite">
             <span
                 className="db-ticker-tag flex items-center gap-[6px] px-[11px] text-[9.5px] tracking-[1px] uppercase text-faint bg-panel border-r border-line flex-none">Live Wire</span>

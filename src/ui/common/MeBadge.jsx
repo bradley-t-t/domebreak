@@ -21,7 +21,7 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, inGame, p
     const ref = useModal(onClose);
     const titleId = "db-mebadge-title";
     return (
-        <div className="db-mebadge-pop absolute top-[calc(100%+8px)] right-0 w-[260px] px-4 py-[14px] border border-line rounded bg-panel-2 backdrop-blur-[14px] shadow animate-[gdPop_150ms_var(--ease-out)]"
+        <div className="db-mebadge-pop absolute top-[calc(100%+8px)] right-0 w-[260px] px-4 py-[14px] border border-line rounded bg-panel-2 backdrop-blur-[14px] shadow animate-[dbPop_150ms_var(--ease-out)]"
              ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
              aria-labelledby={titleId}>
             <div className="flex items-baseline justify-between gap-2">
@@ -90,7 +90,7 @@ export default function MeBadge({profile, stats, onSignOut, inGame, players}) {
         <div ref={rootRef}
              className={cn("z-20", inGame ? "static" : "fixed top-[14px] right-4")}>
             <button className={cn(
-                "flex items-center gap-2 h-[38px] rounded border border-line bg-panel text-text backdrop-blur-[8px] transition-[border-color,transform] duration-150 ease-out-gd hover:border-blue active:scale-[0.96]",
+                "flex items-center gap-2 h-[38px] rounded border border-line bg-panel text-text backdrop-blur-[8px] transition-[border-color,transform] duration-150 ease-out-db hover:border-blue active:scale-[0.96]",
                 inGame ? "w-[38px] p-0 justify-center" : "p-0 pr-3"
             )} onClick={() => setOpen((v) => !v)} aria-haspopup="true"
                     aria-expanded={open} aria-label="Commander profile">

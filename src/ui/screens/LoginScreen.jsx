@@ -55,9 +55,9 @@ export default function LoginScreen() {
     return (
         <div className="absolute inset-0 z-10 grid place-items-center overflow-auto p-6">
             <div className="absolute inset-0 -z-1 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)]"/>
-            <div className="text-center animate-[gdRowIn_400ms_var(--ease-out-gd)_both] pt-[38px] px-[46px] pb-[26px] border border-line-soft rounded backdrop-blur-[10px] [backdrop-filter:blur(10px)_saturate(1.15)] bg-[rgba(7,9,13,0.48)] shadow-[0_30px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="text-center animate-[dbRowIn_400ms_var(--ease-out-db)_both] pt-[38px] px-[46px] pb-[26px] border border-line-soft rounded backdrop-blur-[10px] [backdrop-filter:blur(10px)_saturate(1.15)] bg-[rgba(7,9,13,0.48)] shadow-[0_30px_80px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <h1 className="text-[58px] font-bold tracking-[14px] uppercase m-0 text-dim">
-                    GOLDEN<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">DOME</span>
+                    DOME<span className="text-text [text-shadow:var(--glow-gold)] animate-[dbTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">BREAK</span>
                 </h1>
                 <p className="text-dim tracking-[3px] uppercase text-[13px] mt-1 mb-[34px]">Global Missile Command</p>
                 <form className={cn(card(), "text-left mt-[22px] w-[min(360px,94vw)]")} onSubmit={submit} aria-labelledby="db-login-title">

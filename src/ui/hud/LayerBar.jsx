@@ -14,7 +14,7 @@ export default function LayerBar({layers, onToggle}) {
              role="group" aria-label="Map layers">
             {LAYER_DEFS.map((l) => (
                 <button key={l.id}
-                        className={cn("flex flex-col items-center justify-start gap-1 w-[68px] px-[5px] py-[7px] text-center text-[9.5px] rounded text-dim transition-[background,color] duration-150 ease-out-gd hover:bg-[#141619] hover:text-text", layers[l.id] && "bg-[#15171b] text-text")}
+                        className={cn("flex flex-col items-center justify-start gap-1 w-[68px] px-[5px] py-[7px] text-center text-[9.5px] rounded text-dim transition-[background,color] duration-150 ease-out-db hover:bg-[#141619] hover:text-text", layers[l.id] && "bg-[#15171b] text-text")}
                         aria-pressed={!!layers[l.id]}
                         aria-label={`${l.label} layer, ${layers[l.id] ? "on" : "off"}`}
                         onClick={() => onToggle(l.id)}>

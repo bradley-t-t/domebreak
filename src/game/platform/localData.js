@@ -1,5 +1,5 @@
 // Machine-local data folder bridge. On Electron the preload exposes
-// window.gdLocal (IPC to a JSON-file store under the OS userData dir); in the
+// window.dbLocal (IPC to a JSON-file store under the OS userData dir); in the
 // browser there is no folder, so localStorage alone carries the data.
 //
 // Everything still reads/writes localStorage synchronously — existing call
@@ -7,7 +7,7 @@
 // boot, and mirror writes back to disk fire-and-forget, so the folder is the
 // durable copy and localStorage is the hot cache.
 
-const bridge = typeof window !== "undefined" ? window.gdLocal : undefined;
+const bridge = typeof window !== "undefined" ? window.dbLocal : undefined;
 
 export const isDesktop = !!bridge;
 

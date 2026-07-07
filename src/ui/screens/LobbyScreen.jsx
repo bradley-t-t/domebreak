@@ -284,15 +284,15 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             </div>
             <div className="absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(ellipse_120%_100%_at_66%_46%,transparent_46%,rgba(4,6,9,0.42)_82%,rgba(4,6,9,0.72)_100%)]" aria-hidden="true"/>
 
-            <aside className="absolute top-0 left-0 bottom-0 z-[2] w-96 max-w-[84vw] flex flex-col pt-[46px] pr-[46px] pb-[22px] pl-10 text-left pointer-events-none animate-[gdRailIn_520ms_var(--ease-out-gd)_both] motion-reduce:animate-none
+            <aside className="absolute top-0 left-0 bottom-0 z-[2] w-96 max-w-[84vw] flex flex-col pt-[46px] pr-[46px] pb-[22px] pl-10 text-left pointer-events-none animate-[dbRailIn_520ms_var(--ease-out-db)_both] motion-reduce:animate-none
                 before:content-[''] before:absolute before:inset-0 before:-z-1 before:bg-[linear-gradient(90deg,rgba(7,9,13,0.82)_0%,rgba(7,9,13,0.58)_52%,rgba(7,9,13,0)_100%)] before:backdrop-blur-[9px] before:[backdrop-filter:blur(9px)_saturate(1.1)] before:[mask-image:linear-gradient(90deg,#000_58%,transparent_100%)]
                 after:content-[''] after:absolute after:top-5 after:left-5 after:w-4 after:h-4 after:border-t after:border-l after:border-line-soft">
                 <div className="mb-[34px]">
                     <div className="flex items-center gap-[7px] mb-4 font-mono text-[10px] tracking-[2.5px] uppercase text-faint">
-                        <span className="db-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[gdBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
+                        <span className="db-rail-dot w-1.5 h-1.5 rounded-full bg-danger shadow-[0_0_7px_var(--danger)] animate-[dbBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
                         Matchmaking · War Room
                     </div>
-                    <h1 className={menuTitle({sm: true})}>WAR<span className="text-text [text-shadow:var(--glow-gold)] animate-[gdTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">ROOM</span></h1>
+                    <h1 className={menuTitle({sm: true})}>WAR<span className="text-text [text-shadow:var(--glow-gold)] animate-[dbTitleGlow_6s_var(--ease-in-out)_infinite_alternate]">ROOM</span></h1>
                     <p className="text-dim tracking-[3px] uppercase text-[13px] mt-3 mb-0">{humans} commander{humans !== 1 ? "s" : ""} in the war room</p>
                 </div>
 
@@ -352,7 +352,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                     <span className={cn("text-[12px] leading-snug", starting || allReady ? "text-gold" : "text-dim")} role="status" aria-live="polite">{statusLine}</span>
                     {feed.length > 0 && (
                         <div className="db-scroll max-h-[84px] overflow-y-auto flex flex-col gap-[2px] font-mono text-[11px] text-faint pr-1" aria-live="polite" aria-label="Lobby activity">
-                            {feed.map((f) => <span key={f.id} className="animate-[gdRowIn_200ms_var(--ease-out)_both]">&rsaquo; {f.t}</span>)}
+                            {feed.map((f) => <span key={f.id} className="animate-[dbRowIn_200ms_var(--ease-out)_both]">&rsaquo; {f.t}</span>)}
                         </div>
                     )}
                 </div>

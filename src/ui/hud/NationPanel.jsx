@@ -64,7 +64,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
 
     return (
         <aside
-            className={cn("absolute top-4 left-4 z-5 w-[246px] max-h-[calc(100vh-132px)] flex flex-col bg-panel border border-line rounded-lg shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto overflow-hidden motion-safe:animate-[gdDropIn_300ms_var(--ease-drawer)]", collapsed && "w-[246px]")}
+            className={cn("absolute top-4 left-4 z-5 w-[246px] max-h-[calc(100vh-132px)] flex flex-col bg-panel border border-line rounded-lg shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto overflow-hidden motion-safe:animate-[dbDropIn_300ms_var(--ease-drawer)]", collapsed && "w-[246px]")}
             aria-label="Nation status">
             <div className="flex items-center gap-[10px] px-3 py-[11px] border-b border-hair">
                 <Flag iso={myNation.iso} className="w-[26px] h-[18px] rounded-sm shadow-[0_0_0_1px_var(--line)] flex-none"/>
@@ -74,7 +74,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                     <span className="text-[9.5px] tracking-[1px] uppercase text-faint">Your Command</span>
                 </div>
                 <button
-                    className="w-6 h-6 border border-line rounded-sm bg-transparent text-dim text-[11px] flex-none transition-[border-color,color] duration-150 ease-out-gd hover:text-text hover:border-line-soft"
+                    className="w-6 h-6 border border-line rounded-sm bg-transparent text-dim text-[11px] flex-none transition-[border-color,color] duration-150 ease-out-db hover:text-text hover:border-line-soft"
                     onClick={() => setCollapsed((v) => !v)}
                     title={collapsed ? "Expand" : "Collapse"}
                     aria-label={collapsed ? "Expand nation panel" : "Collapse nation panel"}>
@@ -111,7 +111,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                             className="text-faint font-normal text-xs">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
                     </div>
                     <div className="h-[5px] rounded-[3px] bg-hair overflow-hidden">
-                        <div className="h-full rounded-[3px] bg-linear-to-r from-dim to-text transition-[width] duration-[400ms] ease-out-gd"
+                        <div className="h-full rounded-[3px] bg-linear-to-r from-dim to-text transition-[width] duration-[400ms] ease-out-db"
                              style={{width: `${indFrac * 100}%`}}/>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                         const v = vitalityOf(c);
                         return (
                             <button key={c.id}
-                                    className={cn("flex items-center justify-between gap-2 w-full px-2 py-[7px] border-none rounded-sm bg-transparent text-left cursor-pointer transition-[background] duration-150 ease-out-gd hover:bg-hair", !c.alive && "opacity-55")}
+                                    className={cn("flex items-center justify-between gap-2 w-full px-2 py-[7px] border-none rounded-sm bg-transparent text-left cursor-pointer transition-[background] duration-150 ease-out-db hover:bg-hair", !c.alive && "opacity-55")}
                                     onClick={() => onFocus?.(c)} title={`Focus ${c.name}`}>
                                 <span className="flex flex-col leading-[1.2] min-w-0">
                                     <span

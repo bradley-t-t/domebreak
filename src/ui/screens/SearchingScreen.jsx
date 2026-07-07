@@ -83,9 +83,9 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion}) {
                 {!timedOut ? (
                     <>
                         <div className={cn("db-searching-pulse flex justify-center gap-2.5 my-2.5 mb-[18px]", reduceMotion && "still")} aria-hidden="true">
-                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
-                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.2s]", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
-                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.4s]", reduceMotion ? "opacity-70" : "[animation:gdPulse_1.2s_var(--ease-in-out)_infinite]")}/>
+                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold", reduceMotion ? "opacity-70" : "[animation:dbPulse_1.2s_var(--ease-in-out)_infinite]")}/>
+                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.2s]", reduceMotion ? "opacity-70" : "[animation:dbPulse_1.2s_var(--ease-in-out)_infinite]")}/>
+                            <span className={cn("w-2.5 h-2.5 rounded-full bg-gold [animation-delay:0.4s]", reduceMotion ? "opacity-70" : "[animation:dbPulse_1.2s_var(--ease-in-out)_infinite]")}/>
                         </div>
                         <div role="status" aria-live="polite">
                             <p className="db-searching-label text-sm text-text m-0">Searching for commanders…</p>

@@ -81,7 +81,7 @@ export default function FriendsPanel({onClose}) {
                             {incoming.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (
-                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[gdRowIn_220ms_var(--ease-out)_both]" role="listitem"
+                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[dbRowIn_220ms_var(--ease-out)_both]" role="listitem"
                                          aria-label={`${uname} — incoming request`}>
                                         <span className="text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{uname}</span>
                                         <div className="flex gap-1.5 shrink-0">
@@ -108,7 +108,7 @@ export default function FriendsPanel({onClose}) {
                             {outgoing.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (
-                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[gdRowIn_220ms_var(--ease-out)_both]" role="listitem"
+                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[dbRowIn_220ms_var(--ease-out)_both]" role="listitem"
                                          aria-label={`${uname} — pending request`}>
                                         <span className="text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{uname}</span>
                                         <div className="flex gap-1.5 shrink-0">
@@ -131,7 +131,7 @@ export default function FriendsPanel({onClose}) {
                             {accepted.map((f) => {
                                 const uname = f.other?.username || "Commander";
                                 return (
-                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[gdRowIn_220ms_var(--ease-out)_both]" role="listitem"
+                                    <div key={f.id} className="flex items-center justify-between gap-2 px-[10px] py-2 bg-btn-bg border border-line rounded-sm mt-[6px] animate-[dbRowIn_220ms_var(--ease-out)_both]" role="listitem"
                                          aria-label={`${uname} — friend`}>
                                         <span className="text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{uname}</span>
                                         <div className="flex gap-1.5 shrink-0">

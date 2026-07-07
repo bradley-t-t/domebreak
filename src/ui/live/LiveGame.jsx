@@ -1153,7 +1153,7 @@ export default function LiveGame({
                             <div
                                 className={cn(
                                     "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)",
-                                    u.id === selUnit && "scale-[1.35] transition-transform duration-[140ms] ease-out-gd"
+                                    u.id === selUnit && "scale-[1.35] transition-transform duration-[140ms] ease-out-db"
                                 )}
                                 title={labelOf(u.type, u.slot)}
                                 aria-label={`${labelOf(u.type, u.slot)} — ${nationName(u.slot)}`}
@@ -1261,7 +1261,7 @@ export default function LiveGame({
                 const left = hover.x + 18 > window.innerWidth - 250 ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 190);
                 return (
-                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[gdPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
+                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
                         <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{iso ? <Flag iso={iso}/> : null}<span>{name}</span></div>
                         <div className="grid grid-cols-2 mt-[10px] gap-x-[14px] gap-y-[7px] [&>div]:flex [&>div]:flex-col [&_span]:text-[10px] [&_span]:tracking-[0.5px] [&_span]:uppercase [&_span]:text-faint [&_b]:font-mono [&_b]:text-[12.5px]">
                             {nation ? (<>
@@ -1285,7 +1285,7 @@ export default function LiveGame({
                 const left = flip ? Math.max(12, hover.x - 248) : hover.x + 18;
                 const top = Math.min(Math.max(60, hover.y - 14), window.innerHeight - 200);
                 return (
-                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[gdPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
+                    <div className="fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3 bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]" style={{left, top}} aria-hidden="true">
                         {hover.kind === "unit" ? (<>
                             <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]"><UnitIcon name={UNIT_ICON[hoverEnt.type]}
                                                                   color={teamColor(hoverEnt.slot)}
@@ -1342,7 +1342,7 @@ export default function LiveGame({
                                 })()}
                             </div>
                             <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mt-2">
-                                <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd", vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good")}
+                                <i className={cn("block h-full rounded-[2px] transition-[width] duration-200 ease-out-db", vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good")}
                                    style={{width: `${Math.round(vitalityOf(hoverEnt) * 100)}%`}}/>
                             </div>
                         </>)}
@@ -1351,14 +1351,14 @@ export default function LiveGame({
             })()}
 
             {err && <div className={cn(
-                "absolute bottom-[122px] left-1/2 -translate-x-1/2 z-6 bg-[rgba(14,16,19,0.92)] border border-line-soft text-text py-[9px] px-[18px] rounded text-[12.5px] tracking-[0.3px] pointer-events-none backdrop-blur-[8px] shadow-sm motion-safe:animate-[gdPop_200ms_var(--ease-out)]",
+                "absolute bottom-[122px] left-1/2 -translate-x-1/2 z-6 bg-[rgba(14,16,19,0.92)] border border-line-soft text-text py-[9px] px-[18px] rounded text-[12.5px] tracking-[0.3px] pointer-events-none backdrop-blur-[8px] shadow-sm motion-safe:animate-[dbPop_200ms_var(--ease-out)]",
                 err.kind === "err" && "bg-[rgba(224,87,79,0.14)] border-danger text-[#ffd7dd]",
                 err.kind === "warn" && "bg-[rgba(140,255,58,0.12)] border-[rgba(140,255,58,0.55)] text-[#d6ff9e]"
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {w.over && (
                 <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">
-                    <div className={cn(card({size: "wide"}), "motion-safe:animate-[gdPop_240ms_var(--ease-out)]")}>
+                    <div className={cn(card({size: "wide"}), "motion-safe:animate-[dbPop_240ms_var(--ease-out)]")}>
                         <div id="db-outcome-title"
                             className={cn(
                                 "font-display text-[40px] font-bold tracking-[4px] uppercase text-center mb-3",
@@ -1372,10 +1372,10 @@ export default function LiveGame({
             )}
 
             <div className={cn(
-                "absolute inset-0 z-60 grid place-items-center [background:radial-gradient(120%_120%_at_50%_42%,#0b0e13_0%,#05070b_72%)] transition-opacity duration-[520ms] ease-out-gd",
+                "absolute inset-0 z-60 grid place-items-center [background:radial-gradient(120%_120%_at_50%_42%,#0b0e13_0%,#05070b_72%)] transition-opacity duration-[520ms] ease-out-db",
                 !booting && "opacity-0 pointer-events-none"
             )} aria-hidden={!booting}>
-                <div className="text-center motion-safe:animate-[gdRowIn_500ms_var(--ease-out)_both]">
+                <div className="text-center motion-safe:animate-[dbRowIn_500ms_var(--ease-out)_both]">
                     {myNation?.iso && <Flag iso={myNation.iso} className="text-[30px] rounded-[3px] shadow-[0_6px_20px_-8px_rgba(0,0,0,0.7)]"/>}
                     <div className="mt-4 font-display text-[26px] font-bold tracking-[8px] uppercase text-text">{myNation?.name || "Command"}</div>
                     <div className="mt-2 font-mono text-[11px] tracking-[3px] uppercase text-dim">Establishing theater command</div>

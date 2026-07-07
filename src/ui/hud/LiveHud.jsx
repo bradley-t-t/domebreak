@@ -92,7 +92,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
         <div
             ref={barRef}
             style={fit.scale < 1 ? {transform: `scale(${fit.scale})`, transformOrigin: "top center", marginBottom: fit.mb} : undefined}
-            className="db-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[gdDropInY_300ms_var(--ease-drawer)]">
+            className="db-livehud relative z-5 flex flex-nowrap items-center gap-3 whitespace-nowrap py-[9px] pr-[10px] pl-4 bg-panel-2 border border-line rounded shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbDropInY_300ms_var(--ease-drawer)]">
             <div className="flex flex-col items-start leading-[1.15]"><span
                 className="text-[9px] tracking-[1px] uppercase text-faint">Date</span><span
                 className="text-sm font-bold font-mono">{date}</span><span
@@ -160,7 +160,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys}) {
                 <div className="flex gap-[5px] flex-none">
                     {NAV.map((n) => (
                         <button key={n.id}
-                                className={cn("flex items-center gap-[6px] px-[11px] py-[6px] font-display font-semibold text-[10.5px] tracking-[0.6px] uppercase whitespace-nowrap text-dim bg-sunk border border-line rounded-sm cursor-pointer transition-[border-color,color,background] duration-150 ease-out-gd hover:text-text hover:border-gold-line max-[1560px]:px-[9px]", panel === n.id && "text-gold-contrast bg-gold border-gold")}
+                                className={cn("flex items-center gap-[6px] px-[11px] py-[6px] font-display font-semibold text-[10.5px] tracking-[0.6px] uppercase whitespace-nowrap text-dim bg-sunk border border-line rounded-sm cursor-pointer transition-[border-color,color,background] duration-150 ease-out-db hover:text-text hover:border-gold-line max-[1560px]:px-[9px]", panel === n.id && "text-gold-contrast bg-gold border-gold")}
                                 onClick={() => onPanel(n.id)} title={`${n.label} (${keyLabel(K[n.id])})`}
                                 aria-label={n.label}>
                             <span className="text-[13px] leading-none max-[1560px]:text-sm">{n.glyph}</span>
