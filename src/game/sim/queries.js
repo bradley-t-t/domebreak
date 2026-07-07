@@ -246,12 +246,12 @@ export function sensedBy(w, slot, lng, lat) {
 // ordinary radar and satellites don't reveal them; they show only when an ASW
 // sensor (subSensorsOf) covers them. Everything else uses the normal radar net.
 // The live UI reads this to build its visible-units set (spec §8c).
-export function unitVisibleTo(w, viewerSlot, u) {
+export function unitVisibleTo(w, viewerSlot, u, sensors, subSensors) {
     if (u.slot === viewerSlot) return true;
     if (UNITS[u.type]?.submarine) {
-        return sensorsCover(subSensorsOf(w, viewerSlot), u.lng, u.lat);
+        return sensorsCover(subSensors ?? subSensorsOf(w, viewerSlot), u.lng, u.lat);
     }
-    return sensorsCover(sensorsOf(w, viewerSlot), u.lng, u.lat);
+    return sensorsCover(sensors ?? sensorsOf(w, viewerSlot), u.lng, u.lat);
 }
 
 // True when a friendly Replenishment Ship (resupplyKm) is within range of `unit`
