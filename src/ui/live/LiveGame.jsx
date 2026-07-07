@@ -63,10 +63,11 @@ const CITY_LAYERS = ["live-cities"];
 // Fixed sprite cant for static assets on the map (airstrip reads as a diagonal
 // runway — angled the opposite way from the naval hulls in the arsenal).
 const ROT_STATIC = {airstrip: 42};
-// Side-view silhouettes (the marching infantryman) read wrong if they rotate to
-// heading — they'd tip over or march head-down. These stay fixed upright while
-// every other ground unit (a top-down silhouette) still turns to its bearing.
-const ROT_UPRIGHT = new Set(["infantry"]);
+// Side-view silhouettes (the marching infantryman, the TEL launch vehicle) read
+// wrong if they rotate to heading — they'd tip over or drive head-down. These stay
+// fixed upright while every other ground unit (a top-down silhouette) still turns to
+// its bearing.
+const ROT_UPRIGHT = new Set(["infantry", "launcher"]);
 // Below this zoom, hovering a country shows a whole-country readout instead of a city.
 const COUNTRY_ZOOM = 4.2;
 // Units dissolve as the camera pulls back toward the whole-earth view: fully
