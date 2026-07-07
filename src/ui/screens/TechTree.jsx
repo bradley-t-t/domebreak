@@ -316,6 +316,27 @@ export default function TechTree({world, api, mySlot, onClose}) {
                         {queueOpen ? "Hide Queue" : `Queue${rr.queue.length ? ` (${rr.queue.length})` : ""}`}
                     </button>
                 )}
+                {/* Auto-Research: hands-off research. When on, the sim auto-queues the
+                    next affordable techs, spending only when the treasury holds 2× a
+                    tech's cost so a reserve always remains (see sim/production.js). */}
+                <button type="button" role="switch" aria-checked={!!nation?.autoResearch}
+                        onClick={() => api.setAutoResearch(!nation?.autoResearch)}
+                        title="Auto-queue techs as points allow — always keeps a 2× cost reserve"
+                        className="flex items-center gap-2 cursor-pointer group">
+                    <span className={cn(
+                        "font-mono text-[11px] tracking-[1px] transition-colors duration-150",
+                        nation?.autoResearch ? "text-gold" : "text-dim group-hover:text-text",
+                    )}>Auto-Research</span>
+                    <span className={cn(
+                        "gd-toggle w-11 h-6 rounded border border-line bg-btn-bg relative transition-[background,border-color] duration-150 ease-out-gd",
+                        nation?.autoResearch && "on bg-gold-soft border-[rgba(244,192,42,0.4)]",
+                    )}>
+                        <span className={cn(
+                            "absolute top-0.5 left-0.5 w-[18px] h-[18px] rounded-full bg-dim transition-[transform,background] duration-150 ease-out-gd",
+                            nation?.autoResearch && "translate-x-5 bg-gold",
+                        )}/>
+                    </span>
+                </button>
                 <div className="ml-auto flex gap-1.5" role="group" aria-label="Zoom">
                     <button className={cn(iconButton(), "font-mono text-sm leading-none")} onClick={() => zoomBy(1 / 1.35)}
                             title="Zoom out"

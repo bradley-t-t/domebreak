@@ -7,6 +7,7 @@
 // costs are charged on acceptance and refunded if delivery later fails.
 import {
     AMMO_START,
+    AUTO_RESEARCH_RESERVE_MULT,
     MOVE_COST_FRAC,
     PATROL_SIZES,
     SCRAP_REFUND_FRAC,
@@ -324,6 +325,40 @@ export function unqueueResearch(w, slot, techId) {
     n.research.queue.splice(i, 1);
     n.points += TECHS[techId].cost;
     return {ok: true};
+}
+
+// Player toggle: arm/disarm hands-off research. When on, autoResearchTick keeps the
+// research queue fed automatically (see below). Stored on the nation so it persists
+// in saves and rides through the deterministic sim like any other order flag.
+export function setAutoResearch(w, slot, on) {
+    const n = nationOf(w, slot);
+    if (!n) return {error: "Invalid order."};
+    n.autoResearch = !!on;
+    return {ok: true};
+}
+
+// Per-tick Auto-Research controller (no-op unless n.autoResearch). Greedily queues
+// the cheapest queueable techs — but only spends on a tech once the treasury holds
+// AUTO_RESEARCH_RESERVE_MULT × its cost, so a reserve for production/defense always
+// survives (enqueueResearch charges the cost up front, so each queued tech leaves
+// ≥1× its cost behind). Cheapest-first means every track's next unlock fills in
+// before points drain on one far-future tech; canQueue lets a tech chain onto a
+// prerequisite that's merely queued, so a track advances tier-by-tier over ticks.
+export function autoResearchTick(w, n) {
+    if (!n.autoResearch) return;
+    // Bounded by the tech count: each pass either queues one tech (shrinking the
+    // queueable pool) or finds nothing affordable and breaks.
+    for (let guard = Object.keys(TECHS).length; guard > 0; guard--) {
+        let next = null, best = Infinity;
+        for (const id in TECHS) {
+            const cost = TECHS[id].cost;
+            if (cost < best && n.points >= cost * AUTO_RESEARCH_RESERVE_MULT && canQueue(n, id)) {
+                next = id;
+                best = cost;
+            }
+        }
+        if (!next || enqueueResearch(w, n.slot, next).error) break;
+    }
 }
 
 // Total accounted airframes of a type for a base: stock + airborne + on the line.

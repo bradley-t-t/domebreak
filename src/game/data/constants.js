@@ -1117,6 +1117,13 @@ export const TECH_COST_GROWTH = 1.40;
 export const TECH_TIME_BASE = 48;
 export const TECH_TIME_GROWTH = 1.30;
 
+// Auto-Research safety buffer. When the player enables the tech-tree Auto-Research
+// toggle, the sim auto-queues the next affordable techs but only spends on a tech
+// once the treasury holds this multiple of its cost — so a reserve equal to the
+// tech's cost always remains for production and defense (points are charged at
+// enqueue time). Data-driven per coding standards — no tuning numbers in systems.
+export const AUTO_RESEARCH_RESERVE_MULT = 2;
+
 // Derive the escalating research cost (points) for a 1-based tier.
 export function techCostForTier(tier) {
     return Math.round(TECH_COST_BASE * TECH_COST_GROWTH ** (tier - 1));
