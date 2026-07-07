@@ -15,7 +15,7 @@ import {loadSettings, saveSettings} from "./game/platform/settings.js";
 import {resolveKeys} from "./game/platform/keybindings.js";
 import {applyAudioSettings, initAudio} from "./game/platform/audio.js";
 import {AUTOSAVE, hasContinue, listSaves, loadGame, saveGame} from "./game/platform/saves.js";
-import {fetchProfile, fetchStats, getSession, onAuth, reportMatch, signOut, touch} from "./account/api.js";
+import {fetchAvatar, fetchProfile, fetchStats, getSession, onAuth, reportMatch, setAvatar, signOut, touch} from "./account/api.js";
 import {connectMatch} from "./net/gameClient.js";
 import {supabase} from "./account/client.js";
 import MeBadge from "./ui/common/MeBadge.jsx";
@@ -106,9 +106,19 @@ export default function App() {
     useEffect(() => {
         if (authStatus !== "signedIn" || DEV_NOAUTH) return;
         touch(); // fire-and-forget last_login stamp
-        fetchProfile().then(setAccountProfile);
+        // Profile row (username, joined date) plus the avatar slug from auth
+        // metadata, merged into one object for MeBadge.
+        Promise.all([fetchProfile(), fetchAvatar()])
+            .then(([prof, avatar]) => setAccountProfile(prof ? {...prof, avatar} : prof));
         fetchStats().then(setAccountStats);
     }, [authStatus]);
+
+    // Set/clear the profile picture, then reflect it locally (optimistic — the
+    // server write already succeeded before this resolves).
+    const changeAvatar = async (name) => {
+        const {error} = await setAvatar(name);
+        if (!error) setAccountProfile((p) => (p ? {...p, avatar: name} : p));
+    };
 
     useEffect(() => {
         if (authStatus !== "signedIn" || screen !== "menu") return;
@@ -338,7 +348,7 @@ export default function App() {
             {attract}
             {splash}
             {screen !== "playing" &&
-                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut}/>}
+                <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar}/>}
             {screen === "menu" &&
                 <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue}
                            onPlay={() => setScreen("searching")}
@@ -372,7 +382,7 @@ export default function App() {
                               onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
                               onGameEnd={onGameEnd}
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
-                                                players={netClient?.players}/>}/>
+                                                players={netClient?.players} onSetAvatar={changeAvatar}/>}/>
                 </ErrorBoundary>}
             {netStatus === "lost" && screen === "playing" &&
                 <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.

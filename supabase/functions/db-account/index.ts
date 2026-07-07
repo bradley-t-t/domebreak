@@ -3,7 +3,13 @@
 // verified token and write with the service role. Actions:
 //   {action: "touch"}                      -> stamp last_login
 //   {action: "report_match", match: {...}} -> insert one match row
+//   {action: "set_avatar", avatar: "tank"} -> store the profile picture (a unit
+//     icon slug) in auth user_metadata; "" clears it back to the initial glyph
 import {createClient} from "npm:@supabase/supabase-js@2";
+
+// A cosmetic profile picture is a short unit-icon slug. The picker only ever
+// offers real icons; this bound just keeps arbitrary strings out of metadata.
+const AVATAR_RE = /^[a-z0-9-]{1,32}$/;
 
 const URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -49,6 +55,18 @@ Deno.serve(async (req) => {
         });
         if (error) return json({error: error.message}, 500);
         return json({ok: true});
+    }
+
+    if (body.action === "set_avatar") {
+        const raw = typeof body.avatar === "string" ? body.avatar : "";
+        const avatar = raw === "" ? null : raw;
+        if (avatar !== null && !AVATAR_RE.test(avatar)) return json({error: "bad avatar"}, 400);
+        // Merge into existing metadata so username (and anything else) survives.
+        const {error} = await service.auth.admin.updateUserById(user.id, {
+            user_metadata: {...(user.user_metadata ?? {}), avatar},
+        });
+        if (error) return json({error: error.message}, 500);
+        return json({ok: true, avatar});
     }
 
     return json({error: "unknown action"}, 400);
