@@ -489,7 +489,7 @@ function aiTick(w, dt) {
                     // the shelf (no conjured rounds) and only onto a platform cleared
                     // to carry them, so each platform fights to its specialization.
                     const sig = UNITS[idle.type].signature;
-                    const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : AI_TUNING.thermoChance;
+                    const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : sig === "sicbm" ? AI_TUNING.sicbmChance : AI_TUNING.thermoChance;
                     if (sig && allowedAmmo(idle.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) idle.warhead = sig;
                     commandAttack(w, idle.id, tgt.id);
                 }
@@ -555,6 +555,12 @@ function aiTick(w, dt) {
         const hasHyper = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("hgv"));
         if (hasHyper && enemies.length && stocked("hgv") < AI_TUNING.hgvStockTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
             if (queueAmmo(w, n.slot, "hgv").ok) return;
+        }
+        // SICBM rounds — only worth stocking if the nation fields a TEL (the sole
+        // platform cleared to carry them).
+        const hasTel = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("sicbm"));
+        if (hasTel && enemies.length && stocked("sicbm") < AI_TUNING.sicbmStockTarget && n.points >= WARHEADS.sicbm.prodCost + AI_TUNING.sicbmReserve && rand(w) < AI_TUNING.sicbmChance) {
+            if (queueAmmo(w, n.slot, "sicbm").ok) return;
         }
         // 3. Early-warning radar — spread across the frontier for coverage.
         const radars = myUnits.filter((u) => u.type === "radar").length + prodCount(n, "unit", "radar");
@@ -712,7 +718,9 @@ export function step(w, dt) {
                 rem -= h;
             }
         }
-        if (def.kind === "offense" && u.targetId && u.cooldown <= 0 && airborne(u)) {
+        // Shoot-and-scoot: a road-mobile warhead platform (the TEL) holds fire while
+        // it has a march destination — it must halt to launch.
+        if (def.kind === "offense" && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
             const t = findTarget(w, u.targetId);
             if (!t || !t.alive || !atWar(w, u.slot, t.slot)) {
                 u.targetId = null;
@@ -777,7 +785,7 @@ export function step(w, dt) {
         p.aheadLat = ah[1];
         // MIRVs descend from their release altitude; whole missiles fly the sine arc.
         p.altNorm = p.altStart != null ? p.altStart * (1 - p.progress) : Math.sin(p.progress * Math.PI);
-        if (p.warhead === "cluster" && !p.sub && !p._dead && p.progress >= MIRV_SPLIT_AT) {
+        if (WARHEADS[p.warhead]?.mirv && !p.sub && !p._dead && p.progress >= MIRV_SPLIT_AT) {
             mirvSplit(w, p);
             p._dead = true;
             continue;

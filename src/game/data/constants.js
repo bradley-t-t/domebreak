@@ -120,10 +120,12 @@ export const AI_TUNING = {
     thinkMin: 3, thinkSpan: 3,       // seconds between decisions: min + rand·span
     queueMax: 2,                     // keep the production line short — plan, don't hoard
     thermoChance: 0.25,              // odds per decision to arm/order a thermo warhead
-    hgvChance: 0.3,                  // odds per decision to arm/order a hypersonic glide warhead
+    hgvChance: 0.3,                  // odds per decision to arm/order a hypersonic warhead
+    sicbmChance: 0.3,                // odds per decision to arm/order a SICBM round (TEL)
     stdStockTarget: 4, stdReserve: 60,
     thermoStockTarget: 1, thermoReserve: 300,
     hgvStockTarget: 2, hgvReserve: 200,
+    sicbmStockTarget: 2, sicbmReserve: 150,
     radarReserve: 100, othReserve: 150,
     industryTarget: 3, factoryReserve: 120,
     researchMinPoints: 350, researchChance: 0.55,
@@ -272,19 +274,21 @@ export const UNITS = {
     // Launch platforms — the national missile they fire is armament (see armamentOf),
     // never the unit's own name.
     launcher: {
-        label: "Hypersonic Launcher",
+        label: "TEL",
         warheads: true, // fires the selectable strategic arsenal; conventional units don't
-        ammo: ["standard", "cluster", "hgv"], // road-mobile hypersonic — no strategic thermo payload
-        signature: "hgv", // the round this platform is built to deliver (picker badge + AI arming)
-        desc: "Road-mobile launcher lofting hypersonic glide vehicles — fast, hard to intercept, regional reach.",
+        ammo: ["sicbm"], // single-round mobile platform — the SICBM; no warhead picker
+        signature: "sicbm",
+        desc: "Road-mobile transporter-erector-launcher. Shoot-and-scoot SICBM strikes — reposition to dodge counter-battery; halts to fire. Shorter reach than a silo.",
+        ballistic: true,
         kind: "offense",
         cost: 200,
         buildTime: 10,
-        range: 6000,
-        damage: 34,
+        range: 8000,
+        damage: 40,
         reload: 19.2,
         fireCost: 22,
-        speed: 60,
+        speed: 140,       // in-flight missile speed (ballistic), not ground movement
+        landSpeed: 20,    // road-mobile: marches over land like a ground unit (shoot-and-scoot)
         hp: 45,
         upkeep: 2,
         glyph: "➤"
@@ -292,7 +296,7 @@ export const UNITS = {
     silo: {
         label: "Missile Silo",
         warheads: true,
-        ammo: ["standard", "cluster", "thermo"], // heavy ICBM — the strategic city-killer, no hypersonic glide body
+        ammo: ["standard", "cluster", "thermo", "thermomirv"], // hardened ICBM — full strategic warhead range
         signature: "thermo",
         desc: "Hardened launch silo. Global-reach ICBMs carrying the heaviest strategic payloads.",
         ballistic: true,
@@ -495,7 +499,7 @@ export const UNITS = {
     hypersonicbty: {
         label: "Hypersonic Missile Battery",
         warheads: true,
-        ammo: ["standard", "hgv"], // dedicated glide-vehicle platform — its signature payload
+        ammo: ["hgv"], // dedicated hypersonic platform — single fixed round, no picker
         signature: "hgv",
         desc: "Boost-glide launcher fielding maneuvering hypersonic weapons — fast, low, and hard to intercept at regional reach.",
         kind: "offense",
@@ -641,7 +645,7 @@ export const UNITS = {
     orbitalstrike: {
         label: "Orbital Strike Platform",
         warheads: true,
-        ammo: ["standard", "thermo"], // orbital kinetic rods, up to a strategic thermo payload
+        ammo: ["cluster", "thermo", "thermomirv"], // strategic-only orbital bus — no conventional round
         signature: "thermo",
         desc: "Global kinetic-bombardment platform — a rod-from-god that can strike anywhere on the board, slow to recycle.",
         kind: "offense",
@@ -687,7 +691,7 @@ export const UNITS = {
     "sub-ssbn": {
         label: "Ballistic Missile Sub (SSBN)",
         warheads: true,
-        ammo: ["cluster", "thermo"], // strategic-only second-strike boomer — no conventional round; MIRV + city-killer SLBMs
+        ammo: ["standard", "cluster", "thermo", "thermomirv"], // survivable second-strike leg — full strategic warhead range
         signature: "thermo",
         desc: "The survivable sea leg of the triad — a deep-stealth boomer whose tubes carry only strategic SLBMs: MIRV buses and city-killers for a guaranteed second strike.",
         kind: "offense",
@@ -1009,7 +1013,7 @@ export const UNIT_ICON = {
 };
 
 // Map warhead type -> public/icons SVG basename (production queue + arsenal UI).
-export const WARHEAD_ICON = {standard: "wh-standard", cluster: "wh-cluster", hgv: "wh-hgv", thermo: "wh-thermo"};
+export const WARHEAD_ICON = {standard: "wh-standard", cluster: "wh-cluster", hgv: "wh-hgv", thermo: "wh-thermo", sicbm: "wh-standard", thermomirv: "wh-thermo"};
 
 // Radar coverage overlay ring colors by sensor type. Dedicated ground sensors get
 // distinct hues so the two warning tiers read apart at a glance; every other
@@ -1030,8 +1034,8 @@ export const RADAR_RING_COLORS = {
 // its own production cost/time, damage multiplier, and (for effect) flame color.
 export const WARHEADS = {
     standard: {
-        name: "Standard",
-        short: "STD",
+        name: "Conventional",
+        short: "CONV",
         role: "Balanced",   // one-word niche, surfaced on the payload picker chip
         dmgMult: 1.0,
         prodCost: 30,
@@ -1046,6 +1050,7 @@ export const WARHEADS = {
         name: "Cluster",
         short: "CLU",
         role: "Area",
+        mirv: true,         // splits into submunitions at reentry (data-driven MIRV trigger)
         dmgMult: 0.75,
         prodCost: 55,
         prodTime: 6,
@@ -1061,8 +1066,8 @@ export const WARHEADS = {
         desc: "MIRV bus — splits into 8 warheads on reentry; half strike the target, half fan out to nearby targets."
     },
     hgv: {
-        name: "Hypersonic Glide Vehicle",
-        short: "HGV",
+        name: "Hypersonic Missile",
+        short: "HYP",
         role: "Fast",
         dmgMult: 1.6,
         prodCost: 90,
@@ -1072,7 +1077,7 @@ export const WARHEADS = {
         flame: "#b98cff",
         trail: "#cdb8ff",   // thin ionization streak — a glide body, not a rocket plume
         trailW: 1.7,
-        desc: "Maneuvering kinetic glide body — fast and very hard to intercept. Carried only by hypersonic launchers."
+        desc: "Maneuvering kinetic glide body — fast and very hard to intercept. The Hypersonic Battery's signature round."
     },
     thermo: {
         name: "Thermonuclear",
@@ -1087,6 +1092,44 @@ export const WARHEADS = {
         trailW: 3.0,
         desc: "City-killer yield. Expensive and slow to produce."
     },
+    // Single heavy ballistic round of the road-mobile TEL — bigger warhead than a
+    // conventional ICBM, shorter reach than a silo. A single-round platform, so it
+    // never shows a warhead picker.
+    sicbm: {
+        name: "SICBM",
+        short: "SICBM",
+        role: "Mobile",
+        dmgMult: 1.4,
+        prodCost: 55,
+        prodTime: 6,
+        blastKm: 100,
+        flame: "#ffb24d",
+        trail: "#e3e7ec",
+        trailW: 2.6,
+        desc: "Road-mobile short-range ballistic missile with a heavy single warhead. Fired by the TEL."
+    },
+    // Thermonuclear MIRV — a multi-warhead strategic bus. Splits into a few
+    // thermonuclear sub-warheads (fewer than a conventional Cluster), each leaving
+    // fallout: a multi-city capstone strike, not single-target overkill.
+    thermomirv: {
+        name: "Thermonuclear MIRV",
+        short: "TMRV",
+        role: "Heavy MIRV",
+        mirv: true,
+        dmgMult: 2.4,
+        prodCost: 210,
+        prodTime: 17,
+        splash: 280,
+        subCount: 3,
+        spread: 320,
+        subDmgFrac: 0.6,    // each thermo sub carries this fraction of the bus damage
+        primaryShare: 0.34, // ~1 of 3 subs stays on the primary; the rest fan to other cities
+        blastKm: 120,
+        flame: "#ff3b6b",
+        trail: "#ffcdd6",
+        trailW: 3.0,
+        desc: "Multi-warhead thermonuclear bus — splits into three city-killers on reentry, each leaving fallout."
+    },
 };
 // Ground-zero blast: on detonation every unit within a warhead's blastKm takes
 // proximity-scaled damage — a fraction of the warhead's yield at the core, linearly
@@ -1100,9 +1143,9 @@ export const BLAST = {
 // Fraction of flight at which a cluster bus reenters and releases its MIRVs.
 export const MIRV_SPLIT_AT = 0.72;
 // Warhead display/cycling order (arsenal UI, loadout toggles).
-export const WARHEAD_ORDER = ["standard", "cluster", "hgv", "thermo"];
+export const WARHEAD_ORDER = ["standard", "cluster", "thermo", "thermomirv", "hgv", "sicbm"];
 // Warhead stockpile every nation starts the match with.
-export const AMMO_START = {standard: 6, cluster: 0, hgv: 0, thermo: 0};
+export const AMMO_START = {standard: 6, cluster: 0, thermo: 0, thermomirv: 0, hgv: 0, sicbm: 0};
 
 // Which strategic warheads each launcher may load. Warhead-capable units carry an
 // explicit `ammo` allow-list on their UNITS entry; anything else falls back to the
@@ -1137,7 +1180,7 @@ export function launchersForAmmo(key) {
 // read these numbers, they are never hardcoded in systems. See
 // design/gdd/radioactive-fallout.md for the model and formulas.
 export const FALLOUT = {
-    warheads: ["thermo"],   // warhead keys that leave a fallout cloud on impact
+    warheads: ["thermo", "thermomirv"],   // warhead keys that leave a fallout cloud on impact
     radiusKm: 480,          // contamination radius at ground zero
     lifeSec: 80,            // sim seconds the cloud lingers before full decay
     riseSec: 6,             // seconds to reach peak intensity after detonation
@@ -1155,7 +1198,7 @@ export function unitLabel(type) {
 }
 
 export function armamentOf(type) {
-    return type === "silo" ? "ICBM" : type === "launcher" ? "Hypersonic Glide Vehicle" : null;
+    return type === "silo" ? "ICBM" : type === "launcher" ? "SICBM" : null;
 }
 
 // --- Eras -----------------------------------------------------------------
