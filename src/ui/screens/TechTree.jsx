@@ -65,8 +65,11 @@ function clampCam(x, y, k, vw, vh) {
 // scale for `.avail` are re-expressed here as self-referencing arbitrary
 // variants keyed off the same literal class.
 const NODE_STATE_CLS = {
-    done: "done border-[rgba(245,197,49,0.5)] bg-[linear-gradient(180deg,rgba(245,197,49,0.1),rgba(245,197,49,0.03))]",
-    cur: "cur border-gold shadow-[0_0_0_1px_rgba(245,197,49,0.4),0_8px_22px_rgba(0,0,0,0.45)]",
+    // `.done` and `.cur` are styled era-tinted in index.css (@layer vfx) off the
+    // node's --era var, so a researched column reads in its epoch's color rather
+    // than the orphaned gold literal this used to carry.
+    done: "done",
+    cur: "cur",
     queued: "queued border-blue",
     avail: "avail [&.avail:hover]:-translate-y-0.5 [&.avail:active]:scale-[0.985]",
     availPoor: "avail poor opacity-[0.42] [&.avail:hover]:-translate-y-0.5 [&.avail:active]:scale-[0.985]",
@@ -127,7 +130,7 @@ function Node({id, tech, nation, api, style, eraColor}) {
                 aria-label={ariaLabel}
                 title={locked ? "Requires the previous tech." : poor ? `Need ◆ ${tech.cost}` : tech.desc}>
             {isCur &&
-                <i className="gd-tt-fill absolute inset-y-0 left-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none"
+                <i className="gd-tt-fill absolute inset-y-0 left-0 right-auto pointer-events-none"
                    style={{width: `${Math.min(100, (rr.current?.progress ?? 0) * 100)}%`}}/>}
             <span className="gd-tt-accent absolute left-0 top-0 bottom-0 w-[3px] pointer-events-none" aria-hidden="true"/>
             <span className="relative flex items-start justify-between gap-1.5">
@@ -359,8 +362,9 @@ export default function TechTree({world, api, mySlot, onClose}) {
                                     <line key={`${path.id}${i}`}
                                           className={cn(
                                               "gd-tt-wire stroke-line stroke-2 transition-[stroke] duration-300 ease-out-gd motion-reduce:transition-none",
-                                              lit ? "lit stroke-gold" : null,
+                                              lit ? "lit" : null,
                                           )}
+                                          style={{"--era": eraColorForTier(from.tier)}}
                                           x1={nodeX(i) + NODE_W} y1={y} x2={nodeX(i + 1)} y2={y}/>
                                 );
                             }),
@@ -369,9 +373,9 @@ export default function TechTree({world, api, mySlot, onClose}) {
 
                     {TECH_PATHS.map((path, r) => (
                         <div key={`lane-${path.id}`}
-                             className="absolute flex flex-col justify-center gap-[7px] font-display font-semibold text-xs tracking-[1.5px] uppercase text-dim pointer-events-none"
-                             style={{left: PAD, top: nodeY(r), width: LANE_W - 18, height: NODE_H}}>
-                            <span className="text-[18px] w-[34px] h-[34px] flex-none grid place-items-center rounded-sm text-[#868f98] bg-[rgba(255,255,255,0.04)] border border-line-soft">{path.glyph}</span>
+                             className="gd-tt-lane absolute flex flex-col justify-center gap-[7px] font-display font-semibold text-xs tracking-[1.5px] uppercase pointer-events-none"
+                             style={{left: PAD, top: nodeY(r), width: LANE_W - 18, height: NODE_H, "--doc": path.color}}>
+                            <span className="gd-tt-lane-chip text-[18px] w-[34px] h-[34px] flex-none grid place-items-center rounded-sm border">{path.glyph}</span>
                             <span>{path.name}</span>
                         </div>
                     ))}
