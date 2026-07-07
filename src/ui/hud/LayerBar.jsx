@@ -10,7 +10,7 @@ const LAYER_DEFS = [
 ];
 export default function LayerBar({layers, onToggle}) {
     return (
-        <div className="absolute bottom-4 right-4 z-5 flex flex-row items-stretch gap-1 w-auto rounded-lg bg-panel border border-line p-[6px] shadow backdrop-blur-[12px]"
+        <div className="flex flex-row items-stretch gap-1 w-auto rounded-lg bg-panel border border-line p-[6px] shadow backdrop-blur-[12px]"
              role="group" aria-label="Map layers">
             {LAYER_DEFS.map((l) => (
                 <button key={l.id}
