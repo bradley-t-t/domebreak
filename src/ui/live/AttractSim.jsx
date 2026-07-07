@@ -299,7 +299,7 @@ function AttractWorld({data, onOver, framed}) {
                     }
                     return (
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
-                                offset={air ? [0, -alt * 30] : undefined}>
+                                opacityWhenCovered="0" offset={air ? [0, -alt * 30] : undefined}>
                             <div className="grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)">
                                 <span className="inline-flex transition-transform duration-[170ms] ease-linear"
                                       style={Object.keys(iconStyle).length ? iconStyle : undefined}>
@@ -311,7 +311,7 @@ function AttractWorld({data, onOver, framed}) {
                 })}
 
                 {explosions.map((e) => (
-                    <Marker key={e.id} longitude={e.lng} latitude={e.lat} anchor="center">
+                    <Marker key={e.id} longitude={e.lng} latitude={e.lat} anchor="center" opacityWhenCovered="0">
                         <Explosion kind={e.kind}/>
                     </Marker>
                 ))}

@@ -1180,7 +1180,7 @@ export default function LiveGame({
                     }}/>
                 </Source>
 
-                {selectedCity && <Marker longitude={selectedCity.lng} latitude={selectedCity.lat} anchor="center">
+                {selectedCity && <Marker longitude={selectedCity.lng} latitude={selectedCity.lat} anchor="center" opacityWhenCovered="0">
                     <div className="w-4 h-4 rounded-full border-[1.5px] border-[rgba(255,255,255,0.75)] shadow-[0_0_6px_rgba(255,255,255,0.3)]"/>
                 </Marker>}
                 {/* Capture HUD: a floating badge over every city being taken — the
@@ -1192,7 +1192,7 @@ export default function LiveGame({
                     const col = teamColor(c.capture.slot);
                     const label = c.capture.assault ? "Assault" : (c.slot === mySlot ? "Losing" : "Capturing");
                     return (
-                        <Marker key={`cap-${c.id}`} longitude={c.lng} latitude={c.lat} anchor="bottom" offset={[0, -13]}>
+                        <Marker key={`cap-${c.id}`} longitude={c.lng} latitude={c.lat} anchor="bottom" opacityWhenCovered="0" offset={[0, -13]}>
                             <div className="pointer-events-none flex flex-col items-center gap-[3px]" aria-hidden="true">
                                 <div className="flex items-center gap-1 px-1.5 py-[2px] rounded-full bg-[rgba(8,10,14,0.82)] border backdrop-blur-[3px] font-mono text-[10px] leading-none whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
                                      style={{borderColor: col, color: col}}>
@@ -1224,7 +1224,7 @@ export default function LiveGame({
                     }
                     return (
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
-                                offset={air ? [0, -alt * 30] : undefined}>
+                                opacityWhenCovered="0" offset={air ? [0, -alt * 30] : undefined}>
                             <div
                                 className={cn(
                                     "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)",
@@ -1256,12 +1256,12 @@ export default function LiveGame({
                     );
                 })}
                 {(w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => (
-                    <Marker key={fx.id} longitude={fx.lng} latitude={fx.lat} anchor="center">
+                    <Marker key={fx.id} longitude={fx.lng} latitude={fx.lat} anchor="center" opacityWhenCovered="0">
                         <FalloutCloud intensity={falloutIntensity(fx.age)}/>
                     </Marker>
                 ))}
                 {explosions.map((x) => <Marker key={x.id} longitude={x.lng} latitude={x.lat} anchor="center"
-                                               offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind}/></Marker>)}
+                                               opacityWhenCovered="0" offset={[0, -(x.alt || 0) * 70]}><Explosion kind={x.kind}/></Marker>)}
             </WorldMap>
             <SkyLayer map={mapRef.current}
                       projectiles={w.projectiles.filter((p) => p.slot === mySlot || p.seenBy?.includes(mySlot))}
