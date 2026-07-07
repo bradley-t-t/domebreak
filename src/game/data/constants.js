@@ -1107,9 +1107,14 @@ export function eraForTier(tier) {
 // override. Data-driven per coding standards — no scaling numbers in systems.
 //   cost(tier) = round(TECH_COST_BASE * TECH_COST_GROWTH ^ (tier-1))
 //   time(tier) = round(TECH_TIME_BASE * TECH_TIME_GROWTH ^ (tier-1))
-export const TECH_COST_BASE = 900;
+// Difficulty tuning: bases dropped to 0.6× (900→540 pts, 80→48 s) to make the
+// whole tree ~40% easier — every tier is 40% cheaper AND 40% faster to research,
+// uniformly (scaling the base scales cost(tier)/time(tier) by the same factor at
+// every tier), so time-to-any-tech falls ~40% without distorting the curve shape
+// or the cost:time ratio.
+export const TECH_COST_BASE = 540;
 export const TECH_COST_GROWTH = 1.40;
-export const TECH_TIME_BASE = 80;
+export const TECH_TIME_BASE = 48;
 export const TECH_TIME_GROWTH = 1.30;
 
 // Derive the escalating research cost (points) for a 1-based tier.
