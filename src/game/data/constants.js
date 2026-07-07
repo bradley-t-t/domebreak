@@ -48,12 +48,17 @@ export const MOVE_COST_FRAC = 0.25;
 // — with no hostile unit inside contestKm to fight it off — accrues capture
 // progress over captureSec game-seconds, then flips that city's whole state to
 // the occupier. Progress bleeds off at decayPerSec when unheld or contested.
+// A captor that also ASSAULTS the city (attacks it while holding) drives the
+// flip assaultMult times faster: a capture-flagged unit's fire on a city it
+// could take is converted to capture pressure instead of razing it (tick.js),
+// so "attack the city" accelerates the capture rather than destroying it.
 // Data-driven per coding standards — no capture number is hardcoded in systems.
 export const CAPTURE = {
     holdKm: 70,
     contestKm: 140,
     captureSec: 22,
     decayPerSec: 0.15,
+    assaultMult: 2.6,
 };
 export const MIN_SEP = 45;
 // City survivability: warhead damage subtracts from these; a city dies at 0.

@@ -61,6 +61,10 @@ const CITY_LAYERS = ["live-cities"];
 // Fixed sprite cant for static assets on the map (airstrip reads as a diagonal
 // runway — angled the opposite way from the naval hulls in the arsenal).
 const ROT_STATIC = {airstrip: 42};
+// Side-view silhouettes (the marching infantryman) read wrong if they rotate to
+// heading — they'd tip over or march head-down. These stay fixed upright while
+// every other ground unit (a top-down silhouette) still turns to its bearing.
+const ROT_UPRIGHT = new Set(["infantry"]);
 // Below this zoom, hovering a country shows a whole-country readout instead of a city.
 const COUNTRY_ZOOM = 4.2;
 // Units dissolve as the camera pulls back toward the whole-earth view: fully
@@ -140,11 +144,12 @@ export default function LiveGame({
     // hostile (at war) = red, everyone else = neutral grey.
     const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : "#8b94a1");
     // Your leadership airlift stands out from your white forces: a transport
-    // ferry reads GREEN while it's carrying leaders and YELLOW when flying empty
-    // (outbound to a pickup or back home), and its fighter escorts read green.
+    // ferry reads BLUE while it's carrying leaders and YELLOW when flying empty
+    // (outbound to a pickup or back home), so a glance tells you which planes are
+    // actually moving command. Its fighter escorts read green — a distinct guard.
     const unitColor = (u) => {
         if (u.slot !== mySlot) return teamColor(u.slot);
-        if (u.mission?.role === "leadershipFerry") return u.mission.cargo > 0 ? "#46d38a" : "#f4c02a";
+        if (u.mission?.role === "leadershipFerry") return u.mission.cargo > 0 ? "#3d9bff" : "#f4c02a";
         if (u.mission?.role === "leadershipEscort") return "#46d38a";
         return teamColor(u.slot);
     };
@@ -199,6 +204,7 @@ export default function LiveGame({
     // Falls back to a fixed cant for static assets (the airstrip reads as angled).
     const rotMemo = useRef({});
     const unitHeading = (u) => {
+        if (ROT_UPRIGHT.has(u.type)) return null; // fixed-orientation icon — never rotate to heading
         const m = mapRef.current;
         let deg = ROT_STATIC[u.type] ?? null;
         if (m && u.face) {
@@ -1102,6 +1108,29 @@ export default function LiveGame({
                 {selectedCity && <Marker longitude={selectedCity.lng} latitude={selectedCity.lat} anchor="center">
                     <div className="w-4 h-4 rounded-full border-[1.5px] border-[rgba(255,255,255,0.75)] shadow-[0_0_6px_rgba(255,255,255,0.3)]"/>
                 </Marker>}
+                {/* Capture HUD: a floating badge over every city being taken — the
+                    occupier's color, live progress %, whether an assault is pressing
+                    it, and a mini bar. Pairs with the ground ring below the cities so
+                    a capture reads at a glance (yours, an ally's, or your own falling). */}
+                {w.cities.filter((c) => c.alive && c.capture && c.capture.progress > 0.02).map((c) => {
+                    const pct = Math.round(c.capture.progress * 100);
+                    const col = teamColor(c.capture.slot);
+                    const label = c.capture.assault ? "Assault" : (c.slot === mySlot ? "Losing" : "Capturing");
+                    return (
+                        <Marker key={`cap-${c.id}`} longitude={c.lng} latitude={c.lat} anchor="bottom" offset={[0, -13]}>
+                            <div className="pointer-events-none flex flex-col items-center gap-[3px]" aria-hidden="true">
+                                <div className="flex items-center gap-1 px-1.5 py-[2px] rounded-full bg-[rgba(8,10,14,0.82)] border backdrop-blur-[3px] font-mono text-[10px] leading-none whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,0.55)]"
+                                     style={{borderColor: col, color: col}}>
+                                    <b className="font-bold">{pct}%</b>
+                                    <span className="uppercase tracking-[0.6px] text-[8px] opacity-90">{label}</span>
+                                </div>
+                                <div className="w-[46px] h-[3px] rounded-full bg-[rgba(255,255,255,0.16)] overflow-hidden">
+                                    <i className="block h-full rounded-full" style={{width: `${pct}%`, background: col}}/>
+                                </div>
+                            </div>
+                        </Marker>
+                    );
+                })}
                 {visUnits.map((u) => {
                     const def = UNITS[u.type];
                     const air = !!(def.airSpeed && u.baseId);

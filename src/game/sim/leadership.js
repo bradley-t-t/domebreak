@@ -209,12 +209,19 @@ export function evacTick(w) {
             if (!ferries.length) n._evac = false; // evacuation complete
             continue;
         }
-        // Leaders already being fetched, per city: an inbound (not-yet-loaded) ferry
-        // will lift up to perPlane, so it covers that many of the city's remaining
-        // leaders. Loaded ferries have already drawn their cargo out of city.leaders.
+        // Leaders already being fetched, per city: a ferry inbound to a city OR
+        // sitting on its pad loading has claimed up to perPlane of that city's
+        // leaders. A loading ferry has NOT yet drawn its cargo out of city.leaders
+        // (that happens the instant loading completes), so it must still count as
+        // coverage — otherwise a second airstrip re-sends a ferry for leaders that
+        // are already being lifted, and it arrives to an empty city (a wasted trip
+        // — the multi-airfield over-dispatch bug). Ferries past loading (toDrop /
+        // unloading / toHome) already reduced city.leaders, so they are not counted.
         const inbound = new Map();
         for (const u of ferries) {
-            if (u.mission.phase === "toPickup") inbound.set(u.mission.capId, (inbound.get(u.mission.capId) || 0) + LEADERSHIP.perPlane);
+            if (u.mission.phase === "toPickup" || u.mission.phase === "loading") {
+                inbound.set(u.mission.capId, (inbound.get(u.mission.capId) || 0) + LEADERSHIP.perPlane);
+            }
         }
         const needsFerry = (c) => (c.leaders || 0) - (inbound.get(c.id) || 0) > 0;
         for (const s of strips) {
@@ -246,8 +253,10 @@ function releaseAssign(w, n, bunker, strips, ferries, perStrip) {
         if (!ferries.length) n._evac = false; // nowhere alive to send them
         return;
     }
-    // Sheltered leaders not yet claimed by an inbound (heading-to-bunker) ferry.
-    const enroute = ferries.filter((u) => u.mission.mode === "release" && u.mission.phase === "toPickup").length;
+    // Sheltered leaders not yet claimed by a ferry heading to the bunker OR loading
+    // on its pad — a loading release ferry hasn't drawn n.lead.sheltered down yet,
+    // so counting only "toPickup" would re-dispatch for leaders already being lifted.
+    const enroute = ferries.filter((u) => u.mission.mode === "release" && (u.mission.phase === "toPickup" || u.mission.phase === "loading")).length;
     let unclaimed = (n.lead.sheltered || 0) - enroute * LEADERSHIP.perPlane;
     // Effective fill per target = current leaders + leaders already inbound on a
     // release ferry, so new launches spread to the emptiest cities.

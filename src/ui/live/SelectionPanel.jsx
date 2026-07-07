@@ -4,7 +4,8 @@
 // presentational component — it reads props only and calls back through the
 // same api/setState functions the parent already owns.
 import UnitIcon from "../common/UnitIcon.jsx";
-import {armamentOf, FALLOUT, hangarCapOf, hangarCount, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {armamentOf, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, leadershipStatus, PATROL_SIZES, UNIT_ICON, UNITS, WARHEAD_ORDER, WARHEADS} from "../../game/engine.js";
+import {CAPTURE} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
@@ -170,14 +171,57 @@ export default function SelectionPanel({
                             <div><span>In Cities</span><b>{leadPct(lead.atCity)}%</b></div>
                             <div><span>In Transit</span><b>{leadPct(lead.inTransit)}%</b></div>
                         </div>
-                        <button className={cn(button({variant: sheltering ? "primary" : "default"}), "w-full mt-1.5")}
+                        <button className={cn(button({variant: sheltering ? "primary" : "default"}), "w-full mt-1.5", sheltering && "disabled:opacity-100")}
                                 disabled={!lead.exposed || sheltering || !lead.hasAirstrip}
                                 title={!lead.hasAirstrip ? "Build an Airstrip to fly the evacuation." : !lead.exposed ? "No leaders are exposed in your cities." : "Airlift exposed leaders into the bunker."}
                                 onClick={() => act(api.shelterLeadership)}>{sheltering ? "Sheltering…" : "Shelter Leadership"}</button>
-                        <button className={cn(button({variant: releasing ? "primary" : "default"}), "w-full mt-1.5")}
+                        <button className={cn(button({variant: releasing ? "primary" : "default"}), "w-full mt-1.5", releasing && "disabled:opacity-100")}
                                 disabled={lead.sheltered <= 0 || releasing || !lead.hasAirstrip}
                                 title={!lead.hasAirstrip ? "Build an Airstrip to fly them back out." : lead.sheltered <= 0 ? "No leadership is sheltered." : "Fly sheltered leaders back out to your cities."}
                                 onClick={() => act(api.releaseLeadership)}>{releasing ? "Releasing…" : "Release Leadership"}</button>
+                    </div>
+                );
+            })()}
+            {UNITS[selectedUnit.type].capture && selectedUnit.slot === mySlot && (() => {
+                // Ground capture: the nearest enemy city this unit is close enough
+                // to seize. Holding it flips the whole state; assaulting it (setting
+                // the attack order to the city) drives that flip CAPTURE.assaultMult
+                // times faster — the "attack the city to capture it quicker" play.
+                let city = null, best = Infinity;
+                for (const c of w.cities) {
+                    if (!c.alive || c.slot === selectedUnit.slot || !atWar(w, selectedUnit.slot, c.slot)) continue;
+                    const d = haversine(selectedUnit.lng, selectedUnit.lat, c.lng, c.lat);
+                    if (d <= CAPTURE.holdKm && d < best) {
+                        best = d;
+                        city = c;
+                    }
+                }
+                if (!city) return (
+                    <div className="mt-2 pt-[9px] border-t border-line-soft">
+                        <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1">Ground Capture</div>
+                        <p className="text-[11px] leading-[1.45] text-dim m-0">Move within {CAPTURE.holdKm} km of an enemy city to start taking its state. Clear any garrison first — a nearby defender freezes the capture.</p>
+                    </div>
+                );
+                const holding = city.capture && city.capture.slot === selectedUnit.slot;
+                const pct = Math.round((holding ? city.capture.progress : 0) * 100);
+                const assaulting = selectedUnit.targetId === city.id;
+                return (
+                    <div className="mt-2 pt-[9px] border-t border-line-soft">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">Capturing {city.state || city.name}</span>
+                            <b className="font-mono text-[11px]">{pct}%</b>
+                        </div>
+                        <div className="h-[3px] bg-line rounded-[2px] overflow-hidden mb-2" role="progressbar"
+                             aria-label="Capture progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                            <i className="block h-full rounded-[2px] transition-[width] duration-200 ease-out-gd"
+                               style={{width: `${pct}%`, background: teamColor(mySlot)}}/>
+                        </div>
+                        <button className={cn(button({variant: assaulting ? "primary" : "default"}), "w-full")}
+                                aria-pressed={assaulting}
+                                title={assaulting ? "Ease off the assault — the capture continues at the normal hold pace." : `Storm ${city.name} — capture roughly ${CAPTURE.assaultMult}× faster while your troops press the assault.`}
+                                onClick={() => api.commandAttack(selectedUnit.id, assaulting ? null : city.id)}>
+                            {assaulting ? "Assaulting — Ease Off" : "Assault City"}
+                        </button>
                     </div>
                 );
             })()}

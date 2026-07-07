@@ -708,7 +708,13 @@ export function step(w, dt) {
                     // forces: damage lands straight on the target — no interceptable
                     // projectile, no SAM/THAAD engagement. Distinct from the missile
                     // and warhead platforms that loft the interceptable arsenal.
-                    directFire(w, u, t);
+                    //
+                    // One exception: a capture-flagged unit (infantry/tank) firing
+                    // on an enemy CITY it could take doesn't raze it — the assault
+                    // is converted to capture pressure (occupation.js speeds the
+                    // flip by CAPTURE.assaultMult while u.targetId is this city).
+                    // Fire on enemy ground UNITS still lands as normal damage.
+                    if (!(def.capture && t.kind === "city")) directFire(w, u, t);
                     u.cooldown = def.reload * (n?.reloadMult ?? 1);
                 } else {
                     // Missile units spend a warhead from the strategic arsenal (and can't
