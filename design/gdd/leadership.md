@@ -1,4 +1,10 @@
-# Leadership
+<h1 align="center">Leadership</h1>
+
+<p align="center">
+  <b>National command rides in a pool of leader tokens seeded in your capitals — a decapitation strike can kill them for good, so shelter them in a hardened bunker before the warheads land, or hunt the enemy's before their airlift finishes.</b>
+</p>
+
+<br />
 
 ## 1. Overview
 
