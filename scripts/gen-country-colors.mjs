@@ -4,13 +4,13 @@
 // COVERAGE: every gid0 present in regions-seed.geojson gets an entry, so no
 // country ever renders grey.
 //
-// Existing on-map entries are preserved byte-for-byte — this only computes colors
-// for the countries that were missing (and drops stale keys for polygons the map
-// no longer carries). Each new color is the area-weighted average of its flag
-// (flag-icons pack), computed from shape bounding boxes — background fields
-// dominate, matching the muted national tint washed over the greyscale land.
-// Codes with no flag (disputed/placeholder zones) get a deterministic hashed
-// color so they, too, are never grey.
+// Each color is the flag's DOMINANT CHROMATIC field (flag-icons pack) pushed to a
+// vivid, punchy tone. Averaging a flag's colors collapses everything toward muddy
+// grey-beige and every nation ends up looking alike; picking the dominant hue and
+// normalizing saturation/lightness instead yields the full spectrum — reds, blues,
+// greens, golds — that still reads under the map's ~16%-opacity tint wash. Codes
+// with no flag (disputed/placeholder zones) get a deterministic hashed hue so
+// they, too, are vivid and never grey.
 //
 //   node scripts/gen-country-colors.mjs
 import {readFileSync, writeFileSync, existsSync} from "node:fs";
@@ -145,50 +145,94 @@ function attr(tag, name) {
     return m ? m[1] : null;
 }
 
+function rgbToHsl([r, g, b]) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    const l = (mx + mn) / 2;
+    let h = 0, s = 0;
+    if (d !== 0) {
+        s = d / (1 - Math.abs(2 * l - 1));
+        if (mx === r) h = ((g - b) / d) % 6;
+        else if (mx === g) h = (b - r) / d + 2;
+        else h = (r - g) / d + 4;
+        h *= 60;
+        if (h < 0) h += 360;
+    }
+    return [h, s, l];
+}
+
+function shapeArea(kind, t) {
+    if (kind === "rect") {
+        return (parseFloat(attr(t, "width")) || 0) * (parseFloat(attr(t, "height")) || 0);
+    } else if (kind === "circle") {
+        const rad = parseFloat(attr(t, "r")) || 0;
+        return Math.PI * rad * rad;
+    } else if (kind === "ellipse") {
+        return Math.PI * (parseFloat(attr(t, "rx")) || 0) * (parseFloat(attr(t, "ry")) || 0);
+    } else if (kind === "path") {
+        const bb = pathBBox(attr(t, "d") || "");
+        return bb ? bb.w * bb.h * 0.75 : 0; // paths seldom fill their bbox
+    } else if (kind === "polygon") {
+        const pts = (attr(t, "points") || "").match(/-?\d*\.?\d+/g);
+        if (!pts) return 0;
+        const xs = [], ys = [];
+        for (let k = 0; k < pts.length - 1; k += 2) {
+            xs.push(+pts[k]);
+            ys.push(+pts[k + 1]);
+        }
+        return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)) * 0.5;
+    }
+    return 0;
+}
+
+// The flag's dominant CHROMATIC field, normalized to a vivid tone. Averaging
+// flag colors collapses everything toward muddy grey-beige (red+white+blue ->
+// mud), so nations look alike. Instead we sum area per exact fill color, pick
+// the one with the most *chromatic* coverage (near-white / near-black / grey
+// carry no hue and are heavily discounted so they never win), then push it to a
+// punchy saturation/lightness so it still reads under the map's ~16% tint wash.
 function flagColor(svg) {
     // Drop <defs> — clip/mask geometry is never painted.
     svg = svg.replace(/<defs[\s\S]*?<\/defs>/gi, "");
-    let r = 0, g = 0, b = 0, wsum = 0;
-    // Every self-contained element that can carry a fill + geometry.
+    const areaByColor = new Map(); // "r,g,b" -> {col, area}
     for (const m of svg.matchAll(/<(path|rect|circle|ellipse|polygon)\b([^>]*)>/gi)) {
-        const kind = m[1].toLowerCase();
-        const t = m[2];
-        const col = parseColor(attr(t, "fill"));
+        const col = parseColor(attr(m[2], "fill"));
         if (!col) continue;
-        let area = 0;
-        if (kind === "rect") {
-            area = (parseFloat(attr(t, "width")) || 0) * (parseFloat(attr(t, "height")) || 0);
-        } else if (kind === "circle") {
-            const rad = parseFloat(attr(t, "r")) || 0;
-            area = Math.PI * rad * rad;
-        } else if (kind === "ellipse") {
-            area = Math.PI * (parseFloat(attr(t, "rx")) || 0) * (parseFloat(attr(t, "ry")) || 0);
-        } else if (kind === "path") {
-            const bb = pathBBox(attr(t, "d") || "");
-            area = bb ? bb.w * bb.h * 0.75 : 0; // paths seldom fill their bbox
-        } else if (kind === "polygon") {
-            const pts = (attr(t, "points") || "").match(/-?\d*\.?\d+/g);
-            if (pts) {
-                const xs = [], ys = [];
-                for (let k = 0; k < pts.length - 1; k += 2) {
-                    xs.push(+pts[k]);
-                    ys.push(+pts[k + 1]);
-                }
-                area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)) * 0.5;
-            }
-        }
+        const area = shapeArea(m[1].toLowerCase(), m[2]);
         if (area <= 0) continue;
-        r += col[0] * area;
-        g += col[1] * area;
-        b += col[2] * area;
-        wsum += area;
+        const key = col.join(",");
+        const e = areaByColor.get(key);
+        if (e) e.area += area;
+        else areaByColor.set(key, {col, area});
     }
-    if (wsum === 0) return null;
-    return [Math.round(r / wsum), Math.round(g / wsum), Math.round(b / wsum)];
+    if (areaByColor.size === 0) return null;
+    // Score each color by chromatic coverage: area * saturation, with white and
+    // black floored so a flag that is mostly white still surrenders its hue.
+    let best = null, bestScore = -1, biggest = null, biggestArea = -1;
+    for (const {col, area} of areaByColor.values()) {
+        const [, s, l] = rgbToHsl(col);
+        const chromatic = s > 0.15 && l > 0.12 && l < 0.9;
+        const score = area * (chromatic ? s : 0.02);
+        if (score > bestScore) {
+            bestScore = score;
+            best = col;
+        }
+        if (area > biggestArea) {
+            biggestArea = area;
+            biggest = col;
+        }
+    }
+    const pick = best || biggest;
+    const [h, s, l] = rgbToHsl(pick);
+    // Normalize to a vivid, consistent tone — keep hue, force it to read.
+    const vs = Math.max(s, 0.62);
+    const vl = Math.min(Math.max(l, 0.42), 0.56);
+    return hslToRgb(h, vs, vl);
 }
 
-// Deterministic fallback for codes with no flag: FNV-1a hash -> HSL -> RGB.
-// Mid saturation/lightness keeps it legible under the muted map tint.
+// HSL -> RGB. Used for the vivid normalization and the no-flag fallback.
 function hslToRgb(h, s, l) {
     const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
     const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
@@ -202,22 +246,18 @@ function fallbackColor(gid) {
         hash ^= gid.charCodeAt(i);
         hash = Math.imul(hash, 0x01000193) >>> 0;
     }
-    return hslToRgb(hash % 360, 0.5, 0.55);
+    return hslToRgb(hash % 360, 0.62, 0.5); // as vivid as the flag-derived colors
 }
 
 // --- build the table -------------------------------------------------------
-// Preserve any existing on-map color; only compute the ones that were missing.
+// Regenerate every on-map color from scratch — the goal is vivid, distinct
+// per-nation hues, so we don't carry forward the old muddy averages.
 const colorsPath = join(root, "public/assets/colors.json");
 const prior = existsSync(colorsPath) ? JSON.parse(readFileSync(colorsPath, "utf8")) : {};
 const out = {};
-let kept = 0, flagged = 0, fell = 0;
+let flagged = 0, fell = 0;
 const noFlag = [];
 for (const gid of gids) {
-    if (Array.isArray(prior[gid]) && prior[gid].length === 3) {
-        out[gid] = prior[gid];
-        kept++;
-        continue;
-    }
     const a2 = a3to2[gid];
     const svgPath = a2 ? join(flagDir, `${a2}.svg`) : null;
     let color = null;
@@ -234,5 +274,5 @@ for (const gid of gids) {
 
 writeFileSync(colorsPath, JSON.stringify(out, null, 2) + "\n");
 const dropped = Object.keys(prior).filter((k) => !(k in out)).length;
-console.log(`colors.json: ${Object.keys(out).length} countries (${kept} kept, ${flagged} new from flags, ${fell} hashed fallbacks; ${dropped} stale keys dropped)`);
+console.log(`colors.json: ${Object.keys(out).length} countries (${flagged} from flags, ${fell} hashed fallbacks; ${dropped} stale keys dropped)`);
 if (noFlag.length) console.log(`  fallback codes: ${noFlag.join(" ")}`);
