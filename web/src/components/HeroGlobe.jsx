@@ -4,25 +4,23 @@ import {useReducedMotion} from "motion/react";
 // Animated hero globe. Reuses the REAL in-game attract simulation (rotating
 // world with live missiles, interceptors and detonations) via the `@game` alias.
 //
-// Reveal choreography:
-//  - Nothing is shown in the globe area at first. The hero layout animates in
-//    while the heavy engine + MapLibre chunk loads in the background (deferred
-//    until the page is idle, so it never starves the rest of the page).
-//  - The globe eases in ONLY once both (a) MapLibre has actually painted its
-//    first tiles (AttractSim.onReady) and (b) a short minimum has elapsed, so the
-//    hero animation always plays first and the globe never pops in half-loaded.
-//  - Reduced motion shows the static poster instead. If the engine never becomes
-//    ready (slow/failed), the poster fades in as a fallback so the hero is never
-//    permanently empty.
-//  - Large vector tiles stream from Vercel Blob (CORS + HTTP range).
+// Reveal + performance:
+//  - Nothing shows at first; the hero layout animates in while the heavy engine
+//    + MapLibre chunk loads in the background (deferred until the page is idle).
+//  - The globe eases in only once MapLibre has painted its first tiles AND a
+//    short minimum has elapsed, so the layout animation plays first.
+//  - PERF: AttractSim self-pauses its simulation and MapLibre rendering whenever
+//    it scrolls off screen or the tab is hidden (see AttractSim's camera loop),
+//    so it costs almost nothing while you read the rest of the page.
+//  - Reduced motion shows the static poster; a poster fallback covers a slow or
+//    failed load so the hero is never empty.
 const heroPng = "/shots/hero-globe.png";
 const TILES_BASE = "https://pc9hvrpdxxi66b3t.public.blob.vercel-storage.com";
-const MIN_HOLD_MS = 1600;   // hero layout animates in before the globe may appear
-const FALLBACK_MS = 9000;   // if the live globe never readies, show the poster
+const MIN_HOLD_MS = 1600;
+const FALLBACK_MS = 9000;
 
 const AttractSim = lazy(() => import("@game/ui/live/AttractSim.jsx"));
 
-// Run `cb` once the page has loaded and the main thread is idle.
 function whenPageIdle(cb) {
     if (typeof window === "undefined") return () => {};
     let done = false;
@@ -57,7 +55,7 @@ export default function HeroGlobe() {
     }, []);
 
     useEffect(() => {
-        if (reduce) return; // reduced motion: static poster, no engine
+        if (reduce) return;
         if (typeof window !== "undefined") window.__DB_TILES_BASE__ = TILES_BASE;
         let alive = true;
         const cancel = whenPageIdle(() => {
