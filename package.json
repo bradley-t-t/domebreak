@@ -15,7 +15,9 @@
     "electron": "electron .",
     "electron:build:mac": "vite build && electron-builder --mac",
     "electron:build:win": "vite build && electron-builder --win",
-    "electron:build:all": "vite build && electron-builder -mw"
+    "electron:build:all": "vite build && electron-builder -mw",
+    "brand:dev-electron": "node scripts/dev-brand-electron.cjs",
+    "postinstall": "node scripts/dev-brand-electron.cjs"
   },
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.3.2",
