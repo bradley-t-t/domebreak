@@ -1326,6 +1326,11 @@
     --gold-soft: rgba(0, 0, 0, 0.07);
     --gold-line: rgba(0, 0, 0, 0.32);
     --blue: var(--ink);
+    /* Dark-HUD --good is a near-white glow fill (#eef2f6) that vanishes on the
+       light paper surface — the Victory title read as blank. Flip it to a
+       readable emerald keyed to the victory glow hue (rgba(62,227,139)).
+       --danger's red already reads fine on paper, so it's left untouched. */
+    --good: #0b8048;
 }
 
 .db-card .db-menu-title span {
