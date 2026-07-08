@@ -12,7 +12,7 @@ import {toGid3} from "../../game/data/iso3.js";
 // so by the time the entire globe is in frame the map reads clean). Tuning knob.
 const UNIT_FADE_ZOOM = [1.8, 3.0];
 
-export function useMapVisualEffects({mapRef, layers, mapReady, labels}) {
+export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids}) {
     // Countries layer visibility (keep fill queryable at opacity 0 so land/water tests still work).
     useEffect(() => {
         const m = mapRef.current;
@@ -25,25 +25,28 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels}) {
         }
     }, [layers.countries, mapReady]);
 
-    // Subtle per-country border tint derived from each flag's primary color (muted
-    // toward neutral so the mono map keeps its tactical feel). GID_0 → rgb from colors.json.
+    // Per-country border/fill tint from each flag's primary color. Only the ACTIVE
+    // powers are colored by their flag; every neutral country falls to one shared
+    // neutral color (they're passive scenery). GID_0 → rgb from colors.json. In an
+    // all-active match `activeGids` is unset and every country keeps its flag color.
     const [borderExpr, setBorderExpr] = useState(null);
     useEffect(() => {
         fetch("/assets/colors.json").then((r) => r.json()).then((cols) => {
-            const pairs = [];
+            const only = activeGids && activeGids.size ? activeGids : null;
+            const mix = (v, g) => Math.round(v * 0.6 + g * 0.4); // blend toward neutral grey
+            const pairs = [], tintPairs = [];
             for (const [gid, c] of Object.entries(cols)) {
-                const mix = (v, g) => Math.round(v * 0.6 + g * 0.4); // blend toward neutral grey
+                if (only && !only.has(gid)) continue; // neutrals → the shared default color below
                 pairs.push(gid, `rgb(${mix(c[0], 96)},${mix(c[1], 100)},${mix(c[2], 108)})`);
+                tintPairs.push(gid, `rgb(${c[0]},${c[1]},${c[2]})`);
             }
-            const tintPairs = [];
-            for (const [gid, c] of Object.entries(cols)) tintPairs.push(gid, `rgb(${c[0]},${c[1]},${c[2]})`);
-            if (pairs.length) setBorderExpr({
-                line: ["match", ["get", "GID_0"], ...pairs, "#454b53"],
-                tint: ["match", ["get", "GID_0"], ...tintPairs, "#767b84"],
+            setBorderExpr({
+                line: pairs.length ? ["match", ["get", "GID_0"], ...pairs, "#454b53"] : "#454b53",
+                tint: tintPairs.length ? ["match", ["get", "GID_0"], ...tintPairs, "#767b84"] : "#767b84",
             });
         }).catch(() => { /* colors optional */
         });
-    }, []);
+    }, [activeGids]);
     useEffect(() => {
         const m = mapRef.current;
         if (!m || !borderExpr) return;

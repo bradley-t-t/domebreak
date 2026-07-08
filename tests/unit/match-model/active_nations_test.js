@@ -1,10 +1,10 @@
 // Bounded-match / neutral-world model (adr-008): victory resolves against the
-// ACTIVE set (passive neutrals never block a win), active nations are seeded
-// scattered across the globe, and any active nation may strike/capture a neutral
-// without a war declaration. Deterministic, no RNG, no I/O.
+// ACTIVE set (passive neutrals never block a win), and active nations are seeded
+// scattered across the globe. Neutrals are non-interactable scenery — never targeted
+// or captured. Deterministic, no RNG, no I/O.
 import {describe, expect, it} from "vitest";
 import {stepVictory} from "../../../src/game/sim/tickPhases.js";
-import {hostileTo, isActive} from "../../../src/game/sim/queries.js";
+import {isActive} from "../../../src/game/sim/queries.js";
 import {pickActiveIsos} from "../../../src/game/sim/newGame.js";
 
 // Minimal world for stepVictory: nations[slot] ordered so nationOf hits directly.
@@ -97,26 +97,20 @@ describe("active-nation seeding is scattered", () => {
     });
 });
 
-describe("neutrals are always hostile to active nations", () => {
+describe("isActive reflects the active flag", () => {
     const w = {
         nations: [
-            {slot: 0, active: true, relations: {2: "war"}},
-            {slot: 1, active: true, relations: {}},
-            {slot: 2, active: true, relations: {0: "war"}},
-            {slot: 3, active: false, relations: {}}, // neutral
+            {slot: 0, active: true, relations: {}},
+            {slot: 1, active: false, relations: {}}, // neutral
         ],
     };
-    it("test_isActive_reflects_the_flag", () => {
+    it("test_isActive_true_for_active_nation", () => {
         expect(isActive(w, 0)).toBe(true);
-        expect(isActive(w, 3)).toBe(false);
     });
-    it("test_active_at_peace_is_not_a_valid_target", () => {
-        expect(hostileTo(w, 0, 1)).toBe(false);
+    it("test_isActive_false_for_neutral_nation", () => {
+        expect(isActive(w, 1)).toBe(false);
     });
-    it("test_active_at_war_is_a_valid_target", () => {
-        expect(hostileTo(w, 0, 2)).toBe(true);
-    });
-    it("test_neutral_is_always_a_valid_target", () => {
-        expect(hostileTo(w, 0, 3)).toBe(true);
+    it("test_isActive_true_when_flag_absent", () => {
+        expect(isActive({nations: [{slot: 0, relations: {}}]}, 0)).toBe(true);
     });
 });

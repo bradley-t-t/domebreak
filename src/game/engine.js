@@ -167,7 +167,6 @@ export {
     placementBlocked,
     nationName,
     isActive,
-    hostileTo,
 } from "./sim/queries.js";
 
 export {OBJECTIVES, evaluateObjectives} from "./sim/objectives.js";

@@ -41,6 +41,7 @@ import HoverPopups from "./HoverPopups.jsx";
 import {
     armamentOf,
     atWar,
+    isActive,
     COAST_KM,
     inTerritory,
     placementBlocked,
@@ -221,7 +222,13 @@ export default function LiveGame({
     // Countries layer visibility, per-country border/tint recolor, the
     // unit-fade-with-zoom CSS var, and the GID_0 -> label lookup — see
     // useMapVisualEffects (same effects, same dependency arrays, moved out verbatim).
-    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels});
+    // The active powers' GID_0 set — every other country is neutral scenery, colored
+    // uniformly (see useMapVisualEffects). Stable across a match (active set is fixed).
+    const activeGids = useMemo(
+        () => new Set(w.nations.filter((n) => n.active !== false).map((n) => toGid3(n.iso)).filter(Boolean)),
+        [w.nations]
+    );
+    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids});
 
     // Battle-plan preview geometry for the active plan, shown while the Battle
     // Planning screen is open on a plan that has any roster to draw. Same solve the
@@ -351,6 +358,8 @@ export default function LiveGame({
     const onCityClick = (id) => {
         const c = w.cities.find((x) => x.id === id);
         if (!c) return;
+        // Neutral countries are passive scenery — not interactable (no select, target, or capture).
+        if (!isActive(w, c.slot)) return;
         // Battle-plan target pick: click an enemy-at-war city to add/remove it.
         if (planPick === "targets" && bp.activeId && c.slot !== mySlot && atWar(w, mySlot, c.slot)) {
             bp.toggleTarget(bp.activeId, c.id);

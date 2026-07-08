@@ -169,9 +169,8 @@ export const AI_TUNING = {
     defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
     radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
     bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
-    // Smart offensive targeting — value-weighted over at-war enemies AND neutrals.
+    // Smart offensive targeting — value-weighted over at-war enemy cities.
     targetDistScaleKm: 6000,  // distance at which a target's value roughly halves (nearer preferred)
-    neutralTargetBias: 1.25,  // extra weight on neutral cities (soft targets that open expansion)
     targetTopN: 4,            // weighted-random pick among the N strongest candidates (concentration + variety)
     // Ground expansion doctrine — the tool for taking and holding territory.
     armyReserve: 120,         // points cushion kept before committing to army builds
@@ -234,8 +233,6 @@ export const NEUTRAL = {
     minActive: 2,        // floor — you plus at least one rival
     defaultActive: 8,    // singleplayer default active count
     scatterMinKm: 3000,  // seeding target: greedy farthest-point keeps active capitals apart
-    captureMult: 2,      // neutral cities take this× longer to capture (garrison friction)
-    garrisonBase: 40,    // reserved static neutral-city defense (not wired into M1)
 };
 
 // Leadership continuity (see design/gdd/leadership.md). Each nation's national
