@@ -44,7 +44,7 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
         if (mode === "signup") {
             const u = username.trim();
             if (u.length < AUTH_RULES.username.min || u.length > AUTH_RULES.username.max)
-                return fail(`Callsign must be ${AUTH_RULES.username.min}–${AUTH_RULES.username.max} characters.`);
+                return fail(`Username must be ${AUTH_RULES.username.min}–${AUTH_RULES.username.max} characters.`);
         }
         setStatus("loading");
         setError("");
@@ -92,26 +92,26 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
                         <div className="flex items-center gap-2 text-gold">
                             <GameIcon name="dome" size={22}/>
                             <span className="font-mono text-[11px] uppercase tracking-[0.28em] text-faint">
-                                {signup ? "Enlist" : "Commander Login"}
+                                {signup ? "Create account" : "Sign in"}
                             </span>
                         </div>
                         <h2 className="mt-4 font-display text-[22px] font-bold uppercase tracking-[0.04em] text-text">
-                            {signup ? "Create your command" : "Sign in"}
+                            {signup ? "Create your account" : "Sign in"}
                         </h2>
                         <p className="mt-2 text-[13px] leading-relaxed text-dim">
                             {signup
-                                ? "Your DomeBreak account carries your callsign, avatar and career record across the game and this site."
-                                : "Use your DomeBreak game account. Same credentials, everywhere."}
+                                ? "Your DomeBreak account keeps your profile and match history in sync across the game and this site."
+                                : "Use your DomeBreak game account — same login, everywhere."}
                         </p>
 
                         <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
                             {signup && (
                                 <div>
-                                    <label className={labelCva()} htmlFor="auth-username">Callsign</label>
+                                    <label className={labelCva()} htmlFor="auth-username">Username</label>
                                     <input
                                         id="auth-username" className={cn(input(), "mt-[7px]")}
                                         value={username} onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="CmdrPhoenix" autoComplete="username" maxLength={24}
+                                        placeholder="yourname" autoComplete="username" maxLength={24}
                                     />
                                 </div>
                             )}
@@ -124,7 +124,7 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
                                     setEmail(e.target.value);
                                     if (status === "error") setStatus("idle");
                                 }}
-                                    placeholder="commander@nation.gov" autoComplete="email"
+                                    placeholder="you@email.com" autoComplete="email"
                                 />
                             </div>
                             <div>
@@ -166,8 +166,8 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
                                 className="font-mono text-[12px] text-dim transition-colors hover:text-text"
                             >
                                 {signup
-                                    ? "Already enlisted? Sign in"
-                                    : "New commander? Create an account"}
+                                    ? "Already have an account? Sign in"
+                                    : "New here? Create an account"}
                             </button>
                         </div>
                     </motion.div>

@@ -56,8 +56,8 @@ export default function WaitlistForm({source = "landing", layout = "inline", cta
                             </p>
                             <p className="mt-1 font-mono text-[12px] leading-relaxed text-dim">
                                 {already
-                                    ? "You're already registered, Commander. Stand by for deployment."
-                                    : "Registered. We'll signal you when the dome goes live."}
+                                    ? "You're already on the list. We'll email you when it's out."
+                                    : "You're on the list. We'll email you when it's out."}
                             </p>
                         </div>
                     </motion.div>
@@ -74,7 +74,7 @@ export default function WaitlistForm({source = "landing", layout = "inline", cta
                                 type="email"
                                 inputMode="email"
                                 autoComplete="email"
-                                placeholder="commander@nation.gov"
+                                placeholder="you@email.com"
                                 value={email}
                                 onChange={(e) => {
                                     setEmail(e.target.value);
@@ -107,7 +107,7 @@ export default function WaitlistForm({source = "landing", layout = "inline", cta
                     <p className="font-mono text-[11.5px] tracking-[0.3px] text-danger">{message}</p>
                 ) : status !== "done" ? (
                     <p className="font-mono text-[11.5px] tracking-[0.3px] text-faint">
-                        Early access · no spam · one dispatch when we launch.
+                        Early access · no spam · one email when we launch.
                     </p>
                 ) : null}
             </div>

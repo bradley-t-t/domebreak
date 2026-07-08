@@ -8,9 +8,9 @@ const MARQUEE = [
 
 const STATS = [
     {value: 195, format: (n) => `${Math.round(n)}`, label: "Nations", sub: "Every one on the real map"},
-    {value: 8, format: (n) => `${Math.round(n)}`, label: "Live-AI powers / match", sub: "No two wars alike"},
+    {value: 8, format: (n) => `${Math.round(n)}`, label: "Powers per match", sub: "No two matches alike"},
     {value: 100, format: (n) => `${Math.round(n)}%`, label: "Real-time", sub: "Pause · 0.5× to 10×"},
-    {value: 1, format: (n) => `${Math.round(n)}`, label: "Dome to hold", sub: "Order or annihilation"},
+    {value: 1, format: (n) => `${Math.round(n)}`, label: "Dome to hold", sub: "The line you defend"},
 ];
 
 export default function StatBand() {
