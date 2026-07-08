@@ -256,6 +256,22 @@ export const STABILITY = {
                                 // (HUD clock: 1 game-sec = 30 in-game min → 365·24·60/30 = 17520)
 };
 
+// Battle Planning — player-authored attack plans (design/gdd/battle-planning.md).
+// Tuning for the plan solver, the auto-resupply cadence, and the globe preview.
+// Data-driven per the coding standards: the solver, reconciler, and panel read
+// these numbers; none are hardcoded in those systems.
+export const BATTLE_PLAN = {
+    maxPlans: 8,                // cap on simultaneous plans a player may author
+    defaultEngagementKm: 12000, // starting per-plan engagement-range dial
+    minEngagementKm: 500,       // slider floor
+    maxEngagementKm: 20000,     // slider ceiling — matches the silo's global reach (units.js silo.range)
+    engagementStepKm: 500,      // slider granularity
+    autoBuildIntervalSec: 4,    // min game-seconds between auto-resupply queue actions per plan
+    // Per-plan preview arc/target colors, cycled by plan index — chosen distinct
+    // from the faction hues (white/red/blue/grey) so a plan never reads as a nation.
+    planColors: ["#f0a63c", "#4fd1c5", "#c084fc", "#f472b6", "#60a5fa", "#a3e635", "#fb923c", "#e879f9"],
+};
+
 // --- Unit registry (extracted to units.js; behavior-preserving refactor to
 // keep this file under the size budget — no values changed). Re-exported here
 // so every prior constants.js import (UNITS, UNIT_ICON, unitLabel, armamentOf)

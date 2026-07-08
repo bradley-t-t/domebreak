@@ -19,7 +19,8 @@ const REGION_DIPLO_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.8, 4, 0.
 
 export default function MapLayers({
                                        layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, defenseFC,
-                                       ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor
+                                       ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor,
+                                       planArcsFC, planTargetsFC, planColor
                                    }) {
     return (
         <>
@@ -109,6 +110,24 @@ export default function MapLayers({
                 "line-opacity": 0.5,
                 "line-dasharray": [2, 3]
             }}/></Source>
+            {/* Battle-plan preview: the active plan's attacker→target strike arcs and
+                a ring on each planned target, both in the plan's color. Drawn over the
+                standing command lines so a plan you're authoring reads on top. */}
+            {planArcsFC && <Source id="plan-arc" type="geojson" data={planArcsFC}><Layer id="plan-arc-line" type="line"
+                paint={{
+                    "line-color": planColor || "#f0a63c",
+                    "line-width": 1.9,
+                    "line-opacity": 0.9,
+                    "line-dasharray": [2, 1.6]
+                }}/></Source>}
+            {planTargetsFC && <Source id="plan-tgt" type="geojson" data={planTargetsFC}><Layer id="plan-tgt-ring" type="circle"
+                paint={{
+                    "circle-radius": 7,
+                    "circle-color": "rgba(0,0,0,0)",
+                    "circle-stroke-color": planColor || "#f0a63c",
+                    "circle-stroke-width": 1.8,
+                    "circle-stroke-opacity": 0.9
+                }}/></Source>}
             <Source id="sail" type="geojson" data={sailLines}>
                 <Layer id="sail-line" type="line" filter={["==", ["get", "k"], "line"]} paint={{
                     "line-color": teamColor(mySlot),

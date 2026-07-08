@@ -20,7 +20,8 @@ export function useLiveLayers({
                                   selUnit,
                                   placeValid,
                                   teamColor,
-                                  COAST_KM
+                                  COAST_KM,
+                                  battlePreview
                               }) {
     const backdropFC = useMemo(() => ({
         type: "FeatureCollection",
@@ -186,5 +187,26 @@ export function useLiveLayers({
         })
     }), [w.units, w.time, mySlot]);
 
-    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines};
+    // Battle-plan preview: the active plan's attacker→target strike arcs and its
+    // target markers, derived from the SAME solve the reconciler fires (planPreview
+    // in sim/battlePlan.js) so the drawn lines and the real orders never disagree.
+    // Only present while the Battle Planning panel is open on a plan with content.
+    const planArcsFC = useMemo(() => ({
+        type: "FeatureCollection",
+        features: (battlePreview?.arcs || []).map((a) => ({
+            type: "Feature",
+            properties: {},
+            geometry: {type: "LineString", coordinates: gcTrail(a.from[0], a.from[1], a.to[0], a.to[1], 1, 18)}
+        }))
+    }), [battlePreview]);
+    const planTargetsFC = useMemo(() => ({
+        type: "FeatureCollection",
+        features: (battlePreview?.targets || []).map((t) => ({
+            type: "Feature",
+            properties: {},
+            geometry: {type: "Point", coordinates: [t.lng, t.lat]}
+        }))
+    }), [battlePreview]);
+
+    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines, planArcsFC, planTargetsFC};
 }
