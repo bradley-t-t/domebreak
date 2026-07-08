@@ -151,11 +151,14 @@ export {
     replenishmentBuff,
     sensorsCover,
     sensedBy,
+    radarLandCoverage,
     defenseRange,
     defenseMinRange,
     placementBlocked,
     nationName,
 } from "./sim/queries.js";
+
+export {OBJECTIVES, evaluateObjectives} from "./sim/objectives.js";
 
 export {
     declareWar,
