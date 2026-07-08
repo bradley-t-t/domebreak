@@ -30,7 +30,7 @@ function Shell() {
 
     return (
         <div className="relative min-h-screen bg-bg text-text">
-            <Nav onSignIn={() => setAuthOpen(true)} onShowShortcuts={() => setShortcutsOpen(true)}/>
+            <Nav onSignIn={() => setAuthOpen(true)}/>
             <main>
                 <Hero onSignIn={() => setAuthOpen(true)}/>
                 <Manifesto/>
@@ -97,7 +97,7 @@ function Shell() {
                 <DownloadSection/>
                 <CtaBand/>
             </main>
-            <Footer/>
+            <Footer onShowShortcuts={() => setShortcutsOpen(true)}/>
 
             <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}/>
             <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
