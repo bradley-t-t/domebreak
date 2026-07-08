@@ -9,7 +9,7 @@ export default function ScreenFrame({title, subtitle, onClose, children, foot, w
     const ref = useModal(onClose);
 
     return (
-        <div className="db-screen absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-none shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[dbRowIn_220ms_var(--ease-out)_both]"
+        <div className="db-screen absolute top-[34px] inset-x-0 bottom-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-none shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[dbRowIn_220ms_var(--ease-out)_both]"
              ref={ref} tabIndex={-1} role="dialog" aria-modal="true"
              aria-labelledby="db-screenframe-title">
             <div className="flex items-baseline gap-[14px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
