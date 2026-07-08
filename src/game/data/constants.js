@@ -215,6 +215,20 @@ export const DIPLOMACY = {
     dominationPopFrac: 0.5,
 };
 
+// Bounded-match / neutral-world model (design/gdd/match-model-and-neutral-world.md,
+// adr-008-active-and-neutral-nations). A match runs at most `maxActive` participating
+// ("active") nations; every other country stays on the map as a passive, capturable
+// NEUTRAL that never builds and never wages war. Data-driven — setup, capture, and
+// victory read these, nothing hardcodes them.
+export const NEUTRAL = {
+    maxActive: 8,        // hard cap on active (participating) nations in a match
+    minActive: 2,        // floor — you plus at least one rival
+    defaultActive: 8,    // singleplayer default active count
+    scatterMinKm: 3000,  // seeding target: greedy farthest-point keeps active capitals apart
+    captureMult: 2,      // neutral cities take this× longer to capture (garrison friction)
+    garrisonBase: 40,    // reserved static neutral-city defense (not wired into M1)
+};
+
 // Leadership continuity (see design/gdd/leadership.md). Each nation's national
 // command is a pool of `startTokens` leader tokens seeded across its top cities —
 // the capital holds the largest share, the rest spread over other major cities;

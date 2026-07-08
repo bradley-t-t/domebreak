@@ -6,9 +6,9 @@
 // capture is a function of positions, ownership, war state, and dt, so replays
 // and headless tests stay stable. See design/gdd/ground-combat-and-occupation.md.
 import {haversine} from "../geo/geo.js";
-import {CAPTURE, UNITS} from "../data/constants.js";
+import {CAPTURE, NEUTRAL, UNITS} from "../data/constants.js";
 import {nextId} from "./worldState.js";
-import {atWar} from "./queries.js";
+import {atWar, hostileTo, isActive} from "./queries.js";
 
 // A unit that can plant the flag: a living capture-flagged ground unit (infantry
 // or tank per its UNITS entry).
@@ -48,7 +48,7 @@ export function captureTick(w, dt) {
         // inside the hold radius. The nearest holder owns the capture attempt.
         let captor = null, best = Infinity;
         for (const u of w.units) {
-            if (!isCaptor(u) || u.slot === c.slot || !atWar(w, u.slot, c.slot)) continue;
+            if (!isCaptor(u) || u.slot === c.slot || !hostileTo(w, u.slot, c.slot)) continue;
             const d = haversine(u.lng, u.lat, c.lng, c.lat);
             if (d <= CAPTURE.holdKm && d < best) {
                 best = d;
@@ -79,7 +79,11 @@ export function captureTick(w, dt) {
         // order is set to it) drives the flip faster — boots kicking the door in.
         const assault = captor.targetId === c.id ? (CAPTURE.assaultMult || 1) : 1;
         c.capture.assault = assault > 1; // surfaced in the capture HUD
-        c.capture.progress += (dt / CAPTURE.captureSec) * assault;
+        // Neutral (non-participating) cities put up token garrison resistance, so they
+        // take NEUTRAL.captureMult× longer to occupy than a rival's city — expansion
+        // costs a real ground action, not a free click.
+        const garrison = isActive(w, c.slot) ? 1 : NEUTRAL.captureMult;
+        c.capture.progress += (dt / (CAPTURE.captureSec * garrison)) * assault;
         if (c.capture.progress >= 1) {
             const toSlot = captor.slot, fromSlot = c.slot;
             w.events.push({

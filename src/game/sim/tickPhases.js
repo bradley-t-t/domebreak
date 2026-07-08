@@ -423,11 +423,14 @@ export function stepVictory(w) {
         w.paused = true;
         return;
     }
-    // Victory: last nation standing, or a commanding share of surviving world
-    // population (last-of-222 is impractical, so domination is the reachable win).
-    const aliveNations = w.nations.filter((n) => n.alive);
+    // Victory: last ACTIVE nation standing, or a commanding share of surviving world
+    // population. Only participating (active) nations count toward last-standing —
+    // passive neutrals on the map never block a win. The domination denominator is
+    // the whole world's population, so capturing neutrals counts toward the win. In
+    // an all-active match this is identical to the old "last nation standing" rule.
+    const aliveActive = w.nations.filter((n) => n.alive && n.active !== false);
     const dominant = totPop > 0 && myPop / totPop >= DIPLOMACY.dominationPopFrac;
-    if (aliveNations.length <= 1 || dominant) {
+    if (aliveActive.length <= 1 || dominant) {
         w.over = true;
         w.winnerSlot = me.slot;
         w.paused = true;

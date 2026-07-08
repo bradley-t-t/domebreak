@@ -16,6 +16,11 @@ export function createWorld(setup) {
         name: n.name,
         iso: n.iso,
         isAi: !!n.isAi,
+        // Active = a participating nation (human or AI). Inactive = passive neutral
+        // (never ticks AI/diplomacy, but capturable). Defaults to active when the
+        // setup doesn't specify, so all-active matches (multiplayer, attract) are
+        // unchanged. See adr-008-active-and-neutral-nations.
+        active: n.active !== false,
         gdp: n.gdp || 0,
         color: colorForSlot(n.slot),
         points: START_POINTS,
@@ -161,6 +166,8 @@ export {
     defenseMinRange,
     placementBlocked,
     nationName,
+    isActive,
+    hostileTo,
 } from "./sim/queries.js";
 
 export {OBJECTIVES, evaluateObjectives} from "./sim/objectives.js";

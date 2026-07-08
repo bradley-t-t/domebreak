@@ -222,7 +222,7 @@ export function warTick(w) {
     const aliveBy = {};
     for (const c of w.cities) if (c.alive) aliveBy[c.slot] = (aliveBy[c.slot] || 0) + 1;
     for (const n of w.nations) {
-        if (!n.alive) continue;
+        if (!n.alive || n.active === false) continue;   // neutrals aren't belligerents — they never surrender
         if ((aliveBy[n.slot] || 0) / (start[n.slot] || 1) >= DIPLOMACY.surrenderThreshold) continue;
         for (const s in n.relations) {
             if (n.relations[s] !== "war") continue;
