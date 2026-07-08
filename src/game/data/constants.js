@@ -188,6 +188,14 @@ export const OBJECTIVES_TUNING = {
     bunkersRequired: 1,
     airstripsRequired: 2,
     radarLandCover: 0.8,
+    factoriesRequired: 3,
+    refineriesRequired: 2,
+    samBatteriesRequired: 3,
+    patriotsRequired: 2,
+    thaadRequired: 2,
+    aegisRequired: 1,
+    silosRequired: 2,
+    launchersRequired: 2,
 };
 
 // Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick

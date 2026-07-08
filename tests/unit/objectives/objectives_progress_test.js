@@ -6,7 +6,7 @@
 import {describe, expect, it} from "vitest";
 import {evaluateObjectives, radarLandCoverage} from "../../../src/game/engine.js";
 import {OBJECTIVES} from "../../../src/game/sim/objectives.js";
-import {OBJECTIVES_TUNING} from "../../../src/game/data/constants.js";
+import {OBJECTIVES_TUNING, UNITS} from "../../../src/game/data/constants.js";
 import {toGid3} from "../../../src/game/data/iso3.js";
 import {countryLandCells} from "../../../src/game/geo/countryOwner.js";
 
@@ -24,6 +24,31 @@ const unit = (type, lng = -98, lat = 39) => ({id: `${type}-${lng}`, slot: 0, typ
 
 const firstObjective = () => OBJECTIVES.find((o) => o.tasks.some((t) => t.kind === "build"));
 const coverageObjective = () => OBJECTIVES.find((o) => o.tasks.some((t) => t.kind === "coverage"));
+
+describe("OBJECTIVES definitions are well-formed", () => {
+    it("test_objective_ids_are_unique", () => {
+        const ids = OBJECTIVES.map((o) => o.id);
+        expect(new Set(ids).size).toBe(ids.length);
+    });
+    it("test_task_ids_unique_within_each_objective", () => {
+        for (const o of OBJECTIVES) {
+            const ids = o.tasks.map((t) => t.id);
+            expect(new Set(ids).size).toBe(ids.length);
+        }
+    });
+    it("test_every_build_task_references_a_real_unit_type", () => {
+        for (const o of OBJECTIVES) {
+            for (const t of o.tasks) {
+                if (t.kind === "build") expect(UNITS[t.type], `${o.id}/${t.id} → ${t.type}`).toBeDefined();
+            }
+        }
+    });
+    it("test_every_task_need_is_positive", () => {
+        for (const o of OBJECTIVES) {
+            for (const t of o.tasks) expect(t.need).toBeGreaterThan(0);
+        }
+    });
+});
 
 describe("countryLandCells (coverage denominator)", () => {
     it("test_usa_has_weighted_land_area", () => {
