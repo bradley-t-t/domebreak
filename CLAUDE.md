@@ -50,8 +50,11 @@ on work Trenton has requested, and the quality gates live in the workflow
 itself — GDDs before systems, design review after GDDs, code review and
 balance checks before stories close. Pause for explicit approval only on
 destructive, irreversible, or outward-facing actions (deletes, force pushes,
-deploys, publishing). Never commit without instruction; `/release` is the only
-sanctioned git entry point.
+deploys, publishing). Landing requested work on `develop` is the routine
+completion path, not a gated action — commit it through the sanctioned worktree
+flow (`cd-prepare` → edit → `cd-land`) without waiting for separate sign-off.
+Never run raw `git` by hand, and invoke `/release` (which promotes `develop` →
+`main`) only when Trenton explicitly asks.
 
 ## Coding Standards
 
