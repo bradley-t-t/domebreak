@@ -1,0 +1,247 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/*
+  DomeBreak landing page — shares the in-game "Anduril-school" design language:
+  stark neutral blacks, hairline borders, squared corners, zero glow, grotesk
+  uppercase micro-labels, mono data. Tokens are lifted from the game's
+  src/index.css so the marketing surface reads as the same product.
+*/
+
+:root {
+    --bg: #08090b;
+    --bg-2: #0e1013;
+    --panel: rgba(13, 15, 19, 0.88);
+    --panel-2: rgba(10, 12, 15, 0.95);
+    --panel-solid: #0e1013;
+    --sunk: #060708;
+    --line: #2b3037;
+    --line-soft: rgba(255, 255, 255, 0.10);
+    --hair: rgba(255, 255, 255, 0.06);
+    --text: #f2f4f6;
+    --dim: #9aa4af;
+    --faint: #6b7580;
+    --gold: #f4f6f8;
+    --gold-hi: #ffffff;
+    --gold-contrast: #0b0d10;
+    --gold-soft: rgba(255, 255, 255, 0.09);
+    --gold-line: rgba(255, 255, 255, 0.32);
+    --blue: #d3d8de;
+    --red: #e0574f;
+    --ally: #5fa8ff;
+    --danger: #e0574f;
+
+    --radius: 6px;
+    --radius-sm: 4px;
+    --radius-lg: 8px;
+    --shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.66);
+    --shadow-sm: 0 10px 26px -12px rgba(0, 0, 0, 0.6);
+    --btn-bg: #17191d;
+    --btn-bg-2: #101215;
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-io: cubic-bezier(0.77, 0, 0.175, 1);
+
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --display: var(--sans);
+}
+
+@theme inline {
+    --color-bg: var(--bg);
+    --color-bg-2: var(--bg-2);
+    --color-panel: var(--panel);
+    --color-panel-2: var(--panel-2);
+    --color-panel-solid: var(--panel-solid);
+    --color-sunk: var(--sunk);
+    --color-line: var(--line);
+    --color-line-soft: var(--line-soft);
+    --color-hair: var(--hair);
+    --color-text: var(--text);
+    --color-dim: var(--dim);
+    --color-faint: var(--faint);
+    --color-gold: var(--gold);
+    --color-gold-hi: var(--gold-hi);
+    --color-gold-contrast: var(--gold-contrast);
+    --color-gold-soft: var(--gold-soft);
+    --color-gold-line: var(--gold-line);
+    --color-blue: var(--blue);
+    --color-red: var(--red);
+    --color-ally: var(--ally);
+    --color-danger: var(--danger);
+    --color-btn-bg: var(--btn-bg);
+    --color-btn-bg-2: var(--btn-bg-2);
+
+    --font-sans: var(--sans);
+    --font-mono: var(--mono);
+    --font-display: var(--display);
+
+    --radius-sm: var(--radius-sm);
+    --radius-DEFAULT: var(--radius);
+    --radius-lg: var(--radius-lg);
+
+    --shadow-DEFAULT: var(--shadow);
+    --shadow-sm: var(--shadow-sm);
+
+    --ease-out-db: var(--ease-out);
+    --ease-drawer: var(--ease-drawer);
+    --ease-io: var(--ease-io);
+}
+
+html {
+    background: var(--bg);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow-x: hidden;
+}
+
+::selection {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+/* ---- Irreducible marketing VFX / procedural chrome (Tailwind can't express) ---- */
+@layer utilities {
+    /* Faint instrument-panel grid, lifted from the game menu background. */
+    .db-grid {
+        background-image:
+                linear-gradient(var(--line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 44px 44px;
+        opacity: 0.045;
+    }
+
+    /* Radial top vignette that seats content over the dark canvas. */
+    .db-vignette {
+        background: radial-gradient(1300px 760px at 50% -22%, rgba(40, 48, 60, 0.5), transparent 62%);
+    }
+
+    /* Corner tick "L" marks — the recurring targeting motif. */
+    .db-tick::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 14px;
+        height: 14px;
+        border-top: 1px solid var(--gold-line);
+        border-left: 1px solid var(--gold-line);
+        pointer-events: none;
+    }
+
+    .db-tick::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 14px;
+        height: 14px;
+        border-bottom: 1px solid var(--gold-line);
+        border-right: 1px solid var(--gold-line);
+        pointer-events: none;
+    }
+
+    /* Instrument-panel top seam gradient. */
+    .db-seam::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--gold-line), transparent);
+        pointer-events: none;
+    }
+
+    /* Tactical scrollbar to match the game. */
+    .db-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #575f6a transparent;
+    }
+
+    /* Left-to-right fade backdrop behind the hero command rail. */
+    .db-rail-fade {
+        background: linear-gradient(90deg, rgba(7, 9, 13, 0.92) 0%, rgba(7, 9, 13, 0.72) 42%, rgba(7, 9, 13, 0) 100%);
+    }
+}
+
+@layer utilities {
+    @keyframes dbBlink {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.28;
+        }
+    }
+
+    .db-blink {
+        animation: dbBlink 2.4s var(--ease-io) infinite;
+    }
+
+    @keyframes dbTitleGlow {
+        0%, 100% {
+            filter: brightness(1);
+        }
+        50% {
+            filter: brightness(1.16);
+        }
+    }
+
+    .db-title-glow {
+        animation: dbTitleGlow 5.5s ease-in-out infinite;
+    }
+
+    @keyframes dbScan {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    .db-scan {
+        animation: dbScan 3.2s var(--ease-io) infinite;
+    }
+
+    @keyframes dbMarquee {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(-50%);
+        }
+    }
+
+    .db-marquee {
+        animation: dbMarquee 34s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .db-blink, .db-title-glow, .db-scan, .db-marquee {
+            animation: none !important;
+        }
+
+        /* Reveal-on-scroll keeps the fade but drops movement. */
+        .db-reveal {
+            transform: none !important;
+            transition: opacity 0.4s ease !important;
+        }
+    }
+}
