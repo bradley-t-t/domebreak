@@ -4,17 +4,21 @@ import {useReducedMotion} from "motion/react";
 // Animated hero globe. Reuses the REAL in-game attract simulation (rotating
 // world with live missiles, interceptors and detonations) via the `@game` alias.
 //
-// Perf + correctness:
-//  - The heavy engine + MapLibre chunk is loaded ONLY after the page has fully
-//    loaded and gone idle, so it never competes with the hero image or the rest
-//    of the page for the browser's connections on first paint. (This is what was
-//    starving the images — they now load first, the globe streams in after.)
-//  - The globe is revealed only once MapLibre reports its first tiles have
-//    actually painted (AttractSim's onReady), never on a blind timer, then it
-//    fades + eases in over the static poster.
+// Reveal choreography:
+//  - Nothing is shown in the globe area at first. The hero layout animates in
+//    while the heavy engine + MapLibre chunk loads in the background (deferred
+//    until the page is idle, so it never starves the rest of the page).
+//  - The globe eases in ONLY once both (a) MapLibre has actually painted its
+//    first tiles (AttractSim.onReady) and (b) a short minimum has elapsed, so the
+//    hero animation always plays first and the globe never pops in half-loaded.
+//  - Reduced motion shows the static poster instead. If the engine never becomes
+//    ready (slow/failed), the poster fades in as a fallback so the hero is never
+//    permanently empty.
 //  - Large vector tiles stream from Vercel Blob (CORS + HTTP range).
 const heroPng = "/shots/hero-globe.png";
 const TILES_BASE = "https://pc9hvrpdxxi66b3t.public.blob.vercel-storage.com";
+const MIN_HOLD_MS = 1600;   // hero layout animates in before the globe may appear
+const FALLBACK_MS = 9000;   // if the live globe never readies, show the poster
 
 const AttractSim = lazy(() => import("@game/ui/live/AttractSim.jsx"));
 
@@ -39,10 +43,21 @@ function whenPageIdle(cb) {
 export default function HeroGlobe() {
     const reduce = useReducedMotion();
     const [data, setData] = useState(null);
-    const [ready, setReady] = useState(false);
+    const [tilesReady, setTilesReady] = useState(false);
+    const [minElapsed, setMinElapsed] = useState(false);
+    const [fallback, setFallback] = useState(false);
 
     useEffect(() => {
-        if (reduce) return; // reduced motion: keep the static poster, no engine
+        const t1 = setTimeout(() => setMinElapsed(true), MIN_HOLD_MS);
+        const t2 = setTimeout(() => setFallback(true), FALLBACK_MS);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (reduce) return; // reduced motion: static poster, no engine
         if (typeof window !== "undefined") window.__DB_TILES_BASE__ = TILES_BASE;
         let alive = true;
         const cancel = whenPageIdle(() => {
@@ -57,24 +72,28 @@ export default function HeroGlobe() {
         };
     }, [reduce]);
 
+    const showGlobe = !reduce && tilesReady && minElapsed;
+    const showPoster = reduce || (fallback && !tilesReady);
+
     return (
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-            {data && !reduce && (
+            {!reduce && data && (
                 <Suspense fallback={null}>
                     <div
-                        className={`absolute inset-0 origin-center transition-[opacity,transform] duration-[1400ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${ready ? "scale-100 opacity-100" : "scale-[1.06] opacity-0"}`}
+                        className={`absolute inset-0 origin-center transition-[opacity,transform] duration-[1500ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${showGlobe ? "scale-100 opacity-100" : "scale-[1.08] opacity-0"}`}
                     >
-                        <AttractSim data={data} framed onReady={() => setReady(true)}/>
+                        <AttractSim data={data} framed onReady={() => setTilesReady(true)}/>
                     </div>
                 </Suspense>
             )}
-            <img
-                src={heroPng}
-                alt=""
-                fetchPriority="high"
-                decoding="async"
-                className={`absolute top-1/2 right-[-14%] aspect-square w-[min(86vh,860px)] max-w-[92%] -translate-y-1/2 object-contain transition-opacity duration-[1200ms] ease-out sm:right-[-8%] lg:right-[-3%] ${ready ? "opacity-0" : "opacity-[0.96]"}`}
-            />
+            {showPoster && (
+                <img
+                    src={heroPng}
+                    alt=""
+                    decoding="async"
+                    className="absolute top-1/2 right-[-14%] aspect-square w-[min(86vh,860px)] max-w-[92%] -translate-y-1/2 object-contain opacity-[0.96] transition-opacity duration-[900ms] ease-out sm:right-[-8%] lg:right-[-3%]"
+                />
+            )}
         </div>
     );
 }
