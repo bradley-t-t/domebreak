@@ -15,6 +15,12 @@ national stability. When the player is a belligerent the outcome raises a modal 
 (in single-player) pauses the game; White Peace is a mutual agreement the player can
 offer or must accept. AI-vs-AI wars resolve the same way, silently in the background.
 
+Beyond the surviving-city surrender threshold, a nation is also forced to surrender
+by **decapitation**: if its Leadership pool is wiped out entirely (`lost >= total`),
+`decapitationTick` capitulates it in every war (each foe scores a Victory) and
+eliminates it from the match. This is the war-resolution hook for the Leadership
+system — see `design/gdd/leadership.md` §3.2.1.
+
 ## Player Fantasy
 
 A war should *end* meaningfully, not evaporate. Grinding an enemy down until they

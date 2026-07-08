@@ -7,7 +7,7 @@ import {evacTick} from "./leadership.js";
 import {updateStability} from "./stability.js";
 import {captureTick} from "./occupation.js";
 import {aiTick, diploTick} from "./aiTick.js";
-import {warTick} from "./warResolution.js";
+import {decapitationTick, warTick} from "./warResolution.js";
 import {
     growCities,
     stepCombat,
@@ -70,6 +70,11 @@ export function step(w, dt, predict = false) {
     // tick's flips, and before growth/tally so ceded territory counts for its new
     // owner immediately. See sim/warResolution.js.
     warTick(w);
+    // Decapitation defeat: any nation whose leadership pool is fully wiped out this
+    // tick (bombed in its cities, bunker glassed by a thermonuclear hit, or bunker
+    // captured) surrenders every war and is eliminated. Runs after warTick so it
+    // reads settled relations, and before the win check so the elimination counts.
+    decapitationTick(w);
     // Grow city populations for this tick before the tally reads them, so income,
     // industry cap, and the domination check all see the updated figures.
     growCities(w, dt);

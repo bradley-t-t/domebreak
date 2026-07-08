@@ -233,6 +233,29 @@ export function warTick(w) {
     }
 }
 
+// Decapitation defeat (every tick): a nation whose entire leadership pool has been
+// wiped out (lost >= total — killed in its cities/transports, its bunker destroyed
+// by a thermonuclear strike, or the bunker captured) can no longer command. It
+// capitulates in every war it's fighting (each foe scores a Victory and takes what
+// it occupied) and is eliminated from the match. Runs AFTER reconcileLeadership has
+// finalized this tick's losses and after warTick, before the win check. Neutrals
+// (never belligerents) and nations without a leadership pool are skipped.
+export function decapitationTick(w) {
+    ensureWar(w);
+    for (const n of w.nations) {
+        if (!n.alive || n.active === false || !n.lead || !n.lead.total) continue;
+        if (n.lead.lost < n.lead.total) continue;      // command still stands
+        for (const s in n.relations) {
+            if (n.relations[s] !== "war") continue;
+            const foe = +s;
+            if (!atWar(w, n.slot, foe)) continue;      // may have ended earlier this pass
+            endWar(w, foe, n.slot, foe);               // foe wins, n loses (Defeat)
+        }
+        n.alive = false;                                // eliminated — command decapitated
+        w.events.push({id: nextId(w, "e"), t: w.time, type: "conquest", loser: n.slot, decapitated: 1});
+    }
+}
+
 // Remove a resolved popup from the queue (the modal's Continue action).
 export function dismissWarPopup(w, id) {
     ensureWar(w);

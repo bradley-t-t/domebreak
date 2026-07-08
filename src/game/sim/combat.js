@@ -2,7 +2,7 @@
 // Target resolution (findTarget) also lives here since launch/impact/attack
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
-import {BLAST, FALLOUT, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
+import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 
@@ -112,6 +112,22 @@ export function launch(w, unit, target, warhead) {
     });
 }
 
+// The Leadership Bunker is hardened (see LEADERSHIP.bunkerKillWarheads): it shrugs
+// off every incoming strike except a DIRECT hit from a thermonuclear-class warhead,
+// which destroys it outright. Blast, fallout, and ground fire never touch it. Emits
+// the usual hit/destroy event (flagged `bunker`) so map FX and the news ticker fire;
+// a deflected hit carries `shielded:1` so the UI can say "the bunker holds". `warhead`
+// is null for ground fire (never lethal). Callers early-return after invoking it
+// instead of applying generic damage.
+function resolveBunkerStrike(w, ref, warhead, slot) {
+    const lethal = warhead != null && LEADERSHIP.bunkerKillWarheads.includes(warhead);
+    if (lethal) ref.hp = 0;
+    w.events.push({
+        id: nextId(w, "e"), t: w.time, type: lethal ? "destroy" : "hit", kind: "unit",
+        cityId: ref.id, lng: ref.lng, lat: ref.lat, slot, bunker: 1, ...(lethal ? {} : {shielded: 1})
+    });
+}
+
 // Direct fire: ground combatants (infantry/tank/artillery — targets:"land") deal
 // their damage straight onto the target instead of lofting an interceptable
 // projectile through the missile-defense loop. A tank shell is not something a
@@ -119,6 +135,12 @@ export function launch(w, unit, target, warhead) {
 // resolveHit, so map explosions, kill toasts, and the news ticker all fire —
 // only the in-flight, interceptable phase is skipped. Deterministic (no rng).
 export function directFire(w, unit, target) {
+    // The bunker is immune to ground fire — it can only be captured, or vaporized by
+    // a direct thermonuclear strike. A tank round bounces off.
+    if (target.kind === "unit" && target.ref.type === "bunker") {
+        resolveBunkerStrike(w, target.ref, null, unit.slot);
+        return;
+    }
     const n = nationOf(w, unit.slot);
     const dmg = (UNITS[unit.type].damage || 0) * (n?.dmgMult ?? 1);
     target.ref.hp -= dmg;
@@ -151,7 +173,9 @@ function applyBlast(w, p, lng, lat, excludeId) {
     if (bk <= 0 || p.sub) return;
     const peak = p.damage * BLAST.aoeShare;
     for (const u of w.units) {
-        if (u.hp <= 0 || u.id === excludeId) continue;
+        // The bunker is blast-proof — only a direct thermonuclear hit (or capture)
+        // can take it down, never a near-miss shockwave.
+        if (u.hp <= 0 || u.id === excludeId || u.type === "bunker") continue;
         const d = haversine(lng, lat, u.lng, u.lat);
         if (d > bk) continue;
         const dmg = peak * (1 - (1 - BLAST.edgeFrac) * (d / bk));
@@ -180,6 +204,13 @@ export function resolveHit(w, p) {
     applyBlast(w, p, gzLng, gzLat, target && target.kind === "unit" ? target.ref.id : null);
     if (!target || !target.alive) {
         w.events.push({id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.toLng, lat: p.toLat});
+        return;
+    }
+    // The Leadership Bunker only falls to a direct thermonuclear-class hit; any other
+    // warhead is deflected (see resolveBunkerStrike). This is a DIRECT hit — the
+    // bunker is the projectile's own target — so the thermo rule applies here.
+    if (target.kind === "unit" && target.ref.type === "bunker") {
+        resolveBunkerStrike(w, target.ref, p.warhead, p.slot);
         return;
     }
     target.ref.hp -= p.damage;
