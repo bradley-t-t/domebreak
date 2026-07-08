@@ -14,10 +14,18 @@ export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
         alias: {"@game": resolve(here, "../src")},
-        // The game source (imported via @game from ../src) resolves its own bare
-        // "react", which would load a second React copy and break hooks. Force a
-        // single instance from this app's node_modules.
-        dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "react-map-gl", "maplibre-gl", "pmtiles"],
+        // The game source (imported via @game from ../src) resolves its bare npm
+        // imports from the game's ROOT node_modules, which isn't installed when
+        // only this web workspace is (e.g. Vercel's build). Dedupe every shared
+        // dependency so they all resolve from THIS app's node_modules instead —
+        // this also keeps React a single instance so hooks don't break. Keep in
+        // sync with the bare imports used under src/ (grep: from "<pkg>").
+        dedupe: [
+            "react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime",
+            "react-map-gl", "maplibre-gl", "pmtiles",
+            "clsx", "tailwind-merge", "class-variance-authority",
+            "lucide-react", "@supabase/supabase-js",
+        ],
     },
     server: {
         port: 5180,
