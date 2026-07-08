@@ -1,5 +1,5 @@
 import {useEffect, useLayoutEffect, useRef, useState} from "react";
-import {TECHS, unitLabel} from "../../game/data/constants.js";
+import {unitLabel} from "../../game/data/constants.js";
 import {nationName} from "../../game/engine.js";
 import {cn} from "../lib/cn.js";
 
@@ -36,10 +36,6 @@ export function headline(e, world, mySlot) {
             if (e.winner === mySlot) return {tone: "good", text: `${nn(e.loser)} surrenders to you — their occupied territory is yours`};
             if (e.loser === mySlot) return {tone: "danger", text: `You surrender to ${nn(e.winner)} — occupied territory is lost`};
             return {tone: "alert", text: `${nn(e.loser)} surrenders to ${nn(e.winner)}`};
-        }
-        case "research": {
-            const name = TECHS[e.techId]?.name;
-            return {tone: "info", text: name ? `${nn(e.slot)} completes ${name}` : `${nn(e.slot)} achieves a breakthrough`};
         }
         case "captured": {
             const where = e.state || world.cities.find((x) => x.id === e.cityId)?.name || "territory";

@@ -6,14 +6,13 @@ import {
     allowedAmmo,
     initialWarhead,
     DIPLOMACY,
-    TECHS,
     UNITS,
     WARHEADS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
 import {atWar, netIncomeOf} from "./queries.js";
-import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
 import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
 
@@ -118,23 +117,6 @@ function nearPlayer(w, n, caps) {
     const a = caps[n.slot], p = caps[w.mySlot];
     if (!a || !p) return false;
     return haversine(a.lng, a.lat, p.lng, p.lat) <= DIPLOMACY.activeRangeKm;
-}
-
-// Deeper research: push tracks toward researchDepthTarget. Modern/Space tiers
-// (>= deepTierGate) cost far more, so they demand the deeper points cushion before
-// the AI commits. Returns true if it enqueued something (caller yields the tick).
-function aiResearch(w, n) {
-    if (n.research.current || n.research.queue.length) return false;
-    const avail = Object.keys(TECHS).filter((t) => canQueue(n, t) && TECHS[t].tier <= AI_TUNING.researchDepthTarget);
-    const affordable = avail.filter((t) => {
-        const reserve = TECHS[t].tier >= AI_TUNING.deepTierGate ? AI_TUNING.deepReserve : AI_TUNING.researchMinPoints;
-        return n.points >= TECHS[t].cost + reserve;
-    });
-    if (affordable.length && rand(w) < AI_TUNING.researchChance) {
-        enqueueResearch(w, n.slot, affordable[Math.floor(rand(w) * affordable.length)]);
-        return true;
-    }
-    return false;
 }
 
 // AI diplomacy — the living world. On each nation's staggered _diplo cadence it may
@@ -292,13 +274,10 @@ export function aiTick(w, dt) {
         }
         const myCap = w.cities.find((c) => c.slot === n.slot && c.alive);
         if (!myCap) continue;
-        // Fielding cap — a nation at its unit ceiling stops adding units and only
-        // researches further, keeping the global unit count (and the interception
-        // loop with it) bounded no matter how many nations are simultaneously at war.
-        if (myUnits.length >= DIPLOMACY.aiUnitCap) {
-            aiResearch(w, n);
-            continue;
-        }
+        // Fielding cap — a nation at its unit ceiling stops adding units, keeping the
+        // global unit count (and the interception loop with it) bounded no matter how
+        // many nations are simultaneously at war.
+        if (myUnits.length >= DIPLOMACY.aiUnitCap) continue;
         const net = netIncomeOf(w, n.slot);
         const lineBusy = (n.prod.current ? 1 : 0) + n.prod.queue.length;
         if (lineBusy >= AI_TUNING.queueMax) continue; // keep the line short — the AI plans, it doesn't hoard
@@ -411,11 +390,10 @@ export function aiTick(w, dt) {
             const p = place("oth");
             if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat, true).ok) return;
         }
-        // 8. Tech-gated unlocked units (space HQ, subs, modern defenses…), by role.
+        // 8. Advanced units (space HQ, subs, modern defenses…), by role. All techs
+        //    are unlocked at start, so these are gated only by unit prereqs + cost.
         if (aiBuildUnlocked(w, n, myUnits, cities, front)) return;
-        // 9. Deeper research.
-        if (aiResearch(w, n)) return;
-        // 10. Offense — forward toward the front, once at war.
+        // 9. Offense — forward toward the front, once at war.
         if (!enemies.length) continue;
         if (n.points >= UNITS.silo.cost + AI_TUNING.siloReserve && net > AI_TUNING.siloMinNet) {
             const p = place("silo");

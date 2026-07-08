@@ -11,7 +11,6 @@
 export const KEY_ACTIONS = [
     {id: "production", label: "Production Menu", group: "Command"},
     {id: "diplomacy", label: "Diplomacy Menu", group: "Command"},
-    {id: "research", label: "Research Tree", group: "Command"},
     {id: "pause", label: "Pause / Resume", group: "Time"},
     {id: "speedUp", label: "Speed Up", group: "Time"},
     {id: "speedDown", label: "Slow Down", group: "Time"},
@@ -27,7 +26,6 @@ export const KEY_ACTIONS = [
 export const DEFAULT_KEYS = {
     production: "KeyE",
     diplomacy: "KeyR",
-    research: "KeyT",
     pause: "Space",
     speedUp: "Equal",
     speedDown: "Minus",

@@ -3,7 +3,7 @@
 // every symbol the engine used to export directly is re-exported from the
 // focused modules it now lives in (constants/queries/production/aircraft/
 // combat/tick) so existing importers keep working unchanged.
-import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, colorForSlot} from "./data/constants.js";
+import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, TECHS, colorForSlot} from "./data/constants.js";
 import {distributeLeadership} from "./sim/leadership.js";
 
 // Builds a fresh world from a match setup: {mySlot, seed, nations: [{slot,
@@ -22,8 +22,10 @@ export function createWorld(setup) {
         alive: true,
         relations: {},
         _ai: 2 + n.slot * 0.3,
-        research: {queue: [], current: null, done: []},
-        autoResearch: false, // player Auto-Research toggle (tech tree); see sim/production.js
+        // Everything is unlocked from the start — the tech tree / research mechanic
+        // was removed. Every tech id is marked done so all unit gates open, and each
+        // tech's effect is applied once below so nations begin fully teched.
+        research: {queue: [], current: null, done: Object.keys(TECHS)},
         ammo: {...AMMO_START},
         prod: {queue: [], current: null},
         dmgMult: 1,
@@ -48,6 +50,9 @@ export function createWorld(setup) {
         sonarMult: 1,
         stability: 100,   // national stability 0–100 (see sim/stability.js)
     }));
+    // Apply every tech's effect once per nation, so the fully-unlocked tree's stat
+    // multipliers (dmgMult, interceptAdd, ranges, sonar, …) are all live at start.
+    for (const n of nations) for (const id of n.research.done) TECHS[id].apply(n);
     const cities = setup.cities.map((c) => ({
         id: c.id,
         slot: c.slot,
@@ -179,10 +184,6 @@ export {
     setAwacsPatrol,
     scrapUnit,
     commandAttack,
-    canQueue,
-    enqueueResearch,
-    unqueueResearch,
-    setAutoResearch,
     hangarCount,
     queueAircraft,
     queueAmmo,

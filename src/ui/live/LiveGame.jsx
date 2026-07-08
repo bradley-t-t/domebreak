@@ -29,7 +29,6 @@ import {useMapBoot} from "../hooks/useMapBoot.js";
 import {useMapVisualEffects} from "../hooks/useMapVisualEffects.js";
 import {button, miniButton, overlay, card, sub} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
-import TechTree from "../screens/TechTree.jsx";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
@@ -80,7 +79,7 @@ export default function LiveGame({
     const myGid = useMemo(() => toGid3(myNation?.iso), [myNation?.iso]);
     const mapRef = useRef(null);
 
-    // null | "production" | "research" | "diplomacy" — the top-bar command screens.
+    // null | "production" | "diplomacy" — the top-bar command screens.
     const [panel, setPanel] = useState(null);
     const [placing, setPlacing] = useState(null);
     const [moving, setMoving] = useState(null);
@@ -448,8 +447,6 @@ export default function LiveGame({
                     <ObjectivesPanel world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
             )}
-            {!w.over && panel === "research" &&
-                <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "production" &&
                 <ProductionScreen world={w} api={api} mySlot={mySlot} placing={placing}
                                   setPlacing={(t) => {

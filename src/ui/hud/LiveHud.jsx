@@ -38,7 +38,6 @@ function stabSub(stab) {
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
     {id: "production", label: "Production", glyph: "▣"},
-    {id: "research", label: "Research", glyph: "❉"},
     {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
 ];
 

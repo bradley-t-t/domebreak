@@ -7,7 +7,6 @@ import {
     disembark,
     dismissWarPopup,
     embark,
-    enqueueResearch,
     moveUnit,
     offerPeace,
     proposeAlliance,
@@ -17,7 +16,6 @@ import {
     queueAmmo,
     queueUnit,
     scrapUnit,
-    setAutoResearch,
     setAwacsPatrol,
     setMarch,
     releaseLeadership,
@@ -26,8 +24,7 @@ import {
     setWarhead,
     shelterLeadership,
     step,
-    stopSail,
-    unqueueResearch
+    stopSail
 } from "../../game/engine.js";
 
 // Drives a supplied world (created by App from a new setup or a loaded save).
@@ -77,21 +74,6 @@ export function useEngine(world, online = false) {
         },
         commandAttack: (uid, tid) => {
             const r = commandAttack(ref.current, uid, tid);
-            force();
-            return r;
-        },
-        research: (id) => {
-            const r = enqueueResearch(ref.current, ref.current.mySlot, id);
-            force();
-            return r;
-        },
-        unqueue: (id) => {
-            const r = unqueueResearch(ref.current, ref.current.mySlot, id);
-            force();
-            return r;
-        },
-        setAutoResearch: (on) => {
-            const r = setAutoResearch(ref.current, ref.current.mySlot, on);
             force();
             return r;
         },
