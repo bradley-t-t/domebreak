@@ -1,6 +1,7 @@
+import {Keyboard} from "lucide-react";
 import {Wordmark} from "./ui.jsx";
 
-export default function Footer() {
+export default function Footer({onShowShortcuts}) {
     const year = 2026;
     return (
         <footer className="border-t border-line bg-bg">
@@ -21,6 +22,12 @@ export default function Footer() {
                             Signal
                         </span>
                         <button
+                            onClick={() => document.getElementById("download")?.scrollIntoView({behavior: "smooth"})}
+                            className="text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
+                        >
+                            Download
+                        </button>
+                        <button
                             onClick={() => document.getElementById("waitlist")?.scrollIntoView({behavior: "smooth"})}
                             className="text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
                         >
@@ -31,6 +38,13 @@ export default function Footer() {
                             className="text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
                         >
                             Briefing
+                        </button>
+                        <button
+                            onClick={onShowShortcuts}
+                            className="flex items-center gap-2 text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
+                        >
+                            <Keyboard size={14}/>
+                            Keyboard shortcuts
                         </button>
                     </div>
                 </div>
