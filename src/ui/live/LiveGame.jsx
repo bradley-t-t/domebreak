@@ -233,6 +233,7 @@ export default function LiveGame({
         mySensors,
         visUnits,
         radarFC,
+        radarEmitters,
         defenseFC,
         popFC,
         ranges,
@@ -410,7 +411,7 @@ export default function LiveGame({
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
                            popFC={popFC}
-                           backdropFC={backdropFC} radarFC={radarFC} defenseFC={defenseFC} ranges={ranges}
+                           backdropFC={backdropFC} radarFC={radarFC} radarEmitters={radarEmitters} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
                            planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}/>
