@@ -15,7 +15,7 @@ import PinnedBar from "../hud/PinnedBar.jsx";
 import AdjustablePanel from "../hud/AdjustablePanel.jsx";
 import ObjectivesPanel from "../hud/ObjectivesPanel.jsx";
 import HudLayoutMenu from "../hud/HudLayoutMenu.jsx";
-import BattlePlanPanel from "../hud/BattlePlanPanel.jsx";
+import BattlePlanScreen from "../screens/BattlePlanScreen.jsx";
 import {useHudLayout} from "../hud/useHudLayout.js";
 import {useBattlePlans} from "../hooks/useBattlePlans.js";
 import {useBattlePlanReconciler} from "../hooks/useBattlePlanReconciler.js";
@@ -40,12 +40,10 @@ import MapMarkers from "./MapMarkers.jsx";
 import HoverPopups from "./HoverPopups.jsx";
 import {
     armamentOf,
-    atWar,
     isActive,
     COAST_KM,
     inTerritory,
     placementBlocked,
-    planPreview,
     sensorsCover,
     unitLabel,
     UNITS
@@ -87,10 +85,6 @@ export default function LiveGame({
 
     // null | "production" | "battle" | "diplomacy" — the top-bar command screens.
     const [panel, setPanel] = useState(null);
-    // Battle Planning: which roster the next map click feeds ("attackers" | "targets"
-    // | null), and whether the docked plan panel is minimized to a preview strip.
-    const [planPick, setPlanPick] = useState(null);
-    const [battleMin, setBattleMin] = useState(false);
     const [placing, setPlacing] = useState(null);
     const [moving, setMoving] = useState(null);
     const [selUnit, setSelUnit] = useState(null);
@@ -126,10 +120,6 @@ export default function LiveGame({
     // into real orders through the sanctioned engine commands. See its GDD/ADR.
     const bp = useBattlePlans();
     useBattlePlanReconciler({world: w, api, mySlot, plans: bp.plans, onFired: (id, n) => flash(n ? `Strike launched — ${n} on the way.` : "No units in range to fire.", n ? "info" : undefined)});
-    // Leaving the Battle Planning screen cancels any pick-on-map mode.
-    useEffect(() => {
-        if (panel !== "battle") setPlanPick(null);
-    }, [panel]);
 
     const relation = (slot) => {
         const r = myNation?.relations[slot];
@@ -230,15 +220,6 @@ export default function LiveGame({
     );
     const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids});
 
-    // Battle-plan preview geometry for the active plan, shown while the Battle
-    // Planning screen is open on a plan that has any roster to draw. Same solve the
-    // reconciler fires, so the preview arcs match the orders that would go out.
-    const battlePreview = useMemo(() => {
-        const p = panel === "battle" ? bp.active : null;
-        if (!p || (!p.attackers.length && !p.targets.length)) return null;
-        return planPreview(w, p, mySlot);
-    }, [panel, bp.active, w, mySlot]);
-
     // Memoized map-layer FeatureCollections (backdrop/live cities, fog-of-war
     // visibility, radar/defense/pop overlays, selection+placement rings, and
     // the command/sail line traces) — extracted to keep the same useMemo
@@ -259,8 +240,7 @@ export default function LiveGame({
         planArcsFC,
         planTargetsFC
     } = useLiveLayers({
-        w, mySlot, myNation, backdrop, layers, placing, moving, cursor, selUnit, placeValid, teamColor, COAST_KM,
-        battlePreview
+        w, mySlot, myNation, backdrop, layers, placing, moving, cursor, selUnit, placeValid, teamColor, COAST_KM
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
@@ -360,11 +340,6 @@ export default function LiveGame({
         if (!c) return;
         // Neutral countries are passive scenery — not interactable (no select, target, or capture).
         if (!isActive(w, c.slot)) return;
-        // Battle-plan target pick: click an enemy-at-war city to add/remove it.
-        if (planPick === "targets" && bp.activeId && c.slot !== mySlot && atWar(w, mySlot, c.slot)) {
-            bp.toggleTarget(bp.activeId, c.id);
-            return;
-        }
         if (attackMode && selUnit && c.slot !== mySlot) {
             const r = api.commandAttack(selUnit, c.id);
             if (r.error) flash(r.error); else setAttackMode(false);
@@ -413,17 +388,6 @@ export default function LiveGame({
     const onUnitClick = (u, ev) => {
         ev?.stopPropagation?.();
         // Battle-plan pick: add my offensive units to the roster, or enemy-at-war
-        // units to the target set, depending on which pick mode is active.
-        if (planPick && bp.activeId) {
-            if (planPick === "attackers" && u.slot === mySlot && UNITS[u.type]?.kind === "offense") {
-                bp.toggleAttacker(bp.activeId, u.id);
-                return;
-            }
-            if (planPick === "targets" && u.slot !== mySlot && atWar(w, mySlot, u.slot)) {
-                bp.toggleTarget(bp.activeId, u.id);
-                return;
-            }
-        }
         if (attackMode && selUnit) {
             if (u.slot === mySlot) return;
             const r = api.commandAttack(selUnit, u.id);
@@ -442,7 +406,7 @@ export default function LiveGame({
         <>
             <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS} minZoom={WORLD_ZOOM.min}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
-                      cursor={placing || moving || attackMode || disembarkId || planPick ? "crosshair" : "grab"}>
+                      cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
                            popFC={popFC}
                            backdropFC={backdropFC} radarFC={radarFC} defenseFC={defenseFC} ranges={ranges}
@@ -514,20 +478,8 @@ export default function LiveGame({
                                   }} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "diplomacy" &&
                 <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} onClose={() => setPanel(null)}/>}
-            {!w.over && panel === "battle" && (
-                <AdjustablePanel panel={hud.battlePlan} onChange={(p) => setHud("battlePlan", p)}
-                                 onReset={() => resetHudPanel("battlePlan")} label="Battle planning"
-                                 origin="top left" resizeDir={{x: 1, y: 1}}
-                                 className="absolute top-[40px] left-4 z-6"
-                                 tabAlign="left">
-                    <BattlePlanPanel world={w} mySlot={mySlot} bp={bp} planPick={planPick} setPlanPick={setPlanPick}
-                                     collapsed={battleMin} setCollapsed={setBattleMin}
-                                     onFocus={(id) => {
-                                         const t = w.cities.find((x) => x.id === id) || w.units.find((x) => x.id === id);
-                                         if (t) goPin(t);
-                                     }}/>
-                </AdjustablePanel>
-            )}
+            {!w.over && panel === "battle" &&
+                <BattlePlanScreen world={w} mySlot={mySlot} bp={bp} onClose={() => setPanel(null)}/>}
             <AdjustablePanel panel={hud.bottomRight} onChange={(p) => setHud("bottomRight", p)}
                              onReset={() => resetHudPanel("bottomRight")} label="Map and war bar"
                              origin="bottom right" resizeDir={{x: -1, y: -1}}

@@ -15,7 +15,6 @@ export const HUD_PANELS = [
     {id: "objectives", label: "Objectives"},
     {id: "bottomRight", label: "Map & War Bar"},
     {id: "prodQueue", label: "Production Queue"},
-    {id: "battlePlan", label: "Battle Planning"},
 ];
 
 // Resize/opacity travel limits — deliberately bounded ("resizable to an extent")
