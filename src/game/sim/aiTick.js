@@ -128,7 +128,7 @@ function nearPlayer(w, n, caps) {
 export function diploTick(w, dt) {
     let firing = null;
     for (const n of w.nations) {
-        if (!n.isAi || !n.alive) continue;
+        if (!n.isAi || !n.alive || n.active === false) continue;   // neutrals never run diplomacy
         if (n._diplo == null) n._diplo = DIPLOMACY.thinkMin + rand(w) * DIPLOMACY.thinkSpan;
         n._diplo -= dt;
         if (n._diplo > 0) continue;
@@ -157,7 +157,7 @@ function diploProposeAlliance(w, n, caps) {
     const cand = [];
     let total = 0;
     for (const m of w.nations) {
-        if (m.slot === n.slot || !m.alive) continue;
+        if (m.slot === n.slot || !m.alive || m.active === false) continue;   // can't ally a neutral
         const rel = n.relations[m.slot];
         if (rel === "war" || rel === "ally") continue;
         // Respect the player's opening grace window, same as war declarations.
@@ -199,7 +199,7 @@ function diploDeclareWar(w, n, caps, alive) {
     const rivals = [];
     let total = 0;
     for (const m of w.nations) {
-        if (m.slot === n.slot || !m.alive) continue;
+        if (m.slot === n.slot || !m.alive || m.active === false) continue;   // neutrals are captured, not warred
         // Never open a war on an ally or a nation already being fought.
         if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
         // The player gets an opening grace window before any AI may declare on them.
@@ -233,7 +233,7 @@ export function aiTick(w, dt) {
     }
     const caps = capPositions(w);
     for (const n of w.nations) {
-        if (!n.isAi || !n.alive) continue;
+        if (!n.isAi || !n.alive || n.active === false) continue;   // neutrals never build or attack
         n._ai -= dt;
         if (n._ai > 0) continue;
         // Level-of-detail: hot nations (at war, or with a capital near the player's)

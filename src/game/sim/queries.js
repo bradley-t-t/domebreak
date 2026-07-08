@@ -50,6 +50,22 @@ export function atWar(w, a, b) {
     return !!(n && n.relations[b] === "war");
 }
 
+// Whether a slot is an active (participating) nation. Nations flagged inactive are
+// passive NEUTRALS — they never build or wage war, but their cities are capturable.
+// A nation with no `active` flag (older setups / all-active matches) counts as active.
+export function isActive(w, slot) {
+    const n = nationOf(w, slot);
+    return !n ? false : n.active !== false;
+}
+
+// Whether active slot `a` may strike/capture slot `b`: either they are formally at
+// war, or `b` is a passive neutral (always a valid target for any active nation —
+// this is how the neutral world gets conquered without a war declaration).
+export function hostileTo(w, a, b) {
+    if (a === b) return false;
+    return atWar(w, a, b) || !isActive(w, b);
+}
+
 // Display name for a slot, with a stable fallback for unnamed/AI nations. The
 // public spelling of the internal nationOf lookup — the UI reads this instead of
 // re-implementing `w.nations.find(...)?.name || …` at each call site.

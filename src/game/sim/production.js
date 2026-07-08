@@ -17,7 +17,7 @@ import {
     WARHEADS,
 } from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
-import {atWar, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
+import {atWar, hostileTo, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
 import {findTarget} from "./combat.js";
 import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
@@ -341,7 +341,9 @@ export function commandAttack(w, unitId, targetId) {
     }
     const t = findTarget(w, targetId);
     if (!t) return {error: "Target is gone."};
-    if (!atWar(w, u.slot, t.slot)) return {error: "Not at war with that nation."};
+    // Valid target = a nation you're at war with, or any passive neutral (neutrals
+    // are conquered without a war declaration). Active nations at peace are off-limits.
+    if (!hostileTo(w, u.slot, t.slot)) return {error: "Not at war with that nation."};
     // Ground forces fight the ground war: units with targets:"land" may never
     // engage naval hulls or anything that flies (cities and land assets only).
     if (UNITS[u.type].targets === "land" && t.kind === "unit") {

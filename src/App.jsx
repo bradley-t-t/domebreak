@@ -11,6 +11,7 @@ import SplashSequence from "./ui/screens/SplashSequence.jsx";
 import AttractSim from "./ui/live/AttractSim.jsx";
 import {createWorld} from "./game/engine.js";
 import {buildSetup, loadGameData} from "./game/sim/newGame.js";
+import {NEUTRAL} from "./game/data/constants.js";
 import {loadSettings, saveSettings} from "./game/platform/settings.js";
 import {resolveKeys} from "./game/platform/keybindings.js";
 import {applyAudioSettings, initAudio} from "./game/platform/audio.js";
@@ -222,9 +223,11 @@ export default function App() {
         // Your in-game identity is your account username — no separate "commander
         // name" is collected anywhere.
         const name = accountProfile?.username || "Commander";
-        // Full world: the player claims `iso`, every other country becomes a live AI
-        // nation (buildSetup with no explicit roster enumerates the whole dataset).
-        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9));
+        // Bounded neutral-world match: the player claims `iso`; up to
+        // NEUTRAL.defaultActive nations participate (the player plus scattered great
+        // powers), and every other country stays on the map as a passive, capturable
+        // neutral. See adr-008-active-and-neutral-nations.
+        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: NEUTRAL.defaultActive});
         const w = createWorld(setup);
         w.speed = settings.speed;
         w.paused = true; // solo matches load in paused — the commander presses play to begin
@@ -284,7 +287,7 @@ export default function App() {
             startedAt: wallStartedAtRef.current,
             result,
             nationIso: profile.iso,
-            opponents: world.nations.length - 1,
+            opponents: world.nations.filter((n) => n.active).length - 1,
             durationS: Math.round(world.time),
             stats: matchStatsOf(world)
         });
@@ -303,7 +306,7 @@ export default function App() {
                     startedAt: wallStartedAtRef.current,
                     result: "quit",
                     nationIso: profile.iso,
-                    opponents: world.nations.length - 1,
+                    opponents: world.nations.filter((n) => n.active).length - 1,
                     durationS: Math.round(world.time),
                     stats: matchStatsOf(world)
                 });
