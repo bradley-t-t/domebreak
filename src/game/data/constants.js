@@ -290,6 +290,19 @@ export const BATTLE_PLAN = {
     // Per-plan preview arc/target colors, cycled by plan index — chosen distinct
     // from the faction hues (white/red/blue/grey) so a plan never reads as a nation.
     planColors: ["#f0a63c", "#4fd1c5", "#c084fc", "#f472b6", "#60a5fa", "#a3e635", "#fb923c", "#e879f9"],
+    // Target categories for the Battle Planning screen. A plan selects attacker unit
+    // TYPES and these target CATEGORIES (type → type), never individual map units; the
+    // solver maps each at-war enemy entity to a category. `city` (types:null) = enemy
+    // cities. Data-driven so the screen and solver read the same source of truth.
+    targetCategories: [
+        {id: "city", label: "Cities", types: null},
+        {id: "strike", label: "Missile Platforms", types: ["silo", "launcher", "battleship", "hypersonicbty", "orbitalstrike", "sub-ssbn", "sub-ssn"]},
+        {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "sbi", "orbitallaser"]},
+        {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat", "warnsat"]},
+        {id: "airbases", label: "Airbases", types: ["airstrip", "carrier", "armybase"]},
+        {id: "command", label: "Command", types: ["bunker", "spacehq"]},
+        {id: "ground", label: "Ground Forces", types: ["infantry", "artillery", "tank"]},
+    ],
 };
 
 // --- Unit registry (extracted to units.js; behavior-preserving refactor to

@@ -6,6 +6,16 @@
 
 <br />
 
+> **Revision (2026-07-08):** Battle Planning is now a **full-screen console** (not a
+> docked panel), and plans select **attacker unit TYPES → target CATEGORIES**
+> (type → type) instead of clicking individual units/targets on the map. A plan's
+> roster is therefore a set of unit types (exclusive across plans) and a set of target
+> categories (`BATTLE_PLAN.targetCategories`: Cities, Missile Platforms, Air Defense,
+> Sensors, Airbases, Command, Ground Forces). The solver, reconciler, engagement range,
+> overkill / auto-build / standing-vs-one-shot, and no-overkill + fair-spread allocation
+> are unchanged. The map pick-mode and the docked-panel "minimize to preview" flow below
+> are superseded; armed plans still trace on the globe via the standard command lines.
+
 ## 1. Overview
 
 Battle Planning is a left-docked command surface where the player authors one or

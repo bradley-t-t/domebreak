@@ -12,7 +12,6 @@ import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
 import {nationOf} from "./worldState.js";
 import {atWar} from "./queries.js";
-import {findTarget} from "./combat.js";
 
 // The warhead an offense unit will actually fire — its loaded payload, or the
 // platform's default if it has never been set.
@@ -39,13 +38,6 @@ export function reachKm(w, u, engagementKm) {
     return Math.min(hw, dial);
 }
 
-// Remaining hit points of a resolved target. A live-but-undamaged city carries no
-// `hp` field yet (it's stamped on first damage), so fall back to its maxHp.
-function remainingHp(t) {
-    if (t.kind === "city") return t.ref.hp ?? t.ref.maxHp ?? 0;
-    return t.ref.hp ?? 0;
-}
-
 // Ground-war engagement rule, mirrored from commandAttack: units that fight the
 // ground war (targets:"land") may never be tasked against naval or air targets.
 function canEngage(u, tgt) {
@@ -57,23 +49,42 @@ function canEngage(u, tgt) {
 
 // Resolve a plan's attacker ids to live, owned, offensive units — the only
 // platforms the engine can be given a standing strike order. Sorted by id so the
-// solve is deterministic regardless of roster insertion order.
+// solve is deterministic regardless of unit order. A plan selects attacker unit TYPES
+// (not individual units), so this is every live, owned offensive unit whose type the
+// plan includes.
 export function planAttackers(w, plan, mySlot) {
-    return (plan.attackers || [])
-        .map((id) => w.units.find((u) => u.id === id && u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense"))
-        .filter(Boolean)
+    const types = new Set(plan.attackerTypes || []);
+    return w.units
+        .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type))
         .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
-// Resolve a plan's target ids to live enemy entities we're at war with, each
-// annotated with remaining hp, its owning nation, and a running "allocated
-// damage" tally the solver fills in.
+// Which target CATEGORY an at-war entity falls into (BATTLE_PLAN.targetCategories): a
+// city is always "city"; a unit maps by its type. Returns null for a unit type in no
+// category (e.g. aircraft), which a plan can't target.
+export function targetCategoryOf(kind, type) {
+    if (kind === "city") return "city";
+    for (const cat of BATTLE_PLAN.targetCategories) if (cat.types && cat.types.includes(type)) return cat.id;
+    return null;
+}
+
+// Resolve a plan's target CATEGORIES to live at-war enemy entities — every enemy city
+// (when "city" is selected) and every enemy unit whose type falls in a selected
+// category — each annotated with remaining hp and an "allocated damage" tally the
+// solver fills in. A live-but-undamaged city has no `hp` yet, so it falls back to maxHp.
 export function planTargets(w, plan, mySlot) {
+    const cats = new Set(plan.targetTypes || []);
     const out = [];
-    for (const id of plan.targets || []) {
-        const t = findTarget(w, id);
-        if (!t || !t.alive || !atWar(w, mySlot, t.slot)) continue;
-        out.push({id: t.ref.id, kind: t.kind, type: t.ref.type, slot: t.slot, lng: t.lng, lat: t.lat, hp: remainingHp(t), alloc: 0});
+    if (cats.has("city")) {
+        for (const c of w.cities) {
+            if (!c.alive || !atWar(w, mySlot, c.slot)) continue;
+            out.push({id: c.id, kind: "city", type: undefined, slot: c.slot, lng: c.lng, lat: c.lat, hp: c.hp ?? c.maxHp ?? 0, alloc: 0});
+        }
+    }
+    for (const u of w.units) {
+        if (u.hp <= 0 || !atWar(w, mySlot, u.slot)) continue;
+        const cat = targetCategoryOf("unit", u.type);
+        if (cat && cats.has(cat)) out.push({id: u.id, kind: "unit", type: u.type, slot: u.slot, lng: u.lng, lat: u.lat, hp: u.hp, alloc: 0});
     }
     return out;
 }
@@ -138,7 +149,6 @@ export function solvePlan(w, plan, mySlot) {
         attackerCount: attackers.length,
         firing: assignments.size,
         targetsLive: targets.length,
-        targetsTotal: (plan.targets || []).length,
         targetsCovered: targets.filter((t) => t.alloc > 0).length,
     };
 }
