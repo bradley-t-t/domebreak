@@ -17,7 +17,21 @@ import {
     MATCH_WINDOW_MS,
     MAX_PLAYERS,
     MIN_PLAYERS,
+    QUEUE_STALE_MS,
 } from "./config.js";
+
+// Liveness filter: keep only waiting rows whose owner has heartbeated within
+// staleMs. A player who queued and then went offline (app closed, crash, network
+// drop) stops refreshing last_seen, so their row falls stale and is never grouped
+// — real players are not matched to an offline ghost. Pure and deterministic (now
+// is passed in), so it unit-tests without a database. A missing/unparseable
+// last_seen is treated as stale (fail-closed — better to skip than seat a ghost).
+export function liveWaiters(rows, nowMs, staleMs = QUEUE_STALE_MS) {
+    return rows.filter((r) => {
+        const t = Date.parse(r.last_seen);
+        return Number.isFinite(t) && nowMs - t <= staleMs;
+    });
+}
 
 const SWEEP_MS = 1000;        // must exist: fires window-expiry with no new events
 const READY_POLL_MS = 700;    // per-lobby all-ready re-check cadence
@@ -62,11 +76,13 @@ export function startMatchmaker(db, log) {
         let waiting;
         try {
             const {data, error} = await db.from("matchmaking_queue")
-                .select("user_id, iso, enqueued_at, party_id")
+                .select("user_id, iso, enqueued_at, party_id, last_seen")
                 .eq("status", "waiting")
                 .order("enqueued_at");
             if (error) throw error;
-            waiting = (data ?? []).filter((r) => !claiming.has(r.user_id));
+            // Drop rows already being formed by an overlapping sweep, then drop
+            // stale rows whose owner has gone offline — never seat a ghost.
+            waiting = liveWaiters((data ?? []).filter((r) => !claiming.has(r.user_id)), Date.now());
         } catch (e) {
             log("matchmaker: sweep read failed:", e?.message || e);
             return;

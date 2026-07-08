@@ -45,3 +45,11 @@ export const MATCH_WINDOW_MS = parseInt(process.env.GD_MATCH_WINDOW_MS || "12000
 // until they connect). MIN_PLAYERS are always present, so this never starts an
 // empty match.
 export const LOBBY_READY_TIMEOUT_MS = parseInt(process.env.GD_LOBBY_READY_TIMEOUT_MS || "45000", 10);
+// Queue liveness (ms): a 'waiting' row is only grouped if its owner has
+// heartbeated within this window. The Searching client refreshes last_seen every
+// ~5s (SearchingScreen); a row that goes silent (app closed, crash, network drop)
+// falls stale and is skipped, so real players are never matched to an offline
+// ghost that quit without cancelling. db-lobby deletes rows staler than this on
+// its sweep. Must comfortably exceed the client heartbeat cadence so ordinary
+// jitter never drops a live waiter.
+export const QUEUE_STALE_MS = parseInt(process.env.GD_QUEUE_STALE_MS || "20000", 10);
