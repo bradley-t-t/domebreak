@@ -8,11 +8,12 @@ import {persistKey} from "./localData.js";
 
 const KEY = "domebreak.hudLayout";
 
-// The three adjustable regions. Order drives the layout-menu listing.
+// The adjustable regions. Order drives the layout-menu listing.
 export const HUD_PANELS = [
     {id: "sidebar", label: "Nation Panel"},
     {id: "topbar", label: "Command Bar"},
     {id: "bottomRight", label: "Map & War Bar"},
+    {id: "prodQueue", label: "Production Queue"},
 ];
 
 // Resize/opacity travel limits — deliberately bounded ("resizable to an extent")

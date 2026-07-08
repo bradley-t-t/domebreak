@@ -34,7 +34,7 @@ export default function ProductionBar({world, api, mySlot}) {
     });
     return (
         <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-5 flex items-center gap-[6px] max-w-[min(620px,52vw)] bg-panel border border-line rounded-lg px-[10px] py-[7px] shadow overflow-x-auto backdrop-blur-[12px] motion-safe:animate-[dbPop_220ms_var(--ease-out)] max-[1180px]:bottom-[76px]">
+            className="pointer-events-auto flex items-center gap-[6px] max-w-[min(620px,52vw)] bg-panel border border-line rounded-lg px-[10px] py-[7px] shadow overflow-x-auto backdrop-blur-[12px] motion-safe:animate-[dbPop_220ms_var(--ease-out)]">
             <span
                 className="font-display text-[9px] tracking-[1.5px] uppercase text-faint mr-1 whitespace-nowrap">Production</span>
             {/* Polite live region: re-announces only when the item on the line

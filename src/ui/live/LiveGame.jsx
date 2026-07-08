@@ -449,7 +449,15 @@ export default function LiveGame({
                     <LayerBar layers={layers} onToggle={toggleLayer}/>
                 </div>
             </AdjustablePanel>
-            {!w.over && <ProductionBar world={w} api={api} mySlot={mySlot}/>}
+            {!w.over && Boolean(myNation?.prod?.current || myNation?.prod?.queue?.length) && (
+                <AdjustablePanel panel={hud.prodQueue} onChange={(p) => setHud("prodQueue", p)}
+                                 onReset={() => resetHudPanel("prodQueue")} label="Production queue"
+                                 origin="bottom center" resizeDir={{x: 0, y: -1}} clickThrough
+                                 className="absolute bottom-4 inset-x-0 z-5 flex justify-center max-[1180px]:bottom-[76px]"
+                                 tabAlign="center">
+                    <ProductionBar world={w} api={api} mySlot={mySlot}/>
+                </AdjustablePanel>
+            )}
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
             <HudLayoutMenu layout={hud} onToggle={setHud} onResetAll={resetHudAll}/>
 
