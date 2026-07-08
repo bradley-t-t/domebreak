@@ -35,6 +35,7 @@ function makePlan(index) {
         color: BATTLE_PLAN.planColors[index % BATTLE_PLAN.planColors.length],
         attackerTypes: [],   // my offensive unit types this plan commands (exclusive across plans)
         targetTypes: [],     // target category ids (BATTLE_PLAN.targetCategories)
+        targetNations: [],   // enemy nation slots this plan strikes; [] = every nation I'm at war with
         engagementKm: BATTLE_PLAN.defaultEngagementKm,
         mode: "standing",    // "standing" (auto-manage while armed) | "oneshot" (Execute applies once)
         armed: false,        // standing plans only: continuously reconciled while true
@@ -87,7 +88,7 @@ export function useBattlePlans(world) {
             const copy = makePlan(prev.length);
             // A clone inherits the targets + toggles but NOT the attacker types — those
             // are exclusive, so the copy starts empty and the player re-picks into it.
-            return [...prev, {...copy, name: `${src.name} copy`, targetTypes: [...src.targetTypes], engagementKm: src.engagementKm, mode: src.mode, overkill: src.overkill, autoBuild: src.autoBuild}];
+            return [...prev, {...copy, name: `${src.name} copy`, targetTypes: [...src.targetTypes], targetNations: [...src.targetNations], engagementKm: src.engagementKm, mode: src.mode, overkill: src.overkill, autoBuild: src.autoBuild}];
         });
     }, []);
 
@@ -113,8 +114,20 @@ export function useBattlePlans(world) {
         }));
     }, []);
 
+    // Toggle an enemy nation (by slot) into/out of plan `id`'s target scope. Nation
+    // scopes may overlap between plans, just like target categories. An empty scope means
+    // the plan hits every nation you're at war with; adding slots narrows it to those.
+    const toggleTargetNation = useCallback((id, slot) => {
+        setPlans((prev) => prev.map((p) => {
+            if (p.id !== id) return p;
+            const has = p.targetNations.includes(slot);
+            return {...p, targetNations: has ? p.targetNations.filter((x) => x !== slot) : [...p.targetNations, slot]};
+        }));
+    }, []);
+
     const clearAttackerTypes = useCallback((id) => patchPlan(id, {attackerTypes: []}), [patchPlan]);
     const clearTargetTypes = useCallback((id) => patchPlan(id, {targetTypes: []}), [patchPlan]);
+    const clearTargetNations = useCallback((id) => patchPlan(id, {targetNations: []}), [patchPlan]);
 
     // One-shot fire: bump the nonce the reconciler watches. Standing plans use `armed`.
     const executePlan = useCallback((id) => patchPlan(id, (p) => ({fireNonce: (p.fireNonce || 0) + 1})), [patchPlan]);
@@ -122,7 +135,8 @@ export function useBattlePlans(world) {
     return {
         plans, active, activeId, setActiveId,
         addPlan, removePlan, duplicatePlan, renamePlan, patchPlan,
-        toggleAttackerType, toggleTargetType, clearAttackerTypes, clearTargetTypes,
+        toggleAttackerType, toggleTargetType, toggleTargetNation,
+        clearAttackerTypes, clearTargetTypes, clearTargetNations,
         executePlan,
     };
 }

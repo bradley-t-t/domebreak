@@ -16,7 +16,8 @@ const setup = () => ({
 
 const plan = (over = {}) => ({
     id: "plan-1", name: "Decapitation", color: "#fff",
-    attackerTypes: ["silo"], targetTypes: ["command"], engagementKm: 12000,
+    attackerTypes: ["silo"], targetTypes: ["command"], targetNations: [],
+    engagementKm: 12000,
     mode: "standing", armed: false, overkill: false, autoBuild: false, fireNonce: 0,
     ...over,
 });
@@ -44,6 +45,14 @@ describe("battle-plan persistence", () => {
         const w = createWorld(setup());
         writeBattlePlans(w, [plan({armed: true})], "plan-1");
         expect(readBattlePlans(w).plans[0].armed).toBe(true);
+    });
+
+    it("test_target_nations_scope_survives_the_round_trip", () => {
+        const w = createWorld(setup());
+        writeBattlePlans(w, [plan({targetNations: [2, 5]})], "plan-1");
+        // Through the same JSON trip the save system takes.
+        const back = readBattlePlans(JSON.parse(JSON.stringify(w)));
+        expect(back.plans[0].targetNations).toEqual([2, 5]);
     });
 
     it("test_read_resets_fireNonce_so_a_loaded_oneshot_does_not_refire", () => {
