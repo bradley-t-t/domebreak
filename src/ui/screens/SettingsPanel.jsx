@@ -43,7 +43,13 @@ export default function SettingsPanel({settings, onChange, onClose}) {
     const groups = [...new Set(KEY_ACTIONS.map((a) => a.group))];
 
     return (
-        <div className={overlay({placement: "center"})} onClick={onClose}>
+        // pointer-events-auto re-enables the backdrop (overlay() is click-through by
+        // default for the non-blocking in-game popups) so this menu modal behaves
+        // conventionally: a click anywhere outside the card — the dimmable rest of
+        // the screen, including the menu rail behind it — closes the panel. The card
+        // stops propagation, so clicks inside it never bubble to this handler. Escape
+        // is handled separately by useModal.
+        <div className={cn(overlay({placement: "center"}), "pointer-events-auto")} onClick={onClose}>
             <div className={cn(card(), "db-settings max-h-[88vh] overflow-y-auto")} ref={cardRef} tabIndex={-1}
                  onClick={(e) => e.stopPropagation()}>
                 <div className={menuTitle({sm: true})}>Settings</div>
