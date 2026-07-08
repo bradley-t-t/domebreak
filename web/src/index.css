@@ -1356,3 +1356,39 @@ body {
         }
     }
 
+
+/* ---- Light "paper" section theme. Wrap a section in .db-paper to flip the
+   semantic tokens to a light editorial surface (mirrors the game's paper cards),
+   so the page alternates dark and light bands. Unlayered so it overrides the
+   Tailwind utilities used inside. ---- */
+.db-paper {
+    --bg: #f3f3f0;
+    --bg-2: #eceae4;
+    --panel: rgba(255, 255, 255, 0.7);
+    --panel-2: rgba(255, 255, 255, 0.86);
+    --panel-solid: #ffffff;
+    --sunk: #e8e7e2;
+    --line: #d7d6cf;
+    --line-soft: rgba(0, 0, 0, 0.10);
+    --hair: rgba(0, 0, 0, 0.06);
+    --text: #14171b;
+    --dim: #4c555e;
+    --faint: #838a91;
+    --gold: #14171b;
+    --gold-hi: #000000;
+    --gold-contrast: #f3f3f0;
+    --gold-soft: rgba(0, 0, 0, 0.055);
+    --gold-line: rgba(0, 0, 0, 0.16);
+    --blue: #3a4048;
+    --danger: #c0483f;
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* On paper, the faint white instrument grid would vanish — use a dark-on-light one. */
+.db-paper .db-grid {
+    background-image:
+            linear-gradient(rgba(0, 0, 0, 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 0, 0, 0.5) 1px, transparent 1px);
+    opacity: 0.04;
+}

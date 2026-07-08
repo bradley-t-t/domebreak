@@ -58,7 +58,7 @@ export default function AccountMenu() {
         };
     }, [open]);
 
-    const name = profile?.username || "Commander";
+    const name = profile?.username || "Player";
     const total = stats?.total_matches ?? 0;
     const wins = stats?.wins ?? 0;
     const losses = stats?.losses ?? 0;
@@ -94,7 +94,7 @@ export default function AccountMenu() {
                             <div className="min-w-0">
                                 <div className="truncate font-display text-[14px] font-bold text-text">{name}</div>
                                 <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
-                                    Commander{profile?.created_at ? ` · since ${monthYear(profile.created_at)}` : ""}
+                                    {profile?.created_at ? `Member since ${monthYear(profile.created_at)}` : "Player"}
                                 </div>
                             </div>
                         </div>
