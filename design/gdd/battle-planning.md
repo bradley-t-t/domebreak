@@ -6,6 +6,19 @@
 
 <br />
 
+> **Revision (2026-07-08b):** Plans can now be **pre-planned in peacetime and persist
+> across save/load.** War is no longer required to author or **arm** a plan — the Arm
+> control unlocks as soon as a plan is fully drawn up (≥1 attacker type + ≥1 target
+> type). An armed standing plan sits *standing by* and engages automatically the moment
+> a valid at-war target exists, so a plan drafted before hostilities executes itself
+> when war breaks out. Plans now live on `world.battlePlans` and ride the existing save
+> serialization (seeded from the world on mount, mirrored back on change via
+> `readBattlePlans` / `writeBattlePlans`); the one-shot `fireNonce` is intentionally NOT
+> restored so a loaded one-shot never auto-fires. **The at-war firing rule is unchanged:**
+> only nations you're formally at war with are ever struck — neutrals stay passive
+> scenery — the pre-planning change only lifts the gate on *authoring/arming*, not on the
+> launch itself. Save `VERSION` bumped 3 → 4 (older saves become unreadable, no migration).
+
 > **Revision (2026-07-08):** Battle Planning is now a **full-screen console** (not a
 > docked panel), and plans select **attacker unit TYPES → target CATEGORIES**
 > (type → type) instead of clicking individual units/targets on the map. A plan's
@@ -190,4 +203,14 @@ All in `BATTLE_PLAN` (`src/game/data/constants.js`):
    solve once.
 8. While the panel is open on a plan with a roster, the globe shows attacker→target
    arcs and target rings in the plan's color; minimizing keeps the preview.
-9. `npm run build` is green and `npm run lint` reports 0 errors.
+9. A plan can be **armed while at peace** (attackers + targets chosen, no live
+   targets): the Arm control is enabled, the plan shows *standing by*, and it begins
+   firing on its own once the player is at war with a nation carrying those targets —
+   with no further input. The at-war launch guard (`commandAttack`) is never bypassed:
+   neutrals are never struck.
+10. Plans **persist across save/load**: authored plans (names, rosters, toggles,
+    engagement, and `armed` state) survive a save → load round-trip and are absent from
+    a fresh match; a loaded one-shot does not auto-fire (`fireNonce` reset). Verified by
+    `plan_persistence_test.js` (read/write round-trip, JSON serialization, fireNonce
+    reset, armed survives).
+11. `npm run build` is green and `npm run lint` reports 0 errors.
