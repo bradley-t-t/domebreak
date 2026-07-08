@@ -22,7 +22,12 @@ export const ABANDON_GRACE_S = parseInt(process.env.GD_ABANDON_GRACE_S || "120",
 // 'starting' and get re-swept until a slot frees.
 export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
 export const TICK_MS = 100;      // simulation step cadence
-export const SNAPSHOT_MS = 500;  // full-world broadcast cadence
+// Full-world broadcast cadence. Lower = more realtime economy/production/spawns
+// (motion is already client-predicted), at a serialize+gzip + bandwidth cost that
+// scales with match count on this single-threaded process. 200ms (5Hz) measured
+// safe on the Sunday host even at MAX_MATCHES; env-tunable without a redeploy. A
+// future delta-encoding pass would let this go much higher — see adr-003.
+export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "200", 10);
 // Opening freeze (seconds): an online match holds paused this long at the start
 // so every commander loads in before the war begins, then releases to
 // permanently-locked 1x play (online has no pause/speed control at all).
