@@ -139,7 +139,13 @@ function update(map, data, canvas, els) {
     if (!map || !data || !canvas) return;
     const {projectiles, interceptors, aircraft} = data;
     const project = (lng, lat) => {
-        const p = map.project([lng, lat]);
+        // Safety net: map.project() throws on |lat|>90 or non-finite input, and a
+        // throw here runs inside a layout effect — it would crash the entire match
+        // view (the MATCH ERROR boundary). Sanitize so a degenerate coordinate only
+        // mis-places one sprite for a frame instead of taking the match down.
+        const sLat = Math.max(-90, Math.min(90, lat)) || 0;
+        const sLng = Number.isFinite(lng) ? lng : 0;
+        const p = map.project([sLng, sLat]);
         return [p.x, p.y];
     };
     const trails = [];

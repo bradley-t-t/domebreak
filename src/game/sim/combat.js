@@ -62,7 +62,12 @@ export function trackPoint(p, f) {
     const len = Math.hypot(dx, dy) || 1;
     // Perpendicular offset peaking mid-flight, zero at release and at impact.
     const off = p.spreadKm * Math.sin(Math.PI * Math.min(1, Math.max(0, f)));
-    return [base[0] + ((-dy / len) * off) / (111 * cos), base[1] + ((dx / len) * off) / 111];
+    // interpGC keeps base within ±90, but this lateral bow is a raw-degree nudge
+    // that can push a sub-warhead past a pole near high latitudes. Clamp so the
+    // shared track never yields an impossible latitude — an unclamped value crashes
+    // map.project() (Invalid LngLat) and takes the whole match view down.
+    const bowLat = Math.max(-90, Math.min(90, base[1] + ((dx / len) * off) / 111));
+    return [base[0] + ((-dy / len) * off) / (111 * cos), bowLat];
 }
 
 // Fires one projectile from an offensive unit at a resolved target. Records who
