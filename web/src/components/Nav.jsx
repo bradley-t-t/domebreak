@@ -57,7 +57,7 @@ export default function Nav({onSignIn}) {
                     {loading ? (
                         <div className="h-9 w-9 rounded-sm border border-line bg-panel"/>
                     ) : signedIn ? (
-                        <AccountMenu onDownload={() => scrollToId("download")}/>
+                        <AccountMenu/>
                     ) : (
                         <>
                             <button
@@ -67,10 +67,10 @@ export default function Nav({onSignIn}) {
                                 Sign in
                             </button>
                             <button
-                                onClick={() => scrollToId("download")}
+                                onClick={() => scrollToId("waitlist")}
                                 className={cn(button({variant: "primary", size: "sm"}))}
                             >
-                                Download
+                                Request Access
                             </button>
                         </>
                     )}

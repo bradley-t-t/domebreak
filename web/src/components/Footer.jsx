@@ -22,12 +22,6 @@ export default function Footer({onShowShortcuts}) {
                             Signal
                         </span>
                         <button
-                            onClick={() => document.getElementById("download")?.scrollIntoView({behavior: "smooth"})}
-                            className="text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
-                        >
-                            Download
-                        </button>
-                        <button
                             onClick={() => document.getElementById("waitlist")?.scrollIntoView({behavior: "smooth"})}
                             className="text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
                         >

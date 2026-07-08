@@ -1,11 +1,10 @@
 import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
-import {ChevronDown, ArrowRight} from "lucide-react";
+import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import HeroGlobe from "./HeroGlobe.jsx";
 import GameIcon from "./GameIcon.jsx";
 import {Eyebrow, Wordmark} from "./ui.jsx";
-import {scrollToId} from "../lib/nav.js";
 
 const SPECS = [
     {icon: "reconsat", label: "195 nations"},
@@ -78,17 +77,9 @@ export default function Hero({onSignIn}) {
 
                     <motion.div {...fadeUp(reduce, 0.24)} className="mt-9">
                         <WaitlistForm source="hero" cta="Request Access"/>
-                        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
-                            <button
-                                onClick={() => scrollToId("download")}
-                                className="group inline-flex items-center gap-1.5 text-text transition-colors hover:text-gold-hi"
-                            >
-                                Download the game
-                                <ArrowRight size={13} className="transition-transform duration-200 group-hover:translate-x-0.5"/>
-                            </button>
-                            <span className="text-line">·</span>
+                        <div className="mt-5 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
                             <button onClick={onSignIn} className="text-dim transition-colors hover:text-text">
-                                Sign in
+                                Have an account? Sign in
                             </button>
                         </div>
                     </motion.div>

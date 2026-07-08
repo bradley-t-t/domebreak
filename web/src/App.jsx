@@ -5,7 +5,6 @@ import Manifesto from "./components/Manifesto.jsx";
 import ShowcaseSection from "./components/ShowcaseSection.jsx";
 import StatBand from "./components/StatBand.jsx";
 import FeatureGrid from "./components/FeatureGrid.jsx";
-import DownloadSection from "./components/DownloadSection.jsx";
 import CtaBand from "./components/CtaBand.jsx";
 import Footer from "./components/Footer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
@@ -94,7 +93,6 @@ function Shell() {
                 />
 
                 <FeatureGrid/>
-                <DownloadSection/>
                 <CtaBand/>
             </main>
             <Footer onShowShortcuts={() => setShortcutsOpen(true)}/>
