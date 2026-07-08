@@ -12,7 +12,7 @@
 // dependency array.
 import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
-import {PAN_PX_PER_SEC} from "../../game/data/constants.js";
+import {PAN_LAT_LIMIT, PAN_PX_PER_SEC} from "../../game/data/constants.js";
 
 export function usePanControls({globe, overlayOpen, K, mapRef}) {
     useEffect(() => {
@@ -51,10 +51,19 @@ export function usePanControls({globe, overlayOpen, K, mapRef}) {
                 if (dLngRef > 180) dLngRef -= 360; else if (dLngRef < -180) dLngRef += 360;
                 const degPerPxLng = dLngRef / ref;
                 const degPerPxLat = (m.unproject([pc.x, pc.y - ref]).lat - c.lat) / ref;
-                const lat = Math.max(-85, Math.min(85, c.lat - ny * distPx * degPerPxLat));
+                const lat = Math.max(-PAN_LAT_LIMIT, Math.min(PAN_LAT_LIMIT, c.lat - ny * distPx * degPerPxLat));
                 m.easeTo({center: [c.lng + nx * distPx * degPerPxLng, lat], duration: SEG_MS, easing: (t) => t});
             } else {
-                m.panBy([nx * distPx, ny * distPx], {duration: SEG_MS, easing: (t) => t});
+                // Flat mercator: a raw panBy has no latitude limit, so W/S can drive
+                // the center past the data edge (MERC_LAT) into the polar stretch —
+                // the stutter/lag. Reproduce panBy's target center by hand
+                // (panBy([dx,dy]) lands at unproject(project(center)+[dx,dy])) so we
+                // can clamp latitude to PAN_LAT_LIMIT, matching the globe branch.
+                const c = m.getCenter();
+                const pc = m.project(c);
+                const dest = m.unproject([pc.x + nx * distPx, pc.y + ny * distPx]);
+                const lat = Math.max(-PAN_LAT_LIMIT, Math.min(PAN_LAT_LIMIT, dest.lat));
+                m.easeTo({center: [dest.lng, lat], duration: SEG_MS, easing: (t) => t});
             }
             timer = setTimeout(runSeg, SEG_MS - 60); // slight overlap → seamless continuous motion
         };

@@ -51,6 +51,14 @@ export const WORLD_ZOOM = {
 // by short constant-velocity ease segments (see LiveGame's pan effect).
 export const PAN_PX_PER_SEC = 1500;
 
+// Hard latitude limit for camera panning, in degrees. Kept safely inside the
+// tile/relief data edge (MERC_LAT ≈ 85.05°) AND short of the projection
+// singularity at the poles, where meridians converge (deg-per-pixel blows up)
+// and the vector map re-settles over the most-stretched part of the pyramid —
+// the cause of the polar pan stutter/lag. Applied in BOTH projections so flat
+// mode stops before the data edge the same way globe already does.
+export const PAN_LAT_LIMIT = 82;
+
 // --- Core sim tuning (moved from engine.js — behavior-preserving extraction) ---
 export const START_POINTS = 500;
 export const MISSILE_SPEED = 140;
