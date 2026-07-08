@@ -1,7 +1,7 @@
 // Read-only world accessors: economy (gdp/income/upkeep), territory, sensor
 // coverage, and defense-range queries. No mutation of world state.
 import {haversine} from "../geo/geo.js";
-import {countryGidAt} from "../geo/countryOwner.js";
+import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
 import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
@@ -246,6 +246,39 @@ export function sensorsCover(sensors, lng, lat) {
 
 export function sensedBy(w, slot, lng, lat) {
     return sensorsCover(sensorsOf(w, slot), lng, lat);
+}
+
+// Fraction (0..1) of the nation's own land area sitting under its radar picture.
+// Uses exactly the emitters the radar overlay draws — every unit whose
+// radarRangeOf() is non-zero (dedicated radars, OTH arrays, ships, carriers, and
+// airborne AWACS), each at its research-scaled range — so this figure always
+// agrees with the coverage rings the player can toggle on the map. Land area is
+// the country grid's cos(lat)-weighted cells for the nation's GID_0, making the
+// result a true surface-area share. 0 when the nation has no mapped land or no
+// live emitters. Not cheap on large countries — callers memoize on a coarse cadence.
+export function radarLandCoverage(w, slot) {
+    const n = nationOf(w, slot);
+    const {cells, area} = countryLandCells(toGid3(n?.iso));
+    if (!area) return 0;
+    const mult = n?.radarMult ?? 1;
+    const emitters = [];
+    for (const r of w.units) {
+        if (r.slot !== slot || r.hp <= 0) continue;
+        if (r.baseId && !airborne(r)) continue; // a parked jet radiates nothing
+        const km = radarRangeOf(r.type) * mult;
+        if (km > 0) emitters.push({lng: r.lng, lat: r.lat, km});
+    }
+    if (!emitters.length) return 0;
+    let covered = 0;
+    for (const cell of cells) {
+        for (const e of emitters) {
+            if (haversine(e.lng, e.lat, cell.lng, cell.lat) <= e.km) {
+                covered += cell.w;
+                break;
+            }
+        }
+    }
+    return covered / area;
 }
 
 // Fog-of-war visibility of a single enemy (or friendly) unit to a viewer nation.

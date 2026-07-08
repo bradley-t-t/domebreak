@@ -12,6 +12,7 @@ const KEY = "domebreak.hudLayout";
 export const HUD_PANELS = [
     {id: "sidebar", label: "Nation Panel"},
     {id: "topbar", label: "Command Bar"},
+    {id: "objectives", label: "Objectives"},
     {id: "bottomRight", label: "Map & War Bar"},
     {id: "prodQueue", label: "Production Queue"},
 ];

@@ -30,3 +30,37 @@ export function countryGidAt(lng, lat) {
     const idx = owner[rowOf(lat) * COUNTRY_W + colOf(lng)];
     return idx ? GIDS[idx] : null;
 }
+
+// Enumerate every grid cell owned by a country, as {lng,lat} centers plus a
+// cos(lat) area weight (grid cells shrink toward the poles, so a raw cell count
+// over-weights high-latitude land — weighting by cos(lat) makes `area` a true
+// relative surface area). Returns {cells, area}; `area` is the summed weight,
+// the denominator for any "% of land covered" figure. Scans the full grid once
+// per country and caches — used by radar-coverage objective checks, never per
+// frame without memoization upstream.
+const landCellCache = new Map();
+
+export function countryLandCells(gid) {
+    if (!gid) return {cells: [], area: 0};
+    const cached = landCellCache.get(gid);
+    if (cached) return cached;
+    const idx = GIDS.indexOf(gid);
+    const cells = [];
+    let area = 0;
+    if (idx > 0) {
+        for (let r = 0; r < COUNTRY_H; r++) {
+            const lat = -90 + (r + 0.5) * STEP;
+            const wgt = Math.cos((lat * Math.PI) / 180);
+            const rowBase = r * COUNTRY_W;
+            for (let c = 0; c < COUNTRY_W; c++) {
+                if (owner[rowBase + c] === idx) {
+                    cells.push({lng: -180 + (c + 0.5) * STEP, lat, w: wgt});
+                    area += wgt;
+                }
+            }
+        }
+    }
+    const out = {cells, area};
+    landCellCache.set(gid, out);
+    return out;
+}

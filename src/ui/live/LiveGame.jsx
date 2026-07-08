@@ -13,6 +13,7 @@ import CountryLabels from "./CountryLabels.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
 import PinnedBar from "../hud/PinnedBar.jsx";
 import AdjustablePanel from "../hud/AdjustablePanel.jsx";
+import ObjectivesPanel from "../hud/ObjectivesPanel.jsx";
 import HudLayoutMenu from "../hud/HudLayoutMenu.jsx";
 import {useHudLayout} from "../hud/useHudLayout.js";
 import Flag from "../common/Flag.jsx";
@@ -426,6 +427,15 @@ export default function LiveGame({
                                  className="absolute top-[40px] left-4 z-5"
                                  tabAlign="left">
                     <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>
+                </AdjustablePanel>
+            )}
+            {!w.over && (
+                <AdjustablePanel panel={hud.objectives} onChange={(p) => setHud("objectives", p)}
+                                 onReset={() => resetHudPanel("objectives")} label="Objectives"
+                                 origin="top right" resizeDir={{x: -1, y: 1}}
+                                 className="absolute top-[150px] right-4 z-5"
+                                 tabAlign="right">
+                    <ObjectivesPanel world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
             )}
             {!w.over && panel === "research" &&

@@ -171,6 +171,17 @@ export const AI_TUNING = {
     bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
 };
 
+// Strategic objectives — the guided goals shown in the in-game Objectives menu
+// (see sim/objectives.js). All tuning lives here, never hardcoded in the objective
+// definitions or the panel. Counts are "how many of this structure the goal wants";
+// radarLandCover is the fraction (0..1) of the nation's own land area that must sit
+// under its radar picture to clear the early-warning objective.
+export const OBJECTIVES_TUNING = {
+    bunkersRequired: 1,
+    airstripsRequired: 2,
+    radarLandCover: 0.8,
+};
+
 // Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
 // in sim/tick.js. Every country on the map is a live AI nation; these knobs govern
 // how wars start and end between them, how hard distant peaceful nations are
