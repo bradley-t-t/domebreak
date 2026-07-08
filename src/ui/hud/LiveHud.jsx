@@ -38,6 +38,7 @@ function stabSub(stab) {
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
     {id: "production", label: "Production", glyph: "▣"},
+    {id: "battle", label: "Battle Plan", glyph: "✷"},
     {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
 ];
 
@@ -216,7 +217,8 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                         {NAV.map((n) => (
                             <button key={n.id}
                                     className={cn("flex items-center gap-[6px] px-[11px] py-[6px] font-display font-semibold text-[10.5px] tracking-[0.6px] uppercase whitespace-nowrap text-dim bg-sunk border border-line rounded-sm cursor-pointer transition-[border-color,color,background] duration-150 ease-out-db hover:text-text hover:border-gold-line", panel === n.id && "text-gold-contrast bg-gold border-gold")}
-                                    onClick={() => onPanel(n.id)} title={`${n.label} (${keyLabel(K[n.id])})`}
+                                    onClick={() => onPanel(n.id)}
+                                    title={K[n.id] ? `${n.label} (${keyLabel(K[n.id])})` : n.label}
                                     aria-label={n.label}>
                                 <span className="text-[13px] leading-none">{n.glyph}</span>
                                 <span>{n.label}</span>
