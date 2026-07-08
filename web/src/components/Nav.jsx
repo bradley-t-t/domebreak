@@ -46,6 +46,12 @@ export default function Nav() {
                         Briefing
                     </button>
                     <button
+                        onClick={() => scrollToId("download")}
+                        className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-dim transition-colors duration-150 hover:text-text md:inline-block px-3 py-2 cursor-pointer"
+                    >
+                        Download
+                    </button>
+                    <button
                         onClick={() => scrollToId("waitlist")}
                         className={cn(button({variant: "primary", size: "sm"}))}
                     >

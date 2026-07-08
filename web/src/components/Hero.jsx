@@ -2,30 +2,20 @@ import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
 import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
+import HeroGlobe from "./HeroGlobe.jsx";
 import {Eyebrow, Wordmark} from "./ui.jsx";
-
-const heroGlobe = "/shots/hero-globe.png";
 
 export default function Hero() {
     const ref = useRef(null);
     const reduce = useReducedMotion();
     const {scrollYProgress} = useScroll({target: ref, offset: ["start start", "end start"]});
-    const globeY = useTransform(scrollYProgress, [0, 1], ["0%", "18%"]);
-    const globeScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
     const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "-14%"]);
     const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
     return (
         <section ref={ref} className="relative min-h-[100svh] w-full overflow-hidden">
-            {/* Globe — floats on the right and bleeds off-frame. The radial alpha
-                is baked into the PNG so it seats cleanly on the canvas. Parallax. */}
-            <motion.div
-                aria-hidden
-                style={reduce ? undefined : {y: globeY, scale: globeScale}}
-                className="pointer-events-none absolute top-1/2 right-[-14%] z-0 aspect-square w-[min(86vh,860px)] max-w-[92%] -translate-y-1/2 origin-center sm:right-[-8%] lg:right-[-3%]"
-            >
-                <img src={heroGlobe} alt="" className="h-full w-full object-contain opacity-[0.96]"/>
-            </motion.div>
+            {/* Live in-game globe (real engine) over a static poster. */}
+            <HeroGlobe/>
 
             {/* Instrument overlays. */}
             <div aria-hidden className="pointer-events-none absolute inset-0 z-0 db-grid"/>
