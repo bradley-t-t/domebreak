@@ -26,6 +26,12 @@ export function headline(e, world, mySlot) {
             return {tone: "danger", text: `${nn(e.a)} declares war on ${nn(e.b)}`};
         case "peace":
             return {tone: "good", text: `${nn(e.a)} and ${nn(e.b)} agree to a white peace`};
+        case "alliance":
+            return {tone: "good", text: `${nn(e.a)} and ${nn(e.b)} forge an alliance`};
+        case "callToArms":
+            return {tone: "danger", text: `${nn(e.a)} honors its alliance and joins the war against ${nn(e.b)}`};
+        case "breakalliance":
+            return {tone: "alert", text: `${nn(e.a)} and ${nn(e.b)} dissolve their alliance`};
         case "conquest": {
             if (e.winner === mySlot) return {tone: "good", text: `${nn(e.loser)} surrenders to you — their occupied territory is yours`};
             if (e.loser === mySlot) return {tone: "danger", text: `You surrender to ${nn(e.winner)} — occupied territory is lost`};

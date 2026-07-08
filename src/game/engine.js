@@ -160,6 +160,8 @@ export {
 export {
     declareWar,
     makePeace,
+    formAlliance,
+    breakAlliance,
     ensureProd,
     prodCount,
     queueUnit,
@@ -202,4 +204,4 @@ export {step, growCities} from "./sim/tick.js";
 
 export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";
 
-export {endWar, offerPeace, respondPeace, dismissWarPopup} from "./sim/warResolution.js";
+export {endWar, offerPeace, respondPeace, proposeAlliance, respondAlliance, dismissWarPopup} from "./sim/warResolution.js";

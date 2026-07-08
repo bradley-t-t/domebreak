@@ -2,6 +2,7 @@ import {useEffect, useMemo, useReducer, useRef} from "react";
 import {
     cancelProd,
     commandAttack,
+    breakAlliance,
     declareWar,
     disembark,
     dismissWarPopup,
@@ -9,7 +10,9 @@ import {
     enqueueResearch,
     moveUnit,
     offerPeace,
+    proposeAlliance,
     respondPeace,
+    respondAlliance,
     queueAircraft,
     queueAmmo,
     queueUnit,
@@ -138,6 +141,21 @@ export function useEngine(world, online = false) {
         },
         respondPeace: (foe, accept) => {
             const r = respondPeace(ref.current, ref.current.mySlot, foe, accept);
+            force();
+            return r;
+        },
+        proposeAlliance: (slot) => {
+            const r = proposeAlliance(ref.current, ref.current.mySlot, slot);
+            force();
+            return r;
+        },
+        breakAlliance: (slot) => {
+            const r = breakAlliance(ref.current, ref.current.mySlot, slot);
+            force();
+            return r;
+        },
+        respondAlliance: (from, accept) => {
+            const r = respondAlliance(ref.current, ref.current.mySlot, from, accept);
             force();
             return r;
         },
