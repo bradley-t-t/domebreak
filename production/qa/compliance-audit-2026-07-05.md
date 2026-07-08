@@ -1,4 +1,12 @@
-# Framework Compliance Audit — 2026-07-05
+<h1 align="center">Framework Compliance Audit</h1>
+
+<p align="center">
+  <b>Multi-agent audit of src/ against the .claude/ guidelines — 45 confirmed findings, 29 fixed in the same session, 26 left open, every fix verified behavior-preserving.</b>
+</p>
+
+<br />
+
+**Date**: 2026-07-05
 
 Multi-agent audit of src/ against .claude/ guidelines (adapted per CLAUDE.md). 70 agents: 8 dimension auditors +
 adversarial verification of every finding. 45 confirmed + 10 downgraded findings; 7 claims refuted and dropped.

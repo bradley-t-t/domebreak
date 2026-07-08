@@ -1,4 +1,10 @@
-# Review Log — strategic-arsenal.md
+<h1 align="center">Review Log — Strategic Arsenal</h1>
+
+<p align="center">
+  <b>Design-review verdicts and revisions for <code>design/gdd/strategic-arsenal.md</code>.</b>
+</p>
+
+<br />
 
 ## Review — 2026-07-07 — Verdict: APPROVED (after minor revision)
 Scope signal: L

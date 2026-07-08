@@ -1,4 +1,10 @@
-# GDD — Strategic Arsenal: Two-Axis Warheads & Delivery (Phase 1)
+<h1 align="center">Strategic Arsenal — Two-Axis Warheads &amp; Delivery (Phase 1)</h1>
+
+<p align="center">
+  <b>Every strike is a delivery vehicle crossed with a warhead — the platform fixes the missile, the player picks the payload, and each launcher earns a distinct identity.</b>
+</p>
+
+<br />
 
 > **Supersedes** `design/gdd/strategic-payloads.md` (the earlier flat, one-round
 > model). This document is the source of truth for the offense arsenal going

@@ -1,4 +1,10 @@
-# War Resolution — Victory, Defeat & White Peace
+<h1 align="center">War Resolution — Victory, Defeat &amp; White Peace</h1>
+
+<p align="center">
+  <b>Every war now ends in one of three outcomes — Victory, Defeat, or White Peace — each reshaping territory and national stability instead of quietly fizzling into a ceasefire.</b>
+</p>
+
+<br />
 
 ## Overview
 
