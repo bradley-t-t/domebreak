@@ -38,23 +38,22 @@ export function useKeyboardControls({
         return () => window.removeEventListener("keydown", h);
     }, [menu, disembarkId, moving, placing, attackMode, panel, onPause]);
 
-    // Command-screen hotkeys: toggle the Production, Diplomacy and Research screens
+    // Command-screen hotkeys: toggle the Production and Diplomacy screens
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
-    // defaults are E / R / T.
+    // defaults are E / R.
     useEffect(() => {
         const h = (e) => {
             if (overlayOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
             const code = keyToken(e);
             const target = code === K.production ? "production"
-                : code === K.diplomacy ? "diplomacy"
-                    : code === K.research ? "research" : null;
+                : code === K.diplomacy ? "diplomacy" : null;
             if (!target) return;
             e.preventDefault();
             setPanel((p) => (p === target ? null : target));
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, w.over, K.production, K.diplomacy, K.research]);
+    }, [overlayOpen, w.over, K.production, K.diplomacy]);
 
     // Controls reference toggle: "?" or F1 opens/closes the command reference.
     // Fixed keys (not rebindable) — the overlay itself lists every binding.

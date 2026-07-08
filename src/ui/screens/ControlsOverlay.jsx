@@ -45,7 +45,6 @@ export default function ControlsOverlay({keys, onClose}) {
         {
             h: "Command Screens", rows: [
                 {label: "Production", combo: [cap(keyLabel(K.production))]},
-                {label: "Research tree", combo: [cap(keyLabel(K.research))]},
                 {label: "Diplomacy", combo: [cap(keyLabel(K.diplomacy))]},
             ]
         },

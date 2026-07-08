@@ -1,6 +1,6 @@
 // Production queue, unit/ammo/aircraft ordering, unit relocation and naval
-// sailing orders, patrol toggles, research queue, and diplomacy orders. The
-// single in-order production line (units + warheads) lives here.
+// sailing orders, patrol toggles, and diplomacy orders. The single in-order
+// production line (units + warheads) lives here.
 //
 // Order/command contract: every mutating order function validates first and
 // returns {ok: true, ...} on success or {error: "reason"} on refusal. Point
@@ -9,7 +9,6 @@ import {
     allowedAmmo,
     AMMO_START,
     AMPHIB_LIFT_KM,
-    AUTO_RESEARCH_RESERVE_MULT,
     MOVE_COST_FRAC,
     PATROL_SIZES,
     SCRAP_REFUND_FRAC,
@@ -351,69 +350,6 @@ export function commandAttack(w, unitId, targetId) {
     }
     u.targetId = targetId;
     return {ok: true};
-}
-
-export function canQueue(n, techId) {
-    const t = TECHS[techId];
-    if (!t) return false;
-    if (n.research.done.includes(techId) || n.research.queue.includes(techId) || n.research.current?.id === techId) return false;
-    if (!t.req) return true;
-    return n.research.done.includes(t.req) || n.research.queue.includes(t.req) || n.research.current?.id === t.req;
-}
-
-export function enqueueResearch(w, slot, techId) {
-    const n = nationOf(w, slot), t = TECHS[techId];
-    if (!n || !t) return {error: "Invalid order."};
-    if (!canQueue(n, techId)) return {error: "Unavailable."};
-    if (n.points < t.cost) return {error: "Not enough points."};
-    n.points -= t.cost;
-    n.research.queue.push(techId);
-    return {ok: true};
-}
-
-export function unqueueResearch(w, slot, techId) {
-    const n = nationOf(w, slot);
-    const i = n.research.queue.indexOf(techId);
-    if (i < 0) return {error: "Not queued."};
-    const dep = n.research.queue.slice(i + 1).filter((q) => TECHS[q].req === techId);
-    if (dep.length) return {error: "A later tech depends on it."};
-    n.research.queue.splice(i, 1);
-    n.points += TECHS[techId].cost;
-    return {ok: true};
-}
-
-// Player toggle: arm/disarm hands-off research. When on, autoResearchTick keeps the
-// research queue fed automatically (see below). Stored on the nation so it persists
-// in saves and rides through the deterministic sim like any other order flag.
-export function setAutoResearch(w, slot, on) {
-    const n = nationOf(w, slot);
-    if (!n) return {error: "Invalid order."};
-    n.autoResearch = !!on;
-    return {ok: true};
-}
-
-// Per-tick Auto-Research controller (no-op unless n.autoResearch). Greedily queues
-// the cheapest queueable techs — but only spends on a tech once the treasury holds
-// AUTO_RESEARCH_RESERVE_MULT × its cost, so a reserve for production/defense always
-// survives (enqueueResearch charges the cost up front, so each queued tech leaves
-// ≥1× its cost behind). Cheapest-first means every track's next unlock fills in
-// before points drain on one far-future tech; canQueue lets a tech chain onto a
-// prerequisite that's merely queued, so a track advances tier-by-tier over ticks.
-export function autoResearchTick(w, n) {
-    if (!n.autoResearch) return;
-    // Bounded by the tech count: each pass either queues one tech (shrinking the
-    // queueable pool) or finds nothing affordable and breaks.
-    for (let guard = Object.keys(TECHS).length; guard > 0; guard--) {
-        let next = null, best = Infinity;
-        for (const id in TECHS) {
-            const cost = TECHS[id].cost;
-            if (cost < best && n.points >= cost * AUTO_RESEARCH_RESERVE_MULT && canQueue(n, id)) {
-                next = id;
-                best = cost;
-            }
-        }
-        if (!next || enqueueResearch(w, n.slot, next).error) break;
-    }
 }
 
 // Total accounted airframes of a type for a base: stock + airborne + on the line.

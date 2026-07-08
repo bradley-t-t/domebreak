@@ -19,7 +19,6 @@ import {
     MIRV_SPLIT_AT,
     MISSILE_SPEED,
     POPULATION,
-    TECHS,
     UNITS,
     WARHEADS,
 } from "../data/constants.js";
@@ -40,9 +39,9 @@ import {
 } from "./queries.js";
 import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
 import {flyAircraft, runAirbase, steamShip} from "./aircraft.js";
-import {autoResearchTick, ensureProd} from "./production.js";
+import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
-import {LEADERSHIP, REPLENISH_RELOAD_MULT} from "../data/constants.js";
+import {REPLENISH_RELOAD_MULT} from "../data/constants.js";
 import {spawnQueuedUnit} from "./tickSpawn.js";
 
 // Population growth: each living city's people grow toward a ceiling, scaled by
@@ -70,31 +69,13 @@ export function growCities(w, dt) {
 // over verbatim) for what it does and why it runs where it does.
 
 // Phase 1: economy — leadership command factor, income accrual, then each
-// nation's research and production lines advance and (on completion) apply
-// their effect / spawn their unit.
+// nation's production line advances and (on completion) spawns its unit.
+// (The tech tree was removed; everything is unlocked at world creation.)
 export function stepEconomy(w, dt) {
     // Refresh each nation's leadership command factor before the economy reads it
-    // (incomeOf / research below both scale by n.commandMult).
+    // (incomeOf below scales by n.commandMult).
     updateCommand(w);
     for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeOf(w, n.slot) * dt);
-
-    for (const n of w.nations) {
-        if (!n.alive) continue;
-        autoResearchTick(w, n); // hands-off queue feeding (player toggle; no-op otherwise)
-        const rr = n.research;
-        if (!rr.current && rr.queue.length) rr.current = {id: rr.queue.shift(), progress: 0};
-        if (rr.current) {
-            // Weakened leadership slows research too (command factor), when enabled.
-            const cmd = LEADERSHIP.penalizeResearch ? (n.commandMult ?? 1) : 1;
-            rr.current.progress += (dt / TECHS[rr.current.id].time) * (n.researchSpeedMult ?? 1) * cmd;
-            if (rr.current.progress >= 1) {
-                TECHS[rr.current.id].apply(n);
-                rr.done.push(rr.current.id);
-                w.events.push({id: nextId(w, "e"), t: w.time, type: "research", slot: n.slot, techId: rr.current.id});
-                rr.current = null;
-            }
-        }
-    }
 
     for (const n of w.nations) {
         if (!n.alive) continue;
