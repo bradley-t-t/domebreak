@@ -1,9 +1,10 @@
 import {useEffect, useRef, useState} from "react";
-import {cancelMatch, fetchMyQueue, quickMatch, watchQueue} from "../../account/lobby.js";
+import {cancelMatch, fetchMyQueue, heartbeatQueue, quickMatch, watchQueue} from "../../account/lobby.js";
 import {button, row, menuScreen, menuBg, menuInner, menuTitle} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
 const SEARCH_TIMEOUT_S = 40;
+const HEARTBEAT_QUEUE_MS = 5000; // liveness ping cadence while searching (server stale window is 20s)
 
 // "Searching for commanders..." beat between pressing Play and the matchmaker
 // placing the caller in a formed lobby. Owns its own quick_match enrollment
@@ -40,7 +41,21 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion, preQ
     useEffect(() => {
         enroll();
         const unsub = watchQueue(() => fetchMyQueue().then(handleQueueRow));
-        return unsub;
+        // Prove we're still here so the server never sweeps our 'waiting' row as an
+        // offline ghost. Stops mattering once matched (heartbeat_queue no-ops on a
+        // 'matched' row).
+        const beat = setInterval(() => {
+            if (!matchedRef.current) heartbeatQueue();
+        }, HEARTBEAT_QUEUE_MS);
+        return () => {
+            clearInterval(beat);
+            unsub();
+            // Leaving the search by any in-app path drops our row immediately (a
+            // hard app-close/crash is caught by the server staleness sweep). No-op
+            // once matched. Solo quick-match only — a party's rows are owned by the
+            // party flow, so we don't yank a member out from under it here.
+            if (!matchedRef.current && !preQueued) cancelMatch();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

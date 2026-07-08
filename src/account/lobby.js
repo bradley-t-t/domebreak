@@ -17,6 +17,9 @@ async function invoke(body) {
 export const quickMatch = (iso) => invoke({action: "quick_match", ...(iso ? {iso} : {})});
 // Delete the caller's 'waiting' row. Safe no-op if already matched / not queued.
 export const cancelMatch = () => invoke({action: "cancel"});
+// Liveness ping while searching — refreshes the caller's 'waiting' row so the
+// server doesn't sweep it as an offline ghost. FIFO place (enqueued_at) is kept.
+export const heartbeatQueue = () => invoke({action: "heartbeat_queue"});
 
 export const leaveLobby = () => invoke({action: "leave"});
 export const setLobbyIso = (iso) => invoke({action: "set_iso", iso});

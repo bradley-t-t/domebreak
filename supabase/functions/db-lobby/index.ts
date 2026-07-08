@@ -14,6 +14,8 @@
 //   {action:"cancel"}              delete the caller's 'waiting' row only (no-op
 //                                  if none, or if already 'matched' — use "leave"
 //                                  on the formed lobby in that case)
+//   {action:"heartbeat_queue"}     refresh the caller's 'waiting' row last_seen so
+//                                  it isn't swept as an offline ghost (FIFO kept)
 //   {action:"set_iso", iso}        caller's own lobby_members.iso (unchanged)
 //   {action:"ready", ready}        caller's own lobby_members.ready (unchanged)
 //   {action:"leave"}               remove caller from any open/starting lobby
@@ -29,6 +31,13 @@ import {createClient} from "npm:@supabase/supabase-js@2";
 const URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+// A 'waiting' row whose owner hasn't heartbeated (last_seen) within this window is
+// abandoned — the player quit without cancelling. The sweep deletes them so the
+// matchmaker never seats a ghost. Kept a touch longer than the matchmaker's own
+// in-memory QUEUE_STALE_MS (20s) gate so the deletion is table hygiene, not the
+// primary liveness check.
+const QUEUE_EXPIRE_MS = 30_000;
 
 const CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -48,6 +57,11 @@ async function sweep(db: ReturnType<typeof createClient>) {
     await db.from("lobbies").update({status: "open"}).eq("status", "starting").lt("updated_at", cutoff);
     const stale = new Date(Date.now() - 2 * 3600_000).toISOString();
     await db.from("lobbies").update({status: "closed"}).eq("status", "open").lt("updated_at", stale);
+    // Purge abandoned matchmaking rows: a 'waiting' row that stopped heartbeating
+    // is an offline player who never cancelled. Removing it keeps the queue honest
+    // so the matchmaker only ever groups players who are actually here.
+    const qExpire = new Date(Date.now() - QUEUE_EXPIRE_MS).toISOString();
+    await db.from("matchmaking_queue").delete().eq("status", "waiting").lt("last_seen", qExpire);
 }
 
 // Pull the caller out of any open/starting lobby they're seated in (quick-
@@ -107,10 +121,26 @@ Deno.serve(async (req) => {
             : null;
         const {data: existing} = await db.from("matchmaking_queue")
             .select("user_id, status").eq("user_id", user.id).maybeSingle();
-        if (existing?.status === "waiting") return json({ok: true});
+        // Already waiting: keep FIFO place (don't touch enqueued_at) but refresh
+        // liveness so re-pressing Play counts as "still here".
+        if (existing?.status === "waiting") {
+            await db.from("matchmaking_queue").update({last_seen: new Date().toISOString()})
+                .eq("user_id", user.id).eq("status", "waiting");
+            return json({ok: true});
+        }
+        const now = new Date().toISOString();
         const {error} = await db.from("matchmaking_queue")
-            .upsert({user_id: user.id, iso, status: "waiting", enqueued_at: new Date().toISOString(), lobby_id: null});
+            .upsert({user_id: user.id, iso, status: "waiting", enqueued_at: now, last_seen: now, lobby_id: null});
         if (error) return json({error: error.message}, 500);
+        return json({ok: true});
+    }
+
+    if (body.action === "heartbeat_queue") {
+        // Liveness ping from the Searching screen: prove the caller is still here
+        // so their 'waiting' row isn't swept as an offline ghost. enqueued_at is
+        // untouched, so FIFO order is preserved.
+        await db.from("matchmaking_queue").update({last_seen: new Date().toISOString()})
+            .eq("user_id", user.id).eq("status", "waiting");
         return json({ok: true});
     }
 
