@@ -2,9 +2,10 @@ import {useEffect, useReducer} from "react";
 import {occludedByGlobe} from "../../game/geo/geo.js";
 
 // Screen-space country name labels. The map style ships no glyphs, so these are
-// projected HTML (works offline in Electron). Level of detail: only the largest
-// countries show when zoomed right out; smaller ones fade in as you zoom, and
-// all fade away once you zoom in close.
+// projected HTML (works offline in Electron). Only belligerents are labeled —
+// neutral/unplayed nations are unnamed background geography. Level of detail:
+// only the largest belligerents show when zoomed right out; smaller ones fade in
+// as you zoom, and all fade away once you zoom in close.
 const HIDE_ZOOM = 4.4;
 
 export default function CountryLabels({map, labels}) {
@@ -36,19 +37,17 @@ export default function CountryLabels({map, labels}) {
     const W = cont.clientWidth, H = cont.clientHeight;
     const out = [];
     for (const L of labels) {
-        // Non-combatants are background geography: they reveal later, render
-        // smaller and dimmer, and never compete with the belligerents' names.
-        const eff = L.combat ? L.w : L.w * 0.72;
-        if (eff < minW) continue;
+        // Only belligerents are labeled — neutral/unplayed nations stay unnamed.
+        if (!L.combat) continue;
+        if (L.w < minW) continue;
         if (occludedByGlobe(map, L.lng, L.lat)) continue;
         const p = map.project([L.lng, L.lat]);
         if (p.x < -80 || p.y < -24 || p.x > W + 80 || p.y > H + 24) continue;
-        let size = Math.max(9, Math.min(30, (10 + L.w * 6) * (0.72 + (z - 1) * 0.13)));
-        if (!L.combat) size *= 0.78;
+        const size = Math.max(9, Math.min(30, (10 + L.w * 6) * (0.72 + (z - 1) * 0.13)));
         out.push(
             <div key={L.iso}
-                 className={`absolute -translate-x-1/2 -translate-y-1/2 font-display font-bold tracking-[0.5px] whitespace-nowrap [text-shadow:0_0_6px_#060708,0_0_3px_#060708,0_1px_2px_#000] ${L.mine ? "text-gold" : L.combat ? "text-[#f2f4f6]" : "font-medium tracking-[0.3px] text-[#878e97] [text-shadow:0_1px_2px_#000]"}`}
-                 style={{left: p.x, top: p.y, fontSize: size, opacity: fade * (L.mine ? 1 : L.combat ? 0.85 : 0.38)}}>
+                 className={`absolute -translate-x-1/2 -translate-y-1/2 font-display font-bold tracking-[0.5px] whitespace-nowrap [text-shadow:0_0_6px_#060708,0_0_3px_#060708,0_1px_2px_#000] ${L.mine ? "text-gold" : "text-[#f2f4f6]"}`}
+                 style={{left: p.x, top: p.y, fontSize: size, opacity: fade * (L.mine ? 1 : 0.85)}}>
                 {L.name}
             </div>
         );
