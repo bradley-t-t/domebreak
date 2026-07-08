@@ -171,7 +171,7 @@ export default function TechTree({world, api, mySlot, onClose}) {
     };
 
     return (
-        <div className="db-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] m-[clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] [inset:clamp(20px,4vh,56px)_clamp(20px,3.5vw,72px)] border border-line rounded-lg shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[dbRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
+        <div className="db-techtree absolute inset-0 z-40 flex flex-col bg-[rgba(4,6,9,0.62)] backdrop-blur-[6px] border border-line rounded-none shadow-[0_26px_80px_rgba(0,0,0,0.6)] overflow-hidden animate-[dbRowIn_220ms_var(--ease-out)_both] motion-reduce:animate-none"
              ref={modalRef} tabIndex={-1}
              role="dialog" aria-modal="true" aria-labelledby="db-tt-title">
             <div className="flex items-center gap-[18px] px-[22px] py-[14px] border-b border-line-soft bg-panel">
