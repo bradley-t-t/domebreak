@@ -1,32 +1,80 @@
-import {useEffect, useReducer} from "react";
+import {useEffect, useReducer, useRef} from "react";
 import {occludedByGlobe} from "../../game/geo/geo.js";
 import {trackPoint, WARHEADS} from "../../game/engine.js";
 
 // Renders missiles/interceptors and their contrails in SCREEN space with a
 // ballistic altitude baked into every point, so the trail arcs up off the
 // ground track (correct in globe + flat) and the sprite pitches with the arc.
+//
+// Trails are drawn on a SINGLE <canvas> imperatively — not as per-segment SVG
+// <line> nodes — so a sky full of missiles costs a couple of canvas passes per
+// frame instead of thousands of React/DOM reconciliations (the old approach
+// rebuilt ~SAMPLES line elements per projectile every frame and was the source
+// of the in-flight lag). The canvas also lets each contrail be a soft, layered
+// vapor stroke — a wide diffuse pass under a bright core, faded tail→head — for
+// a realistic dissipating plume instead of a hard animated polyline. Only the
+// warhead/interceptor heads stay as DOM sprites (a handful of nodes).
 const ALT = {silo: 92, launcher: 48, hypersonicbty: 26};
-const SAMPLES = 22;
+const SAMPLES = 20;
 
-function seg(pts, color, width) {
-    const out = [];
-    for (let i = 1; i < pts.length; i++) {
-        if (!pts[i - 1] || !pts[i]) continue; // gap where the track dips behind the globe
-        const o = 0.06 + 0.74 * (i / (pts.length - 1));
-        out.push(<line key={i} x1={pts[i - 1][0]} y1={pts[i - 1][1]} x2={pts[i][0]} y2={pts[i][1]} stroke={color}
-                       strokeWidth={width} strokeOpacity={o} strokeLinecap="round"/>);
+// #rgb / #rrggbb -> "rgba(r,g,b,a)". Trail colors in the warhead registry are
+// all 6-digit hex; the 3-digit branch is just belt-and-suspenders.
+function rgba(hex, a) {
+    let h = hex.replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const n = parseInt(h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+// Draw one trail: pts is an array of [x,y] screen points (CSS px) with `null`
+// entries marking gaps where the ground track dips behind the globe. Each
+// contiguous run is stroked twice — a wide low-alpha vapor body, then a thin
+// bright core — under a linear gradient that fades the oldest (tail) end to
+// nothing so the plume looks like it's dissipating behind the vehicle.
+function drawTrail(ctx, pts, color, width) {
+    let run = [];
+    const flush = () => {
+        if (run.length >= 2) {
+            const a = run[0], b = run[run.length - 1];
+            const g = ctx.createLinearGradient(a[0], a[1], b[0], b[1]);
+            g.addColorStop(0, rgba(color, 0));
+            g.addColorStop(0.55, rgba(color, 0.2));
+            g.addColorStop(1, rgba(color, 0.82));
+            ctx.strokeStyle = g;
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(run[0][0], run[0][1]);
+            for (let i = 1; i < run.length; i++) ctx.lineTo(run[i][0], run[i][1]);
+            ctx.globalAlpha = 0.5;           // wide diffuse vapor
+            ctx.lineWidth = width * 2.4;
+            ctx.stroke();
+            ctx.globalAlpha = 0.92;          // bright core (same path)
+            ctx.lineWidth = Math.max(0.8, width * 0.8);
+            ctx.stroke();
+        }
+        run = [];
+    };
+    for (const p of pts) {
+        if (!p) flush(); else run.push(p);
     }
-    return out;
+    flush();
 }
 
 export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
     const [, force] = useReducer((x) => x + 1, 0);
+    const canvasRef = useRef(null);
+    const trailsRef = useRef([]);
+
     useEffect(() => {
         if (!map) return;
         let raf = null;
         const h = () => { // coalesce MapLibre's many per-frame move events into one render
             if (raf != null) return;
-            raf = requestAnimationFrame(() => { raf = null; force(); });
+            raf = requestAnimationFrame(() => {
+                raf = null;
+                force();
+            });
         };
         map.on("move", h);
         return () => {
@@ -37,6 +85,29 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
             }
         };
     }, [map]);
+
+    // Redraw the trail canvas after every commit (tick or map move), sized to the
+    // map container in device pixels for crisp strokes. trailsRef is populated in
+    // the render pass below from the same projection used for the heads.
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !map) return;
+        const c = map.getContainer();
+        const w = c.clientWidth, hgt = c.clientHeight, dpr = window.devicePixelRatio || 1;
+        const pw = Math.round(w * dpr), ph = Math.round(hgt * dpr);
+        if (canvas.width !== pw || canvas.height !== ph) {
+            canvas.width = pw;
+            canvas.height = ph;
+            canvas.style.width = w + "px";
+            canvas.style.height = hgt + "px";
+        }
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, pw, ph);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px; widths in CSS px
+        for (const t of trailsRef.current) drawTrail(ctx, t.pts, t.color, t.width);
+    });
+
     if (!map) return null;
     const pr = (lng, lat) => {
         const p = map.project([lng, lat]);
@@ -131,10 +202,11 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
             variant: it.srcType === "thaad" ? "thaad" : ""
         });
     }
+    trailsRef.current = trails;
 
     return (
         <>
-            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-2">{trails.map((t) => <g key={t.id}>{seg(t.pts, t.color, t.width)}</g>)}</svg>
+            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-2"/>
             {heads.map((h) => (
                 <div key={h.id} className={`absolute pointer-events-none z-3 will-change-transform ${h.sub ? "sub" : ""}`} style={{
                     left: h.x,
