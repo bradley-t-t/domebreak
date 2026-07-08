@@ -6,7 +6,7 @@
 import {AI_TUNING, UNITS} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
-import {defenseRange, inOwnCountry, inTerritory, placementBlocked} from "./queries.js";
+import {defenseRange, inOwnCountry, inTerritory, placementBlocked, radarRangeOf} from "./queries.js";
 import {isSea} from "../geo/seaRoute.js";
 
 // Coastal-water spot near the capital for naval builds — probes outward until it
@@ -53,6 +53,24 @@ function defenseCovers(w, myUnits, lng, lat) {
         if (haversine(u.lng, u.lat, lng, lat) <= defenseRange(w, u)) return true;
     }
     return false;
+}
+
+// Is a point already inside a friendly radar's coverage? Used to SPREAD early warning
+// across the nation — each new array goes to a city not yet under the radar picture,
+// instead of stacking every sensor on the one frontier city (the old clustering bug).
+function radarCovered(w, myUnits, lng, lat) {
+    for (const u of myUnits) {
+        if (u.hp <= 0 || radarRangeOf(u.type) <= 0) continue;
+        const nn = w.nations.find((x) => x.slot === u.slot);
+        if (haversine(u.lng, u.lat, lng, lat) <= radarRangeOf(u.type) * (nn?.radarMult ?? 1)) return true;
+    }
+    return false;
+}
+
+// The most valuable city (cities arrive value-sorted) not yet under friendly radar —
+// the right anchor for the next sensor so coverage fans out across the whole nation.
+function leastRadarCoveredCity(w, myUnits, cities) {
+    return cities.find((c) => !radarCovered(w, myUnits, c.lng, c.lat)) || null;
 }
 
 // The "front" a nation orients to: the nearest at-war enemy capital, or (in peace)
@@ -148,7 +166,11 @@ export function aiPlace(w, n, type, myUnits, cities, front) {
         const pts = protectPoints(w, n.slot, myUnits);
         anchor = pts.find((p) => !defenseCovers(w, myUnits, p.lng, p.lat)) || pts[0] || cities[0];
     } else if (forward) {
-        anchor = nearestCity(cities, front);   // frontier — face the threat
+        // Sensors spread for coverage — anchor the next array on the most valuable
+        // city not yet under the radar picture; forward offense still faces the front.
+        anchor = role === "sensor"
+            ? (leastRadarCoveredCity(w, myUnits, cities) || nearestCity(cities, front))
+            : nearestCity(cities, front);
     } else if (role === "industry" || def.maxCount) {
         anchor = farthestCity(cities, front);  // safe interior (also bunker / space HQ)
     } else {

@@ -11,24 +11,40 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
-import {atWar, netIncomeOf} from "./queries.js";
-import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
+import {atWar, hostileTo, isActive, netIncomeOf} from "./queries.js";
+import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, setAwacsPatrol, setMarch, setPatrolSize, unitLockReason} from "./production.js";
 import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
 
-// Weighted-by-population target pick (prefers populous enemy cities; skips pop-0 when possible).
-function pickTarget(w, enemies) {
-    const en = new Set(enemies.map((e) => e.slot));
-    let pool = w.cities.filter((c) => c.alive && en.has(c.slot) && (c.pop || 0) > 0);
-    if (!pool.length) pool = w.cities.filter((c) => c.alive && en.has(c.slot));
-    if (!pool.length) return null;
-    const total = pool.reduce((s, c) => s + (c.pop || 1), 0);
-    let r = rand(w) * total;
-    for (const c of pool) {
-        r -= (c.pop || 1);
-        if (r <= 0) return c;
+// Strategic value of an enemy/neutral city as a strike target for nation `n`, seen
+// from `from`: counter-value (population, capital weight) discounted by distance, with
+// a nudge toward neutrals (soft targets that open expansion and can't counter-strike).
+function targetValue(w, n, from, c) {
+    const pop = (c.pop || 0) + 1;
+    const capW = c.cap ? 1.6 : 1;
+    const dist = from ? haversine(from.lng, from.lat, c.lng, c.lat) : 1;
+    const distW = 1 / (1 + dist / AI_TUNING.targetDistScaleKm);
+    const neutralW = isActive(w, c.slot) ? 1 : AI_TUNING.neutralTargetBias;
+    return pop * capW * distW * neutralW;
+}
+
+// Best strike target for nation `n`: the highest-value living city it may attack — an
+// at-war enemy OR any neutral (hostileTo) — measured from `from` (its capital). A
+// weighted pick over the strongest few keeps the AI concentrating on good targets
+// while staying varied; every roll uses the seeded rand(w), so it stays reproducible.
+function pickTarget(w, n, from) {
+    const scored = [];
+    for (const c of w.cities) {
+        if (!c.alive || c.slot === n.slot || !hostileTo(w, n.slot, c.slot)) continue;
+        scored.push([c, targetValue(w, n, from, c)]);
     }
-    return pool[pool.length - 1];
+    if (!scored.length) return null;
+    scored.sort((a, b) => b[1] - a[1]);
+    const top = scored.slice(0, AI_TUNING.targetTopN);
+    const total = top.reduce((s, [, v]) => s + v, 0);
+    let r = rand(w) * total;
+    for (const [c, v] of top) { r -= v; if (r <= 0) return c; }
+    return top[0][0];
 }
 
 // Tech-gated unit types the AI will pursue once unlocked, in build priority.
@@ -254,22 +270,46 @@ export function aiTick(w, dt) {
             const wh = u.warhead || initialWarhead(u.type);
             if (!(n.ammo[wh] > 0) && allowedAmmo(u.type).includes("standard") && (n.ammo.standard || 0) > 0) u.warhead = "standard";
         }
-        // Units come off the production line idle — point one at a target per tick.
+        // Point an idle MISSILE platform (not a ground unit) at the best available
+        // target — an at-war enemy, or a neutral to soften for capture — each think.
+        const cap = caps[n.slot];
+        const idleOff = myUnits.find((u) => !u.targetId && UNITS[u.type].kind === "offense" && UNITS[u.type].targets !== "land");
+        if (idleOff) {
+            const tgt = pickTarget(w, n, cap);
+            if (tgt) {
+                // Arm the platform with its signature round when one is stocked — a
+                // silo/sub/orbital reaches for the thermo city-killer, a hypersonic
+                // launcher/battery for the HGV. Warheads come only off the shelf and
+                // only onto a platform cleared to carry them.
+                const sig = UNITS[idleOff.type].signature;
+                const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : sig === "sicbm" ? AI_TUNING.sicbmChance : AI_TUNING.thermoChance;
+                if (sig && allowedAmmo(idleOff.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) idleOff.warhead = sig;
+                commandAttack(w, idleOff.id, tgt.id);
+            }
+        }
+        // Ground forces expand the border: send each idle capture-capable battalion to
+        // march on and assault the nearest reachable enemy/neutral city it can take.
+        for (const u of myUnits) {
+            if (u.dest || u.hp <= 0 || !UNITS[u.type].capture) continue;
+            let best = null, bd = Infinity;
+            for (const c of w.cities) {
+                if (!c.alive || c.slot === n.slot || !hostileTo(w, n.slot, c.slot)) continue;
+                const d = haversine(u.lng, u.lat, c.lng, c.lat);
+                if (d < bd) { bd = d; best = c; }
+            }
+            if (best) {
+                setMarch(w, n.slot, u.id, best.lng, best.lat);
+                commandAttack(w, u.id, best.id);
+            }
+        }
+        // Bring air power online: stand up fighter patrols + an AWACS orbit on idle
+        // airbases once a war is on — the wings then screen the sector and engage on
+        // their own (the AI built these but never flew them before).
         if (enemies.length) {
-            const idle = myUnits.find((u) => !u.targetId && UNITS[u.type].kind === "offense");
-            if (idle) {
-                const tgt = pickTarget(w, enemies);
-                if (tgt) {
-                    // Arm the platform with its signature round when one is stocked —
-                    // a silo/sub/orbital reaches for the thermo city-killer, a
-                    // hypersonic launcher/battery for the HGV. Warheads only come off
-                    // the shelf (no conjured rounds) and only onto a platform cleared
-                    // to carry them, so each platform fights to its specialization.
-                    const sig = UNITS[idle.type].signature;
-                    const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : sig === "sicbm" ? AI_TUNING.sicbmChance : AI_TUNING.thermoChance;
-                    if (sig && allowedAmmo(idle.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) idle.warhead = sig;
-                    commandAttack(w, idle.id, tgt.id);
-                }
+            for (const u of myUnits) {
+                if (u.hp <= 0 || !UNITS[u.type].wing) continue;
+                if (!u.patrolSize) setPatrolSize(w, n.slot, u.id, AI_TUNING.patrolSize);
+                if (!u.awacsPatrol) setAwacsPatrol(w, n.slot, u.id, true);
             }
         }
         const myCap = w.cities.find((c) => c.slot === n.slot && c.alive);
@@ -383,6 +423,20 @@ export function aiTick(w, dt) {
         if (defenders < defenseTarget && n.points >= UNITS.dome.cost) {
             const p = place("dome");
             if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat, true).ok) return;
+        }
+        // 6b. Ground army — stand up an army base, then a small mobile force. These are
+        // the engine of expansion: idle battalions march on and hold nearby enemy and
+        // neutral cities (see the ground-order assignment above).
+        const hasArmybase = myUnits.some((u) => u.type === "armybase") || prodCount(n, "unit", "armybase") > 0;
+        if (defenders > 0 && !hasArmybase && n.points >= UNITS.armybase.cost + AI_TUNING.armyReserve) {
+            const p = place("armybase");
+            if (p && queueUnit(w, n.slot, "armybase", p.lng, p.lat, true).ok) return;
+        }
+        const groundForce = myUnits.filter((u) => UNITS[u.type].capture).length + prodCount(n, "unit", "infantry") + prodCount(n, "unit", "tank");
+        if (hasArmybase && groundForce < AI_TUNING.groundTarget && n.points >= UNITS.tank.cost + AI_TUNING.armyReserve) {
+            const type = rand(w) < 0.5 ? "tank" : "infantry";
+            const p = place(type);
+            if (p && queueUnit(w, n.slot, type, p.lng, p.lat, true).ok) return;
         }
         // 7. One over-the-horizon array for strategic warning (safe interior).
         const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");

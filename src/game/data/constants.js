@@ -169,6 +169,15 @@ export const AI_TUNING = {
     defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
     radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
     bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
+    // Smart offensive targeting — value-weighted over at-war enemies AND neutrals.
+    targetDistScaleKm: 6000,  // distance at which a target's value roughly halves (nearer preferred)
+    neutralTargetBias: 1.25,  // extra weight on neutral cities (soft targets that open expansion)
+    targetTopN: 4,            // weighted-random pick among the N strongest candidates (concentration + variety)
+    // Ground expansion doctrine — the tool for taking and holding territory.
+    armyReserve: 120,         // points cushion kept before committing to army builds
+    groundTarget: 6,          // mobile capture-capable battalions an active AI fields to seize cities
+    // Air doctrine.
+    patrolSize: 2,            // default fighter patrol an AI stands up on its airbases once at war
 };
 
 // Strategic objectives — the guided goals shown in the in-game Objectives menu

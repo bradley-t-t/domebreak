@@ -1,27 +1,17 @@
 // Local save-game system (localStorage, mirrored to the machine-local data
 // folder on desktop). The world is plain JSON-serializable data.
+//
+// NO backwards compatibility (project policy — see CLAUDE.md): DomeBreak never
+// migrates or shims old saves. When the world shape changes we bump VERSION; a save
+// from any other version is simply unreadable, and the player is told it's outdated
+// (listSaves flags it, the load UI says so). We do not carry per-format migration code.
 import {persistKey, removeKey} from "./localData.js";
-import {allowedAmmo, initialWarhead, UNITS} from "../data/constants.js";
-
-// Forward-compat migration for loaded worlds. Platform loadouts can change between
-// builds (e.g. the launcher became a SICBM-only TEL); a saved unit may carry a
-// warhead its platform can no longer load. Reset any such orphaned warhead to the
-// platform's default round so it never fires a payload it isn't cleared for.
-// Ammo stockpiles are untouched (no warhead keys were renamed).
-function migrateWorld(world) {
-    if (!world || !Array.isArray(world.units)) return world;
-    for (const u of world.units) {
-        const def = UNITS[u.type];
-        if (def?.warheads && u.warhead && !allowedAmmo(u.type).includes(u.warhead)) {
-            u.warhead = initialWarhead(u.type);
-        }
-    }
-    return world;
-}
 
 const PREFIX = "domebreak.save.";
-// v2: unit type ids renamed to generic roles (interceptor, strikefighter, …) — older saves are unreadable.
-const VERSION = 2;
+// Bump on ANY change to the world shape; older saves become unreadable (no migration).
+//   v2: unit type ids renamed to generic roles (interceptor, strikefighter, …).
+//   v3: bounded-match / neutral-world model — nations carry an `active` flag (adr-008).
+const VERSION = 3;
 // Reserved slot name for the rolling autosave (drives the Continue button).
 export const AUTOSAVE = "auto";
 
@@ -43,8 +33,7 @@ export function loadGame(slot) {
     try {
         const raw = localStorage.getItem(PREFIX + slot);
         const d = raw ? JSON.parse(raw) : null;
-        if (!d || d.v !== VERSION) return null;
-        d.world = migrateWorld(d.world);
+        if (!d || d.v !== VERSION) return null;   // outdated / corrupt → unreadable, no migration
         return d;
     } catch {
         return null;
@@ -63,7 +52,9 @@ export function listSaves() {
         if (k && k.startsWith(PREFIX)) {
             try {
                 const d = JSON.parse(localStorage.getItem(k));
-                if (d && d.v === VERSION) out.push({slot: k.slice(PREFIX.length), meta: d.meta || {}});
+                // Outdated saves are still listed (flagged) so the player is told they
+                // exist but can't be played — never silently dropped.
+                if (d) out.push({slot: k.slice(PREFIX.length), meta: d.meta || {}, outdated: d.v !== VERSION});
             } catch { /* skip */
             }
         }
@@ -73,5 +64,5 @@ export function listSaves() {
 
 // True when any loadable save exists — gates the start menu's Continue button.
 export function hasContinue() {
-    return !!loadGame(AUTOSAVE) || listSaves().length > 0;
+    return !!loadGame(AUTOSAVE) || listSaves().some((s) => !s.outdated);
 }
