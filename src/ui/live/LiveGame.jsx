@@ -408,7 +408,7 @@ export default function LiveGame({
                                  onReset={() => resetHudPanel("topbar")} label="Command bar"
                                  origin="top center" resizeDir={{x: 1, y: 0}} clickThrough
                                  className="relative w-full" contentClass="w-full flex justify-center"
-                                 tabClass="bottom-full left-1/2 -translate-x-1/2">
+                                 tabAlign="center">
                     <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
                              onPanel={(id) => setPanel((p) => (p === id ? null : id))}
                              globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
@@ -424,7 +424,7 @@ export default function LiveGame({
                                  onReset={() => resetHudPanel("sidebar")} label="Nation panel"
                                  origin="top left" resizeDir={{x: 1, y: 1}}
                                  className="absolute top-[40px] left-4 z-5"
-                                 tabClass="bottom-full left-0">
+                                 tabAlign="left">
                     <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>
                 </AdjustablePanel>
             )}
@@ -443,7 +443,7 @@ export default function LiveGame({
                              onReset={() => resetHudPanel("bottomRight")} label="Map and war bar"
                              origin="bottom right" resizeDir={{x: -1, y: -1}}
                              className="absolute bottom-4 right-4 z-5"
-                             tabClass="bottom-full right-0">
+                             tabAlign="right">
                 <div className="flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
                     {!w.over && <WarBar world={w} mySlot={mySlot}/>}
                     <LayerBar layers={layers} onToggle={toggleLayer}/>
