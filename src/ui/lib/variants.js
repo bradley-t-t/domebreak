@@ -31,11 +31,20 @@ import {cva} from "class-variance-authority";
  * card-paper.css flips it to solid ink when nested in a modal card.
  */
 export const button = cva(
-    "db-btn font-display border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter] duration-150 ease-out-db enabled:hover:border-blue enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)] disabled:opacity-60 disabled:cursor-not-allowed",
+    "db-btn font-display border border-line px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap transition-[border-color,box-shadow,filter] duration-150 ease-out-db enabled:hover:border-blue disabled:opacity-60 disabled:cursor-not-allowed",
     {
         variants: {
+            // The default fill is a dark vertical gradient (a background-IMAGE);
+            // it lives in the variant rather than the base so the primary
+            // variant can fully replace the fill with a solid background-COLOR.
+            // Keeping the gradient in the base would leave background-image
+            // painting over primary's bg-gold — the legacy
+            // `.db-btn.primary { background: … }` shorthand reset the image, but
+            // bg-gold alone does not, which rendered the primary button dark
+            // with unreadable dark text.
             variant: {
-                default: "",
+                default:
+                    "bg-linear-to-b from-btn-bg to-btn-bg-2 text-text shadow-[inset_0_1px_0_var(--hair)] enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)]",
                 primary:
                     "primary relative overflow-hidden bg-gold text-gold-contrast border-[rgba(0,0,0,0.25)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] enabled:hover:filter enabled:hover:brightness-105",
             },
