@@ -27,17 +27,34 @@ export {growCities};
 // end-of-tick cleanup (dead unit/projectile pruning, win condition). A thin
 // orchestrator over the phases above, run in the exact order the original
 // inline tick did.
-export function step(w, dt) {
+//
+// `predict` marks a CLIENT-SIDE prediction tick in an online match. The server is
+// authoritative and ships full-world snapshots ~2×/s; between them the client runs
+// this to smooth continuous MOTION (units, missiles, interceptors, sensors, fallout)
+// up to 30fps. On a prediction tick it must NOT re-run the discrete, server-owned
+// systems — economy/production/research, opponent AI, diplomacy, leadership evac,
+// occupation, war resolution, growth, stability, and the win check — because
+// predicting those makes the client repeatedly "complete" then revert server state
+// against the next snapshot (the online production-queue stutter/stall bug). Solo
+// play and the authoritative server call step(w, dt) with predict=false: full tick.
+export function step(w, dt, predict = false) {
     if (w.over || dt <= 0) return w;
     w.time += dt;
 
-    stepEconomy(w, dt);
+    // Discrete, server-owned economy (production/research/points) — carried by
+    // snapshots online, so a prediction tick leaves it untouched.
+    if (!predict) stepEconomy(w, dt);
     stepMovement(w, dt);
     stepCombat(w, dt);
     stepFallout(w, dt);
     stepSensors(w, dt);
     stepInterceptors(w, dt);
     stepEventPrune(w);
+
+    // A client prediction tick stops here: everything below mutates discrete,
+    // server-authoritative state that arrives via snapshots. Running it locally only
+    // fights the next snapshot.
+    if (predict) return w;
 
     aiTick(w, dt);
     diploTick(w, dt);

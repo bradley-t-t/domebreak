@@ -10,7 +10,7 @@ import {useEngine} from "./useEngine.js";
 const LOCAL_ONLY = new Set(["setSpeed", "pause", "play"]);
 
 export function useGameSession(world, client) {
-    const [w, localApi, force] = useEngine(world);
+    const [w, localApi, force] = useEngine(world, !!client);
 
     // Snapshot arrivals re-render immediately instead of waiting for the 30fps tick.
     useEffect(() => {
