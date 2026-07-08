@@ -4,6 +4,10 @@ import {evaluateObjectives} from "../../game/engine.js";
 import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";
 
+// How many incomplete objectives the panel foregrounds at once. Purely a
+// presentation cap (keeps the to-do list short) — not a gameplay tuning value.
+const MAX_ACTIVE = 3;
+
 // In-game Objectives menu: the ordered strategic goals the player works through,
 // with live progress. Presentation only — it reads the world through
 // evaluateObjectives (sim/objectives.js owns what the goals ARE and whether they're
@@ -14,6 +18,11 @@ import {cn} from "../lib/cn.js";
 // Completed objectives leave the active list so the panel always foregrounds what
 // the player should do next; they collapse into a "Completed" log at the bottom that
 // can be expanded to review everything already cleared.
+//
+// Only the next MAX_ACTIVE incomplete objectives are shown at once, so the panel
+// stays a short, focused to-do list. As each visible one is cleared it drops into
+// the completed log and the next queued objective slides up to take its place; a
+// "+N more" hint records how many are still waiting.
 //
 // The land-coverage objective runs a full country-grid scan, so evaluation is
 // memoized on the whole-second game clock rather than every animation frame — a
@@ -33,6 +42,11 @@ export default function ObjectivesPanel({world, mySlot}) {
     const doneCount = completed.length;
     const allDone = doneCount === objectives.length;
 
+    // Foreground only the next few incomplete objectives; the rest stay queued
+    // and surface one-by-one as these clear.
+    const visibleActive = active.slice(0, MAX_ACTIVE);
+    const queuedCount = active.length - visibleActive.length;
+
     return (
         <div className="w-[248px] rounded-lg bg-panel-2 border border-line shadow backdrop-blur-[14px] overflow-hidden"
              role="region" aria-label="Objectives">
@@ -50,7 +64,7 @@ export default function ObjectivesPanel({world, mySlot}) {
                 </div>
             ) : (
                 <ol className="flex flex-col">
-                    {active.map((o, i) => (
+                    {visibleActive.map((o, i) => (
                         <li key={o.id} className={cn("px-3 py-[10px]", i > 0 && "border-t border-hair")}>
                             <div className="flex items-start gap-[9px]">
                                 <span className="flex-none mt-[1px] w-[18px] h-[18px] grid place-items-center rounded-full border bg-sunk border-line text-dim text-[10px] font-mono font-bold"
@@ -83,6 +97,15 @@ export default function ObjectivesPanel({world, mySlot}) {
                             </div>
                         </li>
                     ))}
+                    {queuedCount > 0 && (
+                        <li className="px-3 py-[7px] border-t border-hair flex items-center gap-2">
+                            <span className="flex-none w-[18px] h-[18px] grid place-items-center rounded-full border border-dashed border-line text-dim text-[10px] font-mono font-bold"
+                                  aria-hidden="true">+{queuedCount}</span>
+                            <span className="text-[10.5px] leading-snug text-faint">
+                                {queuedCount} more objective{queuedCount > 1 ? "s" : ""} queued
+                            </span>
+                        </li>
+                    )}
                 </ol>
             )}
 
