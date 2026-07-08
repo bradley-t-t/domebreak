@@ -9,7 +9,7 @@
 import {DIPLOMACY, STABILITY} from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
-import {makePeace} from "./production.js";
+import {formAlliance, makePeace} from "./production.js";
 
 // A city's original owner (fallback to current slot for legacy saves predating owner0).
 const origin = (c) => c.owner0 ?? c.slot;
@@ -18,6 +18,14 @@ const origin = (c) => c.owner0 ?? c.slot;
 function ensureWar(w) {
     if (!w.warPopups) w.warPopups = [];
     if (!w.pendingPeace) w.pendingPeace = [];
+    if (!w.pendingAlliance) w.pendingAlliance = [];
+}
+
+// Alliances a nation currently holds.
+function allyCount(n) {
+    let k = 0;
+    for (const s in n.relations) if (n.relations[s] === "ally") k++;
+    return k;
 }
 
 // Cities each slot owned at match start (by owner0) — static over a match, so cached.
@@ -149,6 +157,58 @@ export function respondPeace(w, player, foe, accept) {
     if (idx < 0 || !accept) return {ok: true, declined: !accept};
     if (!atWar(w, player, foe)) return {ok: true};     // war already ended elsewhere
     return endWar(w, foe, player, null, {popup: false});
+}
+
+// --- Alliances: proposal / answer flow (mirrors the white-peace one above). ---
+
+// Would this AI accept an alliance proposed by `from`? Yes when it's under its ally
+// ceiling AND either the two share a common enemy (a bloc worth forming) or the
+// proposer is at least as strong by surviving-city fraction (a pact worth having).
+function aiAcceptsAlliance(w, ai, from) {
+    const nAi = nationOf(w, ai), nFrom = nationOf(w, from);
+    if (!nAi || !nFrom) return false;
+    if (allyCount(nAi) >= DIPLOMACY.maxAllies) return false;
+    for (const s in nAi.relations) {                   // shared enemy?
+        if (nAi.relations[s] === "war" && nFrom.relations[s] === "war") return true;
+    }
+    return survivingFrac(w, from) >= survivingFrac(w, ai);
+}
+
+// An alliance proposal from `from` to `to`. If `to` is an AI it decides immediately
+// (forming the pact or refusing); if `to` is the player, a pending offer is recorded
+// and (for the local player) an Accept/Decline popup is raised.
+export function proposeAlliance(w, from, to) {
+    ensureWar(w);
+    const a = nationOf(w, from), b = nationOf(w, to);
+    if (!a || !b || from === to) return {error: "Invalid order."};
+    if (a.relations[to] === "ally") return {error: "Already allied."};
+    if (atWar(w, from, to)) return {error: "You are at war with them."};
+    if (allyCount(a) >= DIPLOMACY.maxAllies) return {error: "You already hold the maximum alliances."};
+    if (!b.isAi) {                                      // proposed TO a human → ask
+        if (w.pendingAlliance.some((o) => o.from === from && o.to === to)) return {ok: true};
+        w.pendingAlliance.push({from, to, t: w.time});
+        if (to === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-offer", foe: from});
+        return {ok: true};
+    }
+    if (aiAcceptsAlliance(w, to, from)) {
+        const r = formAlliance(w, from, to);
+        if (r.ok && from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-formed", foe: to});
+        return r;
+    }
+    if (from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-refused", foe: to});
+    return {ok: false, refused: true};
+}
+
+// The local player answers an AI's alliance proposal. accept → the pact forms
+// (unless a war has broken out since); decline → the offer is dropped.
+export function respondAlliance(w, player, from, accept) {
+    ensureWar(w);
+    const idx = w.pendingAlliance.findIndex((o) => o.from === from && o.to === player);
+    w.pendingAlliance = w.pendingAlliance.filter((_, i) => i !== idx);
+    w.warPopups = w.warPopups.filter((p) => !(p.kind === "ally-offer" && p.foe === from));
+    if (idx < 0 || !accept) return {ok: true, declined: !accept};
+    if (atWar(w, player, from)) return {ok: true};     // relations changed since the offer
+    return formAlliance(w, from, player);
 }
 
 // Auto-surrender pass (every tick): any belligerent — AI or player — whose surviving-

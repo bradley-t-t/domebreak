@@ -1,7 +1,8 @@
 // Diplomacy — full-screen theatre manager. A roster of every power in the world:
 // flag, name, the seat commanding it (You / AI today, human players in multiplayer),
-// holdings, fielded forces, GDP, standing toward you, and the war/peace control.
-// Presentation only — declareWar/offerPeace go through the api.
+// holdings, fielded forces, GDP, standing toward you, and the war/peace/alliance
+// controls. Presentation only — declareWar/offerPeace/proposeAlliance/breakAlliance
+// go through the api.
 import {useState} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
@@ -19,24 +20,33 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     for (const u of world.units) if (u.hp > 0) forceCount[u.slot] = (forceCount[u.slot] || 0) + 1;
     const citiesOf = (slot) => cityCount[slot] || 0;
     const forcesOf = (slot) => forceCount[slot] || 0;
-    // Self first, then living powers by holdings, then the eliminated — readable standings.
+    // Your standing toward a slot: "war" | "ally" | "peace" (absent reads as peace).
+    const rel = (n) => (n.slot === mySlot ? "self" : me?.relations[n.slot] === "war" ? "war" : me?.relations[n.slot] === "ally" ? "ally" : "peace");
+    // Diplomatic sort priority — the powers that matter to you rise to the top: you,
+    // then human players, then everyone you're at war with, then your allies, then
+    // the rest. Ties within a bucket fall back to alive-then-holdings.
+    const priority = (n) => n.slot === mySlot ? 0 : (online && n.isAi === false && n.alive) ? 1 : rel(n) === "war" ? 2 : rel(n) === "ally" ? 3 : 4;
     const nations = [...world.nations].sort((a, b) =>
-        (a.slot === mySlot ? -1 : b.slot === mySlot ? 1 : 0) || (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
-    // True standings rank per slot, so a filtered view still shows each power's real rank.
-    const rankOf = new Map(nations.map((n, i) => [n.slot, i + 1]));
+        priority(a) - priority(b) || (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
+    // Rank is TRUE standings (alive-then-holdings), computed off a separate sort so the
+    // diplomatic display order above never distorts each power's real rank.
+    const standings = [...world.nations].sort((a, b) => (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
+    const rankOf = new Map(standings.map((n, i) => [n.slot, i + 1]));
 
     const aliveCount = world.nations.filter((n) => n.alive).length;
     const atWar = world.nations.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "war").length;
+    const allied = world.nations.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "ally").length;
     const needle = q.trim().toLowerCase();
-    // Default view keeps the list legible: you, everyone you're at war with, and the
-    // top powers by holdings. A search box reaches any of the ~222 nations by name/ISO.
+    // Default view keeps the list legible: you, everyone you're at war with or allied
+    // to, any human players, and the top powers by holdings. A search box reaches any
+    // of the ~222 nations by name/ISO.
     const shown = needle
         ? nations.filter((n) => n.name.toLowerCase().includes(needle) || n.iso.toLowerCase() === needle)
-        : nations.filter((n, i) => n.slot === mySlot || (n.alive && me?.relations[n.slot] === "war") || i < 40);
+        : nations.filter((n, i) => n.slot === mySlot || (n.alive && (rel(n) === "war" || rel(n) === "ally")) || (online && !n.isAi && n.alive) || i < 40);
 
     const seat = (n) => n.slot === mySlot ? {label: "You", cls: "text-gold-contrast bg-gold border-gold"} : n.isAi ? {label: "AI", cls: ""} : {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"};
 
-    const rowGrid = "grid grid-cols-[52px_minmax(200px,2fr)_96px_76px_76px_88px_116px_150px] items-center gap-3 px-[14px] py-[11px] border-b border-hair";
+    const rowGrid = "grid grid-cols-[52px_minmax(200px,2fr)_96px_76px_76px_88px_116px_190px] items-center gap-3 px-[14px] py-[11px] border-b border-hair";
 
     return (
         <ScreenFrame title="DIPLOMACY" subtitle="Theatre powers & standings" bare onClose={onClose}
@@ -50,6 +60,10 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
                     <div className="flex-1 min-w-[150px] flex flex-col gap-[3px] px-[14px] py-3 bg-sunk border border-line rounded">
                         <span className="text-[9px] tracking-[1.2px] uppercase text-faint">You Are At War With</span>
                         <b className={cn("font-mono text-lg", atWar && "text-red")}>{atWar}</b>
+                    </div>
+                    <div className="flex-1 min-w-[150px] flex flex-col gap-[3px] px-[14px] py-3 bg-sunk border border-line rounded">
+                        <span className="text-[9px] tracking-[1.2px] uppercase text-faint">Your Alliances</span>
+                        <b className={cn("font-mono text-lg", allied && "text-[#5fa8ff]")}>{allied}</b>
                     </div>
                     <div className="flex-1 min-w-[150px] flex flex-col gap-[3px] px-[14px] py-3 bg-sunk border border-line rounded">
                         <span className="text-[9px] tracking-[1.2px] uppercase text-faint">Your Holdings</span>
@@ -77,7 +91,8 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
                     </div>
                     {shown.map((n) => {
                         const isMe = n.slot === mySlot;
-                        const war = !isMe && me?.relations[n.slot] === "war";
+                        const standing = rel(n);       // "self" | "war" | "ally" | "peace"
+                        const war = standing === "war";
                         const s = seat(n);
                         return (
                             <div key={n.slot}
@@ -98,17 +113,30 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
                                     {isMe ? <span className="font-mono text-[11px] text-dim">Home</span>
                                         : !n.alive ? <span className="font-mono text-[11px] text-dim">Eliminated</span>
                                             : war ? <span className="font-mono text-[11px] text-red">At War</span>
-                                                : <span className="font-mono text-[11px] text-[#46d38a]">At Peace</span>}
+                                                : standing === "ally" ? <span className="font-mono text-[11px] text-[#5fa8ff]">Allied</span>
+                                                    : <span className="font-mono text-[11px] text-[#46d38a]">At Peace</span>}
                                 </span>
-                                <span className="text-right" role="cell">
+                                <span className="flex justify-end gap-[6px]" role="cell">
                                     {isMe || !n.alive ? <span className="text-faint">—</span>
                                         : war
                                             ? (online
                                                 ? <span className="font-mono text-[10px] text-faint" title="Peace terms are single-player only for now">Peace: solo only</span>
                                                 : <button className={miniButton()} aria-label={`Offer white peace to ${n.name}`}
                                                           onClick={() => api.offerPeace(n.slot)}>Offer Peace</button>)
-                                            : <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
-                                                      onClick={() => api.declareWar(n.slot)}>Declare War</button>}
+                                            : standing === "ally"
+                                                ? (online
+                                                    ? <span className="font-mono text-[10px] text-faint" title="Alliance terms are single-player only for now">Ally: solo only</span>
+                                                    : <button className={miniButton({danger: true})} aria-label={`Break the alliance with ${n.name}`}
+                                                              onClick={() => api.breakAlliance(n.slot)}>Break Alliance</button>)
+                                                : (
+                                                    <>
+                                                        {!online &&
+                                                            <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
+                                                                    onClick={() => api.proposeAlliance(n.slot)}>Ally</button>}
+                                                        <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
+                                                                onClick={() => api.declareWar(n.slot)}>Declare War</button>
+                                                    </>
+                                                )}
                                 </span>
                             </div>
                         );
