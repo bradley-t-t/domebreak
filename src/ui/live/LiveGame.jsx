@@ -12,6 +12,9 @@ import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
 import PinnedBar from "../hud/PinnedBar.jsx";
+import AdjustablePanel from "../hud/AdjustablePanel.jsx";
+import HudLayoutMenu from "../hud/HudLayoutMenu.jsx";
+import {useHudLayout} from "../hud/useHudLayout.js";
 import Flag from "../common/Flag.jsx";
 import {useGameSession} from "../hooks/useGameSession.js";
 import {useEventEffects} from "../hooks/useEventEffects.js";
@@ -101,6 +104,11 @@ export default function LiveGame({
     // useMapBoot (same mount-scoped effect, same fitBounds/idle-reveal race).
     const [booting, setBooting] = useState(true);
     const handleMap = useMapBoot({w, mySlot, mapRef, setMapReady, setBooting});
+
+    // Player-adjustable HUD layout — per-panel drag/resize/opacity/hide, persisted
+    // machine-local (see useHudLayout / hudLayout.js). Presentation only; never
+    // touches world state.
+    const {layout: hud, update: setHud, resetPanel: resetHudPanel, resetAll: resetHudAll} = useHudLayout();
 
     const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
     // Tactical allegiance color for anything drawn on the map: you = white,
@@ -396,16 +404,30 @@ export default function LiveGame({
                 The wrapper is click-through (pointer-events-none) so the empty space around
                 the ticker/alert doesn't block the map; each child re-enables its own. */}
             <div className="absolute top-[40px] left-[272px] right-4 z-6 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
-                <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
-                         onPanel={(id) => setPanel((p) => (p === id ? null : id))}
-                         globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
-                         onMenu={onPause} meBadge={meBadge}/>
+                <AdjustablePanel panel={hud.topbar} onChange={(p) => setHud("topbar", p)}
+                                 onReset={() => resetHudPanel("topbar")} label="Command bar"
+                                 origin="top center" resizeDir={{x: 1, y: 0}} clickThrough
+                                 className="relative w-full" contentClass="w-full flex justify-center"
+                                 tabClass="bottom-full left-1/2 -translate-x-1/2">
+                    <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
+                             onPanel={(id) => setPanel((p) => (p === id ? null : id))}
+                             globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
+                             onMenu={onPause} meBadge={meBadge}/>
+                </AdjustablePanel>
                 <NewsTicker world={w} mySlot={mySlot}/>
                 {/* Flowed in the stack (not absolutely pinned) so it always sits below the
                     HUD + ticker instead of overlapping them. */}
                 {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             </div>
-            {!w.over && <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>}
+            {!w.over && (
+                <AdjustablePanel panel={hud.sidebar} onChange={(p) => setHud("sidebar", p)}
+                                 onReset={() => resetHudPanel("sidebar")} label="Nation panel"
+                                 origin="top left" resizeDir={{x: 1, y: 1}}
+                                 className="absolute top-[40px] left-4 z-5"
+                                 tabClass="bottom-full left-0">
+                    <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>
+                </AdjustablePanel>
+            )}
             {!w.over && panel === "research" &&
                 <TechTree world={w} api={api} mySlot={mySlot} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "production" &&
@@ -417,12 +439,19 @@ export default function LiveGame({
                                   }} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "diplomacy" &&
                 <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} onClose={() => setPanel(null)}/>}
-            <div className="absolute bottom-4 right-4 z-5 flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
-                {!w.over && <WarBar world={w} mySlot={mySlot}/>}
-                <LayerBar layers={layers} onToggle={toggleLayer}/>
-            </div>
+            <AdjustablePanel panel={hud.bottomRight} onChange={(p) => setHud("bottomRight", p)}
+                             onReset={() => resetHudPanel("bottomRight")} label="Map and war bar"
+                             origin="bottom right" resizeDir={{x: -1, y: -1}}
+                             className="absolute bottom-4 right-4 z-5"
+                             tabClass="bottom-full right-0">
+                <div className="flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
+                    {!w.over && <WarBar world={w} mySlot={mySlot}/>}
+                    <LayerBar layers={layers} onToggle={toggleLayer}/>
+                </div>
+            </AdjustablePanel>
             {!w.over && <ProductionBar world={w} api={api} mySlot={mySlot}/>}
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
+            <HudLayoutMenu layout={hud} onToggle={setHud} onResetAll={resetHudAll}/>
 
             {moving && <div
                 className="absolute top-[100px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
