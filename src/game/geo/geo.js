@@ -10,8 +10,8 @@ const TWO_PI = 2 * Math.PI;
 //
 // Why not a true geodesic cap: a geodesic circle is distance-accurate but
 // Mercator stretches a large one so badly the unit no longer sits at the visual
-// centre — a 5000 km OTH ring pushes it ~1/4 of the way up from the bottom, and
-// with radar research the cap can wrap the pole and leave the unit on the edge.
+// centre — a multi-thousand-km OTH ring pushes it well off centre, and with
+// radar research the cap can wrap the pole and leave the unit on the edge.
 // This is overlay-only; actual detection stays geodesic (sensorsCover uses
 // haversine), so accuracy where it matters is untouched. For small rings the
 // two are visually identical.
@@ -43,6 +43,44 @@ export function circle(lng, lat, km, steps = 56, innerKm = 0) {
     const rings = [ring(km)];
     if (innerKm > 0 && innerKm < km) rings.push(ring(innerKm));
     return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: rings}};
+}
+
+// Web-Mercator projection shared by the sweep helpers below — the same unit-square
+// mapping circle() uses, so a sweep drawn over a coverage ring lines up exactly.
+// Screen Y grows downward here, so an angle sweeping 0→360 reads as clockwise.
+const RAD = Math.PI / 180, DEG = 180 / Math.PI;
+const mercXY = (lng, lat) => [lng / 360 + 0.5, 0.5 - Math.asinh(Math.tan(lat * RAD)) / TWO_PI];
+const mercLngLat = (x, y) => [(x - 0.5) * 360, Math.atan(Math.sinh((0.5 - y) * TWO_PI)) * DEG];
+const mercRho = (km, lat) => (km / R_EARTH_KM) / (TWO_PI * Math.max(0.05, Math.cos(lat * RAD)));
+
+// Rotating radar-sweep wedge: a filled sector from the emitter out to `km`,
+// spanning `arcDeg` of trailing arc behind the leading edge at `headDeg`. Drawn
+// in the same Mercator space as circle() so it tracks the coverage ring. This is
+// the fading "afterglow" behind the sweep line; pair with sweepLine() for the
+// bright leading edge. Overlay-only, like circle().
+export function sweepSector(lng, lat, km, headDeg, arcDeg = 42, steps = 16) {
+    const [x0, y0] = mercXY(lng, lat);
+    const rho = mercRho(km, lat);
+    const head = headDeg * RAD, span = arcDeg * RAD;
+    const coords = [mercLngLat(x0, y0)];
+    for (let i = 0; i <= steps; i++) {
+        const a = head - span * (i / steps);
+        coords.push(mercLngLat(x0 + rho * Math.cos(a), y0 + rho * Math.sin(a)));
+    }
+    coords.push(mercLngLat(x0, y0));   // close the wedge back at the emitter
+    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: [coords]}};
+}
+
+// The bright leading edge of the radar sweep: a line from the emitter to the ring
+// edge at `headDeg`, in the same Mercator space as circle()/sweepSector().
+export function sweepLine(lng, lat, km, headDeg) {
+    const [x0, y0] = mercXY(lng, lat);
+    const rho = mercRho(km, lat);
+    const a = headDeg * RAD;
+    return {
+        type: "Feature", properties: {},
+        geometry: {type: "LineString", coordinates: [mercLngLat(x0, y0), mercLngLat(x0 + rho * Math.cos(a), y0 + rho * Math.sin(a))]}
+    };
 }
 
 // Initial great-circle bearing from point 1 to point 2, compass degrees
