@@ -59,6 +59,30 @@
     button {
         cursor: pointer;
     }
+
+    /* Native-app focus. The UA/OS focus ring — whose color follows the macOS
+       accent, so it reads red on some machines — otherwise draws around every
+       element that takes focus, including the modal shells that hold focus via
+       tabIndex=-1 (which rings the entire screen) and any element after a
+       click. Suppress it everywhere, then restore a single on-theme ring for
+       keyboard navigation only: mouse/programmatic focus stays quiet while
+       keyboard users still see where focus lands. */
+    :focus {
+        outline: none;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--blue);
+        outline-offset: 2px;
+    }
+
+    /* Containers that only ever take focus programmatically (modal shells,
+       scroll regions carrying tabIndex=-1) never show a ring — not even the
+       keyboard one. */
+    [tabindex="-1"]:focus,
+    [tabindex="-1"]:focus-visible {
+        outline: none;
+    }
 }
 
 /* All custom properties from the legacy styles.css :root, copied verbatim.
