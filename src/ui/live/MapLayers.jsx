@@ -13,9 +13,12 @@ const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location
 // view, easing off as you zoom in and the real relief takes over.
 const REGION_OWNER_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.7, 4, 0.52, 5.5, 0.32];
 const REGION_OWNER_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 2, 0.6, 6, 1.4];
+// Diplomacy filter tint: solid enough at the whole-earth view to read green/red/grey
+// at a glance, easing back as you zoom in so terrain and cities stay legible.
+const REGION_DIPLO_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.8, 4, 0.62, 6, 0.4];
 
 export default function MapLayers({
-                                       layers, hoveredGid, ownership, popFC, backdropFC, radarFC, defenseFC,
+                                       layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, defenseFC,
                                        ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor
                                    }) {
     return (
@@ -29,6 +32,12 @@ export default function MapLayers({
                 {layers.countries && <Layer id="region-owner-line" type="line" source-layer="regions" beforeId="country-line"
                        filter={["in", ["get", "GID_1"], ["literal", ownership.ids]]}
                        paint={{"line-color": "#0a0c0f", "line-width": REGION_OWNER_LINE_WIDTH, "line-opacity": 0.55}}/>}
+                {/* Diplomacy filter: recolor every nation by your standing toward it —
+                    green = you/allies, red = at war, grey = neutral. Keyed by GID_0 so
+                    it blankets whole countries; drawn under the borders (and above the
+                    ownership tint) so those still read on top. */}
+                {layers.diplomacy && <Layer id="region-diplomacy" type="fill" source-layer="regions" beforeId="country-line"
+                       paint={{"fill-color": diplomacy.fill, "fill-opacity": REGION_DIPLO_OPACITY}}/>}
                 {layers.states && <Layer id="region-all" type="line" source-layer="regions" paint={{
                     "line-color": "#6b7079",
                     "line-opacity": 0.3,

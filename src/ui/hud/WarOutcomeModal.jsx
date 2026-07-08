@@ -36,6 +36,21 @@ function content(kind, foe) {
                 title: "Peace Offer", tone: "text-dim",
                 body: `${foe} offers a white peace — end the war now, with both sides returning to their pre-war borders.`,
             };
+        case "ally-offer":
+            return {
+                title: "Alliance Proposal", tone: "text-[#5fa8ff]",
+                body: `${foe} proposes a mutual-defense pact. Neither of you will make war on the other, and an attack on one draws in the other.`,
+            };
+        case "ally-formed":
+            return {
+                title: "Alliance Forged", tone: "text-good [text-shadow:0_0_26px_rgba(62,227,139,0.45)]",
+                body: `${foe} accepts your alliance. Your nations now stand together — an attack on either is an attack on both.`,
+            };
+        case "ally-refused":
+            return {
+                title: "Proposal Declined", tone: "text-dim",
+                body: `${foe} declines your offer of alliance.`,
+            };
         case "refused":
         default:
             return {
@@ -48,9 +63,11 @@ function content(kind, foe) {
 export default function WarOutcomeModal({world, api}) {
     const pop = world.warPopups?.[0];
     const isOffer = pop?.kind === "offer";
+    const isAllyOffer = pop?.kind === "ally-offer";
     const onClose = () => {
         if (!pop) return;
-        if (isOffer) api.respondPeace(pop.foe, false);   // Escape / backdrop = decline
+        if (isOffer) api.respondPeace(pop.foe, false);        // Escape / backdrop = decline
+        else if (isAllyOffer) api.respondAlliance(pop.foe, false);
         else api.dismissWarPopup(pop.id);
     };
     const ref = useModal(onClose);
@@ -71,10 +88,12 @@ export default function WarOutcomeModal({world, api}) {
                 <div id="db-war-title"
                      className={cn("font-display text-[34px] font-bold tracking-[3px] uppercase text-center mb-3", tone)}>{title}</div>
                 <p className={sub()}>{body}</p>
-                {isOffer ? (
+                {isOffer || isAllyOffer ? (
                     <div className="flex gap-[10px]">
-                        <button className={cn(button(), "flex-1")} onClick={() => api.respondPeace(pop.foe, false)}>Decline</button>
-                        <button className={cn(button({variant: "primary"}), "flex-1")} onClick={() => api.respondPeace(pop.foe, true)}>Accept</button>
+                        <button className={cn(button(), "flex-1")}
+                                onClick={() => isAllyOffer ? api.respondAlliance(pop.foe, false) : api.respondPeace(pop.foe, false)}>Decline</button>
+                        <button className={cn(button({variant: "primary"}), "flex-1")}
+                                onClick={() => isAllyOffer ? api.respondAlliance(pop.foe, true) : api.respondPeace(pop.foe, true)}>Accept</button>
                     </div>
                 ) : (
                     <button className={cn(button({variant: "primary"}), "w-full")}

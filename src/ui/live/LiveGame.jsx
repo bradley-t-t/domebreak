@@ -51,12 +51,13 @@ import {resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
 import {useOwnershipLayer} from "./useOwnershipLayer.js";
+import {useDiplomacyLayer} from "./useDiplomacyLayer.js";
 import SelectionPanel from "./SelectionPanel.jsx";
 
 const CITY_LAYERS = ["live-cities"];
 // Below this zoom, hovering a country shows a whole-country readout instead of a city.
 const COUNTRY_ZOOM = 4.2;
-const DEFAULT_LAYERS = {countries: true, states: false, defense: false, radar: false, pop: false, backdrop: true};
+const DEFAULT_LAYERS = {countries: true, diplomacy: false, states: false, defense: false, radar: false, pop: false, backdrop: true};
 
 export default function LiveGame({
                                      world,
@@ -111,10 +112,13 @@ export default function LiveGame({
     // touches world state.
     const {layout: hud, update: setHud, resetPanel: resetHudPanel, resetAll: resetHudAll} = useHudLayout();
 
-    const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
+    const relation = (slot) => {
+        const r = myNation?.relations[slot];
+        return r === "war" ? "war" : r === "ally" ? "ally" : "peace";
+    };
     // Tactical allegiance color for anything drawn on the map: you = white,
-    // hostile (at war) = red, everyone else = neutral grey.
-    const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : "#8b94a1");
+    // hostile (at war) = red, allied = blue, everyone else = neutral grey.
+    const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : relation(slot) === "ally" ? "#5fa8ff" : "#8b94a1");
     // Your leadership airlift stands out from your white forces: a transport
     // ferry reads BLUE while it's carrying leaders and YELLOW when flying empty
     // (outbound to a pickup or back home), so a glance tells you which planes are
@@ -147,7 +151,7 @@ export default function LiveGame({
     // helper they share — see useContextMenus (same items, same ordering,
     // same menu state, moved out verbatim).
     const {menu, setMenu, openCityMenu, openUnitMenu} = useContextMenus({
-        w, mySlot, myNation, api, selUnit,
+        w, mySlot, myNation, api, selUnit, online: !!net,
         relation, nationName, labelOf, teamColor, flash,
         setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
     });
@@ -223,6 +227,8 @@ export default function LiveGame({
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
+    // Diplomacy map filter: recolor every nation by your standing (see useDiplomacyLayer).
+    const diplomacy = useDiplomacyLayer(w, mySlot);
 
     const onMove = (e) => {
         const m = mapRef.current;
@@ -381,7 +387,8 @@ export default function LiveGame({
             <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS} minZoom={WORLD_ZOOM.min}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
-                <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} popFC={popFC}
+                <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
+                           popFC={popFC}
                            backdropFC={backdropFC} radarFC={radarFC} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}/>

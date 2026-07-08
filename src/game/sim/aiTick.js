@@ -14,7 +14,7 @@ import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
 import {atWar, netIncomeOf} from "./queries.js";
 import {canQueue, commandAttack, declareWar, enqueueResearch, ensureProd, prodCount, queueAmmo, queueUnit, unitLockReason} from "./production.js";
-import {offerPeace} from "./warResolution.js";
+import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
 
 // Weighted-by-population target pick (prefers populous enemy cities; skips pop-0 when possible).
@@ -99,6 +99,19 @@ function warCount(n) {
     return k;
 }
 
+// How many alliances a nation currently holds.
+function allyCount(n) {
+    let k = 0;
+    for (const s in n.relations) if (n.relations[s] === "ally") k++;
+    return k;
+}
+
+// Does n share a live enemy with m (someone both are at war with)?
+function sharesEnemy(n, m) {
+    for (const s in n.relations) if (n.relations[s] === "war" && m.relations[s] === "war") return true;
+    return false;
+}
+
 // True when a nation is "hot" — at war, or its capital sits within activeRangeKm of
 // the player's. Hot nations run aiTick at full cadence; the rest idle-throttle.
 function nearPlayer(w, n, caps) {
@@ -145,8 +158,41 @@ export function diploTick(w, dt) {
     const alive = aliveCityCounts(w);
     for (const n of firing) {
         diploOfferPeace(w, n);
+        diploProposeAlliance(w, n, caps);
         diploDeclareWar(w, n, caps, alive);
     }
+}
+
+// An AI courts a mutual-defense pact. Below its ally ceiling it may (allyProposeChance)
+// propose to a reachable power it's at peace with, weighted toward one that shares a
+// current enemy (a bloc against a common foe), then toward wealth. proposeAlliance
+// resolves an AI↔AI proposal at once and routes an AI→player proposal to a popup.
+function diploProposeAlliance(w, n, caps) {
+    if (allyCount(n) >= DIPLOMACY.maxAllies) return;
+    if (rand(w) >= DIPLOMACY.allyProposeChance) return;
+    const capA = caps[n.slot];
+    if (!capA) return;
+    const cand = [];
+    let total = 0;
+    for (const m of w.nations) {
+        if (m.slot === n.slot || !m.alive) continue;
+        const rel = n.relations[m.slot];
+        if (rel === "war" || rel === "ally") continue;
+        // Respect the player's opening grace window, same as war declarations.
+        if (!m.isAi && w.time < DIPLOMACY.playerGraceSec) continue;
+        const capB = caps[m.slot];
+        if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.allyRangeKm) continue;
+        const weight = (1 + (sharesEnemy(n, m) ? DIPLOMACY.allySharedEnemyW : 0)) * Math.max(0.2, m.gdp || 0.1);
+        cand.push([m.slot, weight]);
+        total += weight;
+    }
+    if (!cand.length || total <= 0) return;
+    let r = rand(w) * total;
+    for (const [slot, weight] of cand) {
+        r -= weight;
+        if (r <= 0) return void proposeAlliance(w, n.slot, slot);
+    }
+    proposeAlliance(w, n.slot, cand[cand.length - 1][0]);
 }
 
 // An AI's negotiated exit: once a war is older than minWarSec it may offer white peace
@@ -171,7 +217,9 @@ function diploDeclareWar(w, n, caps, alive) {
     const rivals = [];
     let total = 0;
     for (const m of w.nations) {
-        if (m.slot === n.slot || !m.alive || n.relations[m.slot] === "war") continue;
+        if (m.slot === n.slot || !m.alive) continue;
+        // Never open a war on an ally or a nation already being fought.
+        if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
         // The player gets an opening grace window before any AI may declare on them.
         if (!m.isAi && w.time < DIPLOMACY.playerGraceSec) continue;
         const capB = caps[m.slot];

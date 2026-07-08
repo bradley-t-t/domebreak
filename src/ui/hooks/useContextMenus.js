@@ -11,7 +11,7 @@ import {hangarCapOf, hangarCount, haversine, SCRAP_REFUND_FRAC, UNITS} from "../
 const AMPHIB_LIFT_KM = 120;
 
 export function useContextMenus({
-                                     w, mySlot, myNation, api, selUnit,
+                                     w, mySlot, myNation, api, selUnit, online,
                                      relation, nationName, labelOf, teamColor, flash,
                                      setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
                                  }) {
@@ -44,11 +44,28 @@ export function useContextMenus({
                     const r = api.commandAttack(selUnit, c.id);
                     if (r.error) flash(r.error);
                 }
-            }); else items.push({
-                label: `Declare War on ${nationName(c.slot)}`,
+            }); else if (rel === "ally") items.push({
+                // Alliance terms are single-player only for now (mirrors the war-popup
+                // and Diplomacy-screen gating); online, offer the item but disable it.
+                label: `Break Alliance with ${nationName(c.slot)}`,
                 danger: true,
-                onClick: () => api.declareWar(c.slot)
-            });
+                disabled: online,
+                onClick: () => api.breakAlliance(c.slot)
+            }); else {
+                if (!online) items.push({
+                    label: `Propose Alliance to ${nationName(c.slot)}`,
+                    onClick: () => {
+                        const r = api.proposeAlliance(c.slot);
+                        if (r?.error) flash(r.error);
+                        else flash(`Alliance proposed to ${nationName(c.slot)}.`, "info");
+                    }
+                });
+                items.push({
+                    label: `Declare War on ${nationName(c.slot)}`,
+                    danger: true,
+                    onClick: () => api.declareWar(c.slot)
+                });
+            }
         }
         items.push({label: "Pin", onClick: () => addPin("city", c)});
         setMenu({title: `${c.name}${c.state ? " · " + c.state : ""}`, items, x: ev.clientX, y: ev.clientY});

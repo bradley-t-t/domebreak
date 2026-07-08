@@ -24,16 +24,66 @@ import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
 import {haversine} from "../geo/geo.js";
 
+// Set the war relation between two nations and stamp the war-start time on both
+// sides so diplomacy can age the conflict regardless of which nation opened it
+// (see diploTick in sim/tick.js). Relation-only — events are the caller's job.
+function setWar(w, na, nb, a, b) {
+    na.relations[b] = "war";
+    nb.relations[a] = "war";
+    (na._warStart || (na._warStart = {}))[b] = w.time;
+    (nb._warStart || (nb._warStart = {}))[a] = w.time;
+}
+
+// Defensive pact: an attack on `defender` pulls its allies into the war against the
+// aggressor. One hop only (the allies' own allies are NOT chained in) so a single
+// declaration can't cascade the whole world. A nation allied to BOTH belligerents,
+// or already at war with the aggressor, stays out. See design/gdd/alliances.md.
+function callToArms(w, aggressor, defender) {
+    const na = nationOf(w, aggressor), nd = nationOf(w, defender);
+    if (!na || !nd) return;
+    for (const s in nd.relations) {
+        if (nd.relations[s] !== "ally") continue;
+        const ally = +s;
+        if (ally === aggressor) continue;                       // allied to the aggressor too — stays out
+        const nAlly = nationOf(w, ally);
+        if (!nAlly || !nAlly.alive) continue;
+        if (na.relations[ally] === "war" || na.relations[ally] === "ally") continue;
+        setWar(w, na, nAlly, aggressor, ally);
+        w.events.push({id: nextId(w, "e"), t: w.time, type: "callToArms", a: ally, b: aggressor, defender});
+    }
+}
+
 export function declareWar(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
     if (!na || !nb || a === b) return {error: "Invalid order."};
-    na.relations[b] = "war";
-    nb.relations[a] = "war";
-    // Stamp the war-start time on both sides so diplomacy can age the conflict
-    // regardless of which nation opened it (see diploTick in sim/tick.js).
-    (na._warStart || (na._warStart = {}))[b] = w.time;
-    (nb._warStart || (nb._warStart = {}))[a] = w.time;
+    if (na.relations[b] === "ally") return {error: "You are allied — break the alliance first."};
+    setWar(w, na, nb, a, b);
     w.events.push({id: nextId(w, "e"), t: w.time, type: "war", a, b});
+    // Defensive pact: an attack on b pulls b's allies in against the aggressor.
+    callToArms(w, a, b);
+    return {ok: true};
+}
+
+// Form a mutual-defense pact between a and b (symmetric `ally` relation). Refused if
+// they are at war or it's a self-pact — the caller (proposeAlliance) also enforces
+// the ally cap. Territory/stability are untouched; alliance is a pure relation flag.
+export function formAlliance(w, a, b) {
+    const na = nationOf(w, a), nb = nationOf(w, b);
+    if (!na || !nb || a === b) return {error: "Invalid order."};
+    if (atWar(w, a, b)) return {error: "You are at war with them."};
+    na.relations[b] = "ally";
+    nb.relations[a] = "ally";
+    w.events.push({id: nextId(w, "e"), t: w.time, type: "alliance", a, b});
+    return {ok: true};
+}
+
+// Dissolve an alliance — both sides fall back to peace. No-op on either side that
+// isn't actually allied, so a one-sided/legacy state can't be corrupted.
+export function breakAlliance(w, a, b) {
+    const na = nationOf(w, a), nb = nationOf(w, b);
+    if (na && na.relations[b] === "ally") na.relations[b] = "peace";
+    if (nb && nb.relations[a] === "ally") nb.relations[a] = "peace";
+    w.events.push({id: nextId(w, "e"), t: w.time, type: "breakalliance", a, b});
     return {ok: true};
 }
 
