@@ -28,9 +28,13 @@ import {
 } from "../../game/engine.js";
 
 // Drives a supplied world (created by App from a new setup or a loaded save).
-// Mutated in place; re-renders on a throttled tick.
-export function useEngine(world) {
+// Mutated in place; re-renders on a throttled tick. `online` marks a networked
+// match: the local loop then runs step() in prediction mode (motion only) so it
+// smooths the server's snapshots without re-simulating server-authoritative state.
+export function useEngine(world, online = false) {
     const ref = useRef(world);
+    const onlineRef = useRef(online);
+    onlineRef.current = online;
     const [, force] = useReducer((x) => x + 1, 0);
     useEffect(() => {
         let raf, last = performance.now(), acc = 0;
@@ -38,7 +42,7 @@ export function useEngine(world) {
             const w = ref.current;
             const dt = Math.min(0.1, (now - last) / 1000);
             last = now;
-            if (w && !w.paused && !w.over) step(w, dt * w.speed);
+            if (w && !w.paused && !w.over) step(w, dt * w.speed, onlineRef.current);
             acc += dt;
             if (acc >= 0.033) { // ~30fps — keeps aircraft/ship motion fluid
                 acc = 0;
