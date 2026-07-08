@@ -10,8 +10,13 @@ export const button = cva(
         variants: {
             variant: {
                 default: "",
+                // Solid elevated dark surface with WHITE text and a bright border —
+                // readable everywhere and matches the in-game paper-card primary
+                // (dark fill, white label). `bg-none` cancels the base gradient so
+                // the solid color actually shows (a gradient bg-image would paint
+                // over a bg-color otherwise).
                 primary:
-                    "relative overflow-hidden bg-gold text-gold-contrast border-[rgba(0,0,0,0.25)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] enabled:hover:brightness-105 enabled:hover:border-[rgba(0,0,0,0.25)]",
+                    "relative overflow-hidden bg-none bg-[#20242b] text-text border-gold-line shadow-[inset_0_1px_0_var(--hair)] enabled:hover:bg-[#282d35] enabled:hover:border-text",
                 ghost:
                     "bg-transparent border-transparent shadow-none text-dim enabled:hover:text-text enabled:hover:border-line",
             },

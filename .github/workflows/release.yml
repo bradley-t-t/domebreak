@@ -1,0 +1,88 @@
+name: Release — build installers & deploy site
+
+# Runs when a release lands on main (via /release). Builds the macOS and Windows
+# installers on native runners, publishes them to the public distribution repo
+# under stable asset names (so the site's latest-download links always resolve),
+# and redeploys the marketing site to Vercel production.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DIST_REPO: bradley-t-t/domebreak-dist
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+  installers:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build: electron:build:mac
+            glob: "release/*.dmg"
+            asset: DomeBreak-mac.dmg
+          - os: windows-latest
+            build: electron:build:win
+            glob: "release/*.exe"
+            asset: DomeBreak-win.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Skip code signing — no certificates in CI (unsigned builds still install).
+      - name: Build installer
+        run: npm run ${{ matrix.build }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Rename to stable asset name
+        shell: bash
+        run: |
+          f=$(ls ${{ matrix.glob }} | head -1)
+          echo "Built: $f"
+          cp "$f" "${{ matrix.asset }}"
+      - name: Publish to distribution repo
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DIST_REPO_TOKEN }}
+          V: ${{ needs.version.outputs.version }}
+        run: |
+          gh release view "v$V" --repo "$DIST_REPO" >/dev/null 2>&1 \
+            || gh release create "v$V" --repo "$DIST_REPO" --title "DomeBreak $V" \
+                 --notes "DomeBreak $V — desktop build for macOS and Windows. Unsigned; on first launch approve it in your OS." \
+            || true
+          gh release upload "v$V" "${{ matrix.asset }}" --repo "$DIST_REPO" --clobber
+
+  deploy-site:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_8KwOtFUhRyHmZM8dPzqh0fq9
+      VERCEL_PROJECT_ID: prj_gVVToIRWCTEr9T6WHRAeCj1mhrXa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i -g vercel@latest
+      - run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+      - run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

@@ -24,8 +24,12 @@ function ensurePmtiles() {
 }
 
 function tilesUrl(name) {
-    const base = typeof window !== "undefined" ? window.location.origin : "";
-    return `pmtiles://${base}/assets/${name}.pmtiles`;
+    // The vector tiles are large; the marketing site (a separate app) hosts them
+    // off-origin and sets window.__DB_TILES_BASE__ to their base URL. In the game
+    // this is unset, so tiles resolve from the app origin exactly as before.
+    const override = typeof window !== "undefined" ? window.__DB_TILES_BASE__ : null;
+    const base = override || (typeof window !== "undefined" ? `${window.location.origin}/assets` : "/assets");
+    return `pmtiles://${base}/${name}.pmtiles`;
 }
 
 function assetUrl(name) {
