@@ -1,13 +1,26 @@
 import {useEffect, useState} from "react";
+import {Keyboard} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
+import {scrollToId} from "../lib/nav.js";
+import {useAccount} from "../lib/AccountContext.jsx";
 import {Wordmark} from "./ui.jsx";
+import GameIcon from "./GameIcon.jsx";
+import AccountMenu from "./AccountMenu.jsx";
 
-function scrollToId(id) {
-    document.getElementById(id)?.scrollIntoView({behavior: "smooth", block: "start"});
+function NavLink({to, children}) {
+    return (
+        <button
+            onClick={() => scrollToId(to)}
+            className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-dim transition-colors duration-150 hover:text-text md:inline-block px-3 py-2 cursor-pointer"
+        >
+            {children}
+        </button>
+    );
 }
 
-export default function Nav() {
+export default function Nav({onSignIn, onShowShortcuts}) {
+    const {loading, signedIn} = useAccount();
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
@@ -28,35 +41,50 @@ export default function Nav() {
         >
             <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 sm:px-8">
                 <button
-                    onClick={() => window.scrollTo({top: 0, behavior: "smooth"})}
-                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => scrollToId("top")}
+                    className="flex items-center gap-2.5 cursor-pointer"
                     aria-label="DomeBreak home"
                 >
+                    <GameIcon name="dome" size={22} className="text-gold"/>
                     <Wordmark className="text-[16px]"/>
-                    <span className="hidden font-mono text-[10px] uppercase tracking-[0.24em] text-faint sm:inline">
+                    <span className="hidden font-mono text-[10px] uppercase tracking-[0.24em] text-faint lg:inline">
                         Global Missile Command
                     </span>
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                    <NavLink to="features">Briefing</NavLink>
+                    <NavLink to="download">Download</NavLink>
+
                     <button
-                        onClick={() => scrollToId("features")}
-                        className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-dim transition-colors duration-150 hover:text-text md:inline-block px-3 py-2 cursor-pointer"
+                        onClick={onShowShortcuts}
+                        aria-label="Keyboard shortcuts"
+                        title="Keyboard shortcuts (?)"
+                        className="hidden h-9 w-9 items-center justify-center rounded-sm border border-line text-dim transition-colors duration-150 hover:border-blue hover:text-text sm:flex"
                     >
-                        Briefing
+                        <Keyboard size={15}/>
                     </button>
-                    <button
-                        onClick={() => scrollToId("download")}
-                        className="hidden font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-dim transition-colors duration-150 hover:text-text md:inline-block px-3 py-2 cursor-pointer"
-                    >
-                        Download
-                    </button>
-                    <button
-                        onClick={() => scrollToId("waitlist")}
-                        className={cn(button({variant: "primary", size: "sm"}))}
-                    >
-                        Request Access
-                    </button>
+
+                    {loading ? (
+                        <div className="h-9 w-9 rounded-sm border border-line bg-panel"/>
+                    ) : signedIn ? (
+                        <AccountMenu onDownload={() => scrollToId("download")}/>
+                    ) : (
+                        <>
+                            <button
+                                onClick={onSignIn}
+                                className="font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-dim transition-colors duration-150 hover:text-text px-3 py-2 cursor-pointer"
+                            >
+                                Sign in
+                            </button>
+                            <button
+                                onClick={() => scrollToId("waitlist")}
+                                className={cn(button({variant: "primary", size: "sm"}))}
+                            >
+                                Request Access
+                            </button>
+                        </>
+                    )}
                 </div>
             </nav>
         </header>

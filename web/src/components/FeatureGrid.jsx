@@ -1,14 +1,15 @@
-import {Globe2, Radar, Crosshair, Cpu, Landmark, Monitor} from "lucide-react";
 import Reveal from "./Reveal.jsx";
 import {Eyebrow} from "./ui.jsx";
+import GameIcon from "./GameIcon.jsx";
 
+// Icons are the game's own unit/asset art (from /icons), tinted to match.
 const FEATURES = [
-    {icon: Globe2, title: "The Living Map", body: "Real borders, real cities, real population. Fought on a 3D globe rendered from actual geography."},
-    {icon: Cpu, title: "Live-AI Powers", body: "Every other nation is an autonomous AI running its own economy, defense, and doctrine — reacting to you."},
-    {icon: Radar, title: "Missile Defense", body: "Blanket your territory in radar and early warning. Layer interceptors, THAAD, and area defense to hold the dome."},
-    {icon: Crosshair, title: "Missile Offense", body: "Author a plan of attack — pick launchers, choose targets, route the trajectory, and let it fly."},
-    {icon: Landmark, title: "Command Economy", body: "Balance GDP, industry, leadership, and stability. Every silo and interceptor is paid for in real points."},
-    {icon: Monitor, title: "Desktop-First", body: "A native app for macOS and Windows. Fully playable offline, saves stay on your machine."},
+    {icon: "reconsat", title: "The Living Map", body: "Real borders, real cities, real population. Fought on a 3D globe rendered from actual geography."},
+    {icon: "spacehq", title: "Live-AI Powers", body: "Every other nation is an autonomous AI running its own economy, defense, and doctrine — reacting to you."},
+    {icon: "dome", title: "Missile Defense", body: "Blanket your territory in radar and early warning. Layer interceptors, THAAD, and area defense to hold the dome."},
+    {icon: "silo", title: "Missile Offense", body: "Author a plan of attack — pick launchers, choose targets, route the trajectory, and let it fly."},
+    {icon: "factory", title: "Command Economy", body: "Balance GDP, industry, leadership, and stability. Every silo and interceptor is paid for in real points."},
+    {icon: "spacehq", title: "Desktop-First", body: "A native app for macOS and Windows. Fully playable offline, saves stay on your machine."},
 ];
 
 export default function FeatureGrid() {
@@ -25,7 +26,9 @@ export default function FeatureGrid() {
                 {FEATURES.map((f, i) => (
                     <Reveal key={f.title} delay={0.05 * i} className="group relative bg-bg">
                         <div className="relative h-full db-tick p-7 transition-colors duration-200 hover:bg-bg-2 sm:p-8">
-                            <f.icon size={22} strokeWidth={1.5} className="text-dim transition-colors duration-200 group-hover:text-text"/>
+                            <span className="flex h-11 w-11 items-center justify-center rounded border border-line bg-gold-soft text-gold transition-colors duration-200 group-hover:border-gold-line">
+                                <GameIcon name={f.icon} size={22}/>
+                            </span>
                             <h3 className="mt-5 font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-text">
                                 {f.title}
                             </h3>

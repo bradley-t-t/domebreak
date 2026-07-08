@@ -100,7 +100,7 @@ function igniteFront(w) {
     declareWar(w, a, b);
 }
 
-function AttractWorld({data, onOver, framed}) {
+function AttractWorld({data, onOver, framed, onReady}) {
     const world = useMemo(() => demoWorld(data), [data]);
     const [w] = useEngine(world);
     const mapRef = useRef(null);
@@ -258,6 +258,24 @@ function AttractWorld({data, onOver, framed}) {
                 } catch { /* map tearing down */
                 }
                 setMapReady((x) => x + 1);
+                // Signal the host once the first tiles have actually painted, so a
+                // consumer (e.g. the marketing site) can fade the globe in only when
+                // it's real, not on a blind timer. One-shot; the spin never idles.
+                if (onReady) {
+                    let done = false;
+                    const check = () => {
+                        if (done) return;
+                        try {
+                            if (m.areTilesLoaded()) {
+                                done = true;
+                                onReady();
+                                return;
+                            }
+                        } catch { /* tearing down */ }
+                        setTimeout(check, 120);
+                    };
+                    setTimeout(check, 150);
+                }
             }}>
                 <Source id="attract-src" type="geojson" data={cityFC}>
                     {/* Destroyed city: a scorched crater with a burnt scar ring. */}
@@ -326,13 +344,14 @@ function AttractWorld({data, onOver, framed}) {
     );
 }
 
-export default function AttractSim({data, framed}) {
+export default function AttractSim({data, framed, onReady}) {
     // Remount with a fresh cast once a war fully resolves.
     const [gen, setGen] = useState(0);
     if (!data) return null;
     return (
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
             <AttractWorld key={gen} data={data} framed={framed}
+                          onReady={gen === 0 ? onReady : undefined}
                           onOver={() => setTimeout(() => setGen((g) => g + 1), 4000)}/>
             <div className="absolute inset-0 bg-[rgba(4,6,9,0.22)]"/>
         </div>

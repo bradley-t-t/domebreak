@@ -1,0 +1,69 @@
+// DomeBreak game-account access for the site. Same Supabase project and anon
+// key the game uses, so players sign in here with their existing account. The
+// client only READS profile/stats (RLS scopes to the signed-in user); the one
+// write (last_login) goes through the db-account edge function, exactly like the
+// game. Ported from src/account/{client,api}.js, minus the Electron mirror.
+import {createClient} from "@supabase/supabase-js";
+
+const URL = import.meta.env.VITE_SUPABASE_URL;
+const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(URL, ANON, {
+    auth: {persistSession: true, autoRefreshToken: true, storageKey: "domebreak.auth"},
+});
+
+export async function signIn(email, password) {
+    const {error} = await supabase.auth.signInWithPassword({email, password});
+    return {error: error?.message || null};
+}
+
+export async function signUp(email, password, username) {
+    const {error} = await supabase.auth.signUp({email, password, options: {data: {username}}});
+    if (error) return {error: error.message};
+    // Autoconfirm may or may not return a session on signUp — sign in to be sure.
+    return signIn(email, password);
+}
+
+export async function signOut() {
+    await supabase.auth.signOut();
+}
+
+export async function getSession() {
+    const {data} = await supabase.auth.getSession();
+    return data.session ?? null;
+}
+
+export function onAuth(cb) {
+    const {data} = supabase.auth.onAuthStateChange((_evt, session) => cb(session));
+    return () => data.subscription.unsubscribe();
+}
+
+export async function fetchProfile() {
+    const {data: {session}} = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) return null;
+    const {data} = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    if (data) return {...data, avatar: user.user_metadata?.avatar ?? null};
+    return {
+        id: user.id,
+        username: user.user_metadata?.username ?? null,
+        created_at: user.created_at ?? null,
+        avatar: user.user_metadata?.avatar ?? null,
+    };
+}
+
+export async function fetchStats() {
+    const zero = {total_matches: 0, wins: 0, losses: 0, quits: 0, total_playtime_s: 0, last_match_at: null};
+    const {data: {session}} = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return zero;
+    const {data} = await supabase.from("player_stats").select("*").eq("user_id", uid).maybeSingle();
+    return data ?? zero;
+}
+
+export function touch() {
+    return supabase.functions.invoke("db-account", {body: {action: "touch"}}).catch(() => {});
+}
+
+// Client-side validation mirroring the game's LoginScreen.
+export const AUTH_RULES = {username: {min: 3, max: 24}, password: {min: 8}};
