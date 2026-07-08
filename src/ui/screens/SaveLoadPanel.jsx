@@ -46,15 +46,15 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
                         return (
                             <div key={slot} className="db-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={summary}>
                                 <div className="db-saveinfo flex-1 flex flex-col min-w-0">
-                                    <b className="text-sm">Slot {slot}</b><span className="text-[11px] text-dim whitespace-nowrap overflow-hidden text-ellipsis">{s ? `${s.meta.playerName || "?"} · ${s.meta.nations || "?"} Powers · ${fmt(s.meta)}` : "Empty"}</span>
+                                    <b className="text-sm">Slot {slot}</b><span className={cn("text-[11px] whitespace-nowrap overflow-hidden text-ellipsis", s?.outdated ? "text-danger" : "text-dim")}>{s ? (s.outdated ? "Outdated save — cannot be played" : `${s.meta.playerName || "?"} · ${s.meta.nations || "?"} Powers · ${fmt(s.meta)}`) : "Empty"}</span>
                                 </div>
                                 {mode === "save"
                                     ? <button className={miniButton()} aria-label={`Save to slot ${slot}`} onClick={() => {
                                         onSave(slot);
                                         force((t) => t + 1);
                                     }}>Save</button>
-                                    : <button className={miniButton()} disabled={!s} aria-label={`Load slot ${slot}`}
-                                              onClick={() => s && onLoad(slot)}>Load</button>}
+                                    : <button className={miniButton()} disabled={!s || s.outdated} aria-label={`Load slot ${slot}`}
+                                              onClick={() => s && !s.outdated && onLoad(slot)}>Load</button>}
                                 {s && (
                                     <button className={miniButton({danger: true})} aria-label={confirming
                                         ? `Confirm delete slot ${slot}`
@@ -68,9 +68,9 @@ export default function SaveLoadPanel({mode, onSave, onLoad, onClose}) {
                     })}
                     {auto && mode === "load" && (
                         <div className="db-saverow flex items-center gap-2 py-2.5 px-3 bg-btn-bg border border-line rounded" role="listitem" aria-label={`Autosave — ${fmt(auto.meta)}`}>
-                            <div className="db-saveinfo flex-1 flex flex-col min-w-0"><b className="text-sm">Autosave</b><span className="text-[11px] text-dim whitespace-nowrap overflow-hidden text-ellipsis">{fmt(auto.meta)}</span></div>
-                            <button className={miniButton()} aria-label="Load autosave"
-                                    onClick={() => onLoad(AUTOSAVE)}>Load</button>
+                            <div className="db-saveinfo flex-1 flex flex-col min-w-0"><b className="text-sm">Autosave</b><span className={cn("text-[11px] whitespace-nowrap overflow-hidden text-ellipsis", auto.outdated ? "text-danger" : "text-dim")}>{auto.outdated ? "Outdated save — cannot be played" : fmt(auto.meta)}</span></div>
+                            <button className={miniButton()} disabled={auto.outdated} aria-label="Load autosave"
+                                    onClick={() => !auto.outdated && onLoad(AUTOSAVE)}>Load</button>
                         </div>
                     )}
                 </div>

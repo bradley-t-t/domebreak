@@ -6,6 +6,13 @@
 
 <br />
 
+> **Revision (2026-07-08):** Neutral countries are now **non-interactable scenery** —
+> they render in one shared neutral color and **cannot be attacked or captured** by any
+> player or AI. This supersedes the "capturable neutral world" described below: the
+> capture rules, garrison friction, and the "captured neutrals count toward domination"
+> language no longer apply. The 8 active powers fight only one another; victory is
+> last-active-standing or population domination measured over the active set.
+
 ## 1. Overview
 
 A match has at most **8 active nations** (human or AI). Every other country on the

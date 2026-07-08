@@ -13,8 +13,12 @@ import {cn} from "../lib/cn.js";
 export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     const [q, setQ] = useState("");
     const me = world.nations.find((n) => n.slot === mySlot);
-    // Precompute holdings/forces per slot in one pass each — the roster is the whole
-    // world now (~222 nations), so a per-row cities.filter() would be O(nations × cities).
+    // Only the ACTIVE (participating) powers are diplomatic actors — the passive neutral
+    // world never wars or allies, so it never appears here. In an all-active match this
+    // is every nation. See adr-008-active-and-neutral-nations.
+    const roster = world.nations.filter((n) => n.active !== false);
+    // Precompute holdings/forces per slot in one pass each (indexed by slot, so it's
+    // cheap regardless of how many cities/units exist).
     const cityCount = {}, forceCount = {};
     for (const c of world.cities) if (c.alive) cityCount[c.slot] = (cityCount[c.slot] || 0) + 1;
     for (const u of world.units) if (u.hp > 0) forceCount[u.slot] = (forceCount[u.slot] || 0) + 1;
@@ -26,23 +30,22 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     // then human players, then everyone you're at war with, then your allies, then
     // the rest. Ties within a bucket fall back to alive-then-holdings.
     const priority = (n) => n.slot === mySlot ? 0 : (online && n.isAi === false && n.alive) ? 1 : rel(n) === "war" ? 2 : rel(n) === "ally" ? 3 : 4;
-    const nations = [...world.nations].sort((a, b) =>
+    const nations = [...roster].sort((a, b) =>
         priority(a) - priority(b) || (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
     // Rank is TRUE standings (alive-then-holdings), computed off a separate sort so the
     // diplomatic display order above never distorts each power's real rank.
-    const standings = [...world.nations].sort((a, b) => (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
+    const standings = [...roster].sort((a, b) => (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
     const rankOf = new Map(standings.map((n, i) => [n.slot, i + 1]));
 
-    const aliveCount = world.nations.filter((n) => n.alive).length;
-    const atWar = world.nations.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "war").length;
-    const allied = world.nations.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "ally").length;
+    const aliveCount = roster.filter((n) => n.alive).length;
+    const atWar = roster.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "war").length;
+    const allied = roster.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "ally").length;
     const needle = q.trim().toLowerCase();
-    // Default view keeps the list legible: you, everyone you're at war with or allied
-    // to, any human players, and the top powers by holdings. A search box reaches any
-    // of the ~222 nations by name/ISO.
+    // The active powers are few (≤8), so the default view simply shows them all; the
+    // search box filters that roster by name/ISO.
     const shown = needle
         ? nations.filter((n) => n.name.toLowerCase().includes(needle) || n.iso.toLowerCase() === needle)
-        : nations.filter((n, i) => n.slot === mySlot || (n.alive && (rel(n) === "war" || rel(n) === "ally")) || (online && !n.isAi && n.alive) || i < 40);
+        : nations;
 
     const seat = (n) => n.slot === mySlot ? {label: "You", cls: "text-gold-contrast bg-gold border-gold"} : n.isAi ? {label: "AI", cls: ""} : {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"};
 
@@ -50,7 +53,7 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
 
     return (
         <ScreenFrame title="DIPLOMACY" subtitle="Theatre powers & standings" bare onClose={onClose}
-                     foot={<span className="block px-[22px] py-[10px] border-t border-line-soft font-mono text-[10px] tracking-[1px] text-faint text-center">Every country on the map is a live power — AI today, human players once multiplayer lands</span>}>
+                     foot={<span className="block px-[22px] py-[10px] border-t border-line-soft font-mono text-[10px] tracking-[1px] text-faint text-center">The active powers contesting this match — AI today, human players once multiplayer lands</span>}>
             <div className="flex flex-col gap-4 h-full px-6 py-5 overflow-hidden">
                 <div className="flex gap-[10px] flex-wrap">
                     <div className="flex-1 min-w-[150px] flex flex-col gap-[3px] px-[14px] py-3 bg-sunk border border-line rounded">
