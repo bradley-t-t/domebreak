@@ -7,7 +7,9 @@ import {useEffect, useMemo} from "react";
 import {useEngine} from "./useEngine.js";
 
 // api methods that are purely local session controls — never sent online.
-const LOCAL_ONLY = new Set(["setSpeed", "pause", "play"]);
+// dismissWarPopup only clears a client-side UI queue (the war-outcome modal), so
+// it stays local; the rest mutate game state and go to the authoritative server.
+const LOCAL_ONLY = new Set(["setSpeed", "pause", "play", "dismissWarPopup"]);
 
 export function useGameSession(world, client) {
     const [w, localApi, force] = useEngine(world, !!client);

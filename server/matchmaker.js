@@ -33,6 +33,35 @@ export function liveWaiters(rows, nowMs, staleMs = QUEUE_STALE_MS) {
     });
 }
 
+// Select the next lobby group from FIFO-ordered live waiters, keeping publicly-
+// queued parties intact — a party is never split across the maxPlayers boundary.
+// Solo waiters (no party_id) fill remaining seats, so an all-solo group is simply
+// the first maxPlayers in FIFO order. A single party larger than the cap fills the
+// match alone (truncated to maxPlayers) only when it anchors the group; otherwise a
+// party that wouldn't fit the remaining seats is held for a fresh group. Pure — no
+// DB — so the grouping rules unit-test directly (see tests/unit/net).
+export function buildGroup(rows, maxPlayers = MAX_PLAYERS) {
+    const players = [];
+    const usedParties = new Set();
+    for (const r of rows) {
+        if (players.length >= maxPlayers) break;
+        if (!r.party_id) {
+            players.push(r);
+            continue;
+        }
+        if (usedParties.has(r.party_id)) continue;
+        const partyRows = rows.filter((w) => w.party_id === r.party_id);
+        if (players.length === 0 && partyRows.length >= maxPlayers) {
+            players.push(...partyRows.slice(0, maxPlayers)); // a full party fills the match alone
+            break;
+        }
+        if (players.length + partyRows.length > maxPlayers) continue; // won't fit now — hold for a fresh group
+        usedParties.add(r.party_id);
+        players.push(...partyRows);
+    }
+    return players;
+}
+
 const SWEEP_MS = 1000;        // must exist: fires window-expiry with no new events
 const READY_POLL_MS = 700;    // per-lobby all-ready re-check cadence
 
@@ -91,28 +120,8 @@ export function startMatchmaker(db, log) {
         // waiting until a second real player queues.
         if (waiting.length < MIN_PLAYERS) return;
 
-        // Build the next group keeping publicly-queued parties intact — never
-        // split a party across the MAX_PLAYERS boundary. Solo waiters (no party_id)
-        // fill remaining seats, so an all-solo lobby behaves exactly as before
-        // (the first MAX_PLAYERS in FIFO order).
-        const players = [];
-        const usedParties = new Set();
-        for (const r of waiting) {
-            if (players.length >= MAX_PLAYERS) break;
-            if (!r.party_id) {
-                players.push(r);
-                continue;
-            }
-            if (usedParties.has(r.party_id)) continue;
-            const partyRows = waiting.filter((w) => w.party_id === r.party_id);
-            if (players.length === 0 && partyRows.length >= MAX_PLAYERS) {
-                players.push(...partyRows.slice(0, MAX_PLAYERS)); // a full party fills the match alone
-                break;
-            }
-            if (players.length + partyRows.length > MAX_PLAYERS) continue; // won't fit now — hold for a fresh group
-            usedParties.add(r.party_id);
-            players.push(...partyRows);
-        }
+        // Build the next group (parties kept intact) from the live waiters.
+        const players = buildGroup(waiting, MAX_PLAYERS);
         if (players.length < MIN_PLAYERS) return;
 
         const anchorAgeMs = Date.now() - Date.parse(players[0].enqueued_at);

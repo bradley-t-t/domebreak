@@ -6,8 +6,11 @@ const HELLO_TIMEOUT_MS = 4000;
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 2000;
 
-// Overwrite the live world with a server snapshot, preserving identity.
-function absorb(target, snapshot, mySlot) {
+// Overwrite the live world with a server snapshot, preserving identity: the same
+// world object is kept (so engine refs stay valid) — keys absent from the snapshot
+// are dropped, the snapshot's keys are copied over, and mySlot is re-stamped.
+// Exported for tests.
+export function absorb(target, snapshot, mySlot) {
     for (const k of Object.keys(target)) {
         if (!(k in snapshot)) delete target[k];
     }

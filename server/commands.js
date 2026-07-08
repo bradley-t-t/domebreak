@@ -6,17 +6,23 @@ import {
     cancelProd,
     commandAttack,
     declareWar,
+    disembark,
+    embark,
     enqueueResearch,
     makePeace,
     moveUnit,
     queueAircraft,
     queueAmmo,
     queueUnit,
+    releaseLeadership,
     scrapUnit,
+    setAutoResearch,
     setAwacsPatrol,
+    setMarch,
     setPatrolSize,
     setSail,
     setWarhead,
+    shelterLeadership,
     stopSail,
     unqueueResearch,
 } from "../src/game/engine.js";
@@ -46,4 +52,16 @@ export const COMMANDS = {
     produceAmmo: (w, slot, [type]) => queueAmmo(w, slot, str(type)),
     cancelProd: (w, slot, [i]) => cancelProd(w, slot, num(i)),
     setWarhead: (w, slot, [uid, type]) => setWarhead(w, slot, str(uid, 64), str(type)),
+    // Ground transport load/unload and land march.
+    embark: (w, slot, [transportId, groundUnitId]) => embark(w, slot, str(transportId, 64), str(groundUnitId, 64)),
+    disembark: (w, slot, [transportId, lng, lat]) => disembark(w, slot, str(transportId, 64), num(lng), num(lat)),
+    march: (w, slot, [uid, lng, lat]) => setMarch(w, slot, str(uid, 64), num(lng), num(lat)),
+    // Research automation toggle.
+    setAutoResearch: (w, slot, [on]) => setAutoResearch(w, slot, !!on),
+    // Leadership continuity: shelter to the bunker / release back out. These were
+    // missing from the whitelist, so online Shelter/Release silently no-opped —
+    // the server rejected them as unknown and the next snapshot reverted the
+    // client's optimistic change. See tests/unit/net/commands_test.js.
+    shelterLeadership: (w, slot) => shelterLeadership(w, slot),
+    releaseLeadership: (w, slot) => releaseLeadership(w, slot),
 };
