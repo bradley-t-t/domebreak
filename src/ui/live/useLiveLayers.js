@@ -101,6 +101,20 @@ export function useLiveLayers({
             return c;
         })
     }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot]);
+    // Emitter centers + coverage radius for the animated PPI sweep — same filter
+    // and research-scaled radius as radarFC, so the sweep tracks the ring exactly.
+    // RadarSweep rebuilds the rotating wedge geometry itself each animation frame;
+    // this only feeds it where the emitters are and how far they reach.
+    const radarEmitters = useMemo(() => layers.radar
+        ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => {
+            const n = w.nations.find((x) => x.slot === u.slot);
+            return {
+                lng: u.lng, lat: u.lat,
+                rKm: radarRangeOf(u.type) * (n?.radarMult ?? 1),
+                color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)
+            };
+        })
+        : [], [layers.radar, w.units, w.time, mySlot]);
     const defenseFC = useMemo(() => layers.defense ? ({
         type: "FeatureCollection",
         features: visUnits.filter((u) => UNITS[u.type].kind === "defense" && u.hp > 0).map((u) => {
@@ -208,5 +222,5 @@ export function useLiveLayers({
         }))
     }), [battlePreview]);
 
-    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, defenseFC, popFC, ranges, cmdLines, sailLines, planArcsFC, planTargetsFC};
+    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, radarEmitters, defenseFC, popFC, ranges, cmdLines, sailLines, planArcsFC, planTargetsFC};
 }
