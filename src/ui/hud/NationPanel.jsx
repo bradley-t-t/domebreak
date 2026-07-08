@@ -65,7 +65,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
 
     return (
         <aside
-            className={cn("absolute top-[40px] left-4 z-5 w-[246px] max-h-[calc(100vh-132px)] flex flex-col bg-panel border border-line rounded-lg shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto overflow-hidden motion-safe:animate-[dbDropIn_300ms_var(--ease-drawer)]", collapsed && "w-[246px]")}
+            className={cn("w-[246px] max-h-[calc(100vh-132px)] flex flex-col bg-panel border border-line rounded-lg shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto overflow-hidden motion-safe:animate-[dbDropIn_300ms_var(--ease-drawer)]", collapsed && "w-[246px]")}
             aria-label="Nation status">
             <div className="flex items-center gap-[10px] px-3 py-[11px] border-b border-hair">
                 <Flag iso={myNation.iso} className="w-[26px] h-[18px] rounded-sm shadow-[0_0_0_1px_var(--line)] flex-none"/>
