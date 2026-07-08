@@ -180,8 +180,13 @@ export default function App() {
 
     const countryLabels = useMemo(() => {
         if (!data) return [];
+        // Only ACTIVE belligerents get a slot here — world.nations also carries the
+        // inactive neutral background nations, and including them would flag every
+        // country as combat and label the whole map (CountryLabels only names combat
+        // nations). Matches the active-nation filter used for the ownership layer.
         const slotOf = {};
         (world?.nations || []).forEach((n) => {
+            if (n.active === false) return;
             slotOf[n.iso] = n.slot;
         });
         const out = [];
