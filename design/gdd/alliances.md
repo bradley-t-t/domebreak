@@ -1,4 +1,10 @@
-# Alliances (Mutual-Defense Pacts)
+<h1 align="center">Alliances — Mutual-Defense Pacts</h1>
+
+<p align="center">
+  <b>A third relation state beside war and peace: allies never fight each other, and an attack on one drags the other in — so the living world knots itself into blocs.</b>
+</p>
+
+<br />
 
 ## Overview
 

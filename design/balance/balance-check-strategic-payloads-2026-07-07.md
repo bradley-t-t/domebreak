@@ -1,4 +1,12 @@
-# Balance Check: Strategic Payloads & Launch Platforms — 2026-07-07
+<h1 align="center">Balance Check — Strategic Payloads &amp; Launch Platforms</h1>
+
+<p align="center">
+  <b>Loadout differentiation lands as subsets of existing capability plus a targeted SSBN nerf and an AI-competence buff — no firepower ceiling raised, no platform strictly dominant. Verdict: HEALTHY.</b>
+</p>
+
+<br />
+
+**Date**: 2026-07-07
 
 ## Data Sources Analyzed
 - `src/game/data/constants.js` — WARHEADS, UNITS[*].ammo/signature, AI_TUNING, AMMO_START
