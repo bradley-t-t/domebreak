@@ -7,6 +7,7 @@
 // Source/Layer tree, same paint expressions, same conditional gating.
 import {Layer, Source} from "react-map-gl/maplibre";
 import {vitPaint} from "../common/status.js";
+import RadarSweep from "./RadarSweep.jsx";
 
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;
 // Controlled-territory tint: strong enough to read the owner color at the whole-earth
@@ -18,7 +19,7 @@ const REGION_OWNER_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 2, 0.6, 6,
 const REGION_DIPLO_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.8, 4, 0.62, 6, 0.4];
 
 export default function MapLayers({
-                                       layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, defenseFC,
+                                       layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, radarEmitters, defenseFC,
                                        ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor,
                                        planArcsFC, planTargetsFC, planColor
                                    }) {
@@ -76,6 +77,8 @@ export default function MapLayers({
                            "line-dasharray": [3, 3]
                        }}/>
             </Source>}
+            {/* Rotating PPI sweep over the coverage rings — animated old-radar look. */}
+            {layers.radar && <RadarSweep emitters={radarEmitters}/>}
             {layers.defense && <Source id="defall-src" type="geojson" data={defenseFC}>
                 <Layer id="defall-fill" type="fill" paint={{"fill-color": ["get", "color"], "fill-opacity": 0.05}}/>
                 <Layer id="defall-line" type="line"
