@@ -1,4 +1,10 @@
-# ADR-007: Battle plans as client-side intent driven by a reconciler
+<h1 align="center">ADR-0007: Battle Plans as Client-Side Intent Driven by a Reconciler</h1>
+
+<p align="center">
+  <b>A battle plan is client-side intent; a reconciler turns it into ordinary engine attack commands, so the UI never owns game state and online play stays server-authoritative.</b>
+</p>
+
+<br />
 
 - **Status**: Accepted
 - **Date**: 2026-07-07
