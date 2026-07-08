@@ -70,7 +70,9 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
         }
         if (e.type === "detected" && e.slot === mySlot) return sfx("detected");
         if (e.type === "war" && (e.a === mySlot || e.b === mySlot)) return sfx("war");
+        if (e.type === "callToArms" && (e.a === mySlot || e.b === mySlot)) return sfx("war");
         if (e.type === "peace" && (e.a === mySlot || e.b === mySlot)) return sfx("peace");
+        if ((e.type === "alliance" || e.type === "breakalliance") && (e.a === mySlot || e.b === mySlot)) return sfx("peace");
         if (e.type === "conquest" && (e.winner === mySlot || e.loser === mySlot)) return sfx(e.winner === mySlot ? "win" : "lose");
         if (e.type === "research" && e.slot === mySlot) return sfx("research");
         if (e.type === "built" && e.slot === mySlot) return sfx("built");

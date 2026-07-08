@@ -110,10 +110,13 @@ export default function LiveGame({
     // touches world state.
     const {layout: hud, update: setHud, resetPanel: resetHudPanel, resetAll: resetHudAll} = useHudLayout();
 
-    const relation = (slot) => (myNation?.relations[slot] === "war" ? "war" : "peace");
+    const relation = (slot) => {
+        const r = myNation?.relations[slot];
+        return r === "war" ? "war" : r === "ally" ? "ally" : "peace";
+    };
     // Tactical allegiance color for anything drawn on the map: you = white,
-    // hostile (at war) = red, everyone else = neutral grey.
-    const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : "#8b94a1");
+    // hostile (at war) = red, allied = blue, everyone else = neutral grey.
+    const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : relation(slot) === "ally" ? "#5fa8ff" : "#8b94a1");
     // Your leadership airlift stands out from your white forces: a transport
     // ferry reads BLUE while it's carrying leaders and YELLOW when flying empty
     // (outbound to a pickup or back home), so a glance tells you which planes are
@@ -146,7 +149,7 @@ export default function LiveGame({
     // helper they share — see useContextMenus (same items, same ordering,
     // same menu state, moved out verbatim).
     const {menu, setMenu, openCityMenu, openUnitMenu} = useContextMenus({
-        w, mySlot, myNation, api, selUnit,
+        w, mySlot, myNation, api, selUnit, online: !!net,
         relation, nationName, labelOf, teamColor, flash,
         setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
     });
