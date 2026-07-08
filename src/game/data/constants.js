@@ -264,6 +264,13 @@ export const LEADERSHIP = {
     arriveKm: 12,               // distance to count a ferry "arrived" at a waypoint
     commandFloor: 0.5,          // national output multiplier at 0% Leadership (1.0 at 100%)
     penalizeResearch: true,     // scale research speed by the command factor too
+    // The Leadership Bunker is hardened: ONLY a direct hit from one of these
+    // warheads destroys it — everything else (conventional/cluster/HGV strikes,
+    // blast waves, fallout, and ground fire) bounces off. Enemy infantry capturing
+    // the bunker also decapitates its owner (see occupation.js). A nation whose
+    // leadership is fully wiped out (lost >= total) surrenders every war and is
+    // eliminated from the match (see warResolution.decapitationTick).
+    bunkerKillWarheads: ["thermo", "thermomirv"],
 };
 
 // National Stability (see design/gdd/stability.md). Each nation's stability (0–100)

@@ -187,6 +187,9 @@ export default function SelectionPanel({
                                 disabled={lead.sheltered <= 0 || releasing || !lead.hasAirstrip}
                                 title={!lead.hasAirstrip ? "Build an Airstrip to fly them back out." : lead.sheltered <= 0 ? "No leadership is sheltered." : "Fly sheltered leaders back out to your cities."}
                                 onClick={() => act(api.releaseLeadership)}>{releasing ? "Releasing…" : "Release Leadership"}</button>
+                        <div className="mt-2 text-[10.5px] leading-[1.4] text-faint">
+                            Immune to all fire except a <span className="text-text">direct Thermonuclear strike</span>. Enemy infantry that capture the bunker decapitate you outright.
+                        </div>
                     </div>
                 );
             })()}

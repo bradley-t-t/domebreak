@@ -28,6 +28,14 @@ Two coupled changes to the land war:
    the **entire state** the city belongs to, so a captured province becomes part of the
    occupier's nation — income, population, and map all follow.
 
+**Leadership interaction** (see `design/gdd/leadership.md`): occupation is also a way to
+behead a rival. Capturing a city that still holds *exposed* leaders kills those leaders
+for the losing nation (they are not transferred to the conqueror). And the **Leadership
+Bunker can be captured** by the same hold/contest/assault model — infantry that hold it
+uncontested long enough seize national command, totally decapitating and eliminating its
+owner. The bunker is immune to all fire except a direct thermonuclear hit, so ground
+capture is often the only way to take one down.
+
 ## 2. Player Fantasy
 
 Missiles level cities; armies *take* them. The player who has only ever traded strikes now

@@ -212,10 +212,11 @@ export const UNITS = {
         wing: ["helo", "transporthelo"]
     },
     // Unique national command structure. maxCount caps builds per nation.
-    // Deliberately inert for now — command mechanics arrive in a later design pass.
+    // Shelters leadership (design/gdd/leadership.md). Immune to all fire except a
+    // DIRECT Thermonuclear-class hit; can still be seized by enemy infantry.
     bunker: {
         label: "Leadership Bunker",
-        desc: "Hardened national command authority. Only one may ever be built — keep it standing.",
+        desc: "Hardened national command. Shrugs off everything but a direct Thermonuclear strike — but enemy infantry that capture it decapitate you. Only one may ever be built.",
         kind: "support",
         maxCount: 1,
         cost: 650,

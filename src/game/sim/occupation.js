@@ -9,6 +9,7 @@ import {haversine} from "../geo/geo.js";
 import {CAPTURE, UNITS} from "../data/constants.js";
 import {nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
+import {captureCityLeaders, decapitateNation} from "./leadership.js";
 
 // A unit that can plant the flag: a living capture-flagged ground unit (infantry
 // or tank per its UNITS entry).
@@ -25,6 +26,10 @@ function flipState(w, city, toSlot) {
     const fromSlot = city.slot, state = city.state || "";
     for (const c of w.cities) {
         if (c.alive && c.slot === fromSlot && (c.state || "") === state) {
+            // Exposed leaders don't change hands — capturing a leader city kills its
+            // command just as destroying it would (credited to the losing owner
+            // BEFORE the slot flips).
+            captureCityLeaders(w, c);
             c.slot = toSlot;
             c.capture = null;
         }
@@ -94,6 +99,59 @@ export function captureTick(w, dt) {
                 fromSlot
             });
             flipState(w, c, toSlot); // clears c.capture (and the rest of the state's)
+        }
+    }
+    captureBunkers(w, dt);
+}
+
+// Ground capture of the Leadership Bunker. Unlike a warhead (which needs a direct
+// thermonuclear hit), enemy infantry that hold the bunker uncontested long enough
+// SEIZE national command — instantly and totally decapitating its owner, no matter
+// how its leaders were dispersed. The owner then surrenders and is eliminated
+// (warResolution.decapitationTick). Mirrors the city-capture loop above (same hold/
+// contest/assault tuning) but tracks progress on the bunker unit's own `capture`
+// field. Pure/deterministic — a function of positions, ownership, and dt.
+function captureBunkers(w, dt) {
+    for (const b of w.units) {
+        if (b.type !== "bunker" || b.hp <= 0) continue;
+        let captor = null, best = Infinity;
+        for (const u of w.units) {
+            if (!isCaptor(u) || u.slot === b.slot || !atWar(w, u.slot, b.slot)) continue;
+            const d = haversine(u.lng, u.lat, b.lng, b.lat);
+            if (d <= CAPTURE.holdKm && d < best) {
+                best = d;
+                captor = u;
+            }
+        }
+        if (!captor) {
+            if (b.capture) {
+                b.capture.progress -= CAPTURE.decayPerSec * dt;
+                if (b.capture.progress <= 0) b.capture = null;
+            }
+            continue;
+        }
+        if (!b.capture || b.capture.slot !== captor.slot) b.capture = {slot: captor.slot, progress: 0};
+        // Garrison contest — the bunker itself doesn't count (it can't defend its own
+        // capture), only OTHER hostile units still standing near it.
+        const contested = w.units.some(
+            (u) => u.id !== b.id && u.hp > 0 && atWar(w, captor.slot, u.slot) && haversine(u.lng, u.lat, b.lng, b.lat) <= CAPTURE.contestKm
+        );
+        if (contested) {
+            b.capture.progress = Math.max(0, b.capture.progress - CAPTURE.decayPerSec * dt);
+            continue;
+        }
+        const assault = captor.targetId === b.id ? (CAPTURE.assaultMult || 1) : 1;
+        b.capture.assault = assault > 1;
+        b.capture.progress += (dt / CAPTURE.captureSec) * assault;
+        if (b.capture.progress >= 1) {
+            const fromSlot = b.slot;
+            w.events.push({
+                id: nextId(w, "e"), t: w.time, type: "captured", kind: "bunker",
+                unitId: b.id, bunker: 1, lng: b.lng, lat: b.lat, slot: captor.slot, fromSlot
+            });
+            decapitateNation(w, fromSlot); // seizing command ends the nation
+            b.capture = null;
+            b.hp = 0;                       // the bunker itself falls with its command
         }
     }
 }

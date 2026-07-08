@@ -33,11 +33,21 @@ export function headline(e, world, mySlot) {
         case "breakalliance":
             return {tone: "alert", text: `${nn(e.a)} and ${nn(e.b)} dissolve their alliance`};
         case "conquest": {
+            if (e.decapitated) {
+                if (e.loser === mySlot) return {tone: "danger", text: `Your national command is destroyed — you are eliminated`};
+                return {tone: "alert", text: `${nn(e.loser)}'s leadership is wiped out — the nation collapses`};
+            }
             if (e.winner === mySlot) return {tone: "good", text: `${nn(e.loser)} surrenders to you — their occupied territory is yours`};
             if (e.loser === mySlot) return {tone: "danger", text: `You surrender to ${nn(e.winner)} — occupied territory is lost`};
             return {tone: "alert", text: `${nn(e.loser)} surrenders to ${nn(e.winner)}`};
         }
         case "captured": {
+            if (e.bunker) {
+                const mineB = e.slot === mySlot, lostB = e.fromSlot === mySlot;
+                if (mineB) return {tone: "good", text: `Your infantry seize ${nn(e.fromSlot)}'s Leadership Bunker — their command falls`};
+                if (lostB) return {tone: "danger", text: `Enemy infantry storm your Leadership Bunker — your command is captured`};
+                return {tone: "alert", text: `${nn(e.slot)} captures ${nn(e.fromSlot)}'s Leadership Bunker`};
+            }
             const where = e.state || world.cities.find((x) => x.id === e.cityId)?.name || "territory";
             const mine = e.slot === mySlot, lost = e.fromSlot === mySlot;
             if (mine) return {tone: "good", text: `Your forces occupy ${where} — ${nn(e.fromSlot)} loses the province`};
@@ -53,7 +63,9 @@ export function headline(e, world, mySlot) {
             const n = e.lost || 0;
             const noun = `${n} ${n === 1 ? "leader" : "leaders"}`;
             let where;
-            if (e.bunker) where = "the bunker falls — sheltered leadership lost";
+            if (e.decapitated) where = "national command seized — all leadership lost";
+            else if (e.bunker) where = "the bunker falls — sheltered leadership lost";
+            else if (e.captured) where = `${world.cities.find((x) => x.id === e.cityId)?.name || "the capital"} is overrun — ${noun} killed`;
             else if (e.cityId) where = `${world.cities.find((x) => x.id === e.cityId)?.name || "the capital"} — ${noun} killed`;
             else where = `an evac convoy is downed — ${noun} lost`;
             return {tone: mine ? "danger" : "alert", text: mine ? `Leadership lost: ${where}` : `${nn(e.slot)} leadership decapitated — ${noun}`};

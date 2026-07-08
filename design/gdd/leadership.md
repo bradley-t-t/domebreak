@@ -19,6 +19,11 @@ Bunker using transport aircraft flown from friendly airstrips. Low Leadership
 softly throttles national output (production income and research). Leadership is a
 survival stat and a strategic target — decapitating an enemy's command is a valid
 offensive play, and protecting your own is a race against the first warheads.
+Decapitation is decisive: wipe out a nation's leadership entirely — by bombing it in
+its cities, capturing those cities, glassing its bunker with a direct thermonuclear
+strike, or storming the bunker with infantry — and that nation surrenders every war
+and is eliminated from the match. The bunker is the one hardened refuge, immune to
+everything but a direct thermonuclear hit or a ground capture.
 
 This system activates the previously inert **Leadership Bunker** unit
 (`src/game/data/constants.js`, `bunker`), which shipped with `maxCount: 1` and a
@@ -60,11 +65,30 @@ leaders are gone for good.
 - **A city destroyed** (by direct strike or fallout) while it holds `at_city`
   tokens → those tokens become `lost`. Fires a `leadership` event. (Capitals hold
   the most, so decapitation strikes still hit hardest there.)
+- **A city captured** (ground occupation) while it holds `at_city` tokens → those
+  tokens are `lost` to the losing owner, **not** transferred to the conqueror.
+  Overrunning a leader city beheads its command just as destroying it would. Fires a
+  `leadership` event flagged `captured`.
 - **Transport destroyed** (fallout, blast) while carrying `in_transit` tokens →
   cargo `lost`. Fires a `leadership` event.
 - **Bunker destroyed** while it holds `sheltered` tokens → all sheltered tokens
-  `lost`. Fires a `leadership` event. (The bunker is hp 220 — hardened — precisely
-  because concentrating leadership there is a single point of failure.)
+  `lost`. Fires a `leadership` event. The bunker is **hardened**: it can only be
+  destroyed by a **direct hit from a Thermonuclear-class warhead**
+  (`LEADERSHIP.bunkerKillWarheads` — Thermonuclear / Thermonuclear MIRV), which
+  glasses it in one strike. Every other warhead, the blast wave, fallout, and ground
+  fire all bounce off (see §3.8).
+- **Bunker captured** (enemy infantry hold it, §3.8) → the nation is **totally
+  decapitated**: every remaining token, wherever it sits, is `lost` at once. Fires a
+  `leadership` event flagged `decapitated`.
+
+### 3.2.1 Losing all leadership → defeat
+When a nation's leadership pool is fully wiped out (`lost >= total`, i.e. 0%
+Leadership) it can no longer command: it **surrenders every war it is fighting**
+(each foe scores a Victory and takes what it occupied) and is **eliminated from the
+match**. If that nation is the player, this is an immediate Defeat. Decapitation is
+therefore a genuine win condition — behead a rival's command and they are out,
+regardless of how many cities they still hold. (See `warResolution.decapitationTick`
+and `design/gdd/war-resolution.md`.)
 
 ### 3.3 The war alert (persistent prompt)
 - Whenever the player's nation is at war and still has `at_city` leaders and has
@@ -118,6 +142,30 @@ leaders are gone for good.
   releasing are mutually exclusive modes; starting one supersedes the other.
 - Cargo that can't be delivered (its destination city died mid-flight) is kept safe
   back in the bunker rather than lost — releasing never costs Leadership by itself.
+- **Peace prompt:** when every war the player is in has ended and leadership is still
+  sheltered, a calm, non-alarming prompt (the same alert surface used for the war
+  warning, without the pulse) invites the player to **Release Leadership** and lift
+  the low-command economy drag. It clears once release begins or a new war breaks out.
+
+### 3.8 Bunker survivability & capture
+- The Leadership Bunker is the one hardened point in the whole map. It is **immune to
+  all incoming fire** — conventional/cluster/HGV strikes, blast waves, fallout, and
+  ground fire all deflect off it (a deflected strike fires a `shielded` hit event so
+  the UI can show "the bunker holds").
+- The **only** warhead that can destroy it is a **direct hit** from a
+  Thermonuclear-class warhead (`LEADERSHIP.bunkerKillWarheads`, default Thermonuclear
+  + Thermonuclear MIRV). A direct thermo hit vaporizes it in one strike, regardless of
+  its nominal HP. A *near-miss* thermo (blast only) does nothing — it must be a
+  bullseye on the bunker itself.
+- Alternatively, **enemy infantry can capture the bunker** by ground. It uses the
+  same hold/contest/assault model as city capture (`CAPTURE` tuning): a captor of a
+  nation at war with the owner that holds within `holdKm`, uncontested by other
+  hostile units, accrues capture progress; at full progress the bunker falls. Seizing
+  the bunker **totally decapitates** its owner (all remaining leadership `lost`),
+  which then triggers the §3.2.1 elimination. Capturing the bunker is stronger than a
+  thermo strike: a thermo only kills what was *sheltered*, capture kills *everything*.
+- The bunker's selection panel and unit description both state this rule so the player
+  knows what it takes to bring one down (and to protect their own).
 
 ## 4. Formulas
 
@@ -158,8 +206,18 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
   the city.
 - **Multiple capitals:** each is worked independently; the controller balances
   transports per capital by `transportsPerCapital`.
-- **All leaders lost:** Leadership hits 0%, command factor floors at
-  `commandFloor`. Not an instant loss — the nation fights on, weakened.
+- **All leaders lost:** Leadership hits 0% and the nation is **decapitated** — it
+  surrenders every war and is eliminated from the match (Defeat if it's the player).
+  This overrides the old "fights on, weakened" behavior. (While Leadership is merely
+  *low* — above 0% — the command factor still floors at `commandFloor` and the nation
+  fights on, weakened, exactly as before.)
+- **Thermo near-miss on the bunker:** blast only — the bunker is blast-proof, so it
+  survives. Only a direct hit destroys it.
+- **Non-thermo direct hit on the bunker:** deflected, no damage; fires a `shielded`
+  hit event for UI feedback.
+- **Bunker captured while leaders are still dispersed:** capture wipes the *entire*
+  pool (cities, transit, sheltered), not just what was sheltered — capturing command
+  ends the nation outright.
 - **Peace then new war:** the alert re-arms only while leaders are exposed; already
   sheltered leaders are not re-exposed.
 - **Determinism:** all leadership logic is pure integer/threshold math with no
@@ -168,16 +226,25 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
 ## 6. Dependencies
 
 - **Cities / capitals** (`cap` flag) — token home. (`engine.js`, `newGame.js`)
-- **Combat & fallout** (`combat.js`, `tick.js`) — city/unit death sets `alive`/hp,
-  which leadership reconciliation reads. No changes to combat resolution itself.
-- **Aircraft** (`aircraft.js`) — new ferry flight mode; transports from airstrip
+- **Combat & fallout** (`combat.js`, `tickPhases.js`) — city/unit death sets
+  `alive`/hp, which leadership reconciliation reads. Combat also enforces the bunker's
+  thermo-only vulnerability (`resolveBunkerStrike`, blast/fallout exemptions).
+- **Occupation** (`occupation.js`) — capturing a leader city kills its exposed
+  leaders (`captureCityLeaders`); capturing the bunker decapitates its owner
+  (`decapitateNation`). See `design/gdd/ground-combat-and-occupation.md`.
+- **War resolution** (`warResolution.js decapitationTick`, `tick.js`) — a
+  fully-decapitated nation surrenders every war and is eliminated. See
+  `design/gdd/war-resolution.md`.
+- **Aircraft** (`aircraft.js`) — ferry flight mode; transports from airstrip
   hangar stock.
-- **Airstrip / Bunker units** (`constants.js`) — evacuation infrastructure.
+- **Airstrip / Bunker units** (`constants.js`) — evacuation infrastructure;
+  `bunkerKillWarheads` gates bunker destruction.
 - **Economy** (`queries.js incomeOf`, `tick.js` research) — command-factor penalty.
 - **Diplomacy / war** (`production.js declareWar`, `tick.js diploTick`) — war onset
-  drives exposure and AI auto-evac.
-- **UI** (`LiveGame`, `LiveHud`, `NewsTicker`, `useEngine`) — alert, readout,
-  headline, and the Shelter order.
+  drives exposure and AI auto-evac; war *end* drives the peace release prompt.
+- **UI** (`LiveGame`, `LiveHud`, `LeadershipAlert`, `SelectionPanel`, `NewsTicker`,
+  `useEngine`) — war alert, peace release prompt, readout, headlines, bunker rule
+  copy, and the Shelter/Release orders.
 
 ## 7. Tuning Knobs (`LEADERSHIP` block in `constants.js`)
 
@@ -193,6 +260,7 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
 | `arriveKm`              | 12      | Distance to count a ferry "arrived" at a waypoint    |
 | `commandFloor`          | 0.5     | Output multiplier at 0% Leadership                   |
 | `penalizeResearch`      | true    | Whether research speed also scales with Leadership   |
+| `bunkerKillWarheads`    | `["thermo","thermomirv"]` | Warheads whose DIRECT hit destroys the bunker; all else deflects |
 
 ## 8. Acceptance Criteria
 
@@ -218,5 +286,19 @@ Let `total = LEADERSHIP.startTokens`, `lost = nation.lead.lost`.
    sheltered leaders back out to living cities (capital-first, spread), empties the
    bunker, loses nothing, and clears when done. Release is disabled with no
    sheltered leaders.
-9. `npm run lint` is clean (0 errors) and `npm run build` succeeds; behavior is
-   verified in the Electron build.
+9. **Capturing** a leader city (ground occupation) reduces the losing nation's
+   Leadership by that city's held tokens — the tokens are killed, not transferred to
+   the conqueror — and fires a `captured`-flagged `leadership` headline.
+10. The Leadership Bunker survives every non-thermo direct hit, every blast, all
+    fallout, and all ground fire; a **direct** Thermonuclear-class hit destroys it in
+    one strike. A near-miss thermo (blast only) leaves it standing.
+11. Enemy infantry that hold the bunker uncontested long enough **capture** it,
+    which totally decapitates the owner (all leadership lost) and destroys the bunker.
+12. When a nation's Leadership reaches 0% (by any path — bombing, capture, bunker
+    destruction, or bunker capture) it **surrenders every war and is eliminated**;
+    if it is the player, the game ends in Defeat.
+13. When every war the player is in has ended and leadership is still sheltered, a
+    calm **Release Leadership** peace prompt appears; it clears on release or a new war.
+14. `npm run lint` is clean (0 errors) and `npm run build` succeeds; automated tests
+    cover bunker survivability, capture-kills-leaders, bunker capture, and
+    decapitation defeat; behavior is verified in the Electron build.
