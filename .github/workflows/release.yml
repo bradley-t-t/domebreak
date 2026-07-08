@@ -82,6 +82,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # The site build imports the game engine from ../src, whose bare imports
+      # resolve from the repo-root node_modules — install them.
+      - run: npm ci
       - run: npm i -g vercel@latest
       - run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
       - run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
