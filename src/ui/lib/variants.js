@@ -173,7 +173,16 @@ export const card = cva(
 // `fixed top-[42px] right-4` — an `absolute inset-0` overlay filled that tiny
 // corner box and threw the centered card off-screen. All overlay() consumers are
 // full-screen modals, so viewport anchoring is correct for every one.
-export const overlay = cva("fixed inset-0 z-[4] flex pointer-events-none", {
+//
+// z-40 puts every app modal above all screen chrome — the menu rail (StartMenu
+// z-10), the account badge (MeBadge z-20), the in-game HUD bars (z-5/z-6) and
+// adjustable panels (z-30) — and below the boot curtain (z-60). This matters on
+// the main menu: StartMenu's root is a full-screen z-10 catcher, so a lower
+// overlay would render behind it and StartMenu would swallow the card's wheel
+// and click events (dead scroll, dead Done button). The overlay backdrop itself
+// is pointer-events-none, so sitting on top steals no events from the screen
+// underneath except over the card, which re-enables them.
+export const overlay = cva("fixed inset-0 z-40 flex pointer-events-none", {
     variants: {
         placement: {
             none: "",
