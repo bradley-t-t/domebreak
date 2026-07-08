@@ -50,7 +50,7 @@ jobs:
       - run: npm ci
       # Skip code signing — no certificates in CI (unsigned builds still install).
       - name: Build installer
-        run: npm run ${{ matrix.build }}
+        run: npm run ${{ matrix.build }} -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - name: Rename to stable asset name
