@@ -4,11 +4,12 @@ import {cn} from "../lib/cn.js";
 import Reveal from "./Reveal.jsx";
 import {Eyebrow} from "./ui.jsx";
 import {useInViewOnce} from "../lib/useInViewOnce.js";
+import GameIcon from "./GameIcon.jsx";
 
 // One feature showcase: framed in-game screenshot on one side, briefing copy on
 // the other. The image wipes in (clip-path) on scroll and drifts with a light
-// parallax; sides alternate down the page.
-export default function ShowcaseSection({index, kicker, title, body, points = [], image, imageAlt, side = "left"}) {
+// parallax; sides alternate down the page. `icon` is a game unit-icon slug.
+export default function ShowcaseSection({index, kicker, title, body, points = [], image, imageAlt, side = "left", icon}) {
     const ref = useRef(null);
     const reduce = useReducedMotion();
     const {scrollYProgress} = useScroll({target: ref, offset: ["start end", "end start"]});
@@ -36,12 +37,16 @@ export default function ShowcaseSection({index, kicker, title, body, points = []
                                 src={image}
                                 alt={imageAlt}
                                 loading="lazy"
+                                decoding="async"
                                 style={reduce ? undefined : {y: imgY, scale: 1.08}}
                                 className="aspect-[16/10] w-full object-cover"
                             />
                         </div>
                         <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-line bg-[rgba(8,9,11,0.72)] px-4 py-2 backdrop-blur-[8px]">
-                            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">DBK-{index}</span>
+                            <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
+                                {icon && <GameIcon name={icon} size={13} className="text-dim"/>}
+                                DBK-{index}
+                            </span>
                             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-dim">{kicker}</span>
                         </div>
                     </div>
@@ -50,9 +55,16 @@ export default function ShowcaseSection({index, kicker, title, body, points = []
                 {/* Copy */}
                 <div className={cn("order-2", imageFirst ? "lg:order-2" : "lg:order-1")}>
                     <Reveal>
-                        <div className="flex items-baseline gap-4">
-                            <span className="font-mono text-[13px] font-semibold text-faint">{index}</span>
-                            <Eyebrow dot={false}>{kicker}</Eyebrow>
+                        <div className="flex items-center gap-4">
+                            {icon && (
+                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded border border-line bg-gold-soft text-gold">
+                                    <GameIcon name={icon} size={22}/>
+                                </span>
+                            )}
+                            <div className="flex items-baseline gap-4">
+                                <span className="font-mono text-[13px] font-semibold text-faint">{index}</span>
+                                <Eyebrow dot={false}>{kicker}</Eyebrow>
+                            </div>
                         </div>
                         <h2 className="mt-5 font-display text-[clamp(1.8rem,4vw,3rem)] font-bold uppercase leading-[1.02] tracking-[0.01em] text-text">
                             {title}

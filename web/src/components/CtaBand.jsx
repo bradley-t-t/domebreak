@@ -20,6 +20,8 @@ export default function CtaBand() {
                 aria-hidden
                 src={ctaBg}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 style={reduce ? undefined : {y: bgY}}
                 className="absolute inset-0 z-0 h-[116%] w-full -translate-y-[8%] object-cover opacity-[0.28]"
             />
