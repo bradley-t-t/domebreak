@@ -3,7 +3,7 @@ import {AnimatePresence, motion} from "motion/react";
 import {X, Loader2} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button, input, label as labelCva} from "../lib/variants.js";
-import {AUTH_RULES} from "../lib/account.js";
+import {AUTH_RULES} from "../lib/authRules.js";
 import {useAccount} from "../lib/AccountContext.jsx";
 import GameIcon from "./GameIcon.jsx";
 

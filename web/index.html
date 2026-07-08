@@ -4,29 +4,60 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta content="#08090b" name="theme-color"/>
-    <title>DomeBreak — Global Missile Command</title>
+
+    <title>DomeBreak — real-time missile defense &amp; offense on the world map</title>
     <meta name="description"
-          content="A real-time strategy game of missile defense and offense on a living world map. Every nation is a live AI. Request early access."/>
+          content="DomeBreak is a real-time strategy game of missile defense and offense, fought on the real world map. Build your dome, plan your strikes, and outlast every rival nation. For macOS and Windows."/>
+    <link rel="canonical" href="https://domebreak.vercel.app/"/>
+    <meta name="robots" content="index, follow, max-image-preview:large"/>
+    <meta name="keywords" content="DomeBreak, real-time strategy, missile defense, missile command, strategy game, world map game, RTS, macOS game, Windows game"/>
+
     <link rel="icon" type="image/png" href="/favicon.png"/>
+    <link rel="apple-touch-icon" href="/favicon.png"/>
 
     <!-- Open Graph / social -->
     <meta property="og:type" content="website"/>
-    <meta property="og:title" content="DomeBreak — Global Missile Command"/>
+    <meta property="og:site_name" content="DomeBreak"/>
+    <meta property="og:url" content="https://domebreak.vercel.app/"/>
+    <meta property="og:title" content="DomeBreak — real-time missile defense &amp; offense"/>
     <meta property="og:description"
-          content="Command the dome. A real-time strategy game of missile defense and offense on a living world map. Request early access."/>
-    <meta property="og:image" content="/og.jpg"/>
+          content="A real-time strategy game of missile defense and offense on the real world map. Build your dome, plan your strikes, outlast every rival nation."/>
+    <meta property="og:image" content="https://domebreak.vercel.app/og.jpg"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
     <meta name="twitter:card" content="summary_large_image"/>
-    <meta name="twitter:title" content="DomeBreak — Global Missile Command"/>
+    <meta name="twitter:title" content="DomeBreak — real-time missile defense &amp; offense"/>
     <meta name="twitter:description"
-          content="Command the dome. A real-time strategy game of missile defense and offense on a living world map."/>
-    <meta name="twitter:image" content="/og.jpg"/>
+          content="A real-time strategy game of missile defense and offense on the real world map."/>
+    <meta name="twitter:image" content="https://domebreak.vercel.app/og.jpg"/>
 
+    <!-- Perf: warm up the connections the page reaches for. -->
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link crossorigin href="https://pc9hvrpdxxi66b3t.public.blob.vercel-storage.com" rel="preconnect"/>
+    <link rel="dns-prefetch" href="https://pc9hvrpdxxi66b3t.public.blob.vercel-storage.com"/>
     <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
             rel="stylesheet"
     />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "DomeBreak",
+      "url": "https://domebreak.vercel.app/",
+      "image": "https://domebreak.vercel.app/og.jpg",
+      "description": "A real-time strategy game of missile defense and offense, fought on the real world map. Build your dome, plan your strikes, and outlast every rival nation.",
+      "genre": ["Strategy", "Real-time strategy"],
+      "gamePlatform": ["PC", "macOS", "Windows"],
+      "operatingSystem": ["macOS", "Windows"],
+      "applicationCategory": "Game",
+      "author": {"@type": "Person", "name": "Trenton Taylor"},
+      "publisher": {"@type": "Organization", "name": "TaylorURL"}
+    }
+    </script>
+
     <style>
         html {
             background: #08090b;
@@ -34,7 +65,17 @@
     </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+    <!-- No-JS / pre-render fallback so crawlers and no-script visitors get real content. -->
+    <noscript>
+        <main style="max-width:760px;margin:0 auto;padding:64px 24px;color:#f2f4f6;font-family:Inter,system-ui,sans-serif">
+            <h1>DomeBreak — Global Missile Command</h1>
+            <p>A real-time strategy game of missile defense and offense, fought on the real world
+                map. Build your dome, plan your strikes, and outlast every rival nation. Coming to
+                macOS and Windows. Enable JavaScript to request early access.</p>
+        </main>
+    </noscript>
+</div>
 <script src="/src/main.jsx" type="module"></script>
 </body>
 </html>

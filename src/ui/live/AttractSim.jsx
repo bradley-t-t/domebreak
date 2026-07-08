@@ -180,9 +180,10 @@ function AttractWorld({data, onOver, framed, onReady}) {
     // Single camera loop: steady axial spin + a slow zoom breath + a north/south
     // wander, plus the zoom-driven unit fade. Time-based so speed is frame-rate
     // independent; jumpTo leaves padding (the rail offset) untouched.
-    const cam = useRef({lng: 24, started: null, last: 0});
+    const cam = useRef({lng: 24, started: null, last: 0, paintAcc: 0});
     useEffect(() => {
         let raf;
+        const RENDER_HZ = 30; // throttle MapLibre repaints (was every frame)
         const step = (t) => {
             const m = mapRef.current;
             if (m) {
@@ -190,18 +191,37 @@ function AttractWorld({data, onOver, framed, onReady}) {
                 if (st.started == null) st.started = st.last = t;
                 const dt = Math.min((t - st.last) / 1000, 0.05); // clamp long frames (tab defocus)
                 st.last = t;
+
+                // Perf: when the globe is off screen or the tab is hidden, pause the
+                // whole simulation and stop repainting MapLibre — so scrolling the
+                // rest of the page (and background tabs) stay smooth. Resumes on return.
+                const c = m.getContainer();
+                const r = c.getBoundingClientRect();
+                const vh = window.innerHeight || 0, vw = window.innerWidth || 0;
+                const onScreen = document.visibilityState !== "hidden"
+                    && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw;
+                if (!onScreen) {
+                    w.paused = true;
+                    raf = requestAnimationFrame(step);
+                    return;
+                }
+                if (w.paused) w.paused = false;
+
                 const elapsed = (t - st.started) / 1000;
                 st.lng += SPIN_DEG_PER_S * dt;
-                const zoom = ZOOM_MID + ZOOM_AMP * Math.sin(elapsed * (2 * Math.PI / ZOOM_PERIOD_S) - Math.PI / 2);
-                const lat = LAT_BASE + LAT_AMP * Math.sin(elapsed * (2 * Math.PI / LAT_PERIOD_S));
-                try {
-                    m.jumpTo({center: [st.lng, lat], zoom});
-                    const [lo, hi] = UNIT_FADE;
-                    const o = Math.max(0, Math.min(1, (zoom - lo) / (hi - lo)));
-                    const c = m.getContainer();
-                    c.style.setProperty("--db-unit-opacity", o.toFixed(3));
-                    c.classList.toggle("db-units-faded", o < 0.04);
-                } catch { /* map tearing down */
+                st.paintAcc += dt;
+                if (st.paintAcc >= 1 / RENDER_HZ) {
+                    st.paintAcc = 0;
+                    const zoom = ZOOM_MID + ZOOM_AMP * Math.sin(elapsed * (2 * Math.PI / ZOOM_PERIOD_S) - Math.PI / 2);
+                    const lat = LAT_BASE + LAT_AMP * Math.sin(elapsed * (2 * Math.PI / LAT_PERIOD_S));
+                    try {
+                        m.jumpTo({center: [st.lng, lat], zoom});
+                        const [lo, hi] = UNIT_FADE;
+                        const o = Math.max(0, Math.min(1, (zoom - lo) / (hi - lo)));
+                        c.style.setProperty("--db-unit-opacity", o.toFixed(3));
+                        c.classList.toggle("db-units-faded", o < 0.04);
+                    } catch { /* map tearing down */
+                    }
                 }
             }
             raf = requestAnimationFrame(step);

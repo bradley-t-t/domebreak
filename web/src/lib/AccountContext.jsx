@@ -1,46 +1,60 @@
-import {createContext, useCallback, useContext, useEffect, useState} from "react";
-import * as account from "./account.js";
+import {createContext, useContext, useEffect, useRef, useState} from "react";
 
 const Ctx = createContext(null);
 
-// Shared DomeBreak game-account state for the site: session, profile and career
-// stats, plus auth actions. Wrap the app once; read with useAccount().
+// Shared DomeBreak game-account state. The account module (which pulls in
+// supabase-js, ~110 KB) is loaded LAZILY — dynamically imported after the page
+// is idle — so it stays out of the initial bundle and off the critical path.
+// The nav shows "Sign in" until the session check resolves.
 export function AccountProvider({children}) {
     const [session, setSession] = useState(null);
     const [profile, setProfile] = useState(null);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const hydrate = useCallback(async (s) => {
-        if (!s) {
-            setProfile(null);
-            setStats(null);
-            return;
-        }
-        const [p, st] = await Promise.all([account.fetchProfile(), account.fetchStats()]);
-        setProfile(p);
-        setStats(st);
-    }, []);
+    // Cache the dynamic import so every caller shares one module instance.
+    const modRef = useRef(null);
+    const getMod = () => (modRef.current ||= import("./account.js"));
 
     useEffect(() => {
         let alive = true;
-        account.getSession().then(async (s) => {
+        const hydrate = async (a, s) => {
+            if (!s) {
+                setProfile(null);
+                setStats(null);
+                return;
+            }
+            const [p, st] = await Promise.all([a.fetchProfile(), a.fetchStats()]);
+            if (!alive) return;
+            setProfile(p);
+            setStats(st);
+        };
+        let off = null;
+        const start = async () => {
+            const a = await getMod();
+            if (!alive) return;
+            const s = await a.getSession();
             if (!alive) return;
             setSession(s);
-            await hydrate(s);
+            await hydrate(a, s);
             setLoading(false);
-            if (s) account.touch();
-        });
-        const off = account.onAuth(async (s) => {
-            if (!alive) return;
-            setSession(s);
-            await hydrate(s);
-        });
+            if (s) a.touch();
+            off = a.onAuth(async (ns) => {
+                if (!alive) return;
+                setSession(ns);
+                await hydrate(a, ns);
+            });
+        };
+        const id = "requestIdleCallback" in window
+            ? window.requestIdleCallback(start, {timeout: 2500})
+            : setTimeout(start, 400);
         return () => {
             alive = false;
-            off();
+            off?.();
+            if ("cancelIdleCallback" in window) window.cancelIdleCallback(id);
+            else clearTimeout(id);
         };
-    }, [hydrate]);
+    }, []);
 
     const value = {
         session,
@@ -48,10 +62,10 @@ export function AccountProvider({children}) {
         stats,
         loading,
         signedIn: !!session,
-        signIn: account.signIn,
-        signUp: account.signUp,
+        signIn: async (...a) => (await getMod()).signIn(...a),
+        signUp: async (...a) => (await getMod()).signUp(...a),
         signOut: async () => {
-            await account.signOut();
+            await (await getMod()).signOut();
             setSession(null);
             setProfile(null);
             setStats(null);
