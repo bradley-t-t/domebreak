@@ -412,17 +412,20 @@ export default function LiveGame({
                 The wrapper is click-through (pointer-events-none) so the empty space around
                 the ticker/alert doesn't block the map; each child re-enables its own. */}
             <div className="absolute top-[40px] left-[272px] right-4 z-6 flex flex-col items-center gap-[7px] pointer-events-none [&>*]:pointer-events-auto">
+                {/* The command bar and the Live Wire feed are one attached unit: the
+                    ticker is docked directly beneath LiveHud inside the same panel, so
+                    it moves, scales, and fades together with the top bar. */}
                 <AdjustablePanel panel={hud.topbar} onChange={(p) => setHud("topbar", p)}
                                  onReset={() => resetHudPanel("topbar")} label="Command bar"
                                  origin="top center" resizeDir={{x: 1, y: 0}} clickThrough
-                                 className="relative w-full" contentClass="w-full flex justify-center"
+                                 className="relative w-full" contentClass="w-full flex flex-col items-center gap-[6px]"
                                  tabAlign="center">
                     <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
                              onPanel={(id) => setPanel((p) => (p === id ? null : id))}
                              globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
                              onMenu={onPause} meBadge={meBadge}/>
+                    <NewsTicker world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
-                <NewsTicker world={w} mySlot={mySlot}/>
                 {/* Flowed in the stack (not absolutely pinned) so it always sits below the
                     HUD + ticker instead of overlapping them. */}
                 {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}

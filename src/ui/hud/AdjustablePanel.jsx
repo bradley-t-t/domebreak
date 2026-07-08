@@ -11,7 +11,7 @@ const RESIZE_SENSITIVITY = 320;
 const EDGE_MARGIN = 8;
 // Grace period before the hover toolbar closes, so crossing the small gap from
 // the panel to the toolbar (or between its buttons) never dismisses it.
-const CLOSE_DELAY = 200;
+const CLOSE_DELAY = 300;
 
 // Nearest-edge target for a panel rect (in current dx/dy terms): returns the
 // dx/dy that pins the panel flush against the closest screen edge while keeping
@@ -186,10 +186,15 @@ export default function AdjustablePanel({
     const eff = live ? {...panel, ...live} : panel;
     const visible = show || !!live;
     const gripBtn = "w-6 h-6 grid place-items-center rounded text-dim hover:text-text hover:bg-[rgba(160,168,178,0.12)] transition-colors";
-    // Toolbar placement: horizontally aligned to a panel edge (so it never runs
-    // off-screen sideways), vertically above the panel unless there's no room.
-    const alignCls = tabAlign === "center" ? "left-1/2 -translate-x-1/2" : tabAlign === "right" ? "right-0" : "left-0";
-    const vertCls = below ? "top-full" : "bottom-full";
+    // The toolbar lives inside a FULL-WIDTH hover strip that spans the panel and
+    // sits flush against its edge (with a small transparent bridge). That strip —
+    // not just the little pill — is the hover-catch area, so moving the pointer
+    // from anywhere on the panel toward the controls never crosses dead space and
+    // dismisses them. The visible pill is aligned within the strip to a panel edge.
+    const alignJustify = tabAlign === "center" ? "justify-center" : tabAlign === "right" ? "justify-end" : "justify-start";
+    // Drop below the panel only when there's no room above; the bridge padding
+    // (pt/pb) overlaps the panel edge so the catch strip is continuous with it.
+    const vertCls = below ? "top-full pt-1.5" : "bottom-full pb-1.5";
 
     return (
         <div
@@ -211,40 +216,45 @@ export default function AdjustablePanel({
                 still has fully legible controls when hovered. */}
             <div className={contentClass} style={{opacity: eff.opacity}}>{children}</div>
             {/* Adjustment toolbar — revealed on hover (or during an interaction), so
-                it stays out of the way during play. */}
+                it stays out of the way during play. The outer strip spans the panel
+                width and bridges flush to its edge so the pointer can reach the pill
+                without crossing dead space; the pill itself carries the controls. */}
             <div
                 className={cn(
-                    "absolute z-30 flex items-center gap-1 rounded-md bg-panel-2 border border-line px-1.5 py-1 shadow backdrop-blur-[10px] select-none transition-opacity duration-150",
-                    alignCls, vertCls,
+                    "absolute left-0 right-0 z-30 flex", alignJustify, vertCls,
+                    "transition-opacity duration-150",
                     visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
-                )}
-                role="toolbar"
-                aria-label={`${label} layout controls`}>
-                <button type="button" className={cn(gripBtn, "cursor-grab active:cursor-grabbing touch-none")}
-                        onPointerDown={startMove} title="Drag to move" aria-label={`Move ${label}`}>
-                    <GripVertical size={14} aria-hidden="true"/>
-                </button>
-                <button type="button" className={cn(gripBtn, "cursor-nwse-resize touch-none")}
-                        onPointerDown={startResize} title="Drag to resize" aria-label={`Resize ${label}`}>
-                    <Maximize2 size={13} aria-hidden="true"/>
-                </button>
-                <label className="flex items-center gap-1 px-1" title="Opacity"
-                       onPointerDown={(e) => e.stopPropagation()}>
-                    <Contrast size={13} className="text-dim" aria-hidden="true"/>
-                    <input type="range" min={HUD_OPACITY_MIN} max={HUD_OPACITY_MAX} step={0.05}
-                           value={eff.opacity} className="w-14 accent-gold cursor-pointer"
-                           aria-label={`${label} opacity`}
-                           onInput={(e) => setLive({opacity: Number(e.target.value)})}
-                           onChange={(e) => commit({opacity: Number(e.target.value)})}/>
-                </label>
-                <button type="button" className={gripBtn} onClick={() => onReset?.()}
-                        title="Reset this panel" aria-label={`Reset ${label}`}>
-                    <RotateCcw size={13} aria-hidden="true"/>
-                </button>
-                <button type="button" className={gripBtn} onClick={() => onChange({hidden: true})}
-                        title="Hide this panel" aria-label={`Hide ${label}`}>
-                    <EyeOff size={13} aria-hidden="true"/>
-                </button>
+                )}>
+                <div
+                    className="flex items-center gap-1 rounded-md bg-panel-2 border border-line px-1.5 py-1 shadow backdrop-blur-[10px] select-none"
+                    role="toolbar"
+                    aria-label={`${label} layout controls`}>
+                    <button type="button" className={cn(gripBtn, "cursor-grab active:cursor-grabbing touch-none")}
+                            onPointerDown={startMove} title="Drag to move" aria-label={`Move ${label}`}>
+                        <GripVertical size={14} aria-hidden="true"/>
+                    </button>
+                    <button type="button" className={cn(gripBtn, "cursor-nwse-resize touch-none")}
+                            onPointerDown={startResize} title="Drag to resize" aria-label={`Resize ${label}`}>
+                        <Maximize2 size={13} aria-hidden="true"/>
+                    </button>
+                    <label className="flex items-center gap-1 px-1" title="Opacity"
+                           onPointerDown={(e) => e.stopPropagation()}>
+                        <Contrast size={13} className="text-dim" aria-hidden="true"/>
+                        <input type="range" min={HUD_OPACITY_MIN} max={HUD_OPACITY_MAX} step={0.05}
+                               value={eff.opacity} className="w-14 accent-gold cursor-pointer"
+                               aria-label={`${label} opacity`}
+                               onInput={(e) => setLive({opacity: Number(e.target.value)})}
+                               onChange={(e) => commit({opacity: Number(e.target.value)})}/>
+                    </label>
+                    <button type="button" className={gripBtn} onClick={() => onReset?.()}
+                            title="Reset this panel" aria-label={`Reset ${label}`}>
+                        <RotateCcw size={13} aria-hidden="true"/>
+                    </button>
+                    <button type="button" className={gripBtn} onClick={() => onChange({hidden: true})}
+                            title="Hide this panel" aria-label={`Hide ${label}`}>
+                        <EyeOff size={13} aria-hidden="true"/>
+                    </button>
+                </div>
             </div>
         </div>
     );
