@@ -282,7 +282,9 @@ export const STABILITY = {
 // these numbers; none are hardcoded in those systems.
 export const BATTLE_PLAN = {
     maxPlans: 8,                // cap on simultaneous plans a player may author
-    defaultEngagementKm: 12000, // starting per-plan engagement-range dial
+    defaultEngagementKm: 20000, // starting dial — wide open (active nations are seeded far
+                                // apart, often >12000 km, so a shorter default would leash
+                                // reachable targets out of range). Players dial DOWN to leash.
     minEngagementKm: 500,       // slider floor
     maxEngagementKm: 20000,     // slider ceiling — matches the silo's global reach (units.js silo.range)
     engagementStepKm: 500,      // slider granularity
