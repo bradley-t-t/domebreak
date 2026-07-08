@@ -1,4 +1,10 @@
-# GDD — Strategic Payloads & Launch Platforms
+<h1 align="center">Strategic Payloads &amp; Launch Platforms</h1>
+
+<p align="center">
+  <b>The earlier flat, one-round-per-platform offense model — launch platforms and the shared national warhead arsenal they draw from. Superseded; kept for history.</b>
+</p>
+
+<br />
 
 > **⚠ SUPERSEDED by `design/gdd/strategic-arsenal.md`.** This document describes
 > the earlier flat, one-round-per-platform model. The arsenal has since moved to a
