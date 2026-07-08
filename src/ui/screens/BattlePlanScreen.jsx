@@ -46,6 +46,14 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
     // Live solve for the active plan — drives the status readout + arm/execute gating.
     const solved = useMemo(() => (active ? solvePlan(w, active, mySlot) : null), [w, mySlot, active]);
+    // When nothing is firing, explain WHY under the disabled Arm/Execute button.
+    const reason = !active || !solved ? null
+        : active.attackerTypes.length === 0 ? "Pick one or more attacker unit types on the left."
+        : active.targetTypes.length === 0 ? "Pick one or more target types on the right."
+        : solved.attackerCount === 0 ? "You own no units of the selected types yet — build some first."
+        : solved.targetsLive === 0 ? "No targets in play — you must be at war with a nation that has these targets."
+        : solved.firing === 0 ? "No attackers in range — widen the engagement range or choose nearer targets."
+        : null;
     const armed = !!active?.armed;
     const canFire = !!solved && solved.firing > 0;
 
@@ -176,7 +184,8 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
                             {/* Status + action */}
                             {solved && (
-                                <div className="flex items-center gap-4 border-t border-hair pt-3">
+                                <div className="flex flex-col gap-2 border-t border-hair pt-3">
+                                    <div className="flex items-center gap-4">
                                     <div className="text-[12px] text-dim flex-1 leading-[1.5]">
                                         <span className="text-good font-semibold">{solved.firing} firing</span>
                                         {solved.idle.length > 0 && <span className="text-faint"> · {solved.idle.length} idle</span>}
@@ -195,6 +204,8 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                             ⚡ Execute strike
                                         </button>
                                     )}
+                                    </div>
+                                    {reason && !armed && <p className="text-[11px] text-[#d79a3f] leading-[1.4]">{reason}</p>}
                                 </div>
                             )}
                         </>
