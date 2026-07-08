@@ -1,5 +1,14 @@
 # Coding Standards
 
+- **No backwards compatibility.** DomeBreak is not a game that carries legacy support.
+  Do NOT write migration shims, format-upgrade paths, tolerant "old shape" fallbacks,
+  or compatibility branches for prior data/save/world formats. When a persisted shape
+  changes, bump its version so the old data is simply rejected. Outdated saves are not
+  migrated — the player is told the save is outdated and cannot be played
+  (`src/game/platform/saves.js`: bump `VERSION`; `listSaves` flags `outdated`; the load
+  UI shows it). Prefer a clean break over compatibility code scattered through the
+  systems. This overrides the framework's general "verification-driven"/defensive
+  instincts wherever they would add back-compat plumbing.
 - All game code must include doc comments on public APIs
 - Every system must have a corresponding architecture decision record in `docs/architecture/`
 - Gameplay values must be data-driven (external config), never hardcoded

@@ -1,10 +1,15 @@
 <h1 align="center">ADR-0008: Bounded Active Nations Over a Passive-Neutral World</h1>
 
 <p align="center">
-  <b>At most 8 live AI nations per match, with every other country a passive, capturable neutral — trading a 222-nation free-for-all for a focused match and a full-capability AI.</b>
+  <b>At most 8 live AI nations per match, with every other country a passive neutral — trading a 222-nation free-for-all for a focused match and a full-capability AI.</b>
 </p>
 
 <br />
+
+> **Revision (2026-07-08):** Neutrals are now **non-interactable scenery** — uniform
+> color, not attackable or capturable by players or AI. The "capturable neutral" aspect
+> of the decision below is superseded on that point; the active/neutral flag itself and
+> the rest of the decision stand.
 
 - **Status**: Accepted (design) — implementation sequenced per the roadmap
 - **Date**: 2026-07-08
