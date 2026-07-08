@@ -72,17 +72,24 @@ export function targetCategoryOf(kind, type) {
 // (when "city" is selected) and every enemy unit whose type falls in a selected
 // category — each annotated with remaining hp and an "allocated damage" tally the
 // solver fills in. A live-but-undamaged city has no `hp` yet, so it falls back to maxHp.
+// A plan may also scope WHICH enemy nations it hits via `plan.targetNations` (a set of
+// nation slots): when non-empty, only entities of those nations are eligible; empty (the
+// default) means every nation you're at war with. This never bypasses the at-war gate —
+// it only narrows an already-at-war target set, so picking a nation you're still at peace
+// with simply yields nothing until war is declared.
 export function planTargets(w, plan, mySlot) {
     const cats = new Set(plan.targetTypes || []);
+    const nations = plan.targetNations?.length ? new Set(plan.targetNations) : null;
+    const nationOk = (slot) => (!nations || nations.has(slot)) && atWar(w, mySlot, slot);
     const out = [];
     if (cats.has("city")) {
         for (const c of w.cities) {
-            if (!c.alive || !atWar(w, mySlot, c.slot)) continue;
+            if (!c.alive || !nationOk(c.slot)) continue;
             out.push({id: c.id, kind: "city", type: undefined, slot: c.slot, lng: c.lng, lat: c.lat, hp: c.hp ?? c.maxHp ?? 0, alloc: 0});
         }
     }
     for (const u of w.units) {
-        if (u.hp <= 0 || !atWar(w, mySlot, u.slot)) continue;
+        if (u.hp <= 0 || !nationOk(u.slot)) continue;
         const cat = targetCategoryOf("unit", u.type);
         if (cat && cats.has(cat)) out.push({id: u.id, kind: "unit", type: u.type, slot: u.slot, lng: u.lng, lat: u.lat, hp: u.hp, alloc: 0});
     }

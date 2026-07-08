@@ -1,7 +1,8 @@
 import {useMemo} from "react";
-import {armamentOf, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
-import {BATTLE_PLAN} from "../../game/data/constants.js";
+import {armamentOf, atWar, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
+import {BATTLE_PLAN, colorForSlot} from "../../game/data/constants.js";
 import ScreenFrame from "./ScreenFrame.jsx";
+import Flag from "../common/Flag.jsx";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
 
@@ -43,6 +44,15 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
         for (const p of plans) for (const t of p.attackerTypes) m.set(t, p);
         return m;
     }, [plans]);
+
+    // The enemy powers a plan may be scoped to: every ACTIVE (participating) nation but
+    // me. Neutrals never appear — they can't be warred or struck. Each carries whether
+    // I'm currently at war with it so the picker can flag live vs. pre-planned targets.
+    const enemyNations = useMemo(() => w.nations
+        .filter((n) => n.active !== false && n.slot !== mySlot)
+        .map((n) => ({slot: n.slot, name: n.name, iso: n.iso, color: n.color || colorForSlot(n.slot), war: atWar(w, mySlot, n.slot)}))
+        .sort((a, b) => (b.war - a.war) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+        [w.nations, w.time, mySlot]);
 
     // Live solve for the active plan — drives the status readout + arm/execute gating.
     const solved = useMemo(() => (active ? solvePlan(w, active, mySlot) : null), [w, mySlot, active]);
@@ -143,27 +153,62 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                     </div>
                                 </div>
 
-                                {/* Targets */}
-                                <div className="flex flex-col gap-2 rounded-md border border-line bg-sunk/40 p-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] tracking-[1px] uppercase text-faint">Targets · types</span>
-                                        {active.targetTypes.length > 0 &&
-                                            <button onClick={() => bp.clearTargetTypes(active.id)} className={cn(miniButton(), "px-2 py-0.5 text-[10px]")}>Clear</button>}
-                                    </div>
+                                {/* Targets: which nations, then which asset types */}
+                                <div className="flex flex-col gap-2.5 rounded-md border border-line bg-sunk/40 p-3">
+                                    {/* Nation scope */}
                                     <div className="flex flex-col gap-1.5">
-                                        {BATTLE_PLAN.targetCategories.map((cat) => {
-                                            const on = active.targetTypes.includes(cat.id);
-                                            return (
-                                                <button key={cat.id} onClick={() => bp.toggleTargetType(active.id, cat.id)}
-                                                        className={cn("flex items-center gap-2.5 w-full px-2.5 py-2 rounded-sm border text-left transition-[border-color,background] duration-150 ease-out-db",
-                                                            on ? "border-gold-line bg-gold-soft" : "border-line bg-sunk hover:border-line-soft")}>
-                                                    <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center text-[10px]", on ? "bg-gold border-gold text-gold-contrast" : "border-line text-transparent")}>✓</span>
-                                                    <span className="text-[13px] text-text flex-1">{cat.label}</span>
-                                                </button>
-                                            );
-                                        })}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] tracking-[1px] uppercase text-faint">Target nations</span>
+                                            {active.targetNations.length > 0 &&
+                                                <button onClick={() => bp.clearTargetNations(active.id)} className={cn(miniButton(), "px-2 py-0.5 text-[10px]")}>Any</button>}
+                                        </div>
+                                        {enemyNations.length === 0
+                                            ? <div className="text-faint text-[12px] py-2 text-center">No rival powers in this match.</div>
+                                            : (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {enemyNations.map((n) => {
+                                                        const on = active.targetNations.includes(n.slot);
+                                                        return (
+                                                            <button key={n.slot} onClick={() => bp.toggleTargetNation(active.id, n.slot)}
+                                                                    title={n.war ? "At war — live target" : "At peace — this plan engages it if war breaks out"}
+                                                                    className={cn("flex items-center gap-1.5 px-2 py-1 rounded-full border text-[12px] font-semibold transition-[border-color,background,color] duration-150 ease-out-db",
+                                                                        on ? "border-gold-line bg-gold-soft text-text" : "border-line bg-sunk text-dim hover:border-line-soft hover:text-text")}>
+                                                                <span className="flex-none w-[20px] h-[13px] grid place-items-center overflow-hidden border rounded-[2px] [&>*]:w-full [&>*]:h-full [&>*]:object-cover" style={{borderColor: n.color}}>
+                                                                    <Flag iso={n.iso}/>
+                                                                </span>
+                                                                <span className="whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis">{n.name}</span>
+                                                                <span className={cn("w-1.5 h-1.5 rounded-full flex-none", n.war ? "bg-red" : "bg-hair")} title={n.war ? "At war" : "At peace"}/>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        <p className="text-[10px] text-faint leading-[1.4]">{active.targetNations.length === 0
+                                            ? "Any nation you're at war with. Pick specific powers to strike only them; neutrals are never targeted."
+                                            : "Only the selected powers are struck — and only once you're at war with them."}</p>
                                     </div>
-                                    <p className="text-[10px] text-faint mt-0.5 leading-[1.4]">Only enemies you're at war with are struck; neutrals are never targeted.</p>
+
+                                    {/* Asset-type categories */}
+                                    <div className="flex flex-col gap-1.5 border-t border-hair pt-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] tracking-[1px] uppercase text-faint">Target types</span>
+                                            {active.targetTypes.length > 0 &&
+                                                <button onClick={() => bp.clearTargetTypes(active.id)} className={cn(miniButton(), "px-2 py-0.5 text-[10px]")}>Clear</button>}
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            {BATTLE_PLAN.targetCategories.map((cat) => {
+                                                const on = active.targetTypes.includes(cat.id);
+                                                return (
+                                                    <button key={cat.id} onClick={() => bp.toggleTargetType(active.id, cat.id)}
+                                                            className={cn("flex items-center gap-2.5 w-full px-2.5 py-2 rounded-sm border text-left transition-[border-color,background] duration-150 ease-out-db",
+                                                                on ? "border-gold-line bg-gold-soft" : "border-line bg-sunk hover:border-line-soft")}>
+                                                        <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center text-[10px]", on ? "bg-gold border-gold text-gold-contrast" : "border-line text-transparent")}>✓</span>
+                                                        <span className="text-[13px] text-text flex-1">{cat.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

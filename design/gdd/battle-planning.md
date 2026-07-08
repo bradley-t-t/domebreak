@@ -6,6 +6,20 @@
 
 <br />
 
+> **Revision (2026-07-08c):** A plan can now be **scoped to specific enemy nations.**
+> Each plan carries a `targetNations` set (nation slots). When **empty (the default)** the
+> plan behaves exactly as before — it strikes every nation you're at war with, fair-spread
+> across them. When **non-empty**, only entities belonging to the selected powers are
+> eligible targets. The Battle Planning screen lists the active belligerents (the ≤8
+> participating powers, `active !== false`, excluding you) as toggleable flag chips above
+> the target-type list, each marked at-war (red) or at-peace. **The at-war launch gate is
+> unchanged and never bypassed:** `targetNations` only *narrows* an already-at-war target
+> set (`planTargets` ANDs the nation scope with `atWar`), so scoping to a power you're
+> still at peace with simply yields nothing until war is declared — dovetailing with
+> peacetime pre-planning (pick who you'll hit now; it engages them when war breaks out).
+> Neutrals never appear and are never struck. Save `VERSION` bumped 4 → 5 (older saves
+> become unreadable, no migration).
+
 > **Revision (2026-07-08b):** Plans can now be **pre-planned in peacetime and persist
 > across save/load.** War is no longer required to author or **arm** a plan — the Arm
 > control unlocks as soon as a plan is fully drawn up (≥1 attacker type + ≥1 target
@@ -70,6 +84,12 @@ one-shot plan and fire it all at once.
 - **Targets** are enemy entities the player is at war with (`atWar`), resolved to
   cities or units by `findTarget`. Enemy units must be visible (fog of war) to be
   picked; dead or now-neutral targets are ignored by the solver.
+- **Target nations** (per-plan scope, `plan.targetNations` = a set of nation slots):
+  an **empty** set (the default) targets every nation you're at war with; a **non-empty**
+  set restricts the plan to those powers only. Selectable powers are the active
+  belligerents (`active !== false`, minus you). The scope is ANDed with `atWar` in
+  `planTargets`, so it can only *narrow* the target set, never authorize a strike on a
+  power you're at peace with. Scopes may overlap between plans (unlike attacker types).
 - **Assignment** (auto): each attacker is matched to at most one in-reach target.
   - *No-overkill* (default): attackers stack on a target only until their combined
     shot damage covers its remaining hp; once a target is **saturated** no further
@@ -213,4 +233,11 @@ All in `BATTLE_PLAN` (`src/game/data/constants.js`):
     a fresh match; a loaded one-shot does not auto-fire (`fireNonce` reset). Verified by
     `plan_persistence_test.js` (read/write round-trip, JSON serialization, fireNonce
     reset, armed survives).
-11. `npm run build` is green and `npm run lint` reports 0 errors.
+12. A plan can be **scoped to specific enemy nations**: with `targetNations` empty the
+    solver hits every at-war nation (unchanged); selecting one or more powers restricts
+    targeting to exactly those, and a power in the scope you are NOT at war with
+    contributes no targets (the at-war gate still governs the launch). The screen lists
+    the active belligerents as toggleable flag chips flagged at-war/at-peace, and the
+    scope round-trips through save/load. Verified by
+    `plan_solver_test.js` (`test_solver_nation_scope_*`) and `plan_persistence_test.js`.
+13. `npm run build` is green and `npm run lint` reports 0 errors.
