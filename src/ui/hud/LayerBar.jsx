@@ -2,6 +2,7 @@ import {cn} from "../lib/cn.js";
 
 const LAYER_DEFS = [
     {id: "countries", label: "Countries", glyph: "◔"},
+    {id: "diplomacy", label: "Diplomacy", glyph: "⚖"},
     {id: "states", label: "State Borders", glyph: "▦"},
     {id: "defense", label: "Defense Range", glyph: "⬡"},
     {id: "radar", label: "Radar Coverage", glyph: "❉"},

@@ -50,12 +50,13 @@ import {resolveKeys} from "../../game/platform/keybindings.js";
 import {sfx} from "../../game/platform/audio.js";
 import {useLiveLayers} from "./useLiveLayers.js";
 import {useOwnershipLayer} from "./useOwnershipLayer.js";
+import {useDiplomacyLayer} from "./useDiplomacyLayer.js";
 import SelectionPanel from "./SelectionPanel.jsx";
 
 const CITY_LAYERS = ["live-cities"];
 // Below this zoom, hovering a country shows a whole-country readout instead of a city.
 const COUNTRY_ZOOM = 4.2;
-const DEFAULT_LAYERS = {countries: true, states: false, defense: false, radar: false, pop: false, backdrop: true};
+const DEFAULT_LAYERS = {countries: true, diplomacy: false, states: false, defense: false, radar: false, pop: false, backdrop: true};
 
 export default function LiveGame({
                                      world,
@@ -225,6 +226,8 @@ export default function LiveGame({
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
+    // Diplomacy map filter: recolor every nation by your standing (see useDiplomacyLayer).
+    const diplomacy = useDiplomacyLayer(w, mySlot);
 
     const onMove = (e) => {
         const m = mapRef.current;
@@ -383,7 +386,8 @@ export default function LiveGame({
             <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS} minZoom={WORLD_ZOOM.min}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
-                <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} popFC={popFC}
+                <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
+                           popFC={popFC}
                            backdropFC={backdropFC} radarFC={radarFC} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}/>
