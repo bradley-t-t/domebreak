@@ -1,4 +1,10 @@
-# DomeBreak — Tailwind CSS v4 Migration Spec
+<h1 align="center">Tailwind CSS v4 Migration Spec</h1>
+
+<p align="center">
+  <b>Move DomeBreak's presentation layer entirely to Tailwind v4 — delete the 5,695-line stylesheet and all seven component CSS files, ending on exactly one stylesheet.</b>
+</p>
+
+<br />
 
 **Date:** 2026-07-06
 **Author:** Sunday (agent) with Trenton Taylor
