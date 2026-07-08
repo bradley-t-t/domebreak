@@ -55,7 +55,7 @@ export const UNITS = {
         kind: "support",
         cost: 500,
         buildTime: 24,
-        range: 5000,
+        range: 3000,
         detect: true,
         warnOnly: true,
         hp: 35,
