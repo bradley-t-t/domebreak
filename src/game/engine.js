@@ -94,6 +94,11 @@ export function createWorld(setup) {
         events: [],
         warPopups: [],       // player-facing war outcomes/offers queued for the modal (see sim/warResolution.js)
         pendingPeace: [],     // open white-peace offers: {from, to, t}
+        // Authored attack plans (Battle Planning). Player INTENT, not simulation state:
+        // the tick never reads this. It rides on the world purely so it serializes with
+        // the save — plans can be drafted in peacetime and persist across load. The UI
+        // (useBattlePlans) reads/writes it through readBattlePlans / writeBattlePlans.
+        battlePlans: {plans: [], activeId: null},
         winnerSlot: null,
         over: false
     };
@@ -210,7 +215,7 @@ export {
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
-export {solvePlan, planPreview, planAttackers, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead} from "./sim/battlePlan.js";
+export {solvePlan, planPreview, planAttackers, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
 export {step, growCities} from "./sim/tick.js";
 

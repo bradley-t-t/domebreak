@@ -178,3 +178,27 @@ export function planPreview(w, plan, mySlot) {
         targets: targets.map((t) => ({id: t.id, lng: t.lng, lat: t.lat})),
     };
 }
+
+// --- Persistence bridge (Battle Planning) -----------------------------------
+// Attack plans are authored in the UI (useBattlePlans) but stored on the world so
+// they serialize with the save and survive load. These two accessors are the ONLY
+// sanctioned way the UI reads/writes that slot — keeping the mutation "through the
+// engine" and the world shape owned here.
+
+// The persisted state a plan carries across a save. `fireNonce` is a transient
+// one-shot trigger and is deliberately NOT restored (a loaded one-shot must not
+// auto-fire); everything else — including `armed` — round-trips so a plan armed
+// in peacetime stays armed and engages the moment war begins.
+export function readBattlePlans(w) {
+    const bp = w?.battlePlans;
+    const plans = Array.isArray(bp?.plans) ? bp.plans.map((p) => ({...p, fireNonce: 0})) : [];
+    const activeId = bp?.activeId ?? null;
+    return {plans, activeId};
+}
+
+// Mirror the UI's authored plans back onto the world so the next save captures them.
+// Pure data assignment; the tick never reads this field.
+export function writeBattlePlans(w, plans, activeId) {
+    if (!w) return;
+    w.battlePlans = {plans: Array.isArray(plans) ? plans : [], activeId: activeId ?? null};
+}

@@ -46,16 +46,22 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
     // Live solve for the active plan — drives the status readout + arm/execute gating.
     const solved = useMemo(() => (active ? solvePlan(w, active, mySlot) : null), [w, mySlot, active]);
-    // When nothing is firing, explain WHY under the disabled Arm/Execute button.
+    const armed = !!active?.armed;
+    // A plan can be ARMED as soon as it's fully drawn up (attackers + targets chosen) —
+    // no war required. It sits standing by and engages the moment a valid target exists.
+    const canArm = !!active && active.attackerTypes.length > 0 && active.targetTypes.length > 0;
+    // A ONE-SHOT strike still needs something to fire at right now.
+    const canFire = !!solved && solved.firing > 0;
+    // Explains what the plan is (or isn't) doing under the Arm/Execute control.
     const reason = !active || !solved ? null
         : active.attackerTypes.length === 0 ? "Pick one or more attacker unit types on the left."
         : active.targetTypes.length === 0 ? "Pick one or more target types on the right."
-        : solved.attackerCount === 0 ? "You own no units of the selected types yet — build some first."
-        : solved.targetsLive === 0 ? "No targets in play — you must be at war with a nation that has these targets."
+        : solved.attackerCount === 0 ? "You own no units of the selected types yet — arm it now and it fires once you build them."
+        : solved.targetsLive === 0 ? (active.mode === "standing"
+            ? "No active wars yet — arm this plan and it engages the moment you go to war."
+            : "No active wars yet — a one-shot strike needs a nation you're at war with.")
         : solved.firing === 0 ? "No attackers in range — widen the engagement range or choose nearer targets."
         : null;
-    const armed = !!active?.armed;
-    const canFire = !!solved && solved.firing > 0;
 
     return (
         <ScreenFrame title="BATTLE PLANNING" subtitle="Author plans of attack — unit types → target types" wide onClose={onClose}>
@@ -193,7 +199,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         <span className="text-faint"> · {solved.targetsCovered}/{solved.targetsLive} targets covered</span>
                                     </div>
                                     {active.mode === "standing" ? (
-                                        <button onClick={() => bp.patchPlan(active.id, {armed: !armed})} disabled={!canFire && !armed}
+                                        <button onClick={() => bp.patchPlan(active.id, {armed: !armed})} disabled={!canArm && !armed}
                                                 className={cn("px-5 py-2.5 rounded-sm border font-display text-[13px] font-semibold tracking-[1.2px] uppercase transition-[border-color,background,color,filter] duration-150 ease-out-db disabled:opacity-50 disabled:cursor-not-allowed",
                                                     armed ? "border-[rgba(224,87,79,0.6)] bg-[rgba(224,87,79,0.16)] text-[#ffb3bc] hover:brightness-110" : "border-[rgba(0,0,0,0.25)] bg-gold text-gold-contrast enabled:hover:brightness-105")}>
                                             {armed ? "◼ Disarm" : "▶ Arm plan"}
@@ -205,7 +211,10 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         </button>
                                     )}
                                     </div>
-                                    {reason && !armed && <p className="text-[11px] text-[#d79a3f] leading-[1.4]">{reason}</p>}
+                                    {armed
+                                        ? solved.firing === 0 &&
+                                            <p className="text-[11px] text-dim leading-[1.4]">Armed · standing by — engages automatically once a valid target is in play.</p>
+                                        : reason && <p className="text-[11px] text-[#d79a3f] leading-[1.4]">{reason}</p>}
                                 </div>
                             )}
                         </>

@@ -1,16 +1,31 @@
 // Battle Planning — React state for the player's authored attack plans. A plan is
-// player INTENT (session state, never world state): a set of attacker unit TYPES, a
-// set of target CATEGORIES, an engagement range, and a few toggles. The reconciler
+// player INTENT: a set of attacker unit TYPES, a set of target CATEGORIES, an
+// engagement range, and a few toggles. Plans can be drafted (and armed) in peacetime;
+// an armed standing plan simply has nothing to shoot at until war begins, then engages
+// automatically. Plans PERSIST across save/load: they are seeded from the world on
+// mount and mirrored back to it on every change (through readBattlePlans /
+// writeBattlePlans), so the existing save serialization carries them. The reconciler
 // (useBattlePlanReconciler) turns an armed/executed plan into real orders through the
 // sanctioned engine commands. Attacker unit TYPES are EXCLUSIVE across plans — a type
 // belongs to at most one plan, so a given platform is only ever driven by one plan;
 // target categories may overlap. See design/gdd/battle-planning.md.
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
+import {readBattlePlans, writeBattlePlans} from "../../game/engine.js";
 
-// Session-monotonic plan id source (UI-only). Kept out of the state updaters so those
-// stay pure under React strict-mode double-invocation.
+// Monotonic plan id source (UI-only). Kept out of the state updaters so those stay
+// pure under React strict-mode double-invocation. Seeded past any restored plan id on
+// load (see seedSeq) so a fresh session never mints an id that collides with a saved one.
 let SEQ = 0;
+
+// Bump SEQ past the highest numeric suffix among restored plan ids (e.g. "plan-7" → 7),
+// so newly-added plans keep unique ids after a load.
+function seedSeq(plans) {
+    for (const p of plans) {
+        const m = /^plan-(\d+)$/.exec(p.id || "");
+        if (m) SEQ = Math.max(SEQ, Number(m[1]));
+    }
+}
 
 function makePlan(index) {
     SEQ += 1;
@@ -29,9 +44,22 @@ function makePlan(index) {
     };
 }
 
-export function useBattlePlans() {
-    const [plans, setPlans] = useState([]);
-    const [activeId, setActiveId] = useState(null);
+export function useBattlePlans(world) {
+    // Seed from the world once per session (a new match or a loaded save mounts a fresh
+    // LiveGame, so lazy init reads that world's persisted plans exactly once).
+    const [plans, setPlans] = useState(() => {
+        const restored = readBattlePlans(world);
+        seedSeq(restored.plans);
+        return restored.plans;
+    });
+    const [activeId, setActiveId] = useState(() => readBattlePlans(world).activeId);
+
+    // Mirror authored plans back onto the world so the next autosave / quit-save
+    // captures them. Cheap data assignment through the engine accessor; the tick never
+    // reads this slot, so it cannot affect determinism.
+    useEffect(() => {
+        writeBattlePlans(world, plans, activeId);
+    }, [world, plans, activeId]);
 
     const active = useMemo(() => plans.find((p) => p.id === activeId) || null, [plans, activeId]);
 

@@ -115,10 +115,11 @@ export default function LiveGame({
     // touches world state.
     const {layout: hud, update: setHud, resetPanel: resetHudPanel, resetAll: resetHudAll} = useHudLayout();
 
-    // Battle Planning: the player's authored attack plans (intent only — session
-    // state, never world state) plus the reconciler that turns armed/executed plans
-    // into real orders through the sanctioned engine commands. See its GDD/ADR.
-    const bp = useBattlePlans();
+    // Battle Planning: the player's authored attack plans (intent) plus the reconciler
+    // that turns armed/executed plans into real orders through the sanctioned engine
+    // commands. Plans are seeded from — and mirrored back onto — the world so they
+    // persist across save/load and can be drafted in peacetime. See its GDD/ADR.
+    const bp = useBattlePlans(w);
     useBattlePlanReconciler({world: w, api, mySlot, plans: bp.plans, onFired: (id, n) => flash(n ? `Strike launched — ${n} on the way.` : "No units in range to fire.", n ? "info" : undefined)});
 
     const relation = (slot) => {
