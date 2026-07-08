@@ -104,7 +104,7 @@ export default function LoginScreen() {
                            aria-invalid={!!error} aria-describedby={error ? "db-login-err" : undefined}/>
 
                     {mode === "signup" && <>
-                        <label className={cn(label(), "mt-4")} htmlFor="db-login-username">Callsign</label>
+                        <label className={cn(label(), "mt-4")} htmlFor="db-login-username">Username</label>
                         <input id="db-login-username" className={input()} maxLength={24} autoComplete="username"
                                placeholder="3–24 characters"
                                value={username} onChange={(e) => setUsername(e.target.value)} disabled={busy}/>
