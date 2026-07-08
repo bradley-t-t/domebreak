@@ -17,7 +17,7 @@ export default defineConfig({
         // The game source (imported via @game from ../src) resolves its own bare
         // "react", which would load a second React copy and break hooks. Force a
         // single instance from this app's node_modules.
-        dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+        dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "react-map-gl", "maplibre-gl", "pmtiles"],
     },
     server: {
         port: 5180,
