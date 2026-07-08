@@ -260,46 +260,26 @@
         background-clip: padding-box;
     }
 
-    /* ---- missile sprite ---- */
+    /* ---- missile sprite ----
+       The body is a single SVG silhouette (public/icons/missile.svg — ogive nose,
+       slender body, swept tail fins) painted by CSS-masking a metallic gradient,
+       so one crisp shape scales to every warhead size and the per-warhead tint
+       still shows through. Flame + glow are anchored as a fraction of the sprite
+       so they stay at the tail/center whatever the warhead size. */
     .db-missile {
         position: relative;
-        width: 10px;
-        height: 28px;
+        width: 11px;
+        height: 30px;
         will-change: transform;
     }
 
     .db-missile-body {
         position: absolute;
-        left: 3px;
-        top: 4px;
-        width: 4px;
-        height: 15px;
-        border-radius: 2px 2px 1px 1px;
+        inset: 0;
         background: linear-gradient(180deg, #f4f5f6, #c9cdd2 55%, #989ca2);
-        box-shadow: 0 0 4px rgba(222, 226, 232, 0.6);
-    }
-
-    .db-missile-body::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: -5px;
-        width: 0;
-        height: 0;
-        border-left: 2px solid transparent;
-        border-right: 2px solid transparent;
-        border-bottom: 6px solid #f2f4f6;
-    }
-
-    .db-missile-body::after {
-        content: "";
-        position: absolute;
-        left: -2px;
-        bottom: 0;
-        width: 8px;
-        height: 3px;
-        background: #9da1a7;
-        clip-path: polygon(0 100%, 28% 0, 72% 0, 100% 100%);
+        -webkit-mask: url(/icons/missile.svg) center / contain no-repeat;
+        mask: url(/icons/missile.svg) center / contain no-repeat;
+        filter: drop-shadow(0 0 2.5px rgba(222, 226, 232, 0.5));
     }
 
     /* Exhaust + glow are tinted per warhead via the --flame custom property that
@@ -308,10 +288,11 @@
        warhead hue so the four ammo types read apart in flight. */
     .db-missile-flame {
         position: absolute;
-        left: 3px;
-        top: 18px;
+        left: 50%;
+        top: 74%;
         width: 4px;
         height: 12px;
+        margin-left: -2px;
         border-radius: 0 0 50% 50%;
         background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff 0%, color-mix(in srgb, var(--flame, #ff8a1a) 45%, #fff) 24%, var(--flame, #ff8a1a) 56%, color-mix(in srgb, var(--flame, #ff8a1a) 60%, #000) 82%, transparent 100%);
         box-shadow: 0 0 12px 4px color-mix(in srgb, var(--flame, #ff8a1a) 80%, transparent);
@@ -320,10 +301,12 @@
 
     .db-missile-glow {
         position: absolute;
-        left: -7px;
-        top: 7px;
+        left: 50%;
+        top: 50%;
         width: 24px;
         height: 24px;
+        margin-left: -12px;
+        margin-top: -12px;
         border-radius: 50%;
         background: radial-gradient(circle, color-mix(in srgb, var(--flame, #ff8a1a) 34%, transparent), transparent 70%);
     }
@@ -334,48 +317,37 @@
         }
     }
 
-    /* ---- per-warhead silhouettes ----
-       standard = the baseline slim ballistic body above. The three below reshape
-       the sprite to match what each munition actually is. */
+    /* ---- per-warhead treatments ----
+       standard = the baseline silhouette above. The others only re-tint or resize
+       the same masked body (and HGV swaps in its own waverider shape). */
 
-    /* Cluster: a bulkier MIRV bus, banded to hint at the payload stack it carries
-       before it splits into sub-munitions on reentry. */
+    /* Cluster: a banded MIRV bus, hinting at the payload stack it carries before it
+       splits into sub-munitions on reentry. Banding rides the same mask. */
     .db-missile.cluster .db-missile-body {
-        left: 2.5px;
-        width: 5px;
-        height: 14px;
         background:
             repeating-linear-gradient(180deg, transparent 0 2.5px, rgba(16, 42, 54, 0.3) 2.5px 3.5px),
             linear-gradient(180deg, #f2f5f6, #cbe4ee 42%, #a7c3cf 72%, #8db0bd);
     }
 
-    .db-missile.cluster .db-missile-body::before {
-        left: 0.5px;
-    }
-
-    .db-missile.cluster .db-missile-body::after {
-        left: -2.5px;
-        width: 10px;
-    }
-
     /* HGV: a maneuvering waverider glide body — a slender white-hot dart with a
-       plasma bow-shock flaring off its nose and a thin, bright ionization streak in
-       place of a rocket plume. Reads as the fastest, hottest thing in the sky. */
+       plasma bow-shock off its nose and a thin ionization streak in place of a
+       rocket plume. Reads as the fastest, hottest thing in the sky. Uses its own
+       clip-path shape rather than the shared missile silhouette. */
     .db-missile.hgv {
         width: 14px;
         filter: drop-shadow(0 0 3px color-mix(in srgb, var(--flame) 70%, transparent));
     }
 
     .db-missile.hgv .db-missile-body {
-        left: 2.5px;
-        top: 2px;
-        width: 5px;
-        height: 17px;
+        inset: 2px 4.5px;
+        -webkit-mask: none;
+        mask: none;
         border-radius: 1px;
         /* slim arrowhead waverider — sharp nose, swept shoulders, flat aft */
         clip-path: polygon(50% 0, 88% 58%, 100% 100%, 0 100%, 12% 58%);
         background: linear-gradient(180deg, #fff 0%, #fff 16%, color-mix(in srgb, var(--flame) 55%, #fff) 46%, var(--flame) 100%);
         box-shadow: 0 0 10px 2px color-mix(in srgb, var(--flame) 90%, transparent);
+        filter: none;
     }
 
     /* Plasma bow-shock: a hot crescent of compression heat flaring off the nose. */
@@ -383,84 +355,58 @@
         content: "";
         display: block;
         position: absolute;
-        left: -1.5px;
+        left: 50%;
         top: -4px;
         width: 8px;
         height: 7px;
-        border: 0;
+        margin-left: -4px;
         background: radial-gradient(ellipse 100% 72% at 50% 100%, #fff 0%, color-mix(in srgb, var(--flame) 60%, #fff) 30%, color-mix(in srgb, var(--flame) 82%, transparent) 62%, transparent 78%);
         clip-path: polygon(50% 100%, 0 34%, 22% 6%, 50% 0, 78% 6%, 100% 34%);
         opacity: 0.92;
     }
 
-    .db-missile.hgv .db-missile-body::after {
-        display: none;
-    }
-
     /* Ionization streak: thin, bright, and longer than a plume — a hypersonic trail. */
     .db-missile.hgv .db-missile-flame {
-        left: 3px;
-        top: 17px;
+        top: 70%;
         width: 4px;
         height: 14px;
         border-radius: 0 0 60% 60%;
     }
 
     .db-missile.hgv .db-missile-glow {
-        left: -5px;
-        top: 4px;
         width: 20px;
         height: 20px;
+        margin-left: -10px;
+        margin-top: -10px;
         background: radial-gradient(circle, color-mix(in srgb, var(--flame) 44%, transparent), transparent 66%);
     }
 
-    /* Thermonuclear: the heaviest missile — a bigger booster, a blunt reentry-vehicle
-       cone, a dense plume, and a wide ominous halo. */
+    /* Thermonuclear: the heaviest missile — a bigger booster, a denser plume, and a
+       wider ominous halo. Same silhouette, scaled up. */
     .db-missile.thermo,
     .db-missile.thermomirv {
-        width: 12px;
-        height: 32px;
+        width: 13px;
+        height: 34px;
     }
 
     .db-missile.thermo .db-missile-body,
     .db-missile.thermomirv .db-missile-body {
-        left: 3px;
-        top: 5px;
-        width: 6px;
-        height: 17px;
         background: linear-gradient(180deg, #f6f7f8, #c6cace 52%, #93979d);
-    }
-
-    .db-missile.thermo .db-missile-body::before,
-    .db-missile.thermomirv .db-missile-body::before {
-        left: -0.5px;
-        top: -6px;
-        border-left-width: 3.5px;
-        border-right-width: 3.5px;
-        border-bottom-width: 7px;
-    }
-
-    .db-missile.thermo .db-missile-body::after,
-    .db-missile.thermomirv .db-missile-body::after {
-        left: -2.5px;
-        width: 11px;
-        height: 3.5px;
     }
 
     .db-missile.thermo .db-missile-flame,
     .db-missile.thermomirv .db-missile-flame {
-        left: 3px;
-        top: 21px;
         width: 6px;
         height: 15px;
+        margin-left: -3px;
     }
 
     .db-missile.thermo .db-missile-glow,
     .db-missile.thermomirv .db-missile-glow {
-        left: -10px;
-        top: 6px;
         width: 32px;
         height: 32px;
+        margin-left: -16px;
+        margin-top: -16px;
     }
 
     /* ---- homing interceptor sprite ---- */
