@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {AnimatePresence, motion} from "motion/react";
-import {ChevronDown, LogOut, Download} from "lucide-react";
+import {ChevronDown, LogOut} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {useAccount} from "../lib/AccountContext.jsx";
 import GameIcon from "./GameIcon.jsx";
@@ -41,7 +41,7 @@ function Stat({value, label}) {
     );
 }
 
-export default function AccountMenu({onDownload}) {
+export default function AccountMenu() {
     const {profile, stats, signOut} = useAccount();
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -108,17 +108,6 @@ export default function AccountMenu({onDownload}) {
                         </div>
 
                         <div className="p-2">
-                            <button
-                                role="menuitem"
-                                onClick={() => {
-                                    setOpen(false);
-                                    onDownload?.();
-                                }}
-                                className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[13px] text-dim transition-colors hover:bg-bg-2 hover:text-text"
-                            >
-                                <Download size={15}/>
-                                <span>Download the game</span>
-                            </button>
                             <button
                                 role="menuitem"
                                 onClick={() => {
