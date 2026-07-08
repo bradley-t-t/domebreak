@@ -11,32 +11,30 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
-import {atWar, hostileTo, isActive, netIncomeOf} from "./queries.js";
+import {atWar, netIncomeOf} from "./queries.js";
 import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, setAwacsPatrol, setMarch, setPatrolSize, unitLockReason} from "./production.js";
 import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
 
-// Strategic value of an enemy/neutral city as a strike target for nation `n`, seen
-// from `from`: counter-value (population, capital weight) discounted by distance, with
-// a nudge toward neutrals (soft targets that open expansion and can't counter-strike).
-function targetValue(w, n, from, c) {
+// Strategic value of an at-war enemy city as a strike target, seen from `from`:
+// counter-value (population, capital weight) discounted by distance (nearer preferred).
+function targetValue(from, c) {
     const pop = (c.pop || 0) + 1;
     const capW = c.cap ? 1.6 : 1;
     const dist = from ? haversine(from.lng, from.lat, c.lng, c.lat) : 1;
     const distW = 1 / (1 + dist / AI_TUNING.targetDistScaleKm);
-    const neutralW = isActive(w, c.slot) ? 1 : AI_TUNING.neutralTargetBias;
-    return pop * capW * distW * neutralW;
+    return pop * capW * distW;
 }
 
-// Best strike target for nation `n`: the highest-value living city it may attack — an
-// at-war enemy OR any neutral (hostileTo) — measured from `from` (its capital). A
+// Best strike target for nation `n`: the highest-value living city of a nation it is
+// at war with, measured from `from` (its capital). Neutrals are never targeted. A
 // weighted pick over the strongest few keeps the AI concentrating on good targets
 // while staying varied; every roll uses the seeded rand(w), so it stays reproducible.
 function pickTarget(w, n, from) {
     const scored = [];
     for (const c of w.cities) {
-        if (!c.alive || c.slot === n.slot || !hostileTo(w, n.slot, c.slot)) continue;
-        scored.push([c, targetValue(w, n, from, c)]);
+        if (!c.alive || c.slot === n.slot || !atWar(w, n.slot, c.slot)) continue;
+        scored.push([c, targetValue(from, c)]);
     }
     if (!scored.length) return null;
     scored.sort((a, b) => b[1] - a[1]);
@@ -271,7 +269,7 @@ export function aiTick(w, dt) {
             if (!(n.ammo[wh] > 0) && allowedAmmo(u.type).includes("standard") && (n.ammo.standard || 0) > 0) u.warhead = "standard";
         }
         // Point an idle MISSILE platform (not a ground unit) at the best available
-        // target — an at-war enemy, or a neutral to soften for capture — each think.
+        // at-war enemy target each think (neutrals are never targeted).
         const cap = caps[n.slot];
         const idleOff = myUnits.find((u) => !u.targetId && UNITS[u.type].kind === "offense" && UNITS[u.type].targets !== "land");
         if (idleOff) {
@@ -287,13 +285,13 @@ export function aiTick(w, dt) {
                 commandAttack(w, idleOff.id, tgt.id);
             }
         }
-        // Ground forces expand the border: send each idle capture-capable battalion to
-        // march on and assault the nearest reachable enemy/neutral city it can take.
+        // Ground forces press the war: send each idle capture-capable battalion to
+        // march on and assault the nearest at-war enemy city it can take (never neutrals).
         for (const u of myUnits) {
             if (u.dest || u.hp <= 0 || !UNITS[u.type].capture) continue;
             let best = null, bd = Infinity;
             for (const c of w.cities) {
-                if (!c.alive || c.slot === n.slot || !hostileTo(w, n.slot, c.slot)) continue;
+                if (!c.alive || c.slot === n.slot || !atWar(w, n.slot, c.slot)) continue;
                 const d = haversine(u.lng, u.lat, c.lng, c.lat);
                 if (d < bd) { bd = d; best = c; }
             }
