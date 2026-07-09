@@ -1,5 +1,5 @@
 import {describe, expect, test} from "vitest";
-import {openingFreeze} from "../../../server/matchStart.js";
+import {openingFreeze} from "../../../server/match/openingFreeze.js";
 
 // The opening freeze holds an online match paused for a fixed countdown, then
 // releases it to live play. START/UNTIL are fixed anchors so the transition is
