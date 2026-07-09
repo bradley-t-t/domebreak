@@ -114,8 +114,9 @@ export function useEngine(world, online = false) {
             return r;
         },
         declareWar: (slot) => {
-            declareWar(ref.current, ref.current.mySlot, slot);
+            const r = declareWar(ref.current, ref.current.mySlot, slot);
             force();
+            return r;
         },
         offerPeace: (slot) => {
             const r = offerPeace(ref.current, ref.current.mySlot, slot);

@@ -3,6 +3,7 @@
 // shared pin-add helper and the menu state itself.
 import {useState} from "react";
 import {hangarCapOf, hangarCount, haversine, isActive, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
+import {DIPLOMACY} from "../../game/data/constants.js";
 
 // Client-side amphibious lift radius — mirrors AMPHIB_LIFT_KM in production.js so
 // the context menu only offers embark on ground units the engine will accept.
@@ -69,9 +70,14 @@ export function useContextMenus({
                         else flash(`Alliance proposed to ${nationName(c.slot)}.`, "info");
                     }
                 });
+                const graceSec = w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
+                const graceActive = graceSec > 0 && (w.time ?? 0) < graceSec;
                 items.push({
-                    label: `Declare War on ${nationName(c.slot)}`,
+                    label: graceActive
+                        ? `Declare War on ${nationName(c.slot)} (Grace)`
+                        : `Declare War on ${nationName(c.slot)}`,
                     danger: true,
+                    disabled: graceActive,
                     onClick: () => api.declareWar(c.slot)
                 });
             }

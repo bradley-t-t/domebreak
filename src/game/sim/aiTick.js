@@ -199,6 +199,9 @@ function diploOfferPeace(w, n) {
 
 function diploDeclareWar(w, n, caps, alive) {
     if (warCount(n) >= DIPLOMACY.maxWars) return;
+    // Opening grace is a world-wide ceasefire — during the window no AI opens a
+    // war on anyone (the human commander is likewise blocked in declareWar).
+    if (w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) return;
     if (rand(w) >= DIPLOMACY.declareChance) return;
     const capA = caps[n.slot];
     if (!capA) return;
@@ -209,8 +212,6 @@ function diploDeclareWar(w, n, caps, alive) {
         if (m.slot === n.slot || !m.alive || m.active === false) continue;   // neutrals are captured, not warred
         // Never open a war on an ally or a nation already being fought.
         if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
-        // The player gets an opening grace window before any AI may declare on them.
-        if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.warRangeKm) continue;
         const gdpB = Math.max(0.1, m.gdp || 0.1), cB = Math.max(1, alive.get(m.slot) || 0);

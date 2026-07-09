@@ -30,6 +30,7 @@ function w2() {
             {id: "a2", slot: 0, name: "A2", cap: 0, pop: 50, econ: 1, lng: 1, lat: 0},
             {id: "b1", slot: 1, name: "BCap", cap: 1, pop: 100, econ: 1, lng: 10, lat: 0},
         ],
+        rules: {playerGraceSec: 0}, // opening ceasefire off so declareWar tests fire at t=0
     });
     return w;
 }

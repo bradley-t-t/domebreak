@@ -25,6 +25,7 @@ function fresh() {
             {id: "b3", slot: 1, name: "B-3", state: "BS3", cap: 0, pop: 50, econ: 1, lng: 12, lat: 0},
             {id: "c1", slot: 2, name: "C-Cap", state: "CS1", cap: 1, pop: 100, econ: 1, lng: 20, lat: 0},
         ],
+        rules: {playerGraceSec: 0}, // opening ceasefire off so t=0 declareWar calls stand up their wars
     });
     w.city = (id) => w.cities.find((c) => c.id === id);
     return w;
