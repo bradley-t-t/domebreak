@@ -23,7 +23,7 @@ import MeBadge from "./ui/common/MeBadge.jsx";
 import TitleBarDrag from "./ui/common/TitleBarDrag.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
-import {menuButton} from "./ui/lib/variants.js";
+import NetErrorOverlay from "./ui/screens/NetErrorOverlay.jsx";
 import {usePresence} from "./ui/hooks/usePresence.js";
 import {useParty} from "./ui/hooks/useParty.js";
 
@@ -52,7 +52,16 @@ export default function App() {
     // is already enrolled by db-party, so the search screen must not re-enqueue).
     const [partySearch, setPartySearch] = useState(false);
     const [netClient, setNetClient] = useState(null);
-    const [netStatus, setNetStatus] = useState(null); // null | "connecting" | "lost"
+    const [netStatus, setNetStatus] = useState(null); // null | "connecting" | "failed" | "lost"
+    // Detail dump surfaced by NetErrorOverlay when netStatus is "failed" or "lost"
+    // — the multi-line technical trace from connectMatch (URLs tried, ws close
+    // code, server error, matchId) so a player can Copy it into a bug report
+    // instead of getting silently punted to the menu. Cleared when the overlay
+    // dismisses.
+    const [netError, setNetError] = useState(null);
+    // The lobby the last join attempt targeted — held so the failure overlay's
+    // Retry button can re-invoke joinMatch with the same match_id + server_url.
+    const retryLobbyRef = useRef(null);
     // Honor both the OS motion preference and the in-game toggle.
     const reduceMotion = settings.reduceMotion ||
         (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -317,6 +326,8 @@ export default function App() {
                 });
             }
         }
+        setNetError(null);
+        retryLobbyRef.current = null;
         setLobbyId(null);
         setOverlay(null);
         setScreen("menu");
@@ -324,21 +335,31 @@ export default function App() {
     };
 
     // A lobby the player is in went active: dial the game server it advertised.
+    // On any failure we hold on the "failed" state (NetErrorOverlay renders a
+    // copyable dump) instead of silently dumping the player back to the menu —
+    // that path was indistinguishable from a legitimate quit and lost every clue
+    // about why the handoff failed.
     const joinMatch = async (lobby) => {
         if (netClient || netStatus === "connecting") return;
+        retryLobbyRef.current = lobby;
         setNetStatus("connecting");
+        setNetError(null);
         try {
             const client = await connectMatch({
                 urls: (lobby.server_url || "").split(",").map((s) => s.trim()).filter(Boolean),
                 matchId: lobby.match_id,
                 getJwt: async () => (await supabase.auth.getSession()).data.session?.access_token ?? "",
                 onOver: () => fetchStats().then(setAccountStats),
-                onClose: (why) => {
-                    if (why === "lost") setNetStatus("lost");
+                onClose: (why, details) => {
+                    if (why === "lost") {
+                        setNetStatus("lost");
+                        setNetError(details || null);
+                    }
                 },
             });
             setNetClient(client);
             setNetStatus(null);
+            setNetError(null);
             setWorld(client.world);
             setBelligerents(client.world.nations.map((n) => n.iso));
             setProfile({
@@ -350,11 +371,43 @@ export default function App() {
             setScreen("playing");
             setOverlay(null);
         } catch (e) {
-            setNetStatus(null);
-            setLobbyId(null);
-            setScreen("menu");
             console.warn("match connect failed", e);
+            const detail = [
+                e?.details,
+                `matchId: ${lobby?.match_id || "(none)"}`,
+                `serverUrls: ${lobby?.server_url || "(none advertised)"}`,
+                `error: ${e?.message || String(e)}`,
+            ].filter(Boolean).join("\n");
+            setNetStatus("failed");
+            setNetError(detail);
         }
+    };
+
+    // Retry: re-invoke joinMatch against the same lobby snapshot. Clears the
+    // overlay so the connecting state can render underneath while we wait.
+    const retryJoinMatch = () => {
+        const lobby = retryLobbyRef.current;
+        if (!lobby) return dismissNetError();
+        setNetError(null);
+        setNetStatus(null);
+        void joinMatch(lobby);
+    };
+
+    // Dismiss the failure/lost overlay and drop the player back at the main
+    // menu — clears every online-match handle so a fresh Play from the menu is
+    // clean.
+    const dismissNetError = () => {
+        if (netClient) {
+            netClient.close();
+            setNetClient(null);
+        }
+        retryLobbyRef.current = null;
+        setNetStatus(null);
+        setNetError(null);
+        setLobbyId(null);
+        setOverlay(null);
+        setWorld(null);
+        setScreen("menu");
     };
 
     useEffect(() => {
@@ -437,10 +490,19 @@ export default function App() {
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
                                                 players={netClient?.players} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}/>
                 </ErrorBoundary>}
+            {netStatus === "failed" &&
+                <NetErrorOverlay
+                    title="Match Connect Failed"
+                    message="Couldn't hand off from the war room to the game server."
+                    details={netError}
+                    onRetry={retryJoinMatch}
+                    onDismiss={dismissNetError}/>}
             {netStatus === "lost" && screen === "playing" &&
-                <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
-                    <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>
-                </div>}
+                <NetErrorOverlay
+                    title="Connection Lost"
+                    message="Your link to the war server dropped. The war goes on without you."
+                    details={netError}
+                    onDismiss={quitToMenu}/>}
 
             {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => {
                 setSaveMode("save");
