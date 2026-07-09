@@ -30,8 +30,9 @@ export function usePlacementChecks({mapRef, w, mySlot, myGid}) {
         return false;
     };
     // Naval goes in coastal water; coastal industry sits on land beside the sea;
-    // everything else on your land.
+    // orbital sats go anywhere (they're in orbit); everything else on your land.
     const placeError = (type, e) => {
+        if (UNITS[type]?.orbital) return null; // orbit is free real estate — any latitude, any longitude, over anyone's territory
         if (UNITS[type]?.coastal) {
             if (!onLand(e)) return "Seaports must be built on land.";
             if (!inMyLand(e)) return "That's outside your territory.";
