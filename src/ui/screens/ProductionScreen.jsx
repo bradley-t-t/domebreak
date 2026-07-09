@@ -87,26 +87,23 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     const icon = prodIcon;
     const timeOf = prodTime;
 
-    // Research-adjusted stat sheet for a unit *type* (nothing placed yet, so we
-    // read UNITS[type] and apply this nation's research multipliers directly —
-    // mirrors LiveGame.unitStats()/queries.js). Returns compact label/value rows
-    // relevant to the unit's kind; kept dense so cards don't bloat.
+    // Compact per-unit stat sheet for arsenal cards — reads UNITS[type] directly.
     const km = fmtKm;
     const statsFor = (u) => {
         const rows = [];
         if (u.kind === "defense") {
-            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, u.intercept + (me?.interceptAdd ?? 0)) * 100)}%`]);
-            rows.push(["Engage Range", km(u.range * (me?.defRangeMult ?? 1))]);
+            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, u.intercept) * 100)}%`]);
+            rows.push(["Engage Range", km(u.range)]);
             if (u.minRange) rows.push(["Min Range", km(u.minRange)]);
-            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
             rows.push(["Shot Cost", `◆ ${u.fireCost}`]);
         } else if (u.kind === "offense") {
-            rows.push(["Damage", `${Math.round(u.damage * (me?.dmgMult ?? 1))}`]);
-            rows.push(["Strike Range", km(u.range * (me?.rangeMult ?? 1))]);
-            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Damage", `${Math.round(u.damage)}`]);
+            rows.push(["Strike Range", km(u.range)]);
+            rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
             if (u.speed) rows.push(["Missile Spd", `${u.speed} km/s`]);
         } else if (u.detect) {
-            rows.push(["Detection", km((u.radarKm || u.range) * (me?.radarMult ?? 1))]);
+            rows.push(["Detection", km(u.radarKm || u.range)]);
             rows.push(["Track Grade", u.warnOnly ? "Warning Only" : "Fire Control"]);
         } else if (u.kind === "industry") {
             rows.push(["Output", `+${u.output}/s`]);
@@ -122,7 +119,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         // Locked cards render greyed with a lock glyph and the reason as the line
         // + tooltip, and can't arm placement.
         const lock = unitLockReason(world, mySlot, key);
-        const cost = Math.round(u.cost * (me?.buildCostMult ?? 1));
+        const cost = u.cost;
         const afford = points >= cost && (net >= 0 || u.kind === "industry");
         const qn = queuedOf("unit", key);
         const spec = HANGAR_SPEC[key];

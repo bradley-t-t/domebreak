@@ -149,7 +149,7 @@ export default function LiveGame({
     const labelOf = (type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso);
     const armOf = (type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso);
     // Selection-panel stat sheet — see useUnitStats (same rows, same formulas).
-    const unitStats = useUnitStats({w, myNation, mySlot, armOf});
+    const unitStats = useUnitStats({w, mySlot, armOf});
     // Screen-space unit heading for map-marker rotation — see useUnitHeading
     // (same rotMemo unwrap math, moved out verbatim).
     const unitHeading = useUnitHeading(mapRef);
@@ -248,7 +248,7 @@ export default function LiveGame({
         planArcsFC,
         planTargetsFC
     } = useLiveLayers({
-        w, mySlot, myNation, backdrop, layers, selUnit, teamColor, globe
+        w, mySlot, backdrop, layers, selUnit, teamColor, globe
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
@@ -439,7 +439,7 @@ export default function LiveGame({
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
                            planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}
                            globe={globe}/>
-                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} myNation={myNation} globe={globe}/>
+                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} globe={globe}/>
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
                             visUnits={visUnits} unitHeading={unitHeading} unitColor={unitColor} labelOf={labelOf}
                             nationName={nationName} selUnit={selUnit} onUnitClick={onUnitClick}
