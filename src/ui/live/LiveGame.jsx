@@ -270,15 +270,24 @@ export default function LiveGame({
         const gid = feats[0]?.properties?.GID_0 || null;
         const activeType = placing || (moving && w.units.find((u) => u.id === moving)?.type);
         if (activeType) {
-            const onLandHere = feats.length > 0, inTerr = inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
-            const myLandHere = myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (onLandHere && inTerr);
-            // A marching ground unit may head anywhere on land (same freedom ships
-            // have at sea); placement and paid relocation stay territory-bound.
-            const marching = moving && UNITS[activeType]?.landSpeed;
-            const terrainOk = marching ? onLandHere
-                : UNITS[activeType]?.coastal ? (myLandHere && nearWater(e))
-                    : isSea(activeType) ? (!onLandHere && inTerr) : myLandHere;
-            const valid = terrainOk && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null);
+            const orbital = !!UNITS[activeType]?.orbital;
+            let valid;
+            if (orbital) {
+                // Orbital assets orbit above every surface — the cursor is always a
+                // valid orbit slot regardless of land/water/foreign territory, and
+                // the MIN_SEP proximity check is meaningless for a sat.
+                valid = true;
+            } else {
+                const onLandHere = feats.length > 0, inTerr = inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
+                const myLandHere = myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (onLandHere && inTerr);
+                // A marching ground unit may head anywhere on land (same freedom ships
+                // have at sea); placement and paid relocation stay territory-bound.
+                const marching = moving && UNITS[activeType]?.landSpeed;
+                const terrainOk = marching ? onLandHere
+                    : UNITS[activeType]?.coastal ? (myLandHere && nearWater(e))
+                        : isSea(activeType) ? (!onLandHere && inTerr) : myLandHere;
+                valid = terrainOk && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null);
+            }
             ghostRef.current?.update(e.lngLat.lng, e.lngLat.lat, valid);
         }
         if (gid !== hoveredGid) setHoveredGid(gid);

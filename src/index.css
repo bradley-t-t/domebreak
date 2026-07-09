@@ -960,13 +960,6 @@
         filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 1px 2px #000) drop-shadow(0 0 8px rgba(180, 200, 255, 0.35));
     }
 
-    .db-orbital-tether {
-        pointer-events: none;
-        border-left: 1px dashed rgba(200, 214, 236, 0.35);
-        opacity: 0.55;
-        transform: translateX(-0.5px);
-    }
-
     /* ---- all @keyframes ---- */
     @keyframes dbOrbitalHover {
         0%, 100% {

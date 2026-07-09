@@ -10,9 +10,11 @@ import {cn} from "../lib/cn.js";
 import {falloutIntensity, UNIT_ICON, UNITS} from "../../game/engine.js";
 import {fmtPct} from "../lib/format.js";
 
-// Screen-pixel lift per unit of def.orbitLift for satellites. Big enough to read
-// as "in orbit" without shoving the sat off-screen on the mobile viewport.
-const ORBIT_LIFT_PX = 42;
+// Screen-pixel lift per unit of def.orbitLift for satellites. Sized so a sat
+// reads as being clearly above the surface layer rather than sitting on the
+// map — combined with per-type orbitLift multipliers this puts orbital assets
+// well up in the sky column, matching the "in orbit" flavor.
+const ORBIT_LIFT_PX = 34;
 
 export default function MapMarkers({
                                         selectedCity, w, mySlot, teamColor, visUnits, unitHeading, unitColor,
@@ -65,10 +67,12 @@ export default function MapMarkers({
                 }
                 // Orbital units always float above the surface with a subtle hover so
                 // they read as being in orbit rather than sitting on the ground. The
-                // per-type orbitLift lifts the icon in screen space and stretches the
-                // dashed tether from the ground point up to the sat. Works identically
-                // in flat and globe modes — the marker anchor stays on the ground
-                // coordinate and the icon is offset in CSS pixels above it.
+                // per-type orbitLift lifts the icon in screen space; no ground tether
+                // — a sat sweeps its parallel of latitude and the engine advances
+                // its longitude every tick (stepMovement), so the icon visibly walks
+                // around the globe on its own. Works identically in flat and globe
+                // modes: the marker anchor stays on the sat's live ground coordinate
+                // and the icon is offset in CSS pixels above it.
                 const orbital = !!def.orbital;
                 const lift = orbital ? Math.round((def.orbitLift || 1) * ORBIT_LIFT_PX) : 0;
                 return (
@@ -97,10 +101,6 @@ export default function MapMarkers({
                                 y: e.clientY
                             } : h))}
                             onMouseLeave={() => setHover((h) => (h && h.kind === "unit" && h.id === u.id ? null : h))}>
-                            {orbital && (
-                                <span className="db-orbital-tether absolute left-1/2 top-full pointer-events-none"
-                                      style={{height: `${lift}px`}} aria-hidden="true"/>
-                            )}
               <span className={cn("inline-flex transition-transform duration-[170ms] ease-linear", orbital && "db-orbital")}
                     style={Object.keys(iconStyle).length ? iconStyle : undefined}>
                 <UnitIcon name={iconName} color={unitColor(u)} size={air ? 16 : orbital ? 18 : 22}/>

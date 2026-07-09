@@ -103,6 +103,19 @@ export function stepMovement(w, dt) {
         if (u.hp <= 0) continue;
         u.cooldown = Math.max(0, u.cooldown - dt);
         const def = UNITS[u.type];
+        // Orbital sats sweep their parallel of latitude: longitude advances every
+        // tick, latitude is held wherever the player placed them. That's how a
+        // reconsat's ground track walks around the globe under its orbit and how
+        // an orbital-strike platform's engagement footprint gets to any target on
+        // its parallel — you have to wait for the orbit to bring it overhead. Wrap
+        // longitude at ±180 so downstream haversine / projection code stays in the
+        // canonical range.
+        if (def.orbital && def.orbitSpeedDegPerSec) {
+            let lng = u.lng + def.orbitSpeedDegPerSec * dt;
+            if (lng > 180) lng -= 360;
+            else if (lng < -180) lng += 360;
+            u.lng = lng;
+        }
         if (def.wing) runAirbase(w, u, dt);
         if ((def.navalSpeed || def.landSpeed) && u.dest) steamShip(u, def, dt);
         else if (def.airSpeed && u.baseId) {
