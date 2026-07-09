@@ -126,35 +126,77 @@ export const POPULATION = {
 // points cushion the AI keeps on hand before committing to that purchase.
 export const AI_TUNING = {
     thinkMin: 3, thinkSpan: 3,       // seconds between decisions: min + rand·span
-    queueMax: 2,                     // keep the production line short — plan, don't hoard
-    thermoChance: 0.25,              // odds per decision to arm/order a thermo warhead
-    hgvChance: 0.3,                  // odds per decision to arm/order a hypersonic warhead
-    sicbmChance: 0.3,                // odds per decision to arm/order a SICBM round (TEL)
-    stdStockTarget: 4, stdReserve: 60,
-    thermoStockTarget: 1, thermoReserve: 300,
-    hgvStockTarget: 2, hgvReserve: 200,
-    sicbmStockTarget: 2, sicbmReserve: 150,
-    radarReserve: 100, othReserve: 150,
-    industryTarget: 3, factoryReserve: 120,
-    siloReserve: 200, siloMinNet: 3,
+    queueMax: 4,                     // human-style: keep the production line steadily fed
+    thermoChance: 0.35,
+    hgvChance: 0.4,
+    sicbmChance: 0.4,
+    stdStockTarget: 6, stdReserve: 40,
+    thermoStockTarget: 2, thermoReserve: 180,
+    hgvStockTarget: 3, hgvReserve: 120,
+    sicbmStockTarget: 3, sicbmReserve: 90,
+    // Peacetime deterrent stocks — nations rearm BEFORE the shooting starts.
+    peaceThermoStock: 1, peaceHgvStock: 1, peaceSicbmStock: 1,
+    radarReserve: 60, othReserve: 100,
+    // Industry chain — targets scale with industryCapOf(), these are hard ceilings
+    // per structure type so no one industry hogs the whole slate.
+    factoryReserve: 80,
+    portTarget: 2, portReserve: 100,
+    refineryTarget: 2, refineryReserve: 140,
+    techparkTarget: 2, techparkReserve: 180,
+    // Offensive platform posture — silos/launchers built in PEACE as deterrent.
+    siloReserve: 100, siloMinNet: 1, siloTarget: 4,
+    launcherReserve: 60, launcherTarget: 3,
+    hyperReserve: 120, hyperTarget: 2,
     // Deep-tree tuning: unlockedBuildChance is the per-decision odds of building a
     // tech-gated unit; spaceHqReserve is the cushion before the Space Command HQ
     // prerequisite; subReserve gates the pricier hulls.
-    unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
+    unlockedBuildChance: 0.65, spaceHqReserve: 500, subReserve: 200,
     // Strategic placement (aiPlace in sim/tick.js). The AI sites units by role and
     // spreads them across its cities instead of piling everything onto the capital.
-    spreadKm: 150,                   // min distance the AI keeps between two same-role units
-    defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
-    radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
-    bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
+    spreadKm: 150,
+    // Layered defense. Every protect-point wants at least a battery, and each
+    // "layer" adds a wider-envelope defender if the tech is unlocked.
+    defensePerPoint: 1.0, defenseMax: 14,   // defenses built = clamp(round(protectPts·perPoint),1,max)
+    layerCoverKm: 320,                       // uncovered gap that triggers stacking a mid-tier layer
+    radarPerCity: 0.5, radarMax: 5,
+    bunkerMinCities: 2, bunkerReserve: 100,
     // Smart offensive targeting — value-weighted over at-war enemy cities.
-    targetDistScaleKm: 6000,  // distance at which a target's value roughly halves (nearer preferred)
-    targetTopN: 4,            // weighted-random pick among the N strongest candidates (concentration + variety)
+    targetDistScaleKm: 6000,
+    targetTopN: 4,
     // Ground expansion doctrine — the tool for taking and holding territory.
-    armyReserve: 120,         // points cushion kept before committing to army builds
-    groundTarget: 6,          // mobile capture-capable battalions an active AI fields to seize cities
-    // Air doctrine.
-    patrolSize: 2,            // default fighter patrol an AI stands up on its airbases once at war
+    armyReserve: 100,
+    groundTarget: 8,           // more battalions so ground campaigns actually apply pressure
+    artilleryShare: 0.25,      // fraction of the ground stack that goes to artillery
+    // Air doctrine — patrols + hangar restock via queueAircraft.
+    patrolSize: 2,
+    hangarInterceptorTarget: 6,
+    hangarAttackTarget: 6,
+    hangarAwacsTarget: 1,
+    hangarTransportTarget: 4,
+    hangarCarrierFighterTarget: 8,
+    hangarStrikeFighterTarget: 4,
+    hangarHeloTarget: 4,
+    hangarTransportHeloTarget: 2,
+    // Naval doctrine — coastal AIs stand up a small screening group.
+    destroyerTarget: 2, destroyerReserve: 120,
+    cruiserTarget: 1, cruiserReserve: 180,
+    battleshipTarget: 1, battleshipReserve: 200,
+    carrierTarget: 1, carrierReserve: 500,
+    amphibTarget: 1, amphibReserve: 180,
+    replenishTarget: 1, replenishReserve: 180,
+    // Scrap doctrine — sell in deficit to escape red, human-style. Never scraps
+    // capital defenders, bunker/spacehq, engaged units, or the last of any role.
+    scrapMinNet: -0.5,               // trigger scrapping when net < this (a small buffer under zero)
+    scrapSafeRadiusKm: 550,          // preserve defenders within this of a protect-point
+    scrapMaxPerThink: 1,             // at most one dismantle per decision
+    // Great-power reach — big economies aren't leashed to a small war radius.
+    warRangeGdpBoostT: 1.5,          // ($T) GDP above which warRangeKm scales up
+    warRangeMaxKm: 14000,            // ceiling for great-power reach (~global)
+    // Bloc-power math for target selection and war declaration.
+    blocGdpWeight: 1.0,              // exponent on gdp ratio (higher = more decisive)
+    blocForceWeight: 0.8,            // exponent on unit-strength ratio
+    blocAdvantageMin: 1.1,           // only declare war when my bloc / their bloc >= this
+    weaknessTopN: 5,                 // weighted pick among the N weakest reachable rivals
 };
 
 // Strategic objectives — the guided goals shown in the Objectives menu (see
