@@ -1,12 +1,9 @@
 // Party surface: all writes go through the db-party edge function; reads of my
 // own party are watched live under RLS. A party is a social group I lead and
 // friends join, separate from a match lobby.
-import {supabase} from "./client.js";
+import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/supabase.js";
 
-async function invoke(body) {
-    const {data, error} = await supabase.functions.invoke("db-party", {body});
-    return error ? {error: error.message} : (data ?? {ok: true});
-}
+const invoke = createEdgeInvoker("db-party");
 
 export const createParty = (opts = {}) => invoke({action: "create", ...opts});
 export const getParty = (party_id) => invoke({action: "get", party_id});
@@ -22,22 +19,22 @@ export const queuePartyPublic = () => invoke({action: "queue_public"});
 
 // My current party id (or null) — the seat row is readable under RLS.
 export async function fetchMyPartyId() {
-    const {data: {user} = {user: null}} = await supabase.auth.getUser();
-    if (!user) return null;
-    const {data} = await supabase.from("party_members").select("party_id").eq("user_id", user.id).maybeSingle();
+    const uid = await currentUserId();
+    if (!uid) return null;
+    const data = await readRow("party_members", {select: "party_id", eq: ["user_id", uid]});
     return data?.party_id ?? null;
 }
 
 // Live-watch a party row + its members; cb() fires on any change (caller
 // re-fetches via getParty). Poll fallback covers a dropped subscription.
 export function watchParty(partyId, cb) {
-    const ch = supabase.channel(`db-party-${partyId}`)
-        .on("postgres_changes", {event: "*", schema: "public", table: "parties", filter: `id=eq.${partyId}`}, cb)
-        .on("postgres_changes", {event: "*", schema: "public", table: "party_members", filter: `party_id=eq.${partyId}`}, cb)
-        .subscribe();
-    const poll = setInterval(cb, 5000);
-    return () => {
-        clearInterval(poll);
-        supabase.removeChannel(ch);
-    };
+    return watchRows({
+        channel: `db-party-${partyId}`,
+        tables: [
+            {table: "parties", filter: `id=eq.${partyId}`},
+            {table: "party_members", filter: `party_id=eq.${partyId}`},
+        ],
+        pollMs: 5000,
+        cb,
+    });
 }

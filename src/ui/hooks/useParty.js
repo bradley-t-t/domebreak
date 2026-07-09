@@ -2,12 +2,13 @@
 // live, and exposes actions. `party` is null when not in one. Actions resolve to
 // the fresh state (or {error}); membership-changing ones re-discover.
 import {useCallback, useEffect, useRef, useState} from "react";
-import {supabase} from "../../account/client.js";
 import {
     createParty, fetchMyPartyId, getParty, inviteToParty, joinParty, kickFromParty,
     launchPartyPrivate, leaveParty, queuePartyPublic, setPartyIso, setPartyJoinMode,
     setPartyReady, watchParty,
 } from "../../account/party.js";
+import {currentUserId} from "../../lib/supabase.js";
+import {useCancellableEffect} from "../../lib/hooks/useCancellableEffect.js";
 
 export function useParty(enabled) {
     const [state, setState] = useState({party: null, members: []});
@@ -20,7 +21,7 @@ export function useParty(enabled) {
             setMeId(null);
             return;
         }
-        supabase.auth.getUser().then(({data}) => setMeId(data?.user?.id ?? null));
+        currentUserId().then((uid) => setMeId(uid));
     }, [enabled]);
 
     const stopWatch = () => {
@@ -53,21 +54,17 @@ export function useParty(enabled) {
     }, [refresh]);
 
     // Discover my membership on enable / auth change.
-    useEffect(() => {
+    useCancellableEffect((t) => {
         if (!enabled) {
             stopWatch();
             pidRef.current = null;
             setState({party: null, members: []});
             return;
         }
-        let cancelled = false;
         fetchMyPartyId().then((pid) => {
-            if (!cancelled) bind(pid);
+            if (!t.cancelled) bind(pid);
         });
-        return () => {
-            cancelled = true;
-            stopWatch();
-        };
+        return stopWatch;
     }, [enabled, bind]);
 
     // Actions. Membership-changing ones re-bind; in-party tweaks just refresh.
