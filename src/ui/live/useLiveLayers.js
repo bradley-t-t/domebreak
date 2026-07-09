@@ -14,13 +14,8 @@ export function useLiveLayers({
                                   myNation,
                                   backdrop,
                                   layers,
-                                  placing,
-                                  moving,
-                                  cursor,
                                   selUnit,
-                                  placeValid,
                                   teamColor,
-                                  COAST_KM,
                                   battlePreview
                               }) {
     const backdropFC = useMemo(() => ({
@@ -150,22 +145,11 @@ export function useLiveLayers({
                 f.push(c);
             }
         }
-        if ((placing || moving) && cursor) {
-            const type = placing || w.units.find((u) => u.id === moving)?.type;
-            const t = type ? UNITS[type] : null;
-            const rad = t?.coastal ? COAST_KM
-                : t?.detect ? radarRangeOf(type) * (myNation?.radarMult ?? 1)
-                    : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
-            const c = circle(cursor.lng, cursor.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
-            c.properties = {
-                color: placeValid ? "#46d38a" : "#ff5d5d",
-                sel: 1,
-                radar: (t && t.kind === "support") ? 1 : 0
-            };
-            f.push(c);
-        }
+        // The being-placed / relocating unit's ghost ring is drawn by PlacementGhost
+        // (its own source), so cursor motion never re-renders LiveGame — only the
+        // selected unit's standing ring lives here now.
         return {type: "FeatureCollection", features: f};
-    }, [w.units, w.time, placing, moving, cursor, selUnit, mySlot, placeValid]);
+    }, [w.units, w.time, selUnit, mySlot]);
 
     const cmdLines = useMemo(() => ({
         type: "FeatureCollection",
