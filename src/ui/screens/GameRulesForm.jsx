@@ -82,8 +82,8 @@ function ToggleRow({meta, value, readOnly, onChange}) {
                     )}
                 >
                     <span className={cn(
-                        "absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white shadow transition-transform",
-                        value ? "translate-x-[22px]" : "translate-x-[2px]"
+                        "absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white shadow transition-[left] duration-150 ease-out",
+                        value ? "left-[22px]" : "left-[2px]"
                     )}/>
                 </button>
             </span>
