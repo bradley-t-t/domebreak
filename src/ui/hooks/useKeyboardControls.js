@@ -1,11 +1,8 @@
-// The stacked global keydown effects LiveGame owns: Escape's cascade of
-// "close whatever's open" handling, the command-screen hotkeys (Production /
-// Diplomacy / Research), the controls-reference toggle, game-speed hotkeys,
-// and keyboard zoom. Pulled out of LiveGame.jsx verbatim — same handlers,
-// same dependency arrays — so each effect subscribes/unsubscribes exactly
-// when it did inline. Camera pan (WASD) is its own hook (usePanControls);
-// it has enough private state (held-key set, ease-segment timer) to stay
-// separate.
+// The stacked global keydown effects LiveGame owns: Escape's cascade of "close whatever's
+// open" handling, the command-screen hotkeys (Production / Diplomacy / Research), the
+// controls-reference toggle, game-speed hotkeys, and keyboard zoom. Camera pan (WASD) is
+// its own hook (usePanControls); it has enough private state (held-key set, ease-segment
+// timer) to stay separate.
 import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
@@ -36,7 +33,8 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [menu, disembarkId, moving, placing, attackMode, panel, onPause]);
+    }, [menu, disembarkId, moving, placing, attackMode, panel, onPause,
+        setMenu, setDisembarkId, setMoving, setPlacing, setAttackMode, setPanel]);
 
     // Command-screen hotkeys: toggle the Production and Diplomacy screens
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
@@ -53,7 +51,7 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, w.over, K.production, K.diplomacy]);
+    }, [overlayOpen, w.over, K.production, K.diplomacy, setPanel]);
 
     // Controls reference toggle: "?" or F1 opens/closes the command reference.
     // Fixed keys (not rebindable) — the overlay itself lists every binding.
@@ -67,7 +65,7 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen]);
+    }, [overlayOpen, setHelpOpen]);
 
     // Game speed hotkeys, RTS-style: pause toggle + speed up/down step the speed
     // (bindings configurable in Settings; defaults Space / = / −), and the fixed
@@ -112,5 +110,5 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, K.zoomIn, K.zoomOut]);
+    }, [overlayOpen, K.zoomIn, K.zoomOut, mapRef]);
 }

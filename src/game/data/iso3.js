@@ -1,9 +1,8 @@
 /*!
  * ISO 3166-1 alpha-2 -> alpha-3 bridge. Nations are keyed by alpha-2
  * ("US","RU"); the map's GADM `countries` layer keys polygons by GID_0
- * (alpha-3, "USA","RUS"). Placement is gated on the real country polygon
- * under the cursor, so a nation's iso is translated to its GID_0 here.
- * Generated from the i18n-iso-countries dataset (ISO standard).
+ * (alpha-3, "USA","RUS"). Placement is gated on the country polygon under
+ * the cursor, so a nation's iso is translated to its GID_0 here.
  */
 export const ISO3 = {
     "AD": "AND",
@@ -233,8 +232,7 @@ export const ISO3 = {
 
 export const toGid3 = (iso2) => (iso2 ? ISO3[iso2.toUpperCase()] || null : null);
 
-// Reverse lookup: map a GID_0 / ISO3 code (as carried on the country map tiles)
-// back to the ISO2 code the game uses for nations. Lets a click on the globe be
-// resolved to a nation.
+// Reverse lookup: map a GID_0 / ISO3 code (carried on the country map tiles) back
+// to the ISO2 code the game uses, so a click on the globe resolves to a nation.
 const GID3_TO_ISO2 = Object.fromEntries(Object.entries(ISO3).map(([iso2, gid]) => [gid, iso2]));
 export const fromGid3 = (gid3) => (gid3 ? GID3_TO_ISO2[gid3.toUpperCase()] || null : null);

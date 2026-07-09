@@ -1,5 +1,5 @@
 import Reveal from "./Reveal.jsx";
-import {Eyebrow} from "./ui.jsx";
+import {Eyebrow} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
 
 // Icons are the game's own unit/asset art (from /icons), tinted to match.

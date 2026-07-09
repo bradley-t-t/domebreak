@@ -1,6 +1,6 @@
-// Leadership continuity: national command modeled as integer "leader tokens"
-// seeded on capital cities, airlifted to the Leadership Bunker by transport
-// ferries when war exposes them (see design/gdd/leadership.md, ADR-0005).
+// Leadership continuity: national command is integer "leader tokens" seeded on
+// capital cities and airlifted to the Leadership Bunker by transport ferries when
+// war exposes them.
 //
 // This module owns all leadership orchestration — token seeding, derived
 // queries, the shelter order, the per-tick evac controller, loss reconciliation,
@@ -44,7 +44,7 @@ export function distributeLeadership(nations, cities) {
 
 // Seeds a single nation's fresh leader-token pool across its own cities (passed in),
 // resetting its leadership state. Used at world creation, per nation.
-export function seedLeadership(n, ownCities) {
+function seedLeadership(n, ownCities) {
     n.lead = {total: LEADERSHIP.startTokens, lost: 0, sheltered: 0};
     n.commandMult = 1;
     n._evac = false;

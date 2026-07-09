@@ -1,6 +1,5 @@
-// Selection-panel stat sheet: research-aware numbers per unit class, as
-// label/value rows the detail grid renders directly. Pulled out of
-// LiveGame.jsx verbatim — same rows, same conditionals, same formatting.
+// Selection-panel stat sheet: research-aware numbers per unit class, as label/value rows
+// the detail grid renders directly.
 import {
     defenseMinRange,
     defenseRange,

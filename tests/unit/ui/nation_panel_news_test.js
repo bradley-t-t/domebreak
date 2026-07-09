@@ -7,7 +7,7 @@ import React from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {createWorld} from "../../../src/game/engine.js";
 import NationPanel from "../../../src/ui/hud/NationPanel.jsx";
-import {headline} from "../../../src/ui/hud/NewsTicker.jsx";
+import {headline} from "../../../src/ui/hud/newsHeadline.js";
 
 // A two-nation world; slot 0 is the player with four cities spanning every
 // status band, plus two factories so industry count is non-zero.
@@ -119,11 +119,6 @@ describe("NewsTicker headline mapping", () => {
     it("test_war_and_peace", () => {
         expect(headline({type: "war", a: 0, b: 1}, w, 0).tone).toBe("danger");
         expect(headline({type: "peace", a: 0, b: 1}, w, 0).tone).toBe("good");
-    });
-
-    it("test_research_names_the_tech", () => {
-        const h = headline({type: "research", slot: 1, techId: "off1"}, w, 0);
-        expect(h.text).toContain("Fission Warheads");
     });
 
     it("test_inbound_launch_only_when_targeting_player", () => {

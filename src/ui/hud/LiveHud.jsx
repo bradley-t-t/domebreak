@@ -2,11 +2,11 @@ import {useLayoutEffect, useRef, useState} from "react";
 import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityBreakdown, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
-import {fmtNet, fmtPop} from "../common/format.js";
+import {fmtNet, fmtPop} from "../lib/format.js";
 import {cn} from "../lib/cn.js";
 import AmmoBar from "./AmmoBar.jsx";
 import {iconButton, popoverCard} from "../lib/variants.js";
-import {vitColor} from "../common/status.js";
+import {vitColor} from "../lib/status.js";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const SEC_PER_GS = 1800; // 30 in-game minutes per game-second

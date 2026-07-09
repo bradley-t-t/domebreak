@@ -1,12 +1,11 @@
-// Waitlist signup — posts to the public `db-waitlist` edge function on the
-// DomeBreak Supabase project. The insert happens server-side with the service
-// role (client never writes the table directly), mirroring the game's
-// db-account pattern. Only the public anon key + URL ship in the bundle.
+// Waitlist signup — posts to the public `db-waitlist` edge function. The insert
+// happens server-side with the service role (the client never writes the table
+// directly). Only the public anon key + URL ship in the bundle.
 
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isValidEmail(email) {
     return EMAIL_RE.test((email || "").trim());

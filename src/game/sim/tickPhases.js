@@ -1,11 +1,6 @@
 // The per-tick simulation phases: research/production progress, unit movement
 // and firing, projectile flight and interception, sensor sweeps, fallout, and
-// end-of-tick cleanup/victory checks. Split out of tick.js — step() is a
-// straight-line orchestrator over these phases, in the exact order the
-// original inline tick ran them. Each phase is a mechanical extraction of one
-// comment-delimited block from the old step() body — no reordering, no logic
-// change. See each phase's own comments (carried over verbatim) for what it
-// does and why it runs where it does.
+// end-of-tick cleanup/victory checks. step() orchestrates these in order.
 import {
     initialWarhead,
     DEFAULT_BUILD_TIME,
@@ -46,9 +41,9 @@ import {spawnQueuedUnit} from "./tickSpawn.js";
 
 // Population growth: each living city's people grow toward a ceiling, scaled by
 // vitality so healthy cities repopulate over a match and battered ones barely
-// recover. Pure and deterministic — a function of stored pop/hp and dt, no RNG
-// (see design/quick-specs/population-growth-2026-07-06.md). Raw pop is capped at
-// pop0 * growthCapMult; pop0 falls back to current pop for legacy saves.
+// recover. Pure and deterministic — a function of stored pop/hp and dt, no RNG.
+// Raw pop is capped at pop0 * growthCapMult; pop0 falls back to current pop for
+// legacy saves.
 export function growCities(w, dt) {
     if (dt <= 0) return;
     const {growthPerSec, growthCapMult} = POPULATION;
@@ -62,15 +57,10 @@ export function growCities(w, dt) {
 }
 
 // --- step() phases -----------------------------------------------------
-// step() is a straight-line orchestrator over these phases, in the exact
-// order the original inline tick ran them. Each phase is a mechanical
-// extraction of one comment-delimited block from the old step() body —
-// no reordering, no logic change. See each phase's own comments (carried
-// over verbatim) for what it does and why it runs where it does.
 
 // Phase 1: economy — leadership command factor, income accrual, then each
 // nation's production line advances and (on completion) spawns its unit.
-// (The tech tree was removed; everything is unlocked at world creation.)
+// (No tech tree — everything is unlocked at world creation.)
 export function stepEconomy(w, dt) {
     // Refresh each nation's leadership command factor before the economy reads it
     // (incomeOf below scales by n.commandMult).

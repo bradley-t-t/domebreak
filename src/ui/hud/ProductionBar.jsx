@@ -1,6 +1,6 @@
 import UnitIcon from "../common/UnitIcon.jsx";
 import {WARHEADS} from "../../game/engine.js";
-import {prodIcon, prodLabel, prodTime} from "../common/prod.js";
+import {prodIcon, prodLabel, prodTime} from "../lib/prod.js";
 
 // The national production line, docked bottom-center over the map: the item on
 // the line with live progress, then everything queued behind it in order. Click

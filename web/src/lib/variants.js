@@ -1,8 +1,7 @@
 import {cva} from "class-variance-authority";
 
-// Control vocabulary ported from the game's src/ui/lib/variants.js so the
-// landing page's buttons, labels and chips are visually identical to in-game.
-// Every branch is a full literal class string (Tailwind JIT requirement).
+// Control vocabulary for buttons, labels and chips. Every branch is a full
+// literal class string (Tailwind JIT requirement).
 
 export const button = cva(
     "db-btn font-display inline-flex items-center justify-center gap-2 border border-line bg-linear-to-b from-btn-bg to-btn-bg-2 text-text rounded-sm font-semibold uppercase whitespace-nowrap shadow-[inset_0_1px_0_var(--hair)] transition-[border-color,box-shadow,filter,transform] duration-150 ease-out-db enabled:hover:border-blue active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer",
@@ -10,11 +9,9 @@ export const button = cva(
         variants: {
             variant: {
                 default: "",
-                // Solid elevated dark surface with WHITE text and a bright border —
-                // readable everywhere and matches the in-game paper-card primary
-                // (dark fill, white label). `bg-none` cancels the base gradient so
-                // the solid color actually shows (a gradient bg-image would paint
-                // over a bg-color otherwise).
+                // Solid dark surface with white text and a bright border.
+                // `bg-none` cancels the base gradient so the solid color shows
+                // (a gradient bg-image would otherwise paint over the bg-color).
                 primary:
                     "relative overflow-hidden bg-none bg-[#20242b] text-text border-gold-line shadow-[inset_0_1px_0_var(--hair)] enabled:hover:bg-[#282d35] enabled:hover:border-text",
                 ghost:

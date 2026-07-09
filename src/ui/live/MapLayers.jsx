@@ -3,10 +3,9 @@
 // selection+placement ranges, command/sail traces, fallout haze and the
 // capture-progress ring — plus the live city dots themselves. Pure
 // presentational fan-out over the FeatureCollections computed in
-// useLiveLayers/useOwnershipLayer. Pulled out of LiveGame.jsx verbatim — same
-// Source/Layer tree, same paint expressions, same conditional gating.
+// useLiveLayers/useOwnershipLayer.
 import {Layer, Source} from "react-map-gl/maplibre";
-import {vitPaint} from "../common/status.js";
+import {vitPaint} from "../lib/status.js";
 import RadarSweep from "./RadarSweep.jsx";
 
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;

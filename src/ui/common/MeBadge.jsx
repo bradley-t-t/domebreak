@@ -3,7 +3,7 @@ import {Pencil} from "lucide-react";
 import Flag from "./Flag.jsx";
 import FriendsPanel from "./FriendsPanel.jsx";
 import UnitIcon from "./UnitIcon.jsx";
-import {AVATAR_ICONS} from "./avatarIcons.js";
+import {AVATAR_ICONS} from "../lib/avatarIcons.js";
 import {useModal} from "../hooks/useModal.js";
 import {miniButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
