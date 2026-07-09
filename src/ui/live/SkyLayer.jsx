@@ -17,7 +17,10 @@ import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
 // own render loop, so sprites swam a frame behind the ground and reconciling
 // every head div per frame was the lag. A commit-time layout effect covers the
 // other case: the sim advancing a missile while the map itself is still.
-const ALT = {silo: 92, launcher: 48, hypersonicbty: 26};
+// Peak sprite lift per launch-platform type: how tall the trail's altitude arc
+// reads on screen. Orbital-strike rounds fall out of the sky — their platform is
+// literally in orbit — so they read biggest here.
+const ALT = {silo: 92, launcher: 48, hypersonicbty: 26, orbitalstrike: 140, "sub-ssbn": 88, "sub-ssn": 60};
 const SAMPLES = 20;
 
 // #rgb / #rrggbb -> "rgba(r,g,b,a)". Trail colors in the warhead registry are
