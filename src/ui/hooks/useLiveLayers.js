@@ -7,7 +7,7 @@
 // pattern is invisible to exhaustive-deps, so it's disabled for this file.
 /* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 
@@ -38,9 +38,13 @@ export function useLiveLayers({
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [backdrop]);
+    // Cities in neutral (inactive) countries are pure scenery — no dot on the map,
+    // no ruin, no health halo. LiveGame's onCityClick / openCityMenu also treat them
+    // as non-interactable, so dropping them here keeps the map, the hit tests, and
+    // the game rules aligned.
     const liveFC = useMemo(() => ({
         type: "FeatureCollection",
-        features: w.cities.map((c) => ({
+        features: w.cities.filter((c) => isActive(w, c.slot)).map((c) => ({
             type: "Feature",
             properties: {
                 id: c.id,
@@ -52,7 +56,7 @@ export function useLiveLayers({
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
-    }), [w.cities, w.time, mySlot]);
+    }), [w.cities, w.nations, w.time, mySlot]);
 
     // Radioactive fallout footprints: one polygon per active cloud, its opacity
     // driven by the same intensity curve the tick uses for damage, so the visible

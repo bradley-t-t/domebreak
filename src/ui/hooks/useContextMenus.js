@@ -2,7 +2,7 @@
 // "Command Attack", hangar-order, embark/disembark and dismantle item builders — plus the
 // shared pin-add helper and the menu state itself.
 import {useState} from "react";
-import {hangarCapOf, hangarCount, haversine, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
+import {hangarCapOf, hangarCount, haversine, isActive, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
 
 // Client-side amphibious lift radius — mirrors AMPHIB_LIFT_KM in production.js so
 // the context menu only offers embark on ground units the engine will accept.
@@ -31,6 +31,17 @@ export function useContextMenus({
         const c = w.cities.find((x) => x.id === id);
         if (!c) return;
         const mine = c.slot === mySlot;
+        // Neutral (inactive) nations are scenery — no war, alliance, or targeting.
+        // Mirrors the guard in LiveGame's onCityClick; Pin still works so the map
+        // pin bar can hold a neutral landmark.
+        if (!mine && !isActive(w, c.slot)) {
+            setMenu({
+                title: `${c.name}${c.state ? " · " + c.state : ""}`,
+                items: [{label: "Pin", onClick: () => addPin("city", c)}],
+                x: ev.clientX, y: ev.clientY
+            });
+            return;
+        }
         const rel = relation(c.slot);
         const sel = w.units.find((u) => u.id === selUnit);
         const items = [];
