@@ -231,6 +231,9 @@ function diploOfferPeace(w, n) {
 // declaration entirely if no rival bloc is soft enough (blocAdvantageMin).
 function diploDeclareWar(w, n, caps, alive) {
     if (warCount(n) >= DIPLOMACY.maxWars) return;
+    // Opening grace is a world-wide ceasefire — during the window no AI opens a
+    // war on anyone (the human commander is likewise blocked in declareWar).
+    if (w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) return;
     if (rand(w) >= DIPLOMACY.declareChance) return;
     const capA = caps[n.slot];
     if (!capA) return;
@@ -241,7 +244,6 @@ function diploDeclareWar(w, n, caps, alive) {
     for (const m of w.nations) {
         if (m.slot === n.slot || !m.alive || m.active === false) continue;
         if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
-        if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > reach) continue;
         const theirBloc = blocPower(w, m);
