@@ -24,8 +24,8 @@ import {
     WARHEADS,
 } from "../../game/engine.js";
 import {FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
-import {fmtNet} from "../common/format.js";
-import {prodIcon, prodLabel, prodTime} from "../common/prod.js";
+import {fmtNet} from "../lib/format.js";
+import {prodIcon, prodLabel, prodTime} from "../lib/prod.js";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
 
@@ -38,13 +38,13 @@ const catOf = (key, u) => (isSpace(key, u) ? "Space" : u.kind === "industry" ? "
 // warhead line; "All" shows every section at once.
 const CATS = [
     {id: "all", name: "All Systems", glyph: "⌗"},
-    {id: "Strike", name: "Strike", glyph: "✷"},
+    {id: "Support", name: "Support", glyph: "✧"},
     {id: "Air Defense", name: "Air Defense", glyph: "⬡"},
+    {id: "Strike", name: "Strike", glyph: "✷"},
     {id: "Army", name: "Army", glyph: "▲"},
     {id: "Naval", name: "Naval", glyph: "⚓"},
     {id: "Space", name: "Space", glyph: "✦"},
     {id: "Industry", name: "Industry", glyph: "⚙"},
-    {id: "Support", name: "Support", glyph: "✧"},
     {id: "Munitions", name: "Munitions", glyph: "☢"},
 ];
 

@@ -2,7 +2,7 @@ import {useEffect} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {X} from "lucide-react";
 import {SHORTCUTS} from "../lib/nav.js";
-import {Eyebrow} from "./ui.jsx";
+import {Eyebrow} from "./Primitives.jsx";
 
 const EXTRA = [
     {hint: "S", label: "Sign in / account"},

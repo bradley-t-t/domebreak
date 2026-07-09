@@ -1,8 +1,7 @@
 // All of the on-map Markers for the live match: the selected-city ring, the
 // floating capture-progress badges, unit icons (with heading rotation/fade),
 // fallout clouds, and impact explosions. Pure presentational fan-out over
-// state/derived data computed in LiveGame. Pulled out of LiveGame.jsx
-// verbatim — same JSX, same handlers wired through as props.
+// state/derived data computed in LiveGame.
 import {Marker} from "react-map-gl/maplibre";
 import UnitIcon from "../common/UnitIcon.jsx";
 import Explosion from "./Explosion.jsx";

@@ -1,7 +1,7 @@
 // DomeBreak match server. Four jobs:
-//   1. Run the matchmaker (server/matchmaker.js, ADR-0004): group waiting
-//      quick-match queue rows, form lobbies with bot fill, simulate bot
-//      join/ready, and auto-launch by flipping lobbies to 'starting'.
+//   1. Run the matchmaker (server/matchmaker): group waiting quick-match
+//      queue rows, form lobbies (real players only), and auto-launch by
+//      flipping lobbies to 'starting'.
 //   2. Claim lobbies flipped to 'starting' (Realtime + poll fallback), build a
 //      Match, and advertise this server's WS URLs back on the lobby row.
 //   3. Terminate WebSockets: verify the Supabase JWT, map user -> slot, route
@@ -15,8 +15,8 @@ import {extname, join, normalize} from "path";
 import {WebSocketServer} from "ws";
 import {createClient} from "@supabase/supabase-js";
 import {MAX_MATCHES, PORT, SERVICE_ROLE_KEY, SUPABASE_URL, WS_URLS} from "./config.js";
-import {Match} from "./match.js";
-import {startMatchmaker} from "./matchmaker.js";
+import {Match} from "./match/match.js";
+import {startMatchmaker} from "./matchmaker/matchmaker.js";
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {auth: {persistSession: false}});
 const matches = new Map(); // matchId -> Match

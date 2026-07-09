@@ -1,7 +1,7 @@
 import {Keyboard} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {scrollToId} from "../lib/nav.js";
-import {Wordmark} from "./ui.jsx";
+import {Wordmark} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
 
 const ICON_STRIP = ["dome", "radar", "interceptor", "thaad", "silo", "reconsat", "carrier", "factory"];

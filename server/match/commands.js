@@ -8,7 +8,6 @@ import {
     declareWar,
     disembark,
     embark,
-    enqueueResearch,
     makePeace,
     moveUnit,
     queueAircraft,
@@ -16,7 +15,6 @@ import {
     queueUnit,
     releaseLeadership,
     scrapUnit,
-    setAutoResearch,
     setAwacsPatrol,
     setMarch,
     setPatrolSize,
@@ -24,8 +22,7 @@ import {
     setWarhead,
     shelterLeadership,
     stopSail,
-    unqueueResearch,
-} from "../src/game/engine.js";
+} from "../../src/game/engine.js";
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const str = (v, max = 40) => (typeof v === "string" ? v.slice(0, max) : null);
@@ -38,8 +35,6 @@ export const COMMANDS = {
         if (!u || u.slot !== slot) return {error: "not your unit"};
         return commandAttack(w, uid, tid == null ? null : str(tid, 64));
     },
-    research: (w, slot, [id]) => enqueueResearch(w, slot, str(id)),
-    unqueue: (w, slot, [id]) => unqueueResearch(w, slot, str(id)),
     move: (w, slot, [uid, lng, lat, territoryOk]) => moveUnit(w, slot, str(uid, 64), num(lng), num(lat), !!territoryOk),
     setSail: (w, slot, [uid, lng, lat]) => setSail(w, slot, str(uid, 64), num(lng), num(lat)),
     stopSail: (w, slot, [uid]) => stopSail(w, slot, str(uid, 64)),
@@ -56,12 +51,7 @@ export const COMMANDS = {
     embark: (w, slot, [transportId, groundUnitId]) => embark(w, slot, str(transportId, 64), str(groundUnitId, 64)),
     disembark: (w, slot, [transportId, lng, lat]) => disembark(w, slot, str(transportId, 64), num(lng), num(lat)),
     march: (w, slot, [uid, lng, lat]) => setMarch(w, slot, str(uid, 64), num(lng), num(lat)),
-    // Research automation toggle.
-    setAutoResearch: (w, slot, [on]) => setAutoResearch(w, slot, !!on),
-    // Leadership continuity: shelter to the bunker / release back out. These were
-    // missing from the whitelist, so online Shelter/Release silently no-opped —
-    // the server rejected them as unknown and the next snapshot reverted the
-    // client's optimistic change. See tests/unit/net/commands_test.js.
+    // Shelter leadership to the bunker / release it back out.
     shelterLeadership: (w, slot) => shelterLeadership(w, slot),
     releaseLeadership: (w, slot) => releaseLeadership(w, slot),
 };

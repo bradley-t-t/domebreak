@@ -1,10 +1,8 @@
-// Right-click context-menu construction for cities and units — the "Pin",
-// "Declare War", "Command Attack", hangar-order, embark/disembark and
-// dismantle item builders — plus the pin-add helper they share and the menu
-// state itself. Pulled out of LiveGame.jsx verbatim — same items, same
-// ordering, same disabled/danger flags.
+// Right-click context-menu construction for cities and units — the "Pin", "Declare War",
+// "Command Attack", hangar-order, embark/disembark and dismantle item builders — plus the
+// shared pin-add helper and the menu state itself.
 import {useState} from "react";
-import {hangarCapOf, hangarCount, haversine, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
+import {hangarCapOf, hangarCount, haversine, isActive, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
 
 // Client-side amphibious lift radius — mirrors AMPHIB_LIFT_KM in production.js so
 // the context menu only offers embark on ground units the engine will accept.
@@ -33,6 +31,17 @@ export function useContextMenus({
         const c = w.cities.find((x) => x.id === id);
         if (!c) return;
         const mine = c.slot === mySlot;
+        // Neutral (inactive) nations are scenery — no war, alliance, or targeting.
+        // Mirrors the guard in LiveGame's onCityClick; Pin still works so the map
+        // pin bar can hold a neutral landmark.
+        if (!mine && !isActive(w, c.slot)) {
+            setMenu({
+                title: `${c.name}${c.state ? " · " + c.state : ""}`,
+                items: [{label: "Pin", onClick: () => addPin("city", c)}],
+                x: ev.clientX, y: ev.clientY
+            });
+            return;
+        }
         const rel = relation(c.slot);
         const sel = w.units.find((u) => u.id === selUnit);
         const items = [];
@@ -45,8 +54,8 @@ export function useContextMenus({
                     if (r.error) flash(r.error);
                 }
             }); else if (rel === "ally") items.push({
-                // Alliance terms are single-player only for now (mirrors the war-popup
-                // and Diplomacy-screen gating); online, offer the item but disable it.
+                // Alliance terms are single-player only (mirrors the war-popup and
+                // Diplomacy-screen gating); online, the item is offered but disabled.
                 label: `Break Alliance with ${nationName(c.slot)}`,
                 danger: true,
                 disabled: online,

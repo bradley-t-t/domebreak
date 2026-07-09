@@ -4,7 +4,7 @@ import {X, Loader2} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button, input, label as labelCva} from "../lib/variants.js";
 import {AUTH_RULES} from "../lib/authRules.js";
-import {useAccount} from "../lib/AccountContext.jsx";
+import {useAccount} from "../lib/accountStore.js";
 import GameIcon from "./GameIcon.jsx";
 
 // Sign in / sign up with a DomeBreak game account. Email + password (username on
@@ -20,13 +20,20 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
     const [error, setError] = useState("");
     const emailRef = useRef(null);
 
-    useEffect(() => {
+    // Reset the form whenever the modal (re)opens or the requested mode changes —
+    // React's "adjust state from a prop" pattern, done during render, not an effect.
+    const [prevKey, setPrevKey] = useState(`${open}:${initialMode}`);
+    const openKey = `${open}:${initialMode}`;
+    if (openKey !== prevKey) {
+        setPrevKey(openKey);
         if (open) {
             setMode(initialMode);
             setStatus("idle");
             setError("");
-            setTimeout(() => emailRef.current?.focus(), 60);
         }
+    }
+    useEffect(() => {
+        if (open) setTimeout(() => emailRef.current?.focus(), 60);
     }, [open, initialMode]);
 
     useEffect(() => {

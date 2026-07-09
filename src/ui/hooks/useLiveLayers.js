@@ -1,10 +1,13 @@
-// Memoized map-layer FeatureCollection builders for LiveGame's <Source> layers.
-// Pulled out of LiveGame.jsx verbatim — same useMemo calls, same deps, in the
-// same order — so React sees an identical hook sequence and identical memo
-// invalidation. Nothing here owns state; it only derives GeoJSON from engine
-// state (w) and the handful of UI toggles/inputs the map layers care about.
+// Memoized map-layer FeatureCollection builders for LiveGame's <Source> layers. Nothing
+// here owns state; it only derives GeoJSON from engine state (w) and the handful of UI
+// toggles/inputs the map layers care about.
+//
+// The world is mutated in place, so w and its arrays keep the same identity every
+// tick; each memo lists w.time (the tick counter) as its recompute trigger. That
+// pattern is invisible to exhaustive-deps, so it's disabled for this file.
+/* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 
@@ -35,9 +38,13 @@ export function useLiveLayers({
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [backdrop]);
+    // Cities in neutral (inactive) countries are pure scenery — no dot on the map,
+    // no ruin, no health halo. LiveGame's onCityClick / openCityMenu also treat them
+    // as non-interactable, so dropping them here keeps the map, the hit tests, and
+    // the game rules aligned.
     const liveFC = useMemo(() => ({
         type: "FeatureCollection",
-        features: w.cities.map((c) => ({
+        features: w.cities.filter((c) => isActive(w, c.slot)).map((c) => ({
             type: "Feature",
             properties: {
                 id: c.id,
@@ -49,7 +56,7 @@ export function useLiveLayers({
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
-    }), [w.cities, w.time, mySlot]);
+    }), [w.cities, w.nations, w.time, mySlot]);
 
     // Radioactive fallout footprints: one polygon per active cloud, its opacity
     // driven by the same intensity curve the tick uses for damage, so the visible
@@ -82,8 +89,8 @@ export function useLiveLayers({
     // Fog of war: enemy assets exist on my map only where my sensor picture
     // covers them — my own units are always mine to see. unitVisibleTo also
     // splits out submarines, which only surface under my ASW (sonar) coverage
-    // and vanish back into the fog otherwise (spec §8c). Everything drawn from
-    // w.units below goes through visUnits so hidden forces never leak a pixel.
+    // and vanish back into the fog otherwise. Everything drawn from w.units below
+    // goes through visUnits so hidden forces never leak a pixel.
     const mySensors = useMemo(() => sensorsOf(w, mySlot), [w.units, w.time, mySlot]);
     const mySubSensors = useMemo(() => subSensorsOf(w, mySlot), [w.units, w.time, mySlot]);
     // Precomputed sensor lists are threaded into unitVisibleTo so the fog filter

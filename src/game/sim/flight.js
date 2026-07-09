@@ -44,7 +44,7 @@ export function bearingTo(from, to) {
 }
 
 // Rotate `cur` toward `target` by at most `maxDelta`, shortest way around.
-export function turnToward(cur, target, maxDelta) {
+function turnToward(cur, target, maxDelta) {
     let d = target - cur;
     while (d > Math.PI) d -= 2 * Math.PI;
     while (d < -Math.PI) d += 2 * Math.PI;
@@ -345,7 +345,7 @@ export function flyRotary(w, u, def, base, dt) {
 // Orbit-hold guidance: fly the ring tangent, banking gently in or out in
 // proportion to radial error. Produces true circles and smooth joins from
 // any entry angle — no carrot-chasing wobble. Shared by the cruise and hold phases.
-export function flyOrbitHold(base, u, sp, tr, R, dt) {
+function flyOrbitHold(base, u, sp, tr, R, dt) {
     const rd = Math.max(1, haversine(base.lng, base.lat, u.lng, u.lat));
     const desired = bearingTo(base, u) + Math.PI / 2 + Math.max(-FLIGHT.ORBIT_BANK_RAD, Math.min(FLIGHT.ORBIT_BANK_RAD, (rd - R) / FLIGHT.ORBIT_RADIAL_DIV));
     advance(u, desired, sp, tr, dt);
@@ -399,7 +399,7 @@ export function flyHold(w, u, base, sp, tr, dt) {
 // ~63° cut toward the centerline, easing to zero as the jet lines up. Too close
 // in (or on the departure side), fly an outbound leg to a pattern-entry region
 // on its own side, then the controller takes over.
-export function flyApproachIntercept(u, base, ra, sp, tr, dt) {
+function flyApproachIntercept(u, base, ra, sp, tr, dt) {
     u.alt = 1;
     u.vis = 1;
     const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
@@ -432,7 +432,7 @@ export function flyApproachIntercept(u, base, ra, sp, tr, dt) {
 // tighter: runway heading plus a small cross-track cut, throttled back,
 // altitude slewing down the glide slope. No sideways position bleeding — the
 // jet only ever moves where its nose points.
-export function flyApproachFinal(u, base, ra, sp, tr, dt) {
+function flyApproachFinal(u, base, ra, sp, tr, dt) {
     const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
     let dLng = u.lng - base.lng;
     while (dLng > 180) dLng -= 360;
@@ -471,7 +471,7 @@ export function flyApproachFinal(u, base, ra, sp, tr, dt) {
 }
 
 // Land: touchdown — roll out and decelerate.
-export function flyLandRollout(u, base, ra, sp, tr, dt) {
+function flyLandRollout(u, base, ra, sp, tr, dt) {
     const decel = Math.max(FLIGHT.ROLLOUT_MIN_DECEL, 1 - (u._roll || 0) / ROLLOUT_KM);
     advance(u, ra, sp * FLIGHT.ROLLOUT_SPEED_MULT * decel, tr, dt);
     u._roll = (u._roll || 0) + sp * FLIGHT.ROLLOUT_SPEED_MULT * decel * dt;

@@ -1,7 +1,6 @@
-// Screen-space heading (deg, 0 = north/up) for a unit under way — projected the
-// same way the missile sprites are, so it reads correctly in globe and flat.
-// Falls back to a fixed cant for static assets (the airstrip reads as angled).
-// Pulled out of LiveGame.jsx verbatim — same rotMemo ref, same unwrap math.
+// Screen-space heading (deg, 0 = north/up) for a unit under way — projected the same way
+// the missile sprites are, so it reads correctly in globe and flat. Falls back to a fixed
+// cant for static assets (the airstrip reads as angled).
 import {useRef} from "react";
 
 // Fixed sprite cant for static assets on the map (airstrip reads as a diagonal

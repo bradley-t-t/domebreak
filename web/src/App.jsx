@@ -9,7 +9,8 @@ import CtaBand from "./components/CtaBand.jsx";
 import Footer from "./components/Footer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import ShortcutsOverlay from "./components/ShortcutsOverlay.jsx";
-import {AccountProvider, useAccount} from "./lib/AccountContext.jsx";
+import {AccountProvider} from "./components/AccountContext.jsx";
+import {useAccount} from "./lib/accountStore.js";
 import {useHotkeys} from "./hooks/useHotkeys.js";
 import {SHORTCUTS, scrollToId} from "./lib/nav.js";
 

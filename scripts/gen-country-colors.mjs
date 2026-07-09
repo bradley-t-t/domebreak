@@ -1,16 +1,12 @@
 // Fills public/assets/colors.json — the GID_0 (ISO3) -> [r,g,b] table the world
-// map uses to tint each nation with its flag color. The map fills any country
-// MISSING from this table with a neutral grey, so the invariant here is TOTAL
-// COVERAGE: every gid0 present in regions-seed.geojson gets an entry, so no
-// country ever renders grey.
+// map uses to tint each nation. Invariant: every gid0 in regions-seed.geojson
+// gets an entry, so no country renders as the map's fallback grey.
 //
-// Each color is the flag's DOMINANT CHROMATIC field (flag-icons pack) pushed to a
-// vivid, punchy tone. Averaging a flag's colors collapses everything toward muddy
-// grey-beige and every nation ends up looking alike; picking the dominant hue and
-// normalizing saturation/lightness instead yields the full spectrum — reds, blues,
-// greens, golds — that still reads under the map's ~16%-opacity tint wash. Codes
-// with no flag (disputed/placeholder zones) get a deterministic hashed hue so
-// they, too, are vivid and never grey.
+// Each color is the flag's dominant chromatic field (flag-icons pack) pushed to a
+// vivid tone: averaging a flag's colors muddies everything toward grey-beige, so
+// instead we pick the dominant hue and normalize saturation/lightness to yield
+// distinct hues that read under the map's ~16%-opacity tint. Flagless codes
+// (disputed/placeholder zones) get a deterministic hashed hue.
 //
 //   node scripts/gen-country-colors.mjs
 import {readFileSync, writeFileSync, existsSync} from "node:fs";
@@ -187,12 +183,10 @@ function shapeArea(kind, t) {
     return 0;
 }
 
-// The flag's dominant CHROMATIC field, normalized to a vivid tone. Averaging
-// flag colors collapses everything toward muddy grey-beige (red+white+blue ->
-// mud), so nations look alike. Instead we sum area per exact fill color, pick
-// the one with the most *chromatic* coverage (near-white / near-black / grey
-// carry no hue and are heavily discounted so they never win), then push it to a
-// punchy saturation/lightness so it still reads under the map's ~16% tint wash.
+// The flag's dominant chromatic field, normalized to a vivid tone. Sum area per
+// exact fill color, pick the one with the most chromatic coverage (near-white /
+// near-black / grey carry no hue and are heavily discounted so they never win),
+// then push it to a punchy saturation/lightness.
 function flagColor(svg) {
     // Drop <defs> — clip/mask geometry is never painted.
     svg = svg.replace(/<defs[\s\S]*?<\/defs>/gi, "");
@@ -250,8 +244,8 @@ function fallbackColor(gid) {
 }
 
 // --- build the table -------------------------------------------------------
-// Regenerate every on-map color from scratch — the goal is vivid, distinct
-// per-nation hues, so we don't carry forward the old muddy averages.
+// Every color is regenerated from scratch; prior is read only to report keys
+// dropped since the last run.
 const colorsPath = join(root, "public/assets/colors.json");
 const prior = existsSync(colorsPath) ? JSON.parse(readFileSync(colorsPath, "utf8")) : {};
 const out = {};

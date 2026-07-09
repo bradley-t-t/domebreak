@@ -1,9 +1,10 @@
-// The online command whitelist (server/commands.js): the ONLY surface through
-// which a client mutates the authoritative world. Every command must (a) exist —
-// a missing entry means the action silently no-ops online (the Shelter-Leadership
-// bug), (b) act only for the SENDER'S slot, and (c) sanitize its args. Deterministic.
+// The online command whitelist (server/match/commands.js): the ONLY surface
+// through which a client mutates the authoritative world. Every command must
+// (a) exist — a missing entry means the action silently no-ops online (the
+// Shelter-Leadership bug), (b) act only for the SENDER'S slot, and (c) sanitize
+// its args. Deterministic.
 import {describe, expect, it} from "vitest";
-import {COMMANDS} from "../../../server/commands.js";
+import {COMMANDS} from "../../../server/match/commands.js";
 import {createWorld} from "../../../src/game/engine.js";
 
 // Every command the online client can actually send (its api, minus the LOCAL_ONLY
@@ -11,10 +12,10 @@ import {createWorld} from "../../../src/game/engine.js";
 // offerPeace/respondPeace). Keep in sync with src/ui/hooks/useEngine.js — a client
 // api that isn't here (or a whitelist entry that's missing) is the bug this guards.
 const CLIENT_COMMANDS = [
-    "buyPlace", "commandAttack", "research", "unqueue", "move", "setSail", "stopSail",
+    "buyPlace", "commandAttack", "move", "setSail", "stopSail",
     "queueAircraft", "setPatrolSize", "setAwacsPatrol", "declareWar", "scrap",
     "produceAmmo", "cancelProd", "setWarhead", "embark", "disembark", "march",
-    "setAutoResearch", "shelterLeadership", "releaseLeadership",
+    "shelterLeadership", "releaseLeadership",
 ];
 
 function w2() {
@@ -89,16 +90,6 @@ describe("leadership commands (Shelter / Release) route into the engine", () => 
         const w = w2();
         w.units.push(unit({id: "bk", type: "bunker"}), unit({id: "as", type: "airstrip"}));
         expect(COMMANDS.releaseLeadership(w, 0)).toEqual({error: "No leadership is sheltered."});
-    });
-});
-
-describe("setAutoResearch toggles the sender's automation", () => {
-    it("test_setAutoResearch_on_then_off", () => {
-        const w = w2();
-        COMMANDS.setAutoResearch(w, 0, [true]);
-        expect(w.nations[0].autoResearch).toBe(true);
-        COMMANDS.setAutoResearch(w, 0, [false]);
-        expect(w.nations[0].autoResearch).toBe(false);
     });
 });
 

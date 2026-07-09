@@ -1,6 +1,5 @@
 // Opponent AI and inter-nation diplomacy: unit/tech build decisions, strategic
-// placement, and the living-world war/peace simulation. Split out of tick.js
-// (see that file's step() for where aiTick/diploTick run in the tick order).
+// placement, and the living-world war/peace simulation.
 import {
     AI_TUNING,
     allowedAmmo,
@@ -45,10 +44,10 @@ function pickTarget(w, n, from) {
     return top[0][0];
 }
 
-// Tech-gated unit types the AI will pursue once unlocked, in build priority.
-// Space Command HQ leads so its dependents become buildable; subs and modern
-// defenses follow. Purely a build-order preference over data-driven gates —
-// each candidate is still validated by queueUnit (tech + prereq + caps).
+// Tech-gated unit types the AI pursues once unlocked, in build priority. Space
+// Command HQ leads so its dependents become buildable; subs and modern defenses
+// follow. Purely a build-order preference — each candidate is still validated by
+// queueUnit (tech + prereq + caps).
 const AI_UNLOCK_BUILD_ORDER = [
     "spacehq", "sub-ssn", "sub-ssbn", "patriot", "thaad", "aegis",
     "reconsat", "warnsat", "sbi", "orbitallaser", "hypersonicbty", "orbitalstrike",
@@ -237,7 +236,7 @@ function diploDeclareWar(w, n, caps, alive) {
 
 export function aiTick(w, dt) {
     // Index living units by nation once per tick so each AI scans only its own
-    // forces (O(own units)), not the whole world's — the roster is now ~222 nations.
+    // forces (O(own units)), not the whole world's — the roster can be ~222 nations.
     const unitsBySlot = new Map();
     for (const u of w.units) {
         if (u.hp <= 0) continue;
@@ -302,7 +301,7 @@ export function aiTick(w, dt) {
         }
         // Bring air power online: stand up fighter patrols + an AWACS orbit on idle
         // airbases once a war is on — the wings then screen the sector and engage on
-        // their own (the AI built these but never flew them before).
+        // their own.
         if (enemies.length) {
             for (const u of myUnits) {
                 if (u.hp <= 0 || !UNITS[u.type].wing) continue;
@@ -326,9 +325,8 @@ export function aiTick(w, dt) {
         // aiPlace validates the spot against the nation's own political border
         // (land) or coastal waters (sea) before returning it, so every queueUnit
         // below passes territoryOk:true — territory is checked once, in the placer,
-        // exactly as the human path does (LiveGame gates on GID_0, then buyPlace(…,
-        // true)). This avoids queueUnit re-applying the looser Voronoi inTerritory
-        // rule and silently starving valid in-country builds near a frontier.
+        // as the human path does. This avoids queueUnit re-applying the looser
+        // Voronoi inTerritory rule and starving valid in-country builds near a frontier.
         const place = (type) => aiPlace(w, n, type, myUnits, cities, front);
         // In the red, everything else waits — industry is the only way back out
         // (the same deficit gate the player lives under, enforced in queueUnit).

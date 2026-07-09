@@ -1,8 +1,7 @@
 // DomeBreak real-time simulation engine. Pure and deterministic given its seed.
-// This module is the stable public facade: world creation lives here, and
-// every symbol the engine used to export directly is re-exported from the
-// focused modules it now lives in (constants/queries/production/aircraft/
-// combat/tick) so existing importers keep working unchanged.
+// The public facade: world creation lives here, and every engine symbol is
+// re-exported from the focused modules it lives in (constants/queries/production/
+// aircraft/combat/tick).
 import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, TECHS, colorForSlot} from "./data/constants.js";
 import {distributeLeadership} from "./sim/leadership.js";
 
@@ -18,8 +17,7 @@ export function createWorld(setup) {
         isAi: !!n.isAi,
         // Active = a participating nation (human or AI). Inactive = passive neutral
         // (never ticks AI/diplomacy, but capturable). Defaults to active when the
-        // setup doesn't specify, so all-active matches (multiplayer, attract) are
-        // unchanged. See adr-008-active-and-neutral-nations.
+        // setup doesn't specify, so all-active matches (multiplayer, attract) work.
         active: n.active !== false,
         gdp: n.gdp || 0,
         color: colorForSlot(n.slot),
@@ -27,9 +25,9 @@ export function createWorld(setup) {
         alive: true,
         relations: {},
         _ai: 2 + n.slot * 0.3,
-        // Everything is unlocked from the start — the tech tree / research mechanic
-        // was removed. Every tech id is marked done so all unit gates open, and each
-        // tech's effect is applied once below so nations begin fully teched.
+        // Everything is unlocked from the start: every tech id is marked done so all
+        // unit gates open, and each tech's effect is applied once below so nations
+        // begin fully teched.
         research: {queue: [], current: null, done: Object.keys(TECHS)},
         ammo: {...AMMO_START},
         prod: {queue: [], current: null},
@@ -45,12 +43,12 @@ export function createWorld(setup) {
         upkeepMult: 1,
         researchSpeedMult: 1,
         moveCostMult: 1,
-        // Tech-tree expansion multipliers (default identities; scaled by the new
-        // Space Age / Early Warning techs in data/constants.js TECHS):
-        //   hypersonicEvasion — additive intercept-evasion bonus for hypersonic
-        //     boost-glide weapons (off8 Hypersonic Glide Vehicles).
-        //   sonarMult — multiplies ASW sonarKm so det tracking/fusion techs turn
-        //     hulls into better sub-hunters (det7/8/11/12).
+        // Tech multipliers (default identities; scaled by Space Age / Early Warning
+        // techs):
+        //   hypersonicEvasion — additive intercept-evasion for hypersonic boost-glide
+        //     weapons (off8 Hypersonic Glide Vehicles).
+        //   sonarMult — multiplies ASW sonarKm so det tracking/fusion techs turn hulls
+        //     into better sub-hunters (det7/8/11/12).
         hypersonicEvasion: 0,
         sonarMult: 1,
         stability: 100,   // national stability 0–100 (see sim/stability.js)
@@ -104,7 +102,7 @@ export function createWorld(setup) {
     };
 }
 
-// --- Re-exports: preserves the pre-refactor export surface of engine.js. ---
+// --- Re-exports: the engine's public API, sourced from its submodules. ---
 export {
     START_POINTS,
     MISSILE_SPEED,
@@ -130,7 +128,6 @@ export {
     launchersForAmmo,
     unitLabel,
     armamentOf,
-    TECH_PATHS,
     TECHS,
     HANGAR_SPEC,
     PATROL_FIGHTER,

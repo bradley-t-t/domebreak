@@ -1,47 +1,41 @@
 import {cva} from "class-variance-authority";
-// The .db-card "paper" re-theme lives (unlayered) in src/index.css — the one
-// stylesheet — so it is globally present; no per-module CSS import here.
+// The .db-card "paper" re-theme lives (unlayered) in src/index.css, so it is
+// globally present; no per-module CSS import here.
 
 /**
- * DomeBreak shared primitive vocabulary (ADR-0005, Tailwind v4 migration).
+ * DomeBreak's shared primitive vocabulary: each export is a `cva()` call that
+ * renders one primitive class as Tailwind utilities + the `@theme` tokens in
+ * index.css. Where a `@layer vfx` rule targets a class by name (a
+ * `::before`/`::after` pseudo-element, or a `.db-card` descendant re-theme),
+ * that literal class name stays in the base string as a "VFX hook" — removing
+ * it silently breaks the effect that keys off it. Each variant's doc comment
+ * says whether it carries one.
  *
- * Every export below is a `cva()` call translating one primitive class from
- * the legacy styles.css into Tailwind utilities + the `@theme` tokens in
- * index.css, reproducing the original rule exactly. Where a `@layer vfx`
- * rule in index.css targets a class by name (a `::before`/`::after`
- * pseudo-element, or a `.db-card` descendant re-theme selector), that
- * literal class name is retained in the base string as a "VFX hook" —
- * removing it would silently break the pseudo-element/animation/re-theme
- * that keys off it. Each variant's doc comment says whether it carries one.
+ * All class strings are static/literal (no runtime concatenation) so Tailwind's
+ * JIT scanner can see every utility that renders.
  *
- * All class strings are static/literal (no runtime concatenation) so
- * Tailwind's JIT scanner can see every utility that ever renders.
- *
- * Usage: call the variant function and pass the result straight to
- * className (optionally through cn() if you need to merge caller-supplied
- * overrides): `<button className={button({variant: "primary"})}>`.
+ * Usage: call the variant and pass the result to className (through cn() to
+ * merge caller overrides): `<button className={button({variant: "primary"})}>`.
  */
 
 /* ---------------------------------------------------------------------- */
-/* button — .db-btn / .db-btn.primary (styles.css ~321-371)                */
+/* button — .db-btn / .db-btn.primary                                       */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `db-btn` (+ `primary`). `.db-btn.primary::after`
- * in @layer vfx is the hover sheen sweep; `.db-card .db-btn.primary` in
- * card-paper.css flips it to solid ink when nested in a modal card.
+ * VFX hook: carries literal `db-btn` (+ `primary`). `.db-btn.primary::after`
+ * in @layer vfx is the hover sheen sweep; `.db-card .db-btn.primary` flips it
+ * to solid ink when nested in a modal card.
  */
 export const button = cva(
     "db-btn font-display border border-line px-[18px] py-[11px] rounded-sm text-[12.5px] font-semibold tracking-[1.4px] uppercase whitespace-nowrap transition-[border-color,box-shadow,filter] duration-150 ease-out-db enabled:hover:border-blue disabled:opacity-60 disabled:cursor-not-allowed",
     {
         variants: {
             // The default fill is a dark vertical gradient (a background-IMAGE);
-            // it lives in the variant rather than the base so the primary
-            // variant can fully replace the fill with a solid background-COLOR.
-            // Keeping the gradient in the base would leave background-image
-            // painting over primary's bg-gold — the legacy
-            // `.db-btn.primary { background: … }` shorthand reset the image, but
-            // bg-gold alone does not, which rendered the primary button dark
-            // with unreadable dark text.
+            // it lives in the variant, not the base, so the primary variant can
+            // fully replace it with a solid background-COLOR. In the base it
+            // would paint over primary's bg-gold (which resets only
+            // background-color), rendering the primary button dark with
+            // unreadable dark text.
             variant: {
                 default:
                     "bg-linear-to-b from-btn-bg to-btn-bg-2 text-text shadow-[inset_0_1px_0_var(--hair)] enabled:hover:shadow-[0_0_0_rgba(0,0,0,0),inset_0_1px_0_var(--hair)]",
@@ -54,13 +48,12 @@ export const button = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* miniButton — .db-mini (+ hover/danger/disabled) (styles.css ~525-548,   */
-/* 1339-1347)                                                              */
+/* miniButton — .db-mini (+ hover/danger/disabled)                          */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `db-mini` (+ `danger`). `.db-card .db-mini` and
- * `.db-card .db-mini.danger` in card-paper.css re-theme it to the light
- * paper surface when nested inside a `card()`.
+ * VFX hook: carries literal `db-mini` (+ `danger`). `.db-card .db-mini` and
+ * `.db-card .db-mini.danger` re-theme it to the light paper surface when
+ * nested inside a `card()`.
  */
 export const miniButton = cva(
     "db-mini font-display text-[11px] font-semibold px-[9px] py-1 rounded-sm border border-line bg-linear-to-b from-[#17191d] to-[#0f1114] text-text enabled:hover:border-blue disabled:opacity-40 disabled:cursor-not-allowed",
@@ -76,7 +69,7 @@ export const miniButton = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* iconButton — .db-iconbtn (styles.css ~2472-2520)                       */
+/* iconButton — .db-iconbtn                                                 */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-iconbtn. Utilities only.
@@ -95,17 +88,15 @@ export const popoverCard = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* menuButton — .db-menu-btn (+ .back/.primary/.danger), .db-menu-section  */
-/* (styles.css ~2104-2201, section heading ~2175-2185)                    */
+/* menuButton — .db-menu-btn (+ .back/.primary/.danger), .db-menu-section   */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `db-menu-btn` (+ `primary`/`back`/`danger`).
+ * VFX hook: carries literal `db-menu-btn` (+ `primary`/`back`/`danger`).
  * `.db-menu-btn::before/::after` in @layer vfx are the targeting-bracket
  * corners that snap in on hover/focus; `.db-card .db-menu-btn` and
- * `.db-card .db-menu-btn.primary` in card-paper.css re-theme it inside a
- * `card()`. The `section` variant is a distinct static heading (no button
- * semantics, no hook needed) kept here for call-site convenience since it
- * always appears alongside menu buttons.
+ * `.db-card .db-menu-btn.primary` re-theme it inside a `card()`. The `section`
+ * variant is a static heading (no button semantics, no hook), kept here for
+ * call-site convenience since it always appears alongside menu buttons.
  */
 export const menuButton = cva(
     "db-menu-btn relative px-[18px] py-[13px] rounded-sm border border-line bg-[rgba(16,18,20,0.7)] text-text text-[12.5px] font-semibold tracking-[2.5px] uppercase transition-[transform,border-color,background] duration-150 ease-out-db hover:border-blue hover:-translate-y-px focus-visible:border-blue focus-visible:-translate-y-px active:scale-[0.98]",
@@ -125,7 +116,7 @@ export const menuButton = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* chip — .db-chip (+ .subtle) (styles.css ~127-144)                      */
+/* chip — .db-chip (+ .subtle)                                              */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-chip.
@@ -144,17 +135,13 @@ export const chip = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* card — .db-card (+ .wide/.build/.result) (styles.css ~168-261)         */
+/* card — .db-card (+ .wide/.build/.result)                                 */
 /* ---------------------------------------------------------------------- */
 /**
- * VFX hook: retains literal `db-card`. `.db-card::before` in @layer vfx is
- * the gold top-seam. The scoped light-"paper" custom-property overrides
- * (originally styles.css ~171-187, ~197-236) are re-implemented verbatim as
- * a plain CSS ruleset in ./card-paper.css, side-effect-imported at the top
- * of this file — so importing variants.js anywhere in the app is enough for
- * `.db-card` to carry the re-theme; no extra opt-in class/attribute needed
- * (this matches the legacy behavior exactly, where .db-card always implied
- * paper). See card-paper.css's header comment for the full rationale.
+ * VFX hook: carries literal `db-card`. `.db-card::before` in @layer vfx is the
+ * gold top-seam, and the light-"paper" custom-property overrides (unlayered in
+ * index.css) key off the same class — so `.db-card` always carries the re-theme
+ * with no extra opt-in class needed.
  */
 export const card = cva(
     "db-card relative pointer-events-auto text-text bg-paper border border-[rgba(0,0,0,0.18)] rounded-lg shadow p-[26px] w-[min(560px,94vw)]",
@@ -172,25 +159,23 @@ export const card = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* overlay — .db-overlay (+ .center/.bottom) (styles.css ~147-164)        */
+/* overlay — .db-overlay (+ .center/.bottom)                                */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-overlay.
  */
-// fixed (not absolute) so a modal is always anchored to the viewport, never to a
-// positioned ancestor. FriendsPanel opens from MeBadge, whose menu root is
-// `fixed top-[42px] right-4` — an `absolute inset-0` overlay filled that tiny
-// corner box and threw the centered card off-screen. All overlay() consumers are
-// full-screen modals, so viewport anchoring is correct for every one.
+// fixed (not absolute) so a modal always anchors to the viewport, never to a
+// positioned ancestor — FriendsPanel opens from MeBadge, whose root is
+// `fixed top-[42px] right-4`, and an absolute overlay would be trapped in that
+// corner box. All overlay() consumers are full-screen modals, so this is right.
 //
-// z-40 puts every app modal above all screen chrome — the menu rail (StartMenu
+// z-40 puts every modal above all screen chrome — the menu rail (StartMenu
 // z-10), the account badge (MeBadge z-20), the in-game HUD bars (z-5/z-6) and
-// adjustable panels (z-30) — and below the boot curtain (z-60). This matters on
-// the main menu: StartMenu's root is a full-screen z-10 catcher, so a lower
-// overlay would render behind it and StartMenu would swallow the card's wheel
-// and click events (dead scroll, dead Done button). The overlay backdrop itself
-// is pointer-events-none, so sitting on top steals no events from the screen
-// underneath except over the card, which re-enables them.
+// adjustable panels (z-30) — and below the boot curtain (z-60). Matters on the
+// main menu, where StartMenu's full-screen z-10 catcher would otherwise render
+// on top and swallow the card's wheel/click events. The backdrop is
+// pointer-events-none, so it steals no events except over the card, which
+// re-enables them.
 export const overlay = cva("fixed inset-0 z-40 flex pointer-events-none", {
     variants: {
         placement: {
@@ -203,7 +188,7 @@ export const overlay = cva("fixed inset-0 z-40 flex pointer-events-none", {
 });
 
 /* ---------------------------------------------------------------------- */
-/* input — .db-input (+ .mono) (search hit in styles.css ~281-309)       */
+/* input — .db-input (+ .mono)                                              */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-input.
@@ -222,7 +207,7 @@ export const input = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* label — .db-label (styles.css ~270-279)                                */
+/* label — .db-label                                                        */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-label.
@@ -232,7 +217,7 @@ export const label = cva(
 );
 
 /* ---------------------------------------------------------------------- */
-/* sub — .db-sub (styles.css ~263-268)                                    */
+/* sub — .db-sub                                                            */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-sub.
@@ -240,19 +225,17 @@ export const label = cva(
 export const sub = cva("text-dim m-0 mb-5 text-sm leading-[1.5]");
 
 /* ---------------------------------------------------------------------- */
-/* row — .db-row (+ direct .db-input child sizing) (styles.css ~311-319) */
+/* row — .db-row (+ direct .db-input child sizing)                          */
 /* ---------------------------------------------------------------------- */
 /**
- * No VFX hook — no @layer vfx rule targets .db-row. The original
- * `.db-row .db-input { flex: 1 }` is a descendant selector for a common
- * "input + button" row shape; reproduce it at the call site by adding
- * `flex-1` directly to whichever child(ren) should stretch, since cva can't
- * express a descendant-scoped utility.
+ * No VFX hook — no @layer vfx rule targets .db-row. The `.db-row .db-input {
+ * flex: 1 }` descendant rule (the "input + button" row) can't be expressed by
+ * cva; add `flex-1` directly to whichever child should stretch instead.
  */
 export const row = cva("flex gap-[10px] mt-4");
 
 /* ---------------------------------------------------------------------- */
-/* badge — .db-badge (+ .you) (styles.css ~1323-1337)                     */
+/* badge — .db-badge (+ .you)                                               */
 /* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-badge.
@@ -272,7 +255,7 @@ export const badge = cva(
 
 /* ---------------------------------------------------------------------- */
 /* Menu chrome — shared across the centered menu screens (Lobby, Searching, */
-/* etc.). (styles.css ~1959-2210)                                          */
+/* etc.).                                                                   */
 /* ---------------------------------------------------------------------- */
 
 /** Full-viewport centered overlay that hosts a menu card. No VFX hook. */
@@ -280,7 +263,7 @@ export const menuScreen = cva("absolute inset-0 z-10 grid place-items-center ove
 
 /**
  * Vignette + faint grid-texture backdrop behind a menu card. The 44px grid
- * lines are the legacy `.db-menu-bg::after`, reproduced as an `after:` layer.
+ * lines are the `.db-menu-bg::after`, done as an `after:` layer.
  */
 export const menuBg = cva(
     "absolute inset-0 -z-10 bg-[radial-gradient(ellipse_130%_95%_at_50%_42%,transparent_42%,rgba(4,6,9,0.32)_76%,rgba(4,6,9,0.6)_100%)] after:content-[''] after:absolute after:inset-0 after:opacity-[0.045] after:bg-[linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)] after:[background-size:44px_44px]"
@@ -292,7 +275,7 @@ export const menuInner = cva(
 );
 
 /**
- * Menu heading. RETAINS the literal `db-menu-title` class — the `.db-card`
+ * Menu heading. Carries the literal `db-menu-title` class — the `.db-card`
  * paper re-theme (unlayered in index.css) and the `.db-menu-title span` glow
  * both key off it.
  */
