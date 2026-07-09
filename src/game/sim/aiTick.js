@@ -1,4 +1,4 @@
-// Opponent AI and inter-nation diplomacy: unit/tech build decisions, strategic
+// Opponent AI and inter-nation diplomacy: unit build decisions, strategic
 // placement, and the living-world war/peace simulation.
 import {
     AI_TUNING,
@@ -71,8 +71,7 @@ function aiBuildUnlocked(w, n, myUnits, cities, front) {
         const isSpace = def.requiresUnit === "spacehq" || type === "spacehq";
         const isSub = type === "sub-ssn" || type === "sub-ssbn";
         const reserve = isSpace ? AI_TUNING.spaceHqReserve : isSub ? AI_TUNING.subReserve : 0;
-        const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
-        if (n.points < cost + reserve) continue;
+        if (n.points < def.cost + reserve) continue;
         // aiPlace sites by role — sea hulls to coastal water, modern defenses over
         // cities, space/command to the safe interior — and spreads same-role apart.
         const p = aiPlace(w, n, type, myUnits, cities, front);

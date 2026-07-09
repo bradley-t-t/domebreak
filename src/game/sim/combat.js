@@ -3,7 +3,7 @@
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
 import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
-import {nationOf, nextId, rand} from "./worldState.js";
+import {nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 import {cosLatSafe, unwrapLng} from "../../lib/geo.js";
 import {clamp01} from "../../lib/math.js";
@@ -76,7 +76,6 @@ export function trackPoint(p, f) {
 // saw the launch (the shooter always; anyone else only if a sensor covers the
 // launch point — this is what an OTH array buys, visibility into the boost phase).
 export function launch(w, unit, target, warhead) {
-    const n = nationOf(w, unit.slot);
     const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
     const seenBy = [unit.slot];
     for (const nn of w.nations) {
@@ -89,12 +88,11 @@ export function launch(w, unit, target, warhead) {
         slot: unit.slot,
         type: unit.type,
         warhead: warhead || "standard",
-        damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1) * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
-        // Intercept-evasion: the firing nation's hypersonic-glide bonus (off8),
-        // stacked with any inherent evasion on the launcher's own unit type and on
-        // the loaded warhead (an HGV payload is hard to intercept whatever fires it).
-        // The defender subtracts this from its interceptor hit probability (tick.js).
-        evasion: (n?.hypersonicEvasion ?? 0) + (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
+        damage: UNITS[unit.type].damage * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
+        // Intercept-evasion: inherent on the launcher's unit type plus the loaded
+        // warhead (an HGV payload is hard to intercept whatever fires it). The
+        // defender subtracts this from its interceptor hit probability (tick.js).
+        evasion: (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
         // Boost-glide rounds (HGV) overspeed the platform's baseline; speedMult is
         // data-driven on the warhead so a hypersonic payload is fast whatever fires it.
         speed: (UNITS[unit.type].speed ?? MISSILE_SPEED) * (WARHEADS[warhead]?.speedMult ?? 1),
@@ -148,8 +146,7 @@ export function directFire(w, unit, target) {
         resolveBunkerStrike(w, target.ref, null, unit.slot);
         return;
     }
-    const n = nationOf(w, unit.slot);
-    const dmg = (UNITS[unit.type].damage || 0) * (n?.dmgMult ?? 1);
+    const dmg = UNITS[unit.type].damage || 0;
     target.ref.hp -= dmg;
     const dead = target.ref.hp <= 0;
     if (dead) {

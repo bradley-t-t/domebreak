@@ -9,7 +9,6 @@
 import {haversine} from "../geo/geo.js";
 import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
-import {nationOf} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {cmpStr} from "../../lib/iter.js";
 
@@ -19,21 +18,19 @@ export function loadedWarhead(u) {
     return u.warhead || initialWarhead(u.type);
 }
 
-// Effective one-shot damage of an offense unit for its nation: base platform
-// damage × national damage research × the loaded warhead's yield multiplier.
-export function shotDamage(w, u) {
-    const n = nationOf(w, u.slot);
+// Effective one-shot damage of an offense unit: base platform damage × the
+// loaded warhead's yield multiplier.
+export function shotDamage(_w, u) {
     const def = UNITS[u.type];
     const wh = WARHEADS[loadedWarhead(u)] || WARHEADS.standard;
-    return (def.damage || 0) * (n?.dmgMult ?? 1) * (wh.dmgMult ?? 1);
+    return (def.damage || 0) * (wh.dmgMult ?? 1);
 }
 
-// How far a unit can strike under this plan: its hardware range (× national range
-// research) capped by the plan's engagement-range dial. The dial can only ever
-// SHORTEN the reach — never extend it past what the platform can physically do.
-export function reachKm(w, u, engagementKm) {
-    const n = nationOf(w, u.slot);
-    const hw = (UNITS[u.type].range || 0) * (n?.rangeMult ?? 1);
+// How far a unit can strike under this plan: its hardware range capped by the
+// plan's engagement-range dial. The dial can only ever SHORTEN the reach — never
+// extend it past what the platform can physically do.
+export function reachKm(_w, u, engagementKm) {
+    const hw = UNITS[u.type].range || 0;
     const dial = Number.isFinite(engagementKm) ? engagementKm : BATTLE_PLAN.maxEngagementKm;
     return Math.min(hw, dial);
 }

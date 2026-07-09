@@ -58,11 +58,10 @@ function defenseCovers(w, myUnits, lng, lat) {
 // Is a point already inside a friendly radar's coverage? Used to spread early
 // warning across the nation — each new array goes to a city not yet under the
 // radar picture, instead of stacking every sensor on one frontier city.
-function radarCovered(w, myUnits, lng, lat) {
+function radarCovered(_w, myUnits, lng, lat) {
     for (const u of myUnits) {
         if (u.hp <= 0 || radarRangeOf(u.type) <= 0) continue;
-        const nn = w.nations.find((x) => x.slot === u.slot);
-        if (haversine(u.lng, u.lat, lng, lat) <= radarRangeOf(u.type) * (nn?.radarMult ?? 1)) return true;
+        if (haversine(u.lng, u.lat, lng, lat) <= radarRangeOf(u.type)) return true;
     }
     return false;
 }
