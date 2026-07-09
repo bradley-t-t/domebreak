@@ -21,7 +21,7 @@ const REGION_DIPLO_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.8, 4, 0.
 export default function MapLayers({
                                        layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, radarEmitters, defenseFC,
                                        ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor,
-                                       planArcsFC, planTargetsFC, planColor
+                                       planArcsFC, planTargetsFC, planColor, globe
                                    }) {
     return (
         <>
@@ -78,7 +78,7 @@ export default function MapLayers({
                        }}/>
             </Source>}
             {/* Rotating PPI sweep over the coverage rings — animated old-radar look. */}
-            {layers.radar && <RadarSweep emitters={radarEmitters}/>}
+            {layers.radar && <RadarSweep emitters={radarEmitters} globe={globe}/>}
             {layers.defense && <Source id="defall-src" type="geojson" data={defenseFC}>
                 <Layer id="defall-fill" type="fill" paint={{"fill-color": ["get", "color"], "fill-opacity": 0.05}}/>
                 <Layer id="defall-line" type="line"
