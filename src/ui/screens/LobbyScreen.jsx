@@ -247,9 +247,9 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
     const toggleReady = () => {
         if (!myIso || !myMember) return;
         const next = readyOpt ?? !myMember.ready;
-        setReadyOpt(!next);                 // flip + reflect instantly
-        Promise.resolve(setReady(!next))
-            .then((r) => { if (r?.error) setReadyOpt(null); }) // failed — fall back to server truth
+        setReadyOpt(next);
+        Promise.resolve(setReady(next))
+            .then((r) => { if (r?.error) setReadyOpt(null); })
             .catch(() => setReadyOpt(null));
     };
 
