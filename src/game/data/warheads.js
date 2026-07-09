@@ -48,7 +48,7 @@ export const WARHEADS = {
         prodTime: 8,
         blastKm: 90,        // kinetic terminal impact — a tight, hard-hitting blast
         evasion: 0.32,      // maneuvering glide body; added to the projectile's intercept-evasion
-        speedMult: 1.8,     // boost-glide overspeed — multiplies the firing platform's projectile speed
+        speedMult: 2.0,     // boost-glide overspeed — multiplies the firing platform's projectile speed (2x other missiles)
         flame: "#b98cff",
         trail: "#cdb8ff",   // thin ionization streak — a glide body, not a rocket plume
         trailW: 1.7,
