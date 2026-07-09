@@ -3,7 +3,7 @@ import {cancelMatch, fetchMyQueue, heartbeatQueue, quickMatch, watchQueue} from 
 import {button, row, menuScreen, menuBg, menuInner, menuTitle} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
-const SEARCH_TIMEOUT_S = 40;
+const SEARCH_TIMEOUT_S = 120;
 const HEARTBEAT_QUEUE_MS = 5000; // liveness ping cadence while searching (server stale window is 20s)
 
 // "Searching for commanders..." beat between pressing Play and the matchmaker
@@ -117,7 +117,7 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion, preQ
                     </>
                 ) : (
                     <>
-                        <p className="db-searching-label text-sm text-text m-0" role="status" aria-live="polite">Couldn't find a match — try again.</p>
+                        <p className="db-searching-label text-sm text-text m-0" role="status" aria-live="polite">No players were found after 2 minutes of searching. Try again later or play single player.</p>
                         <div className={row()}>
                             <button className={button({variant: "primary"})} disabled={busy} onClick={doRetry}>
                                 {busy ? "Retrying…" : "Retry"}
