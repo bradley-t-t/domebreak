@@ -25,11 +25,23 @@ export default [
             ...reactHooks.configs.recommended.rules,
             "react-refresh/only-export-components": "warn",
             "no-unused-vars": ["error", {varsIgnorePattern: "^[A-Z_]"}],
-            // Render-phase ref/mutation patterns surface as warnings, not errors.
             "react-hooks/refs": "warn",
             "react-hooks/immutability": "warn",
             "react-hooks/set-state-in-effect": "warn",
             "react-hooks/incompatible-library": "warn",
+        },
+    },
+    {
+        // The game engine keeps one world object in a ref, mutates it in place, and
+        // re-renders on a tick counter (see useEngine); components read the world and
+        // map refs during render and sync external state (Supabase realtime, the
+        // attract sim) in effects by design. These render-phase rules don't model
+        // that, so they're off for the game code. The web app keeps them enforced.
+        files: ["src/**/*.{js,jsx}"],
+        rules: {
+            "react-hooks/refs": "off",
+            "react-hooks/immutability": "off",
+            "react-hooks/set-state-in-effect": "off",
         },
     },
 ];
