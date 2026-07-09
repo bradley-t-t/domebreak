@@ -51,7 +51,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
     const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
     const stab = myNation ? stabilityStatus(world, myNation.slot) : null;
     const stabInfo = myNation ? stabilityBreakdown(world, myNation.slot) : null;
-    const alive = world.nations.filter((n) => n.alive).length;
+    const rivals = world.nations.filter((n) => n.alive && n.active !== false).length;
     const {date, time} = gameDate(world.time);
 
     // Which telemetry cell is showing its hover breakdown ("lead" | "stab" | null).
@@ -113,8 +113,14 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                     <div className="w-px self-stretch bg-line-soft"/>
                     <div className="flex flex-col items-end leading-[1.15]"><span
                         className="text-[9px] tracking-[1px] uppercase text-faint">Population</span><span
-                        className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span className="text-[10px] text-dim"
-                                                                                            aria-live="polite">{alive} Powers Left</span>
+                        className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span
+                        className="text-[10px] text-dim">Living citizens</span>
+                    </div>
+                    <div className="w-px self-stretch bg-line-soft"/>
+                    <div className="flex flex-col items-end leading-[1.15]"><span
+                        className="text-[9px] tracking-[1px] uppercase text-faint">Powers</span><span
+                        className="text-sm font-bold font-mono" aria-live="polite">{rivals}</span><span
+                        className="text-[10px] text-dim">Still in the war</span>
                     </div>
                     {lead && <>
                         <div className="w-px self-stretch bg-line-soft"/>
