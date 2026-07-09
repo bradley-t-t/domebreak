@@ -248,7 +248,7 @@ export default function LiveGame({
         planArcsFC,
         planTargetsFC
     } = useLiveLayers({
-        w, mySlot, myNation, backdrop, layers, selUnit, teamColor
+        w, mySlot, myNation, backdrop, layers, selUnit, teamColor, globe
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
@@ -437,8 +437,9 @@ export default function LiveGame({
                            backdropFC={backdropFC} radarFC={radarFC} radarEmitters={radarEmitters} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
-                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}/>
-                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} myNation={myNation}/>
+                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}
+                           globe={globe}/>
+                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} myNation={myNation} globe={globe}/>
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
                             visUnits={visUnits} unitHeading={unitHeading} unitColor={unitColor} labelOf={labelOf}
                             nationName={nationName} selUnit={selUnit} onUnitClick={onUnitClick}

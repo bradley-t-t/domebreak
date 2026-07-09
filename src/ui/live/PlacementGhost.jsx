@@ -12,9 +12,15 @@
 import {forwardRef, useEffect, useImperativeHandle, useMemo, useState} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
 import {COAST_KM, radarRangeOf, UNITS} from "../../game/engine.js";
-import {circle} from "../../game/geo/geo.js";
+import {circle, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 
-const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, myNation}, ref) {
+// Match the coverage-ring behavior in useLiveLayers: a true geodesic cap on the
+// globe, the Mercator disc on the flat map (and for rings too wide to read as a
+// cap), so the being-placed ring looks the same as a selected unit's ring.
+const coverageRing = (globe, lng, lat, km, steps, innerKm = 0) =>
+    (globe && km <= GEODESIC_MAX_KM ? geoCircle : circle)(lng, lat, km, steps, innerKm);
+
+const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, myNation, globe}, ref) {
     // { lng, lat, valid } | null — the live cursor probe pushed in from LiveGame.
     const [cur, setCur] = useState(null);
 
@@ -37,7 +43,7 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, m
             const rad = t?.coastal ? COAST_KM
                 : t?.detect ? radarRangeOf(type) * (myNation?.radarMult ?? 1)
                     : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
-            const c = circle(cur.lng, cur.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
+            const c = coverageRing(globe, cur.lng, cur.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
                 color: cur.valid ? "#46d38a" : "#ff5d5d",
                 sel: 1,
@@ -46,7 +52,7 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, m
             f.push(c);
         }
         return {type: "FeatureCollection", features: f};
-    }, [placing, moving, w, myNation, cur]);
+    }, [placing, moving, w, myNation, cur, globe]);
 
     return (
         <Source id="ranges-ghost" type="geojson" data={data}>
