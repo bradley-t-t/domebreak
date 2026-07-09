@@ -1,7 +1,8 @@
-// Match lifecycle (server/match.js): the authoritative per-match runner — roster to
-// world, opening freeze, command gating, reconnect grace with AI stewardship, the
-// abandon reaper that frees a capacity slot, and result recording. Fake timers make
-// the timing deterministic. Companion to server/match-reap.test.mjs (reaper focus).
+// Match lifecycle (server/match/match.js): the authoritative per-match runner —
+// roster to world, opening freeze, command gating, reconnect grace with AI
+// stewardship, the abandon reaper that frees a capacity slot, and result
+// recording. Fake timers make the timing deterministic. Companion to
+// tests/unit/matchmaking/match_reap_test.js (reaper focus).
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 // config.js reads these at import; set before importing match.js. Short-ish windows
@@ -12,7 +13,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
 process.env.GD_MATCH_START_PAUSE_S ||= "30";
 process.env.GD_ABANDON_GRACE_S ||= "2";
 process.env.GD_RECONNECT_GRACE_S ||= "1";
-const {Match} = await import("../../../server/match.js");
+const {Match} = await import("../../../server/match/match.js");
 
 const roster = () => ([
     {userId: "u0", username: "P0", iso: "US", ready: true},

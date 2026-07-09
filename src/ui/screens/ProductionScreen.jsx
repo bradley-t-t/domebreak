@@ -38,13 +38,13 @@ const catOf = (key, u) => (isSpace(key, u) ? "Space" : u.kind === "industry" ? "
 // warhead line; "All" shows every section at once.
 const CATS = [
     {id: "all", name: "All Systems", glyph: "⌗"},
-    {id: "Strike", name: "Strike", glyph: "✷"},
+    {id: "Support", name: "Support", glyph: "✧"},
     {id: "Air Defense", name: "Air Defense", glyph: "⬡"},
+    {id: "Strike", name: "Strike", glyph: "✷"},
     {id: "Army", name: "Army", glyph: "▲"},
     {id: "Naval", name: "Naval", glyph: "⚓"},
     {id: "Space", name: "Space", glyph: "✦"},
     {id: "Industry", name: "Industry", glyph: "⚙"},
-    {id: "Support", name: "Support", glyph: "✧"},
     {id: "Munitions", name: "Munitions", glyph: "☢"},
 ];
 

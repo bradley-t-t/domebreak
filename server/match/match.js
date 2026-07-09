@@ -3,13 +3,13 @@
 // ends. Humans who drop get a reconnect grace window, then their nation goes
 // to the AI; a permanent drop is recorded as a quit.
 import {randomUUID} from "crypto";
-import {createWorld, step} from "../src/game/engine.js";
-import {buildSetup, GREAT_POWERS} from "../src/game/sim/newGame.js";
-import {gameData} from "./data.js";
+import {createWorld, step} from "../../src/game/engine.js";
+import {buildSetup, GREAT_POWERS} from "../../src/game/sim/newGame.js";
+import {gameData} from "../data.js";
 import {COMMANDS} from "./commands.js";
-import {openingFreeze} from "./matchStart.js";
-import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "./config.js";
-import {indexBy} from "../src/lib/iter.js";
+import {openingFreeze} from "./openingFreeze.js";
+import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "../config.js";
+import {indexBy} from "../../src/lib/iter.js";
 
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
