@@ -9,6 +9,7 @@ import {
     allowedAmmo,
     AMMO_START,
     AMPHIB_LIFT_KM,
+    DIPLOMACY,
     MOVE_COST_FRAC,
     PATROL_SIZES,
     SCRAP_REFUND_FRAC,
@@ -56,6 +57,10 @@ export function declareWar(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
     if (!na || !nb || a === b) return {error: "Invalid order."};
     if (na.relations[b] === "ally") return {error: "You are allied — break the alliance first."};
+    // Opening grace is a hard ceasefire for the whole world — no nation, human
+    // or AI, may open a war until the window elapses.
+    const grace = w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
+    if (grace > 0 && w.time < grace) return {error: "Opening grace is in effect — no wars may be declared yet."};
     setWar(w, na, nb, a, b);
     w.events.push({id: nextId(w, "e"), t: w.time, type: "war", a, b});
     // Defensive pact: an attack on b pulls b's allies in against the aggressor.

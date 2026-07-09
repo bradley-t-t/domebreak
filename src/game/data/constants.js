@@ -186,7 +186,7 @@ export const DIPLOMACY = {
     warRangeKm: 4200,                // max capital-to-capital distance for a war to start
     maxWars: 2,                      // simultaneous wars a nation will sustain
     declareChance: 0.35,             // odds per diplo tick an eligible nation opens a war
-    playerGraceSec: 45,              // opening window before AIs may declare on the player
+    playerGraceSec: 45,              // opening window during which no nation may declare war
     wGdp: 0.6, wWeak: 0.8,           // rival weighting exponents: prefer wealthier / weaker
     wMin: 0.15, wMax: 8,             // clamp on any single rival's selection weight
     surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction

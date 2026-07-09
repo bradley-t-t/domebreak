@@ -5,12 +5,12 @@ import {cn} from "../lib/cn.js";
 
 const POPUP_MS = 6000;
 
-// Two-in-one indicator for the opening non-aggression window:
+// Two-in-one indicator for the opening world-wide ceasefire:
 //   1. While `w.time < grace`, a compact countdown pill anchored under the HUD
-//      shows the remaining seconds (m:ss / 1h) so the commander sees exactly how
-//      long they have to build in peace.
+//      shows the remaining seconds (m:ss / 1h) so every commander sees exactly
+//      how long they have to build in peace.
 //   2. The instant grace lapses, a one-shot toast slides in ("Grace period
-//      ended — the world may declare war") and fades on its own.
+//      ended — wars may now be declared") and fades on its own.
 // A zero-length grace is a no-op — nothing to time, nothing to announce.
 export default function GraceIndicator({world}) {
     const grace = world?.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
@@ -58,7 +58,7 @@ export default function GraceIndicator({world}) {
                         "motion-safe:animate-[dbPop_220ms_var(--ease-out)]"
                     )}>
                     <span className="font-display uppercase tracking-[2px] text-[10px] font-semibold text-danger">Grace Ended</span>
-                    <span className="text-[12.5px]">The world may declare war on you.</span>
+                    <span className="text-[12.5px]">Wars may now be declared.</span>
                 </div>
             )}
         </>

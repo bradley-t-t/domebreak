@@ -90,6 +90,9 @@ function demoWorld(data) {
     const w = createWorld(setup);
     w.speed = SIM_SPEED;
     w.paused = false;
+    // Attract mode is pure spectacle — the war director ignites fronts at t=0,
+    // so bypass the opening-grace ceasefire that would otherwise reject them.
+    if (w.rules) w.rules.playerGraceSec = 0;
     return w;
 }
 
