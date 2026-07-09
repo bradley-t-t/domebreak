@@ -35,14 +35,25 @@ export function useKeyboardControls({
         else if (panel) setPanel(null); else onPause?.();
     });
 
-    // Tab toggles the in-game scoreboard (every active power in the match).
-    // Fixed binding — never falls through to browser focus cycling on the map.
+    // Hold Tab to show the in-game scoreboard (every active power in the match,
+    // including eliminated ones); release to hide. Fixed binding — never falls
+    // through to browser focus cycling on the map. Stays reachable after the
+    // local player has been eliminated (w.over) so the outcome is legible.
     useWindowEvent("keydown", (e) => {
         if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         if (e.key !== "Tab") return;
         e.preventDefault();
-        setPlayerListOpen((v) => !v);
+        setPlayerListOpen(true);
     });
+    useWindowEvent("keyup", (e) => {
+        if (e.key !== "Tab") return;
+        e.preventDefault();
+        setPlayerListOpen(false);
+    });
+    // If the window loses focus while Tab is held (e.g. Cmd-Tab), the keyup
+    // fires on the other window and we'd get stuck open — treat any blur as a
+    // release so the scoreboard never lingers.
+    useWindowEvent("blur", () => setPlayerListOpen(false));
 
     // Command-screen hotkeys: toggle the Production and Diplomacy screens
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
