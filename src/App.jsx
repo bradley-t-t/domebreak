@@ -251,10 +251,10 @@ export default function App() {
         // neutral.
         const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: rules.activeCount, rules});
         const w = createWorld(setup);
-        // Opening speed comes from the rule (SP-only). settings.speed is the HUD's
-        // last-used hotkey preference, which the rule now supersedes at launch.
-        w.speed = rules.startSpeed;
-        w.paused = true; // solo matches load in paused — the commander presses play to begin
+        // Fresh solo matches always open at 1x and paused — the commander presses
+        // play to begin. In-game speed hotkeys still work once running.
+        w.speed = 1;
+        w.paused = true;
         w.meta = {playerIso: iso, playerName: name, belligerents: setup.belligerents};
         setSpRules(rules);
         saveSettings({...settings, rules});
