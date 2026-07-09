@@ -7,7 +7,7 @@
 // pauses while the tab is hidden, matching the ocean shimmer (map/water.js).
 import {useEffect, useRef, useState} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
-import {sweepSector, sweepLine} from "../../game/geo/geo.js";
+import {sweepSector, sweepLine, geoSweepSector, geoSweepLine, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 
 const PERIOD_MS = 3800;   // one full revolution
 const ARC_DEG = 42;       // trailing afterglow width behind the leading edge
@@ -17,7 +17,7 @@ function prefersReducedMotion() {
     return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export default function RadarSweep({emitters}) {
+export default function RadarSweep({emitters, globe}) {
     const [head, setHead] = useState(0);
     const raf = useRef(0);
     const active = emitters.length > 0 && !prefersReducedMotion();
@@ -55,10 +55,14 @@ export default function RadarSweep({emitters}) {
 
     const fc = {
         type: "FeatureCollection",
+        // Match the coverage ring's projection per emitter: geodesic on the globe
+        // (below the satellite cutoff), Mercator on the flat map — so the hand
+        // sweeps exactly inside the ring drawn in useLiveLayers.
         features: emitters.flatMap((e) => {
-            const wedge = sweepSector(e.lng, e.lat, e.rKm, head, ARC_DEG);
+            const geo = globe && e.rKm <= GEODESIC_MAX_KM;
+            const wedge = (geo ? geoSweepSector : sweepSector)(e.lng, e.lat, e.rKm, head, ARC_DEG);
             wedge.properties = {color: e.color, kind: "wedge"};
-            const line = sweepLine(e.lng, e.lat, e.rKm, head);
+            const line = (geo ? geoSweepLine : sweepLine)(e.lng, e.lat, e.rKm, head);
             line.properties = {color: e.color, kind: "line"};
             return [wedge, line];
         })

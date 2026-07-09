@@ -6,7 +6,15 @@
 import {useMemo} from "react";
 import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
-import {circle, gcTrail} from "../../game/geo/geo.js";
+import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
+
+// Coverage rings render round in whichever projection is showing: a true geodesic
+// cap on the globe, the Mercator disc on the flat map. Satellites (rings wider than
+// a hemisphere) stay on the Mercator disc either way — a geodesic cap that big folds
+// toward the antipode instead of reading as a ring. Module-level (not a hook dep) so
+// the memos below only react to `globe`, which they already list.
+const coverageRing = (globe, lng, lat, km, steps, innerKm = 0) =>
+    (globe && km <= GEODESIC_MAX_KM ? geoCircle : circle)(lng, lat, km, steps, innerKm);
 
 export function useLiveLayers({
                                   w,
@@ -21,6 +29,7 @@ export function useLiveLayers({
                                   placeValid,
                                   teamColor,
                                   COAST_KM,
+                                  globe,
                                   battlePreview
                               }) {
     const backdropFC = useMemo(() => ({
@@ -55,11 +64,11 @@ export function useLiveLayers({
     const falloutFC = useMemo(() => ({
         type: "FeatureCollection",
         features: (w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => {
-            const c = circle(fx.lng, fx.lat, fx.radiusKm, 48);
+            const c = coverageRing(globe, fx.lng, fx.lat, fx.radiusKm, 48);
             c.properties = {intensity: falloutIntensity(fx.age)};
             return c;
         })
-    }), [w.effects, w.time]);
+    }), [w.effects, w.time, globe]);
 
     // Ground occupation in progress: a ring around every city currently being
     // captured, colored by the occupier and filled by how far the capture has
@@ -69,11 +78,11 @@ export function useLiveLayers({
     const captureFC = useMemo(() => ({
         type: "FeatureCollection",
         features: w.cities.filter((c) => c.alive && c.capture && c.capture.progress > 0.02).map((c) => {
-            const f = circle(c.lng, c.lat, CAPTURE.holdKm, 40);
+            const f = coverageRing(globe, c.lng, c.lat, CAPTURE.holdKm, 40);
             f.properties = {color: teamColor(c.capture.slot), progress: c.capture.progress};
             return f;
         })
-    }), [w.cities, w.time, teamColor]);
+    }), [w.cities, w.time, teamColor, globe]);
 
     // Fog of war: enemy assets exist on my map only where my sensor picture
     // covers them — my own units are always mine to see. unitVisibleTo also
@@ -93,14 +102,14 @@ export function useLiveLayers({
         type: "FeatureCollection",
         features: visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => {
             const n = w.nations.find((x) => x.slot === u.slot);
-            const c = circle(u.lng, u.lat, radarRangeOf(u.type) * (n?.radarMult ?? 1), 44);
+            const c = coverageRing(globe, u.lng, u.lat, radarRangeOf(u.type) * (n?.radarMult ?? 1), 44);
             // Dedicated ground sensors ring in their own hue so the warning tiers
             // read apart (OTH amber, Early Warning cyan); mobile emitters keep
             // their faction color.
             c.properties = {color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)};
             return c;
         })
-    }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot]);
+    }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot, globe]);
     // Emitter centers + coverage radius for the animated PPI sweep — same filter
     // and research-scaled radius as radarFC, so the sweep tracks the ring exactly.
     // RadarSweep rebuilds the rotating wedge geometry itself each animation frame;
@@ -118,11 +127,11 @@ export function useLiveLayers({
     const defenseFC = useMemo(() => layers.defense ? ({
         type: "FeatureCollection",
         features: visUnits.filter((u) => UNITS[u.type].kind === "defense" && u.hp > 0).map((u) => {
-            const c = circle(u.lng, u.lat, defenseRange(w, u), 40, defenseMinRange(w, u));
+            const c = coverageRing(globe, u.lng, u.lat, defenseRange(w, u), 40, defenseMinRange(w, u));
             c.properties = {color: teamColor(u.slot)};
             return c;
         })
-    }) : {type: "FeatureCollection", features: []}, [layers.defense, w.units, w.time]);
+    }) : {type: "FeatureCollection", features: []}, [layers.defense, w.units, w.time, globe]);
     const popFC = useMemo(() => layers.pop ? ({
         type: "FeatureCollection",
         features: [...w.cities.filter((c) => c.alive), ...(backdrop || [])].map((c) => ({
@@ -145,7 +154,7 @@ export function useLiveLayers({
                 isRadar = 1;
             }
             if (radius && (def.detect || radius <= 4000)) {
-                const c = circle(sel.lng, sel.lat, radius, 56, def.kind === "defense" ? defenseMinRange(w, sel) : 0);
+                const c = coverageRing(globe, sel.lng, sel.lat, radius, 56, def.kind === "defense" ? defenseMinRange(w, sel) : 0);
                 c.properties = {color: teamColor(mySlot), sel: 1, radar: isRadar};
                 f.push(c);
             }
@@ -156,7 +165,7 @@ export function useLiveLayers({
             const rad = t?.coastal ? COAST_KM
                 : t?.detect ? radarRangeOf(type) * (myNation?.radarMult ?? 1)
                     : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
-            const c = circle(cursor.lng, cursor.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
+            const c = coverageRing(globe, cursor.lng, cursor.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
                 color: placeValid ? "#46d38a" : "#ff5d5d",
                 sel: 1,
@@ -165,7 +174,7 @@ export function useLiveLayers({
             f.push(c);
         }
         return {type: "FeatureCollection", features: f};
-    }, [w.units, w.time, placing, moving, cursor, selUnit, mySlot, placeValid]);
+    }, [w.units, w.time, placing, moving, cursor, selUnit, mySlot, placeValid, globe]);
 
     const cmdLines = useMemo(() => ({
         type: "FeatureCollection",
