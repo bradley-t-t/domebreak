@@ -426,7 +426,8 @@ export function stepVictory(w) {
     // the whole world's population, so capturing neutrals counts toward the win. In
     // an all-active match this is identical to the old "last nation standing" rule.
     const aliveActive = w.nations.filter((n) => n.alive && n.active !== false);
-    const dominant = totPop > 0 && myPop / totPop >= DIPLOMACY.dominationPopFrac;
+    const dominationFrac = w.rules?.dominationPopFrac ?? DIPLOMACY.dominationPopFrac;
+    const dominant = totPop > 0 && myPop / totPop >= dominationFrac;
     if (aliveActive.length <= 1 || dominant) {
         w.over = true;
         w.winnerSlot = me.slot;

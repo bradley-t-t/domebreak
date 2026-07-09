@@ -5,6 +5,7 @@
 import {randomUUID} from "crypto";
 import {createWorld, step} from "../../src/game/engine.js";
 import {buildSetup, GREAT_POWERS} from "../../src/game/sim/newGame.js";
+import {normalizeRules} from "../../src/game/sim/gameRules.js";
 import {gameData} from "../data.js";
 import {COMMANDS} from "./commands.js";
 import {openingFreeze} from "./openingFreeze.js";
@@ -34,7 +35,7 @@ export class Match {
     // player); each player claims their own nation within it. A player's slot is
     // that nation's slot in the full world (by GDP order), NOT the roster index —
     // so two players can be arbitrarily far apart on the map.
-    constructor({lobbyId, roster, onFinished}) {
+    constructor({lobbyId, roster, rules, onFinished}) {
         this.id = randomUUID();
         this.lobbyId = lobbyId;
         this.onFinished = onFinished;
@@ -48,7 +49,10 @@ export class Match {
         // Unique, valid nation per player (bad/duplicate picks resolve to a free
         // great power), then build the full world seeded on the first player.
         const isos = resolveIsos(roster.map((r) => r.iso));
-        const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1);
+        // Rules the lobby authored (SP-only knobs like startSpeed are ignored
+        // downstream — online is locked at 1x regardless).
+        const matchRules = normalizeRules(rules ?? {});
+        const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1, {rules: matchRules});
         const slotOfIso = indexBy(setup.nations, (n) => n.iso, (n) => n.slot);
         this.players = roster.map((r, i) => ({...r, iso: isos[i], slot: slotOfIso.get(isos[i])}));
 

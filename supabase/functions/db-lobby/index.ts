@@ -16,6 +16,8 @@
 //                                  it isn't swept as an offline ghost (FIFO kept)
 //   {action:"set_iso", iso}        caller's own lobby_members.iso
 //   {action:"ready", ready}        caller's own lobby_members.ready
+//   {action:"set_rules", rules}    shared match rules for this lobby (any seated
+//                                  member may write; last write wins)
 //   {action:"leave"}               remove caller from any open/starting lobby
 import {createClient} from "npm:@supabase/supabase-js@2";
 
@@ -161,6 +163,17 @@ Deno.serve(async (req) => {
 
     if (body.action === "ready") {
         await db.from("lobby_members").update({ready: !!body.ready}).eq("lobby_id", lobby.id).eq("user_id", user.id);
+        await touch(db, lobby.id);
+        return json({ok: true});
+    }
+
+    if (body.action === "set_rules") {
+        // Any seated member may propose a change; last write wins. The client
+        // renormalizes rules to defaults, so we accept the payload as-is and
+        // let the server's match code re-normalize before touching the sim.
+        if (typeof body.rules !== "object" || body.rules === null) return json({error: "bad rules"}, 400);
+        const {error} = await db.from("lobbies").update({rules: body.rules}).eq("id", lobby.id);
+        if (error) return json({error: error.message}, 500);
         await touch(db, lobby.id);
         return json({ok: true});
     }

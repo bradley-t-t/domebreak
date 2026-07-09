@@ -172,7 +172,7 @@ function diploProposeAlliance(w, n, caps) {
         const rel = n.relations[m.slot];
         if (rel === "war" || rel === "ally") continue;
         // Respect the player's opening grace window, same as war declarations.
-        if (!m.isAi && w.time < DIPLOMACY.playerGraceSec) continue;
+        if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.allyRangeKm) continue;
         const weight = (1 + (sharesEnemy(n, m) ? DIPLOMACY.allySharedEnemyW : 0)) * Math.max(0.2, m.gdp || 0.1);
@@ -210,7 +210,7 @@ function diploDeclareWar(w, n, caps, alive) {
         // Never open a war on an ally or a nation already being fought.
         if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
         // The player gets an opening grace window before any AI may declare on them.
-        if (!m.isAi && w.time < DIPLOMACY.playerGraceSec) continue;
+        if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.warRangeKm) continue;
         const gdpB = Math.max(0.1, m.gdp || 0.1), cB = Math.max(1, alive.get(m.slot) || 0);
