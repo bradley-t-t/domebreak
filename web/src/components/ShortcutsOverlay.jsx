@@ -1,5 +1,5 @@
 import {useEffect} from "react";
-import {AnimatePresence, motion} from "motion/react";
+import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {X} from "lucide-react";
 import {SHORTCUTS} from "../lib/nav.js";
 import {Eyebrow} from "./ui.jsx";
@@ -19,6 +19,7 @@ function Kbd({children}) {
 }
 
 export default function ShortcutsOverlay({open, onClose}) {
+    const reduce = useReducedMotion();
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => e.key === "Escape" && onClose();
@@ -37,15 +38,15 @@ export default function ShortcutsOverlay({open, onClose}) {
                     <div className="absolute inset-0 bg-[rgba(4,6,9,0.72)] backdrop-blur-[4px]" onClick={onClose}/>
                     <motion.div
                         role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
-                        initial={{opacity: 0, transform: "translateY(10px) scale(0.98)"}}
-                        animate={{opacity: 1, transform: "translateY(0px) scale(1)"}}
-                        exit={{opacity: 0, transform: "translateY(8px) scale(0.98)"}}
+                        initial={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(10px) scale(0.98)"}}
+                        animate={reduce ? {opacity: 1} : {opacity: 1, transform: "translateY(0px) scale(1)"}}
+                        exit={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(8px) scale(0.98)"}}
                         transition={{duration: 0.2, ease: [0.23, 1, 0.32, 1]}}
                         className="relative db-tick db-seam w-[min(400px,94vw)] rounded-lg border border-line bg-panel-solid p-7 shadow"
                     >
                         <button
                             onClick={onClose} aria-label="Close"
-                            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-sm border border-line text-dim transition-colors hover:border-blue hover:text-text"
+                            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-sm border border-line text-dim transition-[color,border-color,transform] duration-150 ease-out-db hover:border-blue hover:text-text active:scale-95"
                         >
                             <X size={15}/>
                         </button>

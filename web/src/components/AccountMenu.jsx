@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {AnimatePresence, motion} from "motion/react";
+import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {ChevronDown, LogOut} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {useAccount} from "../lib/AccountContext.jsx";
@@ -43,6 +43,7 @@ function Stat({value, label}) {
 
 export default function AccountMenu() {
     const {profile, stats, signOut} = useAccount();
+    const reduce = useReducedMotion();
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
@@ -69,7 +70,7 @@ export default function AccountMenu() {
         <div ref={ref} className="relative">
             <button
                 onClick={() => setOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-sm border border-line bg-[rgba(16,18,20,0.7)] py-[6px] pl-[6px] pr-2 text-text transition-colors duration-150 hover:border-blue"
+                className="flex items-center gap-2 rounded-sm border border-line bg-[rgba(16,18,20,0.7)] py-[6px] pl-[6px] pr-2 text-text transition-[color,border-color,transform] duration-150 ease-out-db hover:border-blue active:scale-[0.98]"
                 aria-haspopup="menu"
                 aria-expanded={open}
             >
@@ -82,9 +83,9 @@ export default function AccountMenu() {
                 {open && (
                     <motion.div
                         role="menu"
-                        initial={{opacity: 0, transform: "translateY(-6px) scale(0.98)"}}
-                        animate={{opacity: 1, transform: "translateY(0px) scale(1)"}}
-                        exit={{opacity: 0, transform: "translateY(-6px) scale(0.98)"}}
+                        initial={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(-6px) scale(0.98)"}}
+                        animate={reduce ? {opacity: 1} : {opacity: 1, transform: "translateY(0px) scale(1)"}}
+                        exit={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(-6px) scale(0.98)"}}
                         transition={{duration: 0.16, ease: [0.23, 1, 0.32, 1]}}
                         style={{transformOrigin: "top right"}}
                         className="db-seam absolute right-0 top-[calc(100%+8px)] w-[280px] overflow-hidden rounded-lg border border-line bg-panel-2 shadow backdrop-blur-[14px]"

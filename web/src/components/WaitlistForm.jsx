@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {AnimatePresence, motion} from "motion/react";
+import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {Check, Loader2} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button, input} from "../lib/variants.js";
@@ -8,6 +8,7 @@ import {isValidEmail, joinWaitlist} from "../lib/waitlist.js";
 // Email capture. Two layouts: "inline" (single row, for the hero) and "stacked"
 // (label + field + button, for the big CTA band). Both share one submit path.
 export default function WaitlistForm({source = "landing", layout = "inline", cta = "Request Access"}) {
+    const reduce = useReducedMotion();
     const [email, setEmail] = useState("");
     const [status, setStatus] = useState("idle"); // idle | loading | done | error
     const [message, setMessage] = useState("");
@@ -41,8 +42,8 @@ export default function WaitlistForm({source = "landing", layout = "inline", cta
                 {status === "done" ? (
                     <motion.div
                         key="done"
-                        initial={{opacity: 0, transform: "translateY(8px)"}}
-                        animate={{opacity: 1, transform: "translateY(0px)"}}
+                        initial={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(8px)"}}
+                        animate={reduce ? {opacity: 1} : {opacity: 1, transform: "translateY(0px)"}}
                         transition={{duration: 0.4, ease: [0.23, 1, 0.32, 1]}}
                         className="relative db-tick flex items-start gap-3 border border-line bg-panel-2 rounded-sm px-4 py-[14px] backdrop-blur-[14px]"
                     >
