@@ -7,6 +7,7 @@
 import {useEffect, useRef} from "react";
 import {solvePlan, prodCount} from "../../game/engine.js";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
+import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 
 const RECONCILE_MS = 300;   // min wall-clock between full reconcile passes
 
@@ -18,8 +19,7 @@ export function useBattlePlanReconciler({world, api, mySlot, plans, onFired}) {
 
     // Latest inputs, read inside the throttled effect without making it depend on
     // their identity (the effect runs every commit — ~30fps from useEngine).
-    const ref = useRef({world, api, mySlot, plans, onFired});
-    ref.current = {world, api, mySlot, plans, onFired};
+    const ref = useLatestRef({world, api, mySlot, plans, onFired});
 
     useEffect(() => {
         const now = performance.now();

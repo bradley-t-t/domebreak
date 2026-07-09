@@ -1,7 +1,8 @@
-import {useEffect, useState} from "react";
+import {useCallback, useState} from "react";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {DEFAULT_KEYS, KEY_ACTIONS, keyLabel, keyToken, resolveKeys} from "../../game/platform/keybindings.js";
 import {useModal} from "../hooks/useModal.js";
+import {useWindowEvent} from "../../lib/hooks/useWindowEvent.js";
 import {button, card, miniButton, overlay, menuTitle} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
@@ -19,26 +20,23 @@ export default function SettingsPanel({settings, onChange, onClose}) {
     // While capturing, the next keypress rebinds the action. Escape cancels the
     // capture; a key already bound to another action is swapped, so no two
     // actions ever collide on the same key.
-    useEffect(() => {
-        if (!capturing) return;
-        const h = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.key === "Escape") {
-                setCapturing(null);
-                return;
-            }
-            const code = keyToken(e);
-            const next = {...keys};
-            const prev = next[capturing];
-            for (const id of Object.keys(next)) if (next[id] === code && id !== capturing) next[id] = prev;
-            next[capturing] = code;
-            set("keys", next);
+    const captureKey = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === "Escape") {
             setCapturing(null);
-        };
-        window.addEventListener("keydown", h, true);
-        return () => window.removeEventListener("keydown", h, true);
-    }, [capturing]); // eslint-disable-line react-hooks/exhaustive-deps
+            return;
+        }
+        const code = keyToken(e);
+        const next = {...keys};
+        const prev = next[capturing];
+        for (const id of Object.keys(next)) if (next[id] === code && id !== capturing) next[id] = prev;
+        next[capturing] = code;
+        set("keys", next);
+        setCapturing(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [capturing]);
+    useWindowEvent("keydown", captureKey, {capture: true, enabled: !!capturing});
 
     const groups = [...new Set(KEY_ACTIONS.map((a) => a.group))];
 

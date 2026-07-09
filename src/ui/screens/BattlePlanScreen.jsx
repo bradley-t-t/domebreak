@@ -5,6 +5,8 @@ import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
+import {cmpStr, countBy} from "../../lib/iter.js";
+import {fmtKm} from "../lib/format.js";
 
 // Full-screen Battle Planning console. The player authors attack plans by picking
 // attacker unit TYPES → target CATEGORIES (type → type) — no clicking individual units
@@ -30,16 +32,13 @@ function Toggle({on, onClick, label, hint, accent}) {
     );
 }
 
-const fmtKm = (km) => `${Math.round(km).toLocaleString()} km`;
-
 export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
     const {plans, active, activeId, setActiveId} = bp;
 
     // My live offensive platforms, tallied by type — the attacker options.
     const typeCounts = useMemo(() => {
-        const m = {};
-        for (const u of w.units) if (u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense") m[u.type] = (m[u.type] || 0) + 1;
-        return m;
+        const live = w.units.filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense");
+        return Object.fromEntries(countBy(live, (u) => u.type));
     }, [w.units, w.time, mySlot]);
     const offenseTypes = useMemo(() => Object.keys(typeCounts).sort(), [typeCounts]);
     // type -> the plan that currently commands it (attacker types are exclusive).
@@ -55,7 +54,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
     const enemyNations = useMemo(() => w.nations
         .filter((n) => n.active !== false && n.slot !== mySlot)
         .map((n) => ({slot: n.slot, name: n.name, iso: n.iso, color: n.color || colorForSlot(n.slot), war: atWar(w, mySlot, n.slot)}))
-        .sort((a, b) => (b.war - a.war) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)),
+        .sort((a, b) => (b.war - a.war) || cmpStr((n) => n.name)(a, b)),
         [w.nations, w.time, mySlot]);
 
     // Live solve for the active plan — drives the status readout + arm/execute gating.

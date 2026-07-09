@@ -8,6 +8,8 @@ import {useEffect, useRef} from "react";
 import {FALLOUT, haversine} from "../../game/engine.js";
 import {AUDIO_SPATIAL} from "../../game/data/constants.js";
 import {sfx} from "../../game/platform/audio.js";
+import {clampSym} from "../../lib/math.js";
+import {byId} from "../../lib/iter.js";
 
 export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGameEnd}) {
     // Seed with whatever the world already carries (loaded saves keep their last
@@ -35,7 +37,7 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
         const fx = p.x / w, fy = p.y / h;             // 0..1 across / down the viewport
         const mgn = AUDIO_SPATIAL.edgeMargin;
         if (fx < -mgn || fx > 1 + mgn || fy < -mgn || fy > 1 + mgn) return null; // off-screen → silent
-        const pan = Math.max(-1, Math.min(1, (fx - 0.5) * 2));
+        const pan = clampSym((fx - 0.5) * 2, 1);
         // Radial distance from viewport centre: 0 at centre, 1 at a corner.
         const r = Math.min(1, Math.hypot((fx - 0.5) * 2, (fy - 0.5) * 2) / Math.SQRT2);
         const gain = Math.max(AUDIO_SPATIAL.minGain, 1 - (1 - AUDIO_SPATIAL.edgeGain) * r);
@@ -86,7 +88,7 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
             seen.current.add(e.id);
             eventSound(e);
             if (e.type === "destroy" && e.kind === "city") {
-                const c = w.cities.find((x) => x.id === e.cityId);
+                const c = byId(w.cities, e.cityId);
                 if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot, fallout: !!e.fallout});
             }
             // Attack warning: a launch at me my sensors caught, or a track my
