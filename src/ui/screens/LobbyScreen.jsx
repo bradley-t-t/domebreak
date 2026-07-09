@@ -1,9 +1,11 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import Flag from "../common/Flag.jsx";
 import WorldMap from "../../map/WorldMap.jsx";
-import {fetchLobby, leaveLobby, setLobbyIso, setReady, watchLobby} from "../../account/lobby.js";
+import {fetchLobby, leaveLobby, setLobbyIso, setLobbyRules, setReady, watchLobby} from "../../account/lobby.js";
 import {SLOT_COLOR} from "../../game/data/constants.js";
 import {fromGid3, toGid3} from "../../game/data/iso3.js";
+import {DEFAULT_RULES, normalizeRules} from "../../game/sim/gameRules.js";
+import GameRulesForm from "./GameRulesForm.jsx";
 import {menuScreen, menuBg, menuInner, menuTitle, menuButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
@@ -253,6 +255,27 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             .catch(() => setReadyOpt(null));
     };
 
+    // Shared match rules — any seated member may adjust; the write propagates
+    // to everyone via the lobby row's realtime update. The panel starts
+    // collapsed so the roster/globe stays the focus; toggling opens the form.
+    const [rulesOpen, setRulesOpen] = useState(false);
+    // Optimistic overlay so a slider drag reflects instantly instead of waiting
+    // on the round-trip. Cleared once the lobby row echoes back.
+    const [rulesOpt, setRulesOpt] = useState(null);
+    const lobbyRules = useMemo(() => normalizeRules(lobby?.rules ?? DEFAULT_RULES), [lobby?.rules]);
+    const rules = rulesOpt ?? lobbyRules;
+    useEffect(() => {
+        if (!rulesOpt) return;
+        const keys = Object.keys(rulesOpt);
+        if (keys.every((k) => Math.abs((lobbyRules[k] ?? 0) - rulesOpt[k]) < 1e-6)) setRulesOpt(null);
+    }, [lobbyRules, rulesOpt]);
+    const onRulesChange = (next) => {
+        setRulesOpt(next);
+        Promise.resolve(setLobbyRules(next))
+            .then((r) => { if (r?.error) setRulesOpt(null); })
+            .catch(() => setRulesOpt(null));
+    };
+
     if (lobby === undefined) {
         return (
             <div className={menuScreen()}>
@@ -358,6 +381,31 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                 </div>
 
                 <div className="pointer-events-auto flex flex-col gap-[9px]">
+                    <button
+                        type="button"
+                        className={cn(
+                            "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-sm border border-line-soft bg-[rgba(9,11,15,0.5)] text-left transition-colors hover:border-line",
+                            rulesOpen && "border-gold-line bg-[rgba(244,192,42,0.06)]"
+                        )}
+                        onClick={() => setRulesOpen((o) => !o)}
+                        aria-expanded={rulesOpen}
+                        aria-controls="db-lobby-rules"
+                    >
+                        <span className="flex flex-col">
+                            <span className="font-mono text-[10px] tracking-[2.5px] uppercase text-faint">Game Rules</span>
+                            <span className="text-[12px] text-dim">
+                                {rules.activeCount} nations · {rules.startPoints} pts · {Math.round(rules.dominationPopFrac * 100)}% dom · {rules.playerGraceSec}s grace
+                            </span>
+                        </span>
+                        <span className={cn("font-mono text-[11px] text-dim transition-transform", rulesOpen && "rotate-90")}>&rsaquo;</span>
+                    </button>
+                    {rulesOpen && (
+                        <div id="db-lobby-rules"
+                             className="max-h-[46vh] overflow-y-auto rounded-sm border border-line-soft bg-[rgba(9,11,15,0.6)] p-3">
+                            <GameRulesForm mode="mp" rules={rules} onChange={onRulesChange}/>
+                            <p className="mt-2 font-mono text-[10px] text-faint tracking-[1px] uppercase">Shared with the whole war room.</p>
+                        </div>
+                    )}
                     <button className={cn(menuButton({variant: "primary"}), "w-full text-center disabled:opacity-50", ready && "bg-gold text-gold-contrast border-gold-line")}
                             disabled={!myIso} onClick={toggleReady}
                             aria-pressed={ready}

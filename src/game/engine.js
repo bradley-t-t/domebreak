@@ -4,12 +4,17 @@
 // aircraft/combat/tick).
 import {AMMO_START, CAPITAL_HP, CITY_HP, START_POINTS, TECHS, colorForSlot} from "./data/constants.js";
 import {distributeLeadership} from "./sim/leadership.js";
+import {DEFAULT_RULES, normalizeRules} from "./sim/gameRules.js";
 
 // Builds a fresh world from a match setup: {mySlot, seed, nations: [{slot,
 // name, iso, isAi, gdp}], cities: [{id, slot, name, state, cap, pop, econ,
 // lng, lat}]}. The returned object is the entire game state — plain
 // JSON-serializable data that the tick mutates in place.
 export function createWorld(setup) {
+    // Author's rules, seeded through buildSetup. Fall back to defaults so a
+    // handcrafted setup (tests, legacy callers) always yields a valid rule set.
+    const rules = normalizeRules(setup.rules ?? DEFAULT_RULES);
+    const startPoints = rules.startPoints ?? START_POINTS;
     const nations = setup.nations.map((n) => ({
         slot: n.slot,
         name: n.name,
@@ -21,7 +26,7 @@ export function createWorld(setup) {
         active: n.active !== false,
         gdp: n.gdp || 0,
         color: colorForSlot(n.slot),
-        points: START_POINTS,
+        points: startPoints,
         alive: true,
         relations: {},
         // Small staggered first-think offset. Modulo (not raw slot) so the
@@ -58,10 +63,11 @@ export function createWorld(setup) {
     distributeLeadership(nations, cities);
     return {
         time: 0,
-        speed: 1,
+        speed: rules.startSpeed || 1,
         paused: true,
         mySlot: setup.mySlot,
         seed: setup.seed || 1,
+        rules,
         _r: (setup.seed || 1) >>> 0,
         _id: 0,
         nations,

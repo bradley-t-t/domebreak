@@ -7,6 +7,7 @@ import {GDP_FALLBACK_T, GDP_T, NEUTRAL, REAL_POP} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {clamp} from "../../lib/math.js";
 import {cmpStr} from "../../lib/iter.js";
+import {normalizeRules} from "./gameRules.js";
 
 let _data = null;
 
@@ -116,5 +117,8 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     // Belligerents (the named, prominently-labelled nations) = the active set; in an
     // all-active match that's everyone.
     const belligerents = activeSet ? chosen.filter((iso) => activeSet.has(iso)) : chosen;
-    return {mySlot: 0, seed: seed || 1, nations, cities, belligerents};
+    // Author's rules ride along on the setup so createWorld can stamp them onto
+    // world.rules — normalized here so any downstream reader sees a valid shape.
+    const rules = normalizeRules(opts.rules);
+    return {mySlot: 0, seed: seed || 1, nations, cities, belligerents, rules};
 }
