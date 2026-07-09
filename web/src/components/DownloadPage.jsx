@@ -25,9 +25,9 @@ const BUILDS = [
         os: "Windows",
         arch: "x64 installer",
         icon: "factory",
-        file: "DomeBreak Setup 1.3.0.exe",
+        file: "DomeBreak.Setup.1.3.0.exe",
         size: "263 MB",
-        url: `${RELEASE_BASE}/DomeBreak%20Setup%201.3.0.exe`,
+        url: `${RELEASE_BASE}/DomeBreak.Setup.1.3.0.exe`,
     },
 ];
 
