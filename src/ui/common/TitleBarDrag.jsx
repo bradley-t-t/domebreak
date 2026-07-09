@@ -1,14 +1,10 @@
-// Frameless-window drag strip: with electron/main.cjs's BrowserWindow set to
-// `titleBarStyle: "hidden"`, the OS supplies no draggable title bar, so the app
-// must expose its own. This is a full-width, top-anchored region the player can
-// grab to move the window; it renders above every screen (menus, HUD, modals)
-// so the window stays draggable no matter what's on screen. Its height (34px)
-// and z-index (35) are shared contract with the macOS traffic-light position
-// and the Windows titleBarOverlay height configured in electron/main.cjs, and
-// with every top-pinned UI element's inset (see LiveGame.jsx, NationPanel.jsx,
-// PinnedBar.jsx, MeBadge.jsx) that must clear it. Non-interactive by design —
-// anything that needs to be clickable near the top gets inset below this strip
-// instead of living inside it.
+// Frameless-window drag strip: electron/main.cjs sets the BrowserWindow to
+// `titleBarStyle: "hidden"`, so the app supplies its own draggable region — a
+// full-width, top-anchored bar rendered above every screen so the window always
+// stays draggable. Its 34px height and z-35 are a shared contract with the macOS
+// traffic-light position, the Windows titleBarOverlay height in electron/main.cjs,
+// and every top-pinned element's inset that must clear it. Non-interactive by
+// design — clickable things near the top get inset below it instead.
 export default function TitleBarDrag() {
     return (
         <div

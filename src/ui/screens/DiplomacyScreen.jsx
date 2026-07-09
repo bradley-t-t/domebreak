@@ -15,7 +15,7 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     const me = world.nations.find((n) => n.slot === mySlot);
     // Only the ACTIVE (participating) powers are diplomatic actors — the passive neutral
     // world never wars or allies, so it never appears here. In an all-active match this
-    // is every nation. See adr-008-active-and-neutral-nations.
+    // is every nation.
     const roster = world.nations.filter((n) => n.active !== false);
     // Precompute holdings/forces per slot in one pass each (indexed by slot, so it's
     // cheap regardless of how many cities/units exist).

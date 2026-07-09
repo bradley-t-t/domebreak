@@ -1,11 +1,8 @@
-// The stacked global keydown effects LiveGame owns: Escape's cascade of
-// "close whatever's open" handling, the command-screen hotkeys (Production /
-// Diplomacy / Research), the controls-reference toggle, game-speed hotkeys,
-// and keyboard zoom. Pulled out of LiveGame.jsx verbatim — same handlers,
-// same dependency arrays — so each effect subscribes/unsubscribes exactly
-// when it did inline. Camera pan (WASD) is its own hook (usePanControls);
-// it has enough private state (held-key set, ease-segment timer) to stay
-// separate.
+// The stacked global keydown effects LiveGame owns: Escape's cascade of "close whatever's
+// open" handling, the command-screen hotkeys (Production / Diplomacy / Research), the
+// controls-reference toggle, game-speed hotkeys, and keyboard zoom. Camera pan (WASD) is
+// its own hook (usePanControls); it has enough private state (held-key set, ease-segment
+// timer) to stay separate.
 import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";

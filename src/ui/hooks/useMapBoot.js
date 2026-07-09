@@ -1,6 +1,4 @@
-// Loading veil + first-frame camera framing for the live match. Pulled out of
-// LiveGame.jsx verbatim — same mount-scoped failsafe timer, same capital
-// fitBounds math, same idle-reveal race.
+// Loading veil + first-frame camera framing for the live match.
 import {useEffect} from "react";
 import {START_CAM} from "../../game/data/constants.js";
 

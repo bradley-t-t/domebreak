@@ -1,8 +1,6 @@
-// Right-click context-menu construction for cities and units — the "Pin",
-// "Declare War", "Command Attack", hangar-order, embark/disembark and
-// dismantle item builders — plus the pin-add helper they share and the menu
-// state itself. Pulled out of LiveGame.jsx verbatim — same items, same
-// ordering, same disabled/danger flags.
+// Right-click context-menu construction for cities and units — the "Pin", "Declare War",
+// "Command Attack", hangar-order, embark/disembark and dismantle item builders — plus the
+// shared pin-add helper and the menu state itself.
 import {useState} from "react";
 import {hangarCapOf, hangarCount, haversine, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
 
@@ -45,8 +43,8 @@ export function useContextMenus({
                     if (r.error) flash(r.error);
                 }
             }); else if (rel === "ally") items.push({
-                // Alliance terms are single-player only for now (mirrors the war-popup
-                // and Diplomacy-screen gating); online, offer the item but disable it.
+                // Alliance terms are single-player only (mirrors the war-popup and
+                // Diplomacy-screen gating); online, the item is offered but disabled.
                 label: `Break Alliance with ${nationName(c.slot)}`,
                 danger: true,
                 disabled: online,

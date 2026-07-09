@@ -1,6 +1,5 @@
 // Production-line delivery: spawnQueuedUnit, used only by stepEconomy in
-// tickPhases.js. Split out verbatim (no logic change) to keep tickPhases.js
-// under the file-length budget.
+// tickPhases.js.
 import {AIRSTRIP_RUNWAY, HANGAR_SPEC, initialWarhead, UNITS} from "../data/constants.js";
 import {nextId} from "./worldState.js";
 import {placementBlocked} from "./queries.js";

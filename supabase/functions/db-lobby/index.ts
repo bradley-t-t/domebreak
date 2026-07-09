@@ -1,12 +1,10 @@
-// Quick-match + lobby writes (ADR-0004). The client never inserts/updates
-// matchmaking_queue, lobbies, or lobby_members directly; identity always
-// derives from the verified JWT. Match formation is entirely server-owned:
-// the game server's matchmaker (server/matchmaker.js) groups waiting queue
-// rows, forms lobbies, backfills bot lobby_members, and auto-launches by
-// flipping status to 'starting', which the game server's existing claim path
-// (ADR-0003) then picks up. This function only enrolls/cancels queue entries
-// and lets a seated member (human or, moot for bots since they never call
-// this function) adjust their own seat before launch.
+// Quick-match + lobby writes. The client never inserts/updates matchmaking_queue,
+// lobbies, or lobby_members directly; identity always derives from the verified
+// JWT. Match formation is entirely server-owned: the game server's matchmaker
+// (server/matchmaker.js) groups waiting queue rows, forms lobbies, and
+// auto-launches by flipping status to 'starting', which the game server's claim
+// path picks up. This function only enrolls/cancels queue entries and lets a
+// seated member adjust their own seat before launch.
 //
 //   {action:"quick_match", iso?}   enroll as a 'waiting' queue row (idempotent;
 //                                  a no-op success if already 'waiting' — does
@@ -16,16 +14,9 @@
 //                                  on the formed lobby in that case)
 //   {action:"heartbeat_queue"}     refresh the caller's 'waiting' row last_seen so
 //                                  it isn't swept as an offline ghost (FIFO kept)
-//   {action:"set_iso", iso}        caller's own lobby_members.iso (unchanged)
-//   {action:"ready", ready}        caller's own lobby_members.ready (unchanged)
+//   {action:"set_iso", iso}        caller's own lobby_members.iso
+//   {action:"ready", ready}        caller's own lobby_members.ready
 //   {action:"leave"}               remove caller from any open/starting lobby
-//                                  (unchanged)
-//
-// REMOVED from the player path: "create", "join", "find" (lobby formation is
-// now server-owned by the matchmaker, not a host/browser flow), "set_ai"
-// (bots are matchmaker-inserted lobby_members, not a host-configured count),
-// and "start" as a client action (the server's auto-launch writes
-// status='starting' directly; there is no host to click Start).
 import {createClient} from "npm:@supabase/supabase-js@2";
 
 const URL = Deno.env.get("SUPABASE_URL")!;
@@ -65,8 +56,8 @@ async function sweep(db: ReturnType<typeof createClient>) {
 }
 
 // Pull the caller out of any open/starting lobby they're seated in (quick-
-// match lobbies are server-formed and host-less — see ADR-0004 — but this
-// also tolerates a legacy hosted row if one still exists).
+// match lobbies are server-formed and host-less, but this also tolerates a
+// legacy hosted row if one still exists).
 async function leaveAll(db: ReturnType<typeof createClient>, userId: string) {
     const {data: mine} = await db.from("lobby_members").select("lobby_id, lobbies!inner(id, host, status)")
         .eq("user_id", userId).in("lobbies.status", ["open", "starting"]);
@@ -114,7 +105,7 @@ Deno.serve(async (req) => {
         // is never double-booked, then upsert a 'waiting' row. If a 'waiting'
         // row already exists this is a no-op success — enqueued_at is left
         // untouched so the caller keeps their FIFO place in the matchmaker's
-        // grouping window (ADR-0004).
+        // grouping window.
         await leaveAll(db, user.id);
         const iso = typeof body.iso === "string" && /^[A-Za-z]{2,3}$/.test(body.iso.trim())
             ? body.iso.trim().toUpperCase().slice(0, 3)

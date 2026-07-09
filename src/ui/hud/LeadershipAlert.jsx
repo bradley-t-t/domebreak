@@ -1,7 +1,7 @@
 import {leadershipStatus} from "../../game/engine.js";
 import {cn} from "../lib/cn.js";
 
-// Persistent, non-dismissing leadership prompt (see design/gdd/leadership.md).
+// Persistent, non-dismissing leadership prompt.
 // Derives entirely from world state — it owns no state and dispatches the normal
 // shelterLeadership order — so it self-arms while the player is at war with leaders
 // still exposed, and self-clears once they are sheltered or lost. It never closes

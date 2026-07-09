@@ -83,22 +83,22 @@ describe("ground-zero blast", () => {
 });
 
 describe("per-launcher warhead allow-list", () => {
-    it("test_launcher_carries_hgv_not_thermo", () => {
-        expect(allowedAmmo("launcher")).toContain("hgv");
+    it("test_launcher_carries_only_sicbm", () => {
+        expect(allowedAmmo("launcher")).toEqual(["sicbm"]);
         expect(allowedAmmo("launcher")).not.toContain("thermo");
     });
     it("test_silo_carries_thermo_not_hgv", () => {
         expect(allowedAmmo("silo")).toContain("thermo");
         expect(allowedAmmo("silo")).not.toContain("hgv");
     });
-    it("test_hgv_reverse_map_is_the_two_hypersonic_platforms", () => {
-        expect(launchersForAmmo("hgv")).toEqual(["launcher", "hypersonicbty"]);
+    it("test_hgv_reverse_map_is_the_hypersonic_battery", () => {
+        expect(launchersForAmmo("hgv")).toEqual(["hypersonicbty"]);
     });
     it("test_thermo_reverse_map_is_the_strategic_platforms", () => {
         expect(launchersForAmmo("thermo")).toEqual(["silo", "orbitalstrike", "sub-ssbn"]);
     });
-    it("test_standard_is_universal_across_all_launchers", () => {
-        expect(launchersForAmmo("standard")).toEqual(["launcher", "silo", "hypersonicbty", "orbitalstrike", "sub-ssbn"]);
+    it("test_standard_reverse_map_is_the_icbm_platforms", () => {
+        expect(launchersForAmmo("standard")).toEqual(["silo", "sub-ssbn"]);
     });
 });
 
@@ -110,9 +110,9 @@ describe("setWarhead honours the allow-list", () => {
         expect(u.warhead).toBe("standard"); // unchanged
     });
     it("test_accepts_a_payload_on_the_allow_list", () => {
-        const u = {id: "L", slot: 0, type: "launcher", warhead: "standard"};
+        const u = {id: "S", slot: 0, type: "silo", warhead: "standard"};
         const w = miniWorld([], [u]);
-        expect(setWarhead(w, 0, "L", "hgv")).toEqual({ok: true});
-        expect(u.warhead).toBe("hgv");
+        expect(setWarhead(w, 0, "S", "thermo")).toEqual({ok: true});
+        expect(u.warhead).toBe("thermo");
     });
 });

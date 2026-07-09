@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-    {ignores: ["dist", "release", "node_modules"]},
+    {ignores: ["**/dist", "release", "node_modules"]},
     {
         files: ["**/*.{js,jsx,mjs}"],
         languageOptions: {
@@ -25,8 +25,7 @@ export default [
             ...reactHooks.configs.recommended.rules,
             "react-refresh/only-export-components": "warn",
             "no-unused-vars": ["error", {varsIgnorePattern: "^[A-Z_]"}],
-            // Pre-existing render-phase ref/mutation patterns predate the lint
-            // gate; kept visible as warnings until fixed in a dedicated session.
+            // Render-phase ref/mutation patterns surface as warnings, not errors.
             "react-hooks/refs": "warn",
             "react-hooks/immutability": "warn",
             "react-hooks/set-state-in-effect": "warn",

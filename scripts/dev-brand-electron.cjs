@@ -1,21 +1,15 @@
 #!/usr/bin/env node
 // Dev-only cosmetic fix for the macOS menu-bar app name.
 //
-// In development we launch the game with the unpackaged Electron binary from
-// node_modules (electron/dist/Electron.app). That bundle's CFBundleName is
-// literally "Electron", and macOS reads the menu-bar application-menu title
-// straight from the running bundle's Info.plist — app.setName() in the main
-// process cannot override it for an unpackaged run (electron/electron#18463).
-// So the menu bar shows "Electron" instead of the product name.
+// Dev runs the unpackaged Electron binary (node_modules/electron/dist/Electron.app),
+// whose CFBundleName is "Electron"; macOS reads the menu-bar title from that
+// bundle's Info.plist and app.setName() can't override it (electron/electron#18463).
+// This rewrites the bundle's display-name keys to "DomeBreak" so the menu bar
+// reads right in dev. Packaged builds get the name from electron-builder's
+// productName, so this only ever touches node_modules.
 //
-// This rewrites the dev bundle's display-name keys to the product name so the
-// menu bar reads "DomeBreak" during development. The packaged build already
-// gets the correct name from electron-builder's `productName`, so this only
-// ever touches node_modules and never affects a shipped artifact.
-//
-// Wired to `postinstall`, so it re-applies after every `npm install`.
-// Idempotent, and a silent no-op off macOS or when the binary is absent
-// (e.g. CI, Windows install, before deps are present).
+// Wired to postinstall, so it re-applies after every npm install. Idempotent,
+// and a silent no-op off macOS or when the binary is absent (CI, Windows).
 const {execFileSync} = require("node:child_process");
 const {existsSync} = require("node:fs");
 const path = require("node:path");

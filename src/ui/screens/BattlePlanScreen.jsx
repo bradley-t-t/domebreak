@@ -10,7 +10,7 @@ import {miniButton} from "../lib/variants.js";
 // attacker unit TYPES → target CATEGORIES (type → type) — no clicking individual units
 // on the map. Presentation only: it reads the pure solver for live status and edits
 // plan intent through the useBattlePlans handlers (`bp`); the reconciler turns intent
-// into real orders. See design/gdd/battle-planning.md.
+// into real orders.
 
 function Toggle({on, onClick, label, hint, accent}) {
     return (

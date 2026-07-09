@@ -1,70 +1,42 @@
-// Tech tree registry — extracted verbatim from constants.js (behavior-preserving
-// refactor to keep constants.js under the file-size budget; no values changed).
-// Re-exported from constants.js so the public import surface is unchanged.
+// Tech tree registry.
 
 // --- Eras -----------------------------------------------------------------
 // Three chronological eras band the 12 research tiers (4 tiers each). ERAS is
-// pure metadata consumed by the tech-tree UI for era banding — id, display
-// name, inclusive tier range [lo, hi], flavor years, and a band color. Tech
-// entries carry a matching `era` id so the UI can group lanes without recomputing
-// the tier→era mapping.
-export const ERAS = [
+// metadata for the tech-tree UI's era banding — id, display name, inclusive tier
+// range [lo, hi], flavor years, and a band color. Tech entries carry a matching
+// `era` id so the UI can group lanes without recomputing the tier→era mapping.
+const ERAS = [
     {id: "coldwar", name: "Cold War", tierRange: [1, 4], years: "1947–1991", color: "#4fc3e8"},
     {id: "modern", name: "Modern", tierRange: [5, 8], years: "1991–2035", color: "#f4c02a"},
     {id: "space", name: "Space Age", tierRange: [9, 12], years: "2035+", color: "#b98cff"},
 ];
 
 // Era id for a given 1-based tier (drives the `era` tag on every tech).
-export function eraForTier(tier) {
+function eraForTier(tier) {
     const e = ERAS.find((era) => tier >= era.tierRange[0] && tier <= era.tierRange[1]);
     return e ? e.id : ERAS[ERAS.length - 1].id;
 }
 
 // --- Tech cost / time scaling ---------------------------------------------
-// Costs and research times escalate super-linearly with tier, so the deeper
-// (more futuristic) a tech, the harder and slower it is to reach. Every tech's
-// cost/time derives from its tier via these knobs unless it supplies an explicit
-// override. Data-driven per coding standards — no scaling numbers in systems.
+// Costs and research times escalate super-linearly with tier, so the deeper a tech,
+// the harder and slower it is to reach. Every tech's cost/time derives from its tier
+// via these knobs unless it supplies an explicit override.
 //   cost(tier) = round(TECH_COST_BASE * TECH_COST_GROWTH ^ (tier-1))
 //   time(tier) = round(TECH_TIME_BASE * TECH_TIME_GROWTH ^ (tier-1))
-// Difficulty tuning: bases dropped to 0.6× (900→540 pts, 80→48 s) to make the
-// whole tree ~40% easier — every tier is 40% cheaper AND 40% faster to research,
-// uniformly (scaling the base scales cost(tier)/time(tier) by the same factor at
-// every tier), so time-to-any-tech falls ~40% without distorting the curve shape
-// or the cost:time ratio.
-export const TECH_COST_BASE = 540;
-export const TECH_COST_GROWTH = 1.40;
-export const TECH_TIME_BASE = 48;
-export const TECH_TIME_GROWTH = 1.30;
-
-// Auto-Research safety buffer. When the player enables the tech-tree Auto-Research
-// toggle, the sim auto-queues the next affordable techs but only spends on a tech
-// once the treasury holds this multiple of its cost — so a reserve equal to the
-// tech's cost always remains for production and defense (points are charged at
-// enqueue time). Data-driven per coding standards — no tuning numbers in systems.
-export const AUTO_RESEARCH_RESERVE_MULT = 2;
+const TECH_COST_BASE = 540;
+const TECH_COST_GROWTH = 1.40;
+const TECH_TIME_BASE = 48;
+const TECH_TIME_GROWTH = 1.30;
 
 // Derive the escalating research cost (points) for a 1-based tier.
-export function techCostForTier(tier) {
+function techCostForTier(tier) {
     return Math.round(TECH_COST_BASE * TECH_COST_GROWTH ** (tier - 1));
 }
 
 // Derive the escalating research time (seconds) for a 1-based tier.
-export function techTimeForTier(tier) {
+function techTimeForTier(tier) {
     return Math.round(TECH_TIME_BASE * TECH_TIME_GROWTH ** (tier - 1));
 }
-
-// The five research tracks; TECHS entries reference these by path id.
-// `color` is the doctrine accent — a per-track tactical tint used for the lane
-// label + glyph chip so the five rows read as distinct doctrines at a glance.
-// (Node/era chroma is a separate axis: the era band tints columns by epoch.)
-export const TECH_PATHS = [
-    {id: "off", name: "Strategic Command", glyph: "▲", color: "#e06a4f"}, // offense — warm strike red
-    {id: "def", name: "Missile Shield", glyph: "⬡", color: "#4f9be0"},    // defense — shield blue
-    {id: "eco", name: "War Economy", glyph: "$", color: "#59c08a"},       // economy — supply green
-    {id: "det", name: "Early Warning", glyph: "❉", color: "#e0b34f"},     // detection — radar amber
-    {id: "cmd", name: "Command & Control", glyph: "✦", color: "#9b7fe0"}, // C2 — command violet
-];
 
 // Build a linear tech chain for a track. Each def is a 1-based tier; tier N
 // requires tier N-1. cost/time default to the tier-derived scaling curve above

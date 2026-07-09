@@ -26,7 +26,7 @@ function ensurePmtiles() {
 function tilesUrl(name) {
     // The vector tiles are large; the marketing site (a separate app) hosts them
     // off-origin and sets window.__DB_TILES_BASE__ to their base URL. In the game
-    // this is unset, so tiles resolve from the app origin exactly as before.
+    // this is unset, so tiles resolve from the app origin.
     const override = typeof window !== "undefined" ? window.__DB_TILES_BASE__ : null;
     const base = override || (typeof window !== "undefined" ? `${window.location.origin}/assets` : "/assets");
     return `pmtiles://${base}/${name}.pmtiles`;
@@ -50,8 +50,8 @@ const OCEAN_DEPTH_COLOR = ["match", ["get", "depth"],
 
 // Level-of-detail: far out keep the current flat command-map look; zooming in
 // fades the real relief in and thins the political wash so terrain shows through.
-export const RELIEF_OPACITY = ["interpolate", ["linear"], ["zoom"], 3.2, 0, 3.9, 0.2, 5.5, 0.92];
-export const REGIONS_FILL_OPACITY = ["interpolate", ["linear"], ["zoom"], 3, 0.85, 4, 0.82, 5.5, 0.42];
+const RELIEF_OPACITY = ["interpolate", ["linear"], ["zoom"], 3.2, 0, 3.9, 0.2, 5.5, 0.92];
+const REGIONS_FILL_OPACITY = ["interpolate", ["linear"], ["zoom"], 3, 0.85, 4, 0.82, 5.5, 0.42];
 export const COUNTRY_FILL_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.96, 3, 0.9, 4, 0.62, 5.5, 0.24];
 // Far out, land is a light grey that clearly reads against the near-black ocean;
 // as you zoom in and the real (desaturated) relief fades up, land settles darker.

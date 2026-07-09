@@ -4,8 +4,7 @@
 //
 // Quick-match only: there is no lobby browser, no host, no create/find/set_ai.
 // Pressing Play enrolls the caller in `matchmaking_queue`; the authoritative
-// server groups/forms/bot-fills/auto-launches the lobby (see
-// docs/architecture/adr-004-matchmaking-bot-lobby.md).
+// server groups/forms/bot-fills/auto-launches the lobby.
 import {supabase} from "./client.js";
 
 async function invoke(body) {

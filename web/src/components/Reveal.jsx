@@ -1,5 +1,5 @@
 import {createElement} from "react";
-import {useInViewOnce} from "../lib/useInViewOnce.js";
+import {useInViewOnce} from "../hooks/useInViewOnce.js";
 
 // Scroll-reveal wrapper: fades + lifts children the first time they enter view.
 // Native-IO based (see useInViewOnce) so it always eventually shows. Reduced
