@@ -16,6 +16,7 @@ export function useKeyboardControls({
                                          attackMode, setAttackMode,
                                          panel, setPanel,
                                          playerListOpen, setPlayerListOpen,
+                                         countryPopupSlot, setCountryPopupSlot,
                                          onPause,
                                          overlayOpen,
                                          w,
@@ -30,7 +31,8 @@ export function useKeyboardControls({
         else if (placing) setPlacing(null); else if (attackMode) setAttackMode(false);
         // An open command screen (Production / Research / Diplomacy) closes on
         // Escape before Escape falls through to the pause menu; the Tab
-        // scoreboard closes ahead of both.
+        // scoreboard and the country dossier popup close ahead of them.
+        else if (countryPopupSlot != null) setCountryPopupSlot?.(null);
         else if (playerListOpen) setPlayerListOpen(false);
         else if (panel) setPanel(null); else onPause?.();
     });
@@ -39,8 +41,10 @@ export function useKeyboardControls({
     // including eliminated ones); release to hide. Fixed binding — never falls
     // through to browser focus cycling on the map. Stays reachable after the
     // local player has been eliminated (w.over) so the outcome is legible.
+    // Suppressed while the country dossier popup is on screen so Tab doesn't
+    // pull a second modal underneath it.
     useWindowEvent("keydown", (e) => {
-        if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (overlayOpen || countryPopupSlot != null || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         if (e.key !== "Tab") return;
         e.preventDefault();
         setPlayerListOpen(true);
@@ -59,7 +63,7 @@ export function useKeyboardControls({
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
     // defaults are E / R.
     useWindowEvent("keydown", (e) => {
-        if (overlayOpen || playerListOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (overlayOpen || playerListOpen || countryPopupSlot != null || w.over || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         const code = keyToken(e);
         const target = code === K.production ? "production"
             : code === K.diplomacy ? "diplomacy" : null;
@@ -71,7 +75,7 @@ export function useKeyboardControls({
     // Controls reference toggle: "?" or F1 opens/closes the command reference.
     // Fixed keys (not rebindable) — the overlay itself lists every binding.
     useWindowEvent("keydown", (e) => {
-        if (overlayOpen || playerListOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (overlayOpen || playerListOpen || countryPopupSlot != null || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         if (e.key === "?" || e.key === "F1") {
             e.preventDefault();
             setHelpOpen((v) => !v);
