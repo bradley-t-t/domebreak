@@ -8,6 +8,7 @@
 import {STABILITY} from "../data/constants.js";
 import {nationOf} from "./worldState.js";
 import {netIncomeOf, populationOf} from "./queries.js";
+import {clamp, clamp01} from "../../lib/math.js";
 
 // Wars a nation is currently fighting.
 function warCount(n) {
@@ -34,7 +35,7 @@ function stabilityFactors(w, n) {
     // Population loss (captures depopulation AND cities/territory lost to war).
     const base = basePopOf(w, n.slot);
     if (base > 0) {
-        const lostFrac = Math.max(0, Math.min(1, 1 - populationOf(w, n.slot) / base));
+        const lostFrac = clamp01(1 - populationOf(w, n.slot) / base);
         if (lostFrac > 0) f.push({
             key: "pop", label: "Population lost", penalty: lostFrac * STABILITY.wPopLoss,
             detail: `${Math.round(lostFrac * 100)}% of citizens gone`,
@@ -85,7 +86,7 @@ function stabilityFactors(w, n) {
 export function stabilityTarget(w, n) {
     let penalty = 0;
     for (const f of stabilityFactors(w, n)) penalty += f.penalty;
-    return Math.max(0, Math.min(100, 100 - penalty));
+    return clamp(100 - penalty, 0, 100);
 }
 
 // HUD status for a nation: current % and the live target it is easing toward.
@@ -123,8 +124,6 @@ export function updateStability(w, dt) {
             n.defeatPenalties = n.defeatPenalties.filter((p) => w.time - p.t0 < STABILITY.defeatSec);
         }
         const target = stabilityTarget(w, n);
-        n.stability += (target - n.stability) * k;
-        if (n.stability < 0) n.stability = 0;
-        else if (n.stability > 100) n.stability = 100;
+        n.stability = clamp(n.stability + (target - n.stability) * k, 0, 100);
     }
 }

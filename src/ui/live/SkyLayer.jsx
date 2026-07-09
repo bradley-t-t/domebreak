@@ -1,6 +1,7 @@
 import {useEffect, useLayoutEffect, useMemo, useRef} from "react";
 import {occludedByGlobe} from "../../game/geo/geo.js";
 import {trackPoint, WARHEADS} from "../../game/engine.js";
+import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
 
 // Renders missiles/interceptors and their contrails in SCREEN space with a
 // ballistic altitude baked into every point, so the trail arcs up off the
@@ -71,11 +72,7 @@ function projGeom(map, p, project) {
     let prevLng = null;
     const screenAt = (f) => {
         const g = trackPoint(p, f);
-        let lng = g[0];
-        if (prevLng !== null) {
-            while (lng - prevLng > 180) lng -= 360;
-            while (lng - prevLng < -180) lng += 360;
-        }
+        const lng = prevLng !== null ? unwrapLng(g[0], prevLng) : g[0];
         prevLng = lng;
         if (occludedByGlobe(map, lng, g[1])) return null; // far side of the globe
         const [x, y] = project(lng, g[1]);
@@ -94,15 +91,13 @@ function projGeom(map, p, project) {
         const ref = fwd || back || head;
         const dx = fwd ? ref[0] - head[0] : head[0] - ref[0];
         const dy = fwd ? ref[1] - head[1] : head[1] - ref[1];
-        deg = (dx || dy) ? (Math.atan2(dx, -dy) * 180) / Math.PI : 0;
+        deg = screenHeadingDeg(dx, dy);
     }
     return {pts, head: head || null, deg};
 }
 
 function intGeom(map, it, projById, project) {
-    let clng = it.lng;
-    while (clng - it.fromLng > 180) clng -= 360;
-    while (clng - it.fromLng < -180) clng += 360;
+    const clng = unwrapLng(it.lng, it.fromLng);
     if (occludedByGlobe(map, clng, it.lat)) return {head: null, deg: 0};
     const [xc, yc] = project(clng, it.lat);
     const head = [xc, yc - (it.altNorm || 0) * 72];
@@ -110,14 +105,11 @@ function intGeom(map, it, projById, project) {
     // of travel this instant (a chord back to the launch site diverges once the
     // globe projection curves the path).
     const tgt = projById.get(it.targetId);
-    let tlng = it.toLng;
-    while (tlng - clng > 180) tlng -= 360;
-    while (tlng - clng < -180) tlng += 360;
+    const tlng = unwrapLng(it.toLng, clng);
     const [xt, yt] = project(tlng, it.toLat);
     const tgtLift = tgt ? (ALT[tgt.type] || 60) * (tgt.altNorm || 0) : (it.altNorm || 0) * 72;
     const dx = xt - head[0], dy = (yt - tgtLift) - head[1];
-    const deg = (dx || dy) ? (Math.atan2(dx, -dy) * 180) / Math.PI : 0;
-    return {head, deg};
+    return {head, deg: screenHeadingDeg(dx, dy)};
 }
 
 function place(el, head, deg, extra) {

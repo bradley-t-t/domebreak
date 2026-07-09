@@ -5,6 +5,7 @@ import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
 import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+import {clamp, clamp01} from "../../lib/math.js";
 
 // Fallout cloud intensity (0..1) for a given age in sim seconds: ramps up over
 // riseSec, holds at peak through fadeFrac of its life, then decays linearly to 0
@@ -72,7 +73,7 @@ export function nationName(w, slot) {
 export function vitalityOf(c) {
     if (!c || !c.alive) return 0;
     const max = c.maxHp || 1;
-    return Math.max(0, Math.min(1, (c.hp ?? max) / max));
+    return clamp01((c.hp ?? max) / max);
 }
 
 // Flat points/s produced by a nation's standing industry structures.
@@ -105,18 +106,17 @@ export function incomeOf(w, slot) {
     if (n.gdp > 0) {
         let econ = 0;
         for (const c of w.cities) if (c.slot === slot && c.alive) econ += (c.econ || 0) * vitalityOf(c);
-        return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econ + ind) * (n.incomeMult ?? 1) * (n.commandMult ?? 1);
+        return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econ + ind) * (n.commandMult ?? 1);
     }
     let vit = 0;
     for (const c of w.cities) if (c.slot === slot && c.alive) vit += vitalityOf(c);
-    return (ECONOMY.fallbackBase + vit * ECONOMY.fallbackPerCity + ind) * (n.incomeMult ?? 1) * (n.commandMult ?? 1);
+    return (ECONOMY.fallbackBase + vit * ECONOMY.fallbackPerCity + ind) * (n.commandMult ?? 1);
 }
 
 export function upkeepOf(w, slot) {
-    const n = nationOf(w, slot);
     let sum = 0;
     for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
-    return sum * (n?.upkeepMult ?? 1);
+    return sum;
 }
 
 export function netIncomeOf(w, slot) {
@@ -142,7 +142,7 @@ export function industryCountOf(w, slot) {
 // Losing cities lowers the ceiling; surplus structures above it are grandfathered.
 export function industryCapOf(w, slot) {
     const pop = populationOf(w, slot);
-    return Math.max(INDUSTRY.base, Math.min(INDUSTRY.max, INDUSTRY.base + Math.floor(pop / INDUSTRY.popPer)));
+    return clamp(INDUSTRY.base + Math.floor(pop / INDUSTRY.popPer), INDUSTRY.base, INDUSTRY.max);
 }
 
 // A point belongs to `slot` only if the NEAREST living city of ANY nation is one
@@ -192,57 +192,50 @@ export function airborne(u) {
 // warnOnly OTH arrays and parked aircraft don't count. Gates the
 // RADAR_RANGE_MULT engagement-range bonus in defenseRange().
 export function radarLinked(w, d) {
-    const n = nationOf(w, d.slot);
     return w.units.some((r) => {
         if (r.slot !== d.slot || r.hp <= 0) return false;
         if (UNITS[r.type].warnOnly) return false; // OTH tracks are too coarse to cue interceptors
         const km = radarRangeOf(r.type);
         if (!km) return false;
         if (r.baseId && !airborne(r)) return false; // a parked jet radiates nothing
-        return haversine(r.lng, r.lat, d.lng, d.lat) <= km * (n?.radarMult ?? 1);
+        return haversine(r.lng, r.lat, d.lng, d.lat) <= km;
     });
 }
 
 // Everything a nation senses with: dedicated radars/ships/aircraft cover their
-// radar radius (× tech multiplier); defense units watch their own engagement
-// bubble with organic fire-control radar — they can still shoot what nothing
-// warned them about, they just get no lead time. Fog of war and missile
-// detection both read from this list.
+// radar radius; defense units watch their own engagement bubble with organic
+// fire-control radar — they can still shoot what nothing warned them about,
+// they just get no lead time. Fog of war and missile detection both read from
+// this list.
 export function sensorsOf(w, slot) {
-    const n = nationOf(w, slot);
-    const mult = n?.radarMult ?? 1;
-    const sonarMult = n?.sonarMult ?? 1;
     const list = [];
     for (const r of w.units) {
         if (r.slot !== slot || r.hp <= 0) continue;
         if (r.baseId && !airborne(r)) continue;
         const def = UNITS[r.type];
-        const km = radarRangeOf(r.type) * mult || (def.kind === "defense" ? def.range : 0);
+        const km = radarRangeOf(r.type) || (def.kind === "defense" ? def.range : 0);
         if (km) list.push({
             id: r.id,          // stable identity so a moving emitter's fog bubble tracks it smoothly
             lng: r.lng,
             lat: r.lat,
             km,
             asw: !!def.asw,
-            sonarKm: def.asw ? (def.sonarKm || 0) * sonarMult : 0,
+            sonarKm: def.asw ? (def.sonarKm || 0) : 0,
         });
     }
     return list;
 }
 
 // Anti-submarine sensors only: platforms flagged asw:true, radiating a sonar
-// bubble of sonarKm × the nation's sonarMult (det tracking/fusion techs widen
-// it). Submerged hulls are detected only within one of these.
+// bubble of sonarKm. Submerged hulls are detected only within one of these.
 export function subSensorsOf(w, slot) {
-    const n = nationOf(w, slot);
-    const sonarMult = n?.sonarMult ?? 1;
     const list = [];
     for (const r of w.units) {
         if (r.slot !== slot || r.hp <= 0) continue;
         if (r.baseId && !airborne(r)) continue;
         const def = UNITS[r.type];
         if (!def.asw) continue;
-        const km = (def.sonarKm || 0) * sonarMult;
+        const km = def.sonarKm || 0;
         if (km) list.push({lng: r.lng, lat: r.lat, km});
     }
     return list;
@@ -259,21 +252,20 @@ export function sensedBy(w, slot, lng, lat) {
 // Fraction (0..1) of the nation's own land area sitting under its radar picture.
 // Uses exactly the emitters the radar overlay draws — every unit whose
 // radarRangeOf() is non-zero (dedicated radars, OTH arrays, ships, carriers, and
-// airborne AWACS), each at its research-scaled range — so this figure always
-// agrees with the coverage rings the player can toggle on the map. Land area is
-// the country grid's cos(lat)-weighted cells for the nation's GID_0, making the
-// result a true surface-area share. 0 when the nation has no mapped land or no
-// live emitters. Not cheap on large countries — callers memoize on a coarse cadence.
+// airborne AWACS) — so this figure always agrees with the coverage rings the
+// player can toggle on the map. Land area is the country grid's cos(lat)-weighted
+// cells for the nation's GID_0, making the result a true surface-area share. 0
+// when the nation has no mapped land or no live emitters. Not cheap on large
+// countries — callers memoize on a coarse cadence.
 export function radarLandCoverage(w, slot) {
     const n = nationOf(w, slot);
     const {cells, area} = countryLandCells(toGid3(n?.iso));
     if (!area) return 0;
-    const mult = n?.radarMult ?? 1;
     const emitters = [];
     for (const r of w.units) {
         if (r.slot !== slot || r.hp <= 0) continue;
         if (r.baseId && !airborne(r)) continue; // a parked jet radiates nothing
-        const km = radarRangeOf(r.type) * mult;
+        const km = radarRangeOf(r.type);
         if (km > 0) emitters.push({lng: r.lng, lat: r.lat, km});
     }
     if (!emitters.length) return 0;
@@ -318,13 +310,12 @@ export function replenishmentBuff(w, unit) {
 export function defenseRange(w, d) {
     const base = UNITS[d.type].range;
     if (UNITS[d.type].kind !== "defense") return base;
-    const n = nationOf(w, d.slot);
-    return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1) * (n?.defRangeMult ?? 1);
+    return base * (radarLinked(w, d) ? RADAR_RANGE_MULT : 1);
 }
 
 // Inner keep-out radius (km): targets closer than this can't be engaged. It's a
-// flat kinematic floor of the battery — radar links and range research push the
-// outer edge out, but never shrink this inner gap. 0 for units without one.
+// flat kinematic floor of the battery — a radar link pushes the outer edge out,
+// but never shrinks this inner gap. 0 for units without one.
 export function defenseMinRange(_w, d) {
     return UNITS[d.type].minRange || 0;
 }

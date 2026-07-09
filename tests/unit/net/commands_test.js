@@ -1,9 +1,10 @@
-// The online command whitelist (server/commands.js): the ONLY surface through
-// which a client mutates the authoritative world. Every command must (a) exist —
-// a missing entry means the action silently no-ops online (the Shelter-Leadership
-// bug), (b) act only for the SENDER'S slot, and (c) sanitize its args. Deterministic.
+// The online command whitelist (server/match/commands.js): the ONLY surface
+// through which a client mutates the authoritative world. Every command must
+// (a) exist — a missing entry means the action silently no-ops online (the
+// Shelter-Leadership bug), (b) act only for the SENDER'S slot, and (c) sanitize
+// its args. Deterministic.
 import {describe, expect, it} from "vitest";
-import {COMMANDS} from "../../../server/commands.js";
+import {COMMANDS} from "../../../server/match/commands.js";
 import {createWorld} from "../../../src/game/engine.js";
 
 // Every command the online client can actually send (its api, minus the LOCAL_ONLY

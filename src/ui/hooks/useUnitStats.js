@@ -1,5 +1,5 @@
-// Selection-panel stat sheet: research-aware numbers per unit class, as label/value rows
-// the detail grid renders directly.
+// Selection-panel stat sheet: per-unit-class numbers as label/value rows the
+// detail grid renders directly.
 import {
     defenseMinRange,
     defenseRange,
@@ -9,14 +9,14 @@ import {
     radarRangeOf,
     UNITS
 } from "../../game/engine.js";
+import {fmtKm as km} from "../lib/format.js";
 
-export function useUnitStats({w, myNation, mySlot, armOf}) {
+export function useUnitStats({w, mySlot, armOf}) {
     return (u) => {
         const def = UNITS[u.type];
-        const km = (v) => `${Math.round(v).toLocaleString()} km`;
         const rows = [];
         if (def.kind === "defense") {
-            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, def.intercept + (myNation?.interceptAdd ?? 0)) * 100)}%`]);
+            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, def.intercept) * 100)}%`]);
             rows.push(["Engage Range", km(defenseRange(w, u))]);
             if (defenseMinRange(w, u) > 0) rows.push(["Min Range", km(defenseMinRange(w, u))]);
             rows.push(["Radar Link", radarLinked(w, u) ? `Linked ×${RADAR_RANGE_MULT}` : "No Link"]);
@@ -24,16 +24,16 @@ export function useUnitStats({w, myNation, mySlot, armOf}) {
             rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
         }
         if (def.kind === "offense") {
-            rows.push(["Damage", `${Math.round(def.damage * (myNation?.dmgMult ?? 1))}`]);
-            rows.push(["Strike Range", km(def.range * (myNation?.rangeMult ?? 1))]);
-            rows.push(["Reload", `${(def.reload * (myNation?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Damage", `${Math.round(def.damage)}`]);
+            rows.push(["Strike Range", km(def.range)]);
+            rows.push(["Reload", `${def.reload.toFixed(1)}s`]);
             rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
             if (def.speed) rows.push(["Missile Spd", `${def.speed} km/s`]);
         }
         if (def.detect) {
-            rows.push(["Detection", km(radarRangeOf(u.type) * (myNation?.radarMult ?? 1))]);
+            rows.push(["Detection", km(radarRangeOf(u.type))]);
             rows.push(["Track Grade", def.warnOnly ? "Warning Only" : "Fire Control"]);
-        } else if (def.radarKm) rows.push(["Radar", km(def.radarKm * (myNation?.radarMult ?? 1))]);
+        } else if (def.radarKm) rows.push(["Radar", km(def.radarKm)]);
         if (def.kind === "industry") {
             rows.push(["Output", `+${def.output}/s`]);
             rows.push(["GDP", `+$${def.gdpAdd}T`]);

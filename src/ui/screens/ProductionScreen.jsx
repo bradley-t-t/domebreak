@@ -24,7 +24,7 @@ import {
     WARHEADS,
 } from "../../game/engine.js";
 import {FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
-import {fmtNet} from "../lib/format.js";
+import {fmtGdp, fmtKm, fmtNet, fmtPct} from "../lib/format.js";
 import {prodIcon, prodLabel, prodTime} from "../lib/prod.js";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
@@ -87,26 +87,23 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     const icon = prodIcon;
     const timeOf = prodTime;
 
-    // Research-adjusted stat sheet for a unit *type* (nothing placed yet, so we
-    // read UNITS[type] and apply this nation's research multipliers directly —
-    // mirrors LiveGame.unitStats()/queries.js). Returns compact label/value rows
-    // relevant to the unit's kind; kept dense so cards don't bloat.
-    const km = (v) => `${Math.round(v).toLocaleString()} km`;
+    // Compact per-unit stat sheet for arsenal cards — reads UNITS[type] directly.
+    const km = fmtKm;
     const statsFor = (u) => {
         const rows = [];
         if (u.kind === "defense") {
-            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, u.intercept + (me?.interceptAdd ?? 0)) * 100)}%`]);
-            rows.push(["Engage Range", km(u.range * (me?.defRangeMult ?? 1))]);
+            rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, u.intercept) * 100)}%`]);
+            rows.push(["Engage Range", km(u.range)]);
             if (u.minRange) rows.push(["Min Range", km(u.minRange)]);
-            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
             rows.push(["Shot Cost", `◆ ${u.fireCost}`]);
         } else if (u.kind === "offense") {
-            rows.push(["Damage", `${Math.round(u.damage * (me?.dmgMult ?? 1))}`]);
-            rows.push(["Strike Range", km(u.range * (me?.rangeMult ?? 1))]);
-            rows.push(["Reload", `${(u.reload * (me?.reloadMult ?? 1)).toFixed(1)}s`]);
+            rows.push(["Damage", `${Math.round(u.damage)}`]);
+            rows.push(["Strike Range", km(u.range)]);
+            rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
             if (u.speed) rows.push(["Missile Spd", `${u.speed} km/s`]);
         } else if (u.detect) {
-            rows.push(["Detection", km((u.radarKm || u.range) * (me?.radarMult ?? 1))]);
+            rows.push(["Detection", km(u.radarKm || u.range)]);
             rows.push(["Track Grade", u.warnOnly ? "Warning Only" : "Fire Control"]);
         } else if (u.kind === "industry") {
             rows.push(["Output", `+${u.output}/s`]);
@@ -122,7 +119,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         // Locked cards render greyed with a lock glyph and the reason as the line
         // + tooltip, and can't arm placement.
         const lock = unitLockReason(world, mySlot, key);
-        const cost = Math.round(u.cost * (me?.buildCostMult ?? 1));
+        const cost = u.cost;
         const afford = points >= cost && (net >= 0 || u.kind === "industry");
         const qn = queuedOf("unit", key);
         const spec = HANGAR_SPEC[key];
@@ -132,7 +129,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
             : u.wing ? `Air wing · ${wing} aircraft`
                 : arm ? `Fires ${arm}`
                     : u.kind === "industry" ? `+${u.output}/s income · +$${u.gdpAdd}T GDP`
-                        : `${cap(u.kind)}${u.range ? ` · ${u.range.toLocaleString()} km` : ""}`;
+                        : `${cap(u.kind)}${u.range ? ` · ${fmtKm(u.range)}` : ""}`;
         const rows = lock ? [] : statsFor(u);
         return (
             <button key={key}
@@ -259,7 +256,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     <div className="db-prod-econ grid grid-cols-2 gap-[7px]">
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Income</span><b className="pos font-mono text-[13px] text-[#46d38a]">+{income.toFixed(1)}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Upkeep</span><b className="neg font-mono text-[13px] text-red">−{upkeep.toFixed(1)}</b></div>
-                        <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">GDP</span><b className="font-mono text-[13px]">${gdpOf(world, mySlot).toFixed(2)}T</b></div>
+                        <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">GDP</span><b className="font-mono text-[13px]">{fmtGdp(gdpOf(world, mySlot))}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm" title="Industry structures / population-supported cap">
                             <span className="text-[8.5px] tracking-[1px] uppercase text-faint">Industry</span><b className={cn("font-mono text-[13px]", industryCount >= industryCap && "neg text-red")}>{industryCount}/{industryCap}</b>
                         </div>
@@ -302,10 +299,10 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         {cur && (
                             <button className="db-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-db hover:border-red" onClick={() => api.cancelProd(-1)}
                                     title="Building — click to cancel for a refund">
-                                <i className="db-qitem-fill absolute inset-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none" style={{width: `${Math.round(cur.progress * 100)}%`}}/>
+                                <i className="db-qitem-fill absolute inset-0 right-auto bg-[rgba(245,197,49,0.14)] pointer-events-none" style={{width: `${fmtPct(cur.progress)}%`}}/>
                                 <UnitIcon name={icon(cur.item)} size={16}/>
                                 <span className="db-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(cur.item)}</span>
-                                <b className="db-qitem-pct relative font-mono text-[10px] text-gold">{Math.round(cur.progress * 100)}%</b>
+                                <b className="db-qitem-pct relative font-mono text-[10px] text-gold">{fmtPct(cur.progress, {suffix: true})}</b>
                             </button>
                         )}
                         {queue.map((it, i) => (

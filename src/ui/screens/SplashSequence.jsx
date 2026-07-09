@@ -3,6 +3,7 @@
 // instant cuts instead of fades.
 import {useCallback, useEffect, useRef, useState} from "react";
 import {cn} from "../lib/cn.js";
+import {useWindowEvent} from "../../lib/hooks/useWindowEvent.js";
 
 const LOGO_MS = 2600;
 const CREDIT_MS = 2300;
@@ -23,15 +24,7 @@ export default function SplashSequence({reduceMotion, onDone}) {
         return () => clearTimeout(t);
     }, [step, reduceMotion, finish]);
 
-    useEffect(() => {
-        const skip = () => finish();
-        window.addEventListener("keydown", skip);
-        window.addEventListener("pointerdown", skip);
-        return () => {
-            window.removeEventListener("keydown", skip);
-            window.removeEventListener("pointerdown", skip);
-        };
-    }, [finish]);
+    useWindowEvent(["keydown", "pointerdown"], finish);
 
     const cardCls = cn(
         "text-center motion-reduce:animate-none",

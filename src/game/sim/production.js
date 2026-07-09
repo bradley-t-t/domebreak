@@ -166,7 +166,7 @@ export function queueUnit(w, slot, type, lng, lat, territoryOk) {
     if (!okTerr) return {error: "Outside your territory."};
     const blocked = placementBlocked(w, lng, lat, null);
     if (blocked) return {error: blocked};
-    const cost = Math.round(def.cost * (n.buildCostMult ?? 1));
+    const cost = def.cost;
     if (n.points < cost) return {error: "Not enough points."};
     n.points -= cost;
     n.prod.queue.push({kind: "unit", type, lng, lat, paid: cost});
@@ -260,7 +260,7 @@ export function moveUnit(w, slot, unitId, lng, lat, territoryOk) {
     const blocked = placementBlocked(w, lng, lat, unitId);
     if (blocked) return {error: blocked};
     const n = nationOf(w, slot);
-    const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC * (n.moveCostMult ?? 1));
+    const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC);
     if (n.points < cost) return {error: "Not enough points to relocate."};
     n.points -= cost;
     u.lng = lng;
@@ -376,7 +376,7 @@ export function queueAircraft(w, slot, baseId, type) {
     ensureHangar(w, base);
     if (hangarCount(w, n, baseId, type) >= cap) return {error: "The hangar is at capacity for that type."};
     if (netIncomeOf(w, slot) < 0) return {error: "Cannot build while in deficit."};
-    const cost = Math.round(UNITS[type].cost * (n.buildCostMult ?? 1));
+    const cost = UNITS[type].cost;
     if (n.points < cost) return {error: "Not enough points."};
     n.points -= cost;
     n.prod.queue.push({kind: "unit", type, forBase: baseId, paid: cost});

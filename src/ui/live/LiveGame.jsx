@@ -35,6 +35,7 @@ import {cn} from "../lib/cn.js";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
+import PlayerListOverlay from "../screens/PlayerListOverlay.jsx";
 import MapLayers from "./MapLayers.jsx";
 import MapMarkers from "./MapMarkers.jsx";
 import PlacementGhost from "./PlacementGhost.jsx";
@@ -108,6 +109,8 @@ export default function LiveGame({
     const [pins, setPins] = useState([]);
     // In-game controls reference (toggled with ? / F1, or the corner button).
     const [helpOpen, setHelpOpen] = useState(false);
+    // In-game scoreboard (Tab): every active power, their commander, and stats.
+    const [playerListOpen, setPlayerListOpen] = useState(false);
     const [err, setErr] = useState(null);
     // Loading veil: covers the map from mount until the style + tiles finish
     // (map "idle"), so the player only sees the world once it's fully drawn and
@@ -149,7 +152,7 @@ export default function LiveGame({
     const labelOf = (type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso);
     const armOf = (type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso);
     // Selection-panel stat sheet — see useUnitStats (same rows, same formulas).
-    const unitStats = useUnitStats({w, myNation, mySlot, armOf});
+    const unitStats = useUnitStats({w, mySlot, armOf});
     // Screen-space unit heading for map-marker rotation — see useUnitHeading
     // (same rotMemo unwrap math, moved out verbatim).
     const unitHeading = useUnitHeading(mapRef);
@@ -203,6 +206,7 @@ export default function LiveGame({
         placing, setPlacing,
         attackMode, setAttackMode,
         panel, setPanel,
+        playerListOpen, setPlayerListOpen,
         onPause,
         overlayOpen,
         w,
@@ -248,7 +252,7 @@ export default function LiveGame({
         planArcsFC,
         planTargetsFC
     } = useLiveLayers({
-        w, mySlot, myNation, backdrop, layers, selUnit, teamColor, globe
+        w, mySlot, backdrop, layers, selUnit, teamColor, globe
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
@@ -439,7 +443,7 @@ export default function LiveGame({
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
                            planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}
                            globe={globe}/>
-                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} myNation={myNation} globe={globe}/>
+                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} globe={globe}/>
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
                             visUnits={visUnits} unitHeading={unitHeading} unitColor={unitColor} labelOf={labelOf}
                             nationName={nationName} selUnit={selUnit} onUnitClick={onUnitClick}
@@ -545,6 +549,8 @@ export default function LiveGame({
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
             {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
+            {playerListOpen && <PlayerListOverlay world={w} mySlot={mySlot} players={net?.players}
+                                                  onClose={() => setPlayerListOpen(false)}/>}
             <HoverPopups hover={hover} hoverEnt={hoverEnt} countryByGid={countryByGid} w={w} mySlot={mySlot}
                          relation={relation} nationName={nationName} labelOf={labelOf} armOf={armOf}
                          teamColor={teamColor}/>

@@ -6,13 +6,15 @@ import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
 import {defenseRange, inOwnCountry, inTerritory, placementBlocked, radarRangeOf} from "./queries.js";
 import {isSea} from "../geo/seaRoute.js";
+import {cosLatSafe} from "../../lib/geo.js";
+import {jitter, randRange} from "../../lib/random.js";
 
 // Coastal-water spot near the capital for naval builds — probes outward until it
 // finds sea that isn't blocked. Falls back to null (skip the build) if the
 // capital is landlocked within reach.
 function aiSeaSpot(w, slot, city) {
     for (let k = 0; k < 24; k++) {
-        const r = 1.5 + rand(w) * 6;
+        const r = randRange(rand(w), 1.5, 6);
         const a = rand(w) * Math.PI * 2;
         const lng = city.lng + Math.cos(a) * r, lat = city.lat + Math.sin(a) * r;
         if (isSea(lng, lat) && inTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
@@ -56,11 +58,10 @@ function defenseCovers(w, myUnits, lng, lat) {
 // Is a point already inside a friendly radar's coverage? Used to spread early
 // warning across the nation — each new array goes to a city not yet under the
 // radar picture, instead of stacking every sensor on one frontier city.
-function radarCovered(w, myUnits, lng, lat) {
+function radarCovered(_w, myUnits, lng, lat) {
     for (const u of myUnits) {
         if (u.hp <= 0 || radarRangeOf(u.type) <= 0) continue;
-        const nn = w.nations.find((x) => x.slot === u.slot);
-        if (haversine(u.lng, u.lat, lng, lat) <= radarRangeOf(u.type) * (nn?.radarMult ?? 1)) return true;
+        if (haversine(u.lng, u.lat, lng, lat) <= radarRangeOf(u.type)) return true;
     }
     return false;
 }
@@ -127,7 +128,7 @@ function crowdsSameRole(role, myUnits, lng, lat) {
 // unit on a neighbour's (or the player's) land. Falls back to any valid in-country
 // spot; returns null if none is found (the caller skips the build this tick).
 function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
-    const cosLat = Math.max(0.2, Math.cos((anchor.lat * Math.PI) / 180));
+    const cosLat = cosLatSafe(anchor.lat, 0.2);
     let brng = null;
     if (front && (toward || away)) {
         brng = Math.atan2(front.lng - anchor.lng, front.lat - anchor.lat) + (away ? Math.PI : 0);
@@ -135,7 +136,7 @@ function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
     for (let ring = 0; ring < 5; ring++) {
         const rDeg = 0.55 + ring * 0.5;
         for (let k = 0; k < 6; k++) {
-            const ang = brng != null ? brng + (rand(w) - 0.5) * 1.6 : rand(w) * Math.PI * 2;
+            const ang = brng != null ? brng + jitter(rand(w), 1.6) : rand(w) * Math.PI * 2;
             const lat = anchor.lat + Math.cos(ang) * rDeg;
             const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
             if (!inOwnCountry(w, slot, lng, lat)) continue;
@@ -146,7 +147,7 @@ function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
     }
     // Spread constraint too tight for the room available — take any valid spot.
     for (let k = 0; k < 12; k++) {
-        const lng = anchor.lng + (rand(w) - 0.5) * 2.2, lat = anchor.lat + (rand(w) - 0.5) * 2.2;
+        const lng = anchor.lng + jitter(rand(w), 2.2), lat = anchor.lat + jitter(rand(w), 2.2);
         if (inOwnCountry(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
     }
     return null;

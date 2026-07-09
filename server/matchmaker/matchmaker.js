@@ -2,20 +2,20 @@
 // forms the `lobbies`/`lobby_members` rows — real players only, no bots. A match
 // forms once at least MIN_PLAYERS are queued (admitting up to MAX_PLAYERS); a
 // lone waiter keeps waiting. It then auto-launches by flipping `lobbies.status`
-// to `'starting'`, which server/index.js `claimLobby` picks up. Each player
-// claims their own nation inside the full living world (server/match.js).
+// to `'starting'`, which the server entry's `claimLobby` picks up. Each player
+// claims their own nation inside the full living world (server/match).
 //
 // Drive is a periodic sweep (which fires window-expiry when there's no new queue
 // event) plus a best-effort Realtime subscription to react faster to a new
-// waiter. Every write uses the service-role `db` client passed in from
-// server/index.js — never a client-supplied identity.
+// waiter. Every write uses the service-role `db` client passed in from the
+// server entry — never a client-supplied identity.
 import {
     LOBBY_READY_TIMEOUT_MS,
     MATCH_WINDOW_MS,
     MAX_PLAYERS,
     MIN_PLAYERS,
     QUEUE_STALE_MS,
-} from "./config.js";
+} from "../config.js";
 
 // Liveness filter: keep only waiting rows whose owner has heartbeated within
 // staleMs. A player who queued and then went offline (app closed, crash, network

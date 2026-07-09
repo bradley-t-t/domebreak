@@ -7,6 +7,8 @@ import {AVATAR_ICONS} from "../lib/avatarIcons.js";
 import {useModal} from "../hooks/useModal.js";
 import {miniButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
+import {fmtMonthYear, fmtPlaytimeHours, winRatePct} from "../lib/format.js";
+import {useDisclosure} from "../../lib/hooks/useDisclosure.js";
 
 // The commander's identity glyph: their chosen unit icon, or the first letter of
 // their username as a fallback. Gold-on-soft-gold to match the app's accent.
@@ -45,14 +47,6 @@ function AvatarPicker({avatar, onPick, onClose}) {
         </div>
     );
 }
-
-// "Month Year" from an ISO created_at timestamp — mirrors StartMenu's commander strip.
-const monthYear = (iso) => {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString(undefined, {month: "long", year: "numeric"});
-};
 
 // The popover's own subtree, mounted only while open. Split out so useModal's
 // once-per-mount focus-trap effect binds at the moment the popover actually
@@ -125,26 +119,26 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, initial, 
 // top offset (42px) clears TitleBarDrag's 34px OS-drag strip so the chip
 // never sits underneath the undraggable-but-on-top drag region.
 export default function MeBadge({profile, stats, onSignOut, inGame, players, onSetAvatar, presence, partyCtl}) {
-    const [open, setOpen] = useState(false);
-    const [friendsOpen, setFriendsOpen] = useState(false);
+    const popover = useDisclosure(false);
+    const friends = useDisclosure(false);
     const rootRef = useRef(null);
 
     // Outside-click closes the popover — useModal handles Escape + focus trap
     // + restoration once the popover itself is mounted; this effect only
     // needs to cover the backdrop-click case, which useModal doesn't do.
     useEffect(() => {
-        if (!open) return;
+        if (!popover.open) return;
         const onDown = (e) => {
-            if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+            if (rootRef.current && !rootRef.current.contains(e.target)) popover.hide();
         };
         document.addEventListener("mousedown", onDown);
         return () => document.removeEventListener("mousedown", onDown);
-    }, [open]);
+    }, [popover]);
 
-    const since = monthYear(profile?.created_at);
+    const since = fmtMonthYear(profile?.created_at);
     const total = stats?.total_matches ?? 0;
-    const winRate = total > 0 ? Math.round(((stats?.wins ?? 0) / total) * 100) : 0;
-    const hours = stats ? (stats.total_playtime_s / 3600).toFixed(1) : null;
+    const winRate = winRatePct(stats);
+    const hours = fmtPlaytimeHours(stats);
     const initial = (profile?.username || "?").charAt(0).toUpperCase();
 
     return (
@@ -153,17 +147,17 @@ export default function MeBadge({profile, stats, onSignOut, inGame, players, onS
             <button className={cn(
                 "flex items-center gap-2 h-[38px] rounded border border-line bg-panel text-text backdrop-blur-[8px] transition-[border-color,transform] duration-150 ease-out-db hover:border-blue active:scale-[0.96]",
                 inGame ? "w-[38px] p-0 justify-center" : "p-0 pr-3"
-            )} onClick={() => setOpen((v) => !v)} aria-haspopup="true"
-                    aria-expanded={open} aria-label="Commander profile">
+            )} onClick={popover.toggle} aria-haspopup="true"
+                    aria-expanded={popover.open} aria-label="Commander profile">
                 <AvatarCircle avatar={profile?.avatar ?? null} initial={initial} className={inGame ? "" : "ml-1"}/>
                 {!inGame && <span className="font-display text-[12.5px] font-semibold tracking-[0.4px] whitespace-nowrap max-w-[140px] overflow-hidden text-ellipsis">{profile?.username || "—"}</span>}
             </button>
-            {open && (
+            {popover.open && (
                 <MeBadgePopover profile={profile} stats={stats} since={since} total={total} winRate={winRate}
                                 hours={hours} initial={initial} inGame={inGame} players={players} onSignOut={onSignOut}
-                                onSetAvatar={onSetAvatar} onClose={() => setOpen(false)} onOpenFriends={() => setFriendsOpen(true)}/>
+                                onSetAvatar={onSetAvatar} onClose={popover.hide} onOpenFriends={friends.show}/>
             )}
-            {friendsOpen && <FriendsPanel onClose={() => setFriendsOpen(false)} presence={presence} partyCtl={partyCtl}/>}
+            {friends.open && <FriendsPanel onClose={friends.hide} presence={presence} partyCtl={partyCtl}/>}
         </div>
     );
 }

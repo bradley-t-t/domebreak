@@ -5,6 +5,10 @@
 import {useEffect, useMemo, useState} from "react";
 import {COUNTRY_FILL_OPACITY} from "../../map/mapPaint.js";
 import {toGid3} from "../../game/data/iso3.js";
+import {norm01} from "../../lib/math.js";
+import {loadJsonAsset} from "../../lib/fetchJson.js";
+import {rgbTuple} from "../../lib/color.js";
+import {safeMap} from "../lib/mapSafe.js";
 
 // Units dissolve as the camera pulls back toward the whole-earth view: fully
 // visible at/above UNIT_FADE_ZOOM[1], gone by UNIT_FADE_ZOOM[0] (min zoom is 1.1,
@@ -14,14 +18,11 @@ const UNIT_FADE_ZOOM = [1.8, 3.0];
 export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids}) {
     // Countries layer visibility (keep fill queryable at opacity 0 so land/water tests still work).
     useEffect(() => {
-        const m = mapRef.current;
-        if (!m) return;
-        try {
+        safeMap(mapRef.current, (m) => {
             m.setPaintProperty("country-fill", "fill-opacity", layers.countries ? COUNTRY_FILL_OPACITY : 0);
             m.setLayoutProperty("country-line", "visibility", layers.countries ? "visible" : "none");
             m.setLayoutProperty("country-tint", "visibility", layers.countries ? "visible" : "none");
-        } catch { /* style not ready */
-        }
+        });
     }, [layers.countries, mapReady, mapRef]);
 
     // Per-country border/fill tint from each flag's primary color. Only the ACTIVE
@@ -30,30 +31,28 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGid
     // all-active match `activeGids` is unset and every country keeps its flag color.
     const [borderExpr, setBorderExpr] = useState(null);
     useEffect(() => {
-        fetch("/assets/colors.json").then((r) => r.json()).then((cols) => {
+        loadJsonAsset("/assets/colors.json", {cache: true}).then((cols) => {
+            if (!cols) return;
             const only = activeGids && activeGids.size ? activeGids : null;
             const mix = (v, g) => Math.round(v * 0.6 + g * 0.4); // blend toward neutral grey
             const pairs = [], tintPairs = [];
             for (const [gid, c] of Object.entries(cols)) {
                 if (only && !only.has(gid)) continue; // neutrals → the shared default color below
-                pairs.push(gid, `rgb(${mix(c[0], 96)},${mix(c[1], 100)},${mix(c[2], 108)})`);
-                tintPairs.push(gid, `rgb(${c[0]},${c[1]},${c[2]})`);
+                pairs.push(gid, rgbTuple([mix(c[0], 96), mix(c[1], 100), mix(c[2], 108)]));
+                tintPairs.push(gid, rgbTuple(c));
             }
             setBorderExpr({
                 line: pairs.length ? ["match", ["get", "GID_0"], ...pairs, "#454b53"] : "#454b53",
                 tint: tintPairs.length ? ["match", ["get", "GID_0"], ...tintPairs, "#767b84"] : "#767b84",
             });
-        }).catch(() => { /* colors optional */
         });
     }, [activeGids]);
     useEffect(() => {
-        const m = mapRef.current;
-        if (!m || !borderExpr) return;
-        try {
+        if (!borderExpr) return;
+        safeMap(mapRef.current, (m) => {
             m.setPaintProperty("country-line", "line-color", borderExpr.line);
             m.setPaintProperty("country-tint", "fill-color", borderExpr.tint);
-        } catch { /* style not ready */
-        }
+        });
     }, [borderExpr, mapReady, mapRef]);
 
     // Fade unit markers out as the camera zooms toward the whole-earth view. The
@@ -66,7 +65,7 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGid
         const container = m.getContainer();
         const [lo, hi] = UNIT_FADE_ZOOM;
         const apply = () => {
-            const o = Math.max(0, Math.min(1, (m.getZoom() - lo) / (hi - lo)));
+            const o = norm01(m.getZoom(), lo, hi);
             container.style.setProperty("--db-unit-opacity", o.toFixed(3));
             container.classList.toggle("db-units-faded", o < 0.04);
         };
