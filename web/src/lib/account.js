@@ -1,8 +1,6 @@
-// DomeBreak game-account access for the site. Same Supabase project and anon
-// key the game uses, so players sign in here with their existing account. The
-// client only READS profile/stats (RLS scopes to the signed-in user); the one
-// write (last_login) goes through the db-account edge function, exactly like the
-// game. Ported from src/account/{client,api}.js, minus the Electron mirror.
+// Game-account access. Players sign in with their existing DomeBreak account.
+// The client only reads profile/stats (RLS scopes to the signed-in user); the
+// single write (last_login) goes through the db-account edge function.
 import {createClient} from "@supabase/supabase-js";
 
 const URL = import.meta.env.VITE_SUPABASE_URL;
@@ -20,7 +18,7 @@ export async function signIn(email, password) {
 export async function signUp(email, password, username) {
     const {error} = await supabase.auth.signUp({email, password, options: {data: {username}}});
     if (error) return {error: error.message};
-    // Autoconfirm may or may not return a session on signUp — sign in to be sure.
+    // signUp may not return a session under autoconfirm — sign in to be sure.
     return signIn(email, password);
 }
 
@@ -65,5 +63,5 @@ export function touch() {
     return supabase.functions.invoke("db-account", {body: {action: "touch"}}).catch(() => {});
 }
 
-// Client-side validation mirroring the game's LoginScreen.
+// Client-side auth validation rules.
 export const AUTH_RULES = {username: {min: 3, max: 24}, password: {min: 8}};

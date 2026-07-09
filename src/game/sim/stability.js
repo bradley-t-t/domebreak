@@ -1,4 +1,4 @@
-// National Stability (see design/gdd/stability.md).
+// National Stability.
 //
 // Each nation's stability (0..100) eases every tick toward a live target of
 // 100 − Σ penalties, drawn from population loss, wars beyond the first, leadership
@@ -29,7 +29,7 @@ function basePopOf(w, slot) {
 // target. One entry per pressure that is currently dragging stability down (nothing
 // is listed when a factor is inactive). Pure; stabilityTarget just sums these, so
 // the HUD breakdown and the simulated target can never diverge.
-export function stabilityFactors(w, n) {
+function stabilityFactors(w, n) {
     const f = [];
     // Population loss (captures depopulation AND cities/territory lost to war).
     const base = basePopOf(w, n.slot);

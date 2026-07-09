@@ -1,12 +1,11 @@
 // The two on-map hover readouts — the zoomed-out whole-country tooltip and the
 // zoomed-in city/unit tooltip — fed by LiveGame's hover probe (onMove) and
-// its pre-filtered hoverEnt lookup. Pulled out of LiveGame.jsx verbatim —
-// same rows, same conditionals, same HoverReadout usage.
+// its pre-filtered hoverEnt lookup.
 import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import HoverReadout from "./HoverReadout.jsx";
-import {fmtPop} from "../common/format.js";
+import {fmtPop} from "../lib/format.js";
 import {toGid3} from "../../game/data/iso3.js";
 import {
     defenseRange,

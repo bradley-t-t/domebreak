@@ -1,10 +1,9 @@
-// Map-visual side effects driven by layer toggles, style-ready renders, and
-// zoom: countries layer visibility, the per-country border/tint recolor
-// fetched from colors.json, the unit-marker fade-with-zoom CSS var, and the
-// GID_0 -> country-label lookup for the zoomed-out hover readout. Pulled out
-// of LiveGame.jsx verbatim — same effects, same dependency arrays, same order.
+// Map-visual side effects driven by layer toggles, style-ready renders, and zoom:
+// countries layer visibility, the per-country border/tint recolor fetched from
+// colors.json, the unit-marker fade-with-zoom CSS var, and the GID_0 -> country-label
+// lookup for the zoomed-out hover readout.
 import {useEffect, useMemo, useState} from "react";
-import {COUNTRY_FILL_OPACITY} from "../../map/WorldMap.jsx";
+import {COUNTRY_FILL_OPACITY} from "../../map/mapPaint.js";
 import {toGid3} from "../../game/data/iso3.js";
 
 // Units dissolve as the camera pulls back toward the whole-earth view: fully
@@ -23,7 +22,7 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGid
             m.setLayoutProperty("country-tint", "visibility", layers.countries ? "visible" : "none");
         } catch { /* style not ready */
         }
-    }, [layers.countries, mapReady]);
+    }, [layers.countries, mapReady, mapRef]);
 
     // Per-country border/fill tint from each flag's primary color. Only the ACTIVE
     // powers are colored by their flag; every neutral country falls to one shared
@@ -55,7 +54,7 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGid
             m.setPaintProperty("country-tint", "fill-color", borderExpr.tint);
         } catch { /* style not ready */
         }
-    }, [borderExpr, mapReady]);
+    }, [borderExpr, mapReady, mapRef]);
 
     // Fade unit markers out as the camera zooms toward the whole-earth view. The
     // opacity is pushed to a CSS var on the map container (not React state) so it
@@ -78,7 +77,7 @@ export function useMapVisualEffects({mapRef, layers, mapReady, labels, activeGid
             container.style.removeProperty("--db-unit-opacity");
             container.classList.remove("db-units-faded");
         };
-    }, [mapReady]);
+    }, [mapReady, mapRef]);
 
     // GID_0 (ISO3) → country label, for the zoomed-out country hover readout.
     const countryByGid = useMemo(() => {

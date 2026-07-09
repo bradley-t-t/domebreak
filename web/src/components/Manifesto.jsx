@@ -1,5 +1,5 @@
 import Reveal from "./Reveal.jsx";
-import {Eyebrow} from "./ui.jsx";
+import {Eyebrow} from "./Primitives.jsx";
 
 // Editorial thesis statement — Anduril-style big claim, revealed line by line.
 const LINES = [

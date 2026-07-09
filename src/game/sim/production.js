@@ -36,7 +36,7 @@ function setWar(w, na, nb, a, b) {
 // Defensive pact: an attack on `defender` pulls its allies into the war against the
 // aggressor. One hop only (the allies' own allies are NOT chained in) so a single
 // declaration can't cascade the whole world. A nation allied to BOTH belligerents,
-// or already at war with the aggressor, stays out. See design/gdd/alliances.md.
+// or already at war with the aggressor, stays out.
 function callToArms(w, aggressor, defender) {
     const na = nationOf(w, aggressor), nd = nationOf(w, defender);
     if (!na || !nd) return;
@@ -134,7 +134,7 @@ export function queueUnit(w, slot, type, lng, lat, territoryOk) {
     if (!def || !n) return {error: "Invalid order."};
     ensureProd(n);
     const hasReq = (t) => w.units.some((u) => u.slot === slot && u.type === t && u.hp > 0) || prodCount(n, "unit", t) > 0;
-    // Tech-gated units: the unlocking research must be completed first (spec §6).
+    // Tech-gated units: the unlocking research must be completed first.
     if (def.requiresTech && !n.research.done.includes(def.requiresTech)) {
         return {error: `Requires ${TECHS[def.requiresTech]?.name || def.requiresTech}.`};
     }
@@ -194,8 +194,8 @@ export function unitLockReason(w, slot, type) {
     return null;
 }
 
-// --- Amphibious lift: embark / disembark ground units (spec §8d) -----------
-// Range (AMPHIB_LIFT_KM) is a data-driven tuning knob in data/constants.js.
+// --- Amphibious lift: embark / disembark ground units -----------
+// Range (AMPHIB_LIFT_KM) is a tuning knob in data/constants.js.
 
 // Load a friendly ground unit into an Amphibious Transport. The transport must
 // have spare capacity and be within lift range of the (land-domain, mobile)

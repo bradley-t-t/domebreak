@@ -2,7 +2,7 @@ import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import Reveal from "./Reveal.jsx";
-import {Eyebrow} from "./ui.jsx";
+import {Eyebrow} from "./Primitives.jsx";
 
 const ctaBg = "/shots/population-heat.jpg";
 

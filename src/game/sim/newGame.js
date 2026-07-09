@@ -1,8 +1,8 @@
 // Builds a match setup from the bundled state-level city data. Player is slot 0.
 // With an `activeCount` (singleplayer), only that many nations participate — the
 // player plus scattered great powers — and every other country stays on the map as
-// a passive, capturable NEUTRAL (adr-008). Without one (multiplayer / attract sim),
-// every country is a live participant, as before.
+// a passive, capturable NEUTRAL. Without one (multiplayer / attract sim), every
+// country is a live participant.
 import {GDP_FALLBACK_T, GDP_T, NEUTRAL, REAL_POP} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 
@@ -31,12 +31,12 @@ function capitalOf(data, iso) {
     return {lng: cap.lng, lat: cap.lat};
 }
 
-// Choose the active nations for a match (design/gdd/match-model-and-neutral-world.md,
-// seeding B): start from the participants (the human player, plus any other humans),
-// then greedily add the pool nation whose capital is FARTHEST from every already-
-// chosen capital, until `count` is reached. Deterministic (no rng) — the same
-// participants + pool + count always yield the same scattered cast, so seeding is
-// reproducible for saves and replays. Exported for tests.
+// Choose the active nations for a match: start from the participants (the human
+// player, plus any other humans), then greedily add the pool nation whose capital
+// is FARTHEST from every already-chosen capital, until `count` is reached.
+// Deterministic (no rng) — the same participants + pool + count always yield the
+// same scattered cast, so seeding is reproducible for saves and replays. Exported
+// for tests.
 export function pickActiveIsos(data, participants, pool, count) {
     const active = participants.filter((iso) => data.cities[iso]?.length);
     const caps = active.map((iso) => capitalOf(data, iso)).filter(Boolean);
@@ -62,10 +62,9 @@ export function pickActiveIsos(data, participants, pool, count) {
 // When `aiIsos` is null/undefined the roster is the WHOLE WORLD — every ISO in the
 // dataset with cities, ordered by GDP (descending) then ISO so slot→nation is
 // deterministic for a given dataset (required for saves, replays, and the seeded
-// diplomacy). An explicit `aiIsos` array still selects a curated cast (the menu
-// attract sim uses this for a cheap handful of great powers). There are no neutral
-// backdrop nations anymore — an unselected country simply doesn't exist as a
-// nation only in the curated path.
+// diplomacy). An explicit `aiIsos` array instead selects a curated cast (the menu
+// attract sim uses this for a cheap handful of great powers); in that path an
+// unselected country simply doesn't exist as a nation.
 export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     let chosen;
     if (aiIsos == null) {
@@ -81,8 +80,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     // given (singleplayer's bounded neutral-world model), start from the participants
     // and scatter-fill from the seed pool to that count; every other country in
     // `chosen` stays on the map as a passive NEUTRAL. With no `activeCount`
-    // (multiplayer / attract sim), `activeSet` stays null and EVERY nation is active —
-    // the legacy all-participants behavior, unchanged. See adr-008.
+    // (multiplayer / attract sim), `activeSet` stays null and EVERY nation is active.
     let activeSet = null;
     if (aiIsos == null && opts.activeCount) {
         const participants = (opts.participantIsos?.length ? opts.participantIsos : [playerIso])
@@ -114,7 +112,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
         });
     });
     // Belligerents (the named, prominently-labelled nations) = the active set; in an
-    // all-active match that's everyone, as before.
+    // all-active match that's everyone.
     const belligerents = activeSet ? chosen.filter((iso) => activeSet.has(iso)) : chosen;
     return {mySlot: 0, seed: seed || 1, nations, cities, belligerents};
 }

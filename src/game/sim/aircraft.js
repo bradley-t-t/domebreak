@@ -32,7 +32,7 @@ export {polarFrom} from "./flight.js";
 // world. `face` is the look-ahead point the UI rotates the sprite toward.
 export function steamShip(u, def, dt) {
     if (!u.dest) return;
-    if (!u.route?.length) u.route = [{...u.dest}]; // saves from before routes existed
+    if (!u.route?.length) u.route = [{...u.dest}]; // legacy saves predate routes
     let stepKm = (def.navalSpeed || def.landSpeed) * dt;
     while (u.route.length) {
         const wp = u.route[0];
@@ -83,7 +83,7 @@ export function ensureHangar(w, base) {
 }
 
 // Materialize one aircraft out of stock onto the runway.
-export function launchOne(w, base, type) {
+function launchOne(w, base, type) {
     const idx = w.units.filter((u) => u.baseId === base.id && u.hp > 0).length;
     base.hangar[type]--;
     const ad = UNITS[type];
@@ -167,7 +167,7 @@ export function runAirbase(w, base, dt) {
 }
 
 // The runway/deck axis: airstrips are fixed; a carrier's deck follows its heading.
-export function runwayAxis(base) {
+function runwayAxis(base) {
     if (base.type === "carrier") return base.face ? bearingTo(base, base.face) : (base.runwayA ?? Math.PI / 2);
     return base.runwayA ?? AIRSTRIP_RUNWAY;
 }
