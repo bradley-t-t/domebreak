@@ -49,7 +49,7 @@ function pickTarget(w, n, from) {
 // queueUnit (tech + prereq + caps).
 const AI_UNLOCK_BUILD_ORDER = [
     "spacehq", "sub-ssn", "sub-ssbn", "patriot", "thaad", "aegis",
-    "reconsat", "warnsat", "sbi", "orbitallaser", "hypersonicbty", "orbitalstrike",
+    "reconsat", "orbitallaser", "hypersonicbty", "orbitalstrike",
 ];
 
 // Builds one freshly-unlocked, tech-gated unit the nation qualifies for. Honors
