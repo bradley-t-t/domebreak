@@ -2,8 +2,8 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {Contrast, EyeOff, GripVertical, Maximize2, RotateCcw} from "lucide-react";
 import {HUD_OPACITY_MAX, HUD_OPACITY_MIN, HUD_SCALE_MAX, HUD_SCALE_MIN} from "../../game/platform/hudLayout.js";
 import {cn} from "../lib/cn.js";
-
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+import {clamp} from "../../lib/math.js";
+import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 // Drag distance (px) that spans the full resize range floor→ceiling.
 const RESIZE_SENSITIVITY = 320;
 // Panels always keep this gap from the screen edge — the whole panel stays fully
@@ -73,10 +73,7 @@ export default function AdjustablePanel({
     const [show, setShow] = useState(false);
     const closeT = useRef(0);
     // Latest onChange without making layout effects depend on its identity.
-    const onChangeRef = useRef(onChange);
-    useEffect(() => {
-        onChangeRef.current = onChange;
-    });
+    const onChangeRef = useLatestRef(onChange);
 
     const openTab = useCallback(() => {
         clearTimeout(closeT.current);

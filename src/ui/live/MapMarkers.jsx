@@ -8,6 +8,7 @@ import Explosion from "./Explosion.jsx";
 import FalloutCloud from "./FalloutCloud.jsx";
 import {cn} from "../lib/cn.js";
 import {falloutIntensity, UNIT_ICON, UNITS} from "../../game/engine.js";
+import {fmtPct} from "../lib/format.js";
 
 export default function MapMarkers({
                                         selectedCity, w, mySlot, teamColor, visUnits, unitHeading, unitColor,
@@ -24,7 +25,7 @@ export default function MapMarkers({
                 it, and a mini bar. Pairs with the ground ring below the cities so
                 a capture reads at a glance (yours, an ally's, or your own falling). */}
             {w.cities.filter((c) => c.alive && c.capture && c.capture.progress > 0.02).map((c) => {
-                const pct = Math.round(c.capture.progress * 100);
+                const pct = fmtPct(c.capture.progress);
                 const col = teamColor(c.capture.slot);
                 const label = c.capture.assault ? "Assault" : (c.slot === mySlot ? "Losing" : "Capturing");
                 return (

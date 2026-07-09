@@ -21,33 +21,24 @@ import {
     UNITS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
+import {cosLatSafe, offsetKmPolar, unwrapLng, wrapAnglePi} from "../../lib/geo.js";
+import {clamp01, clampSym} from "../../lib/math.js";
 import {nationOf} from "./worldState.js";
 
 // Point at radiusKm/ang from origin o, in the local flight frame: math angle
 // (east = 0, counterclockwise), equirectangular offset with cos(lat) clamped
 // near the poles. bearingTo() reads angles in this same basis.
-export function polarFrom(o, radiusKm, ang) {
-    const cosLat = Math.max(0.05, Math.cos((o.lat * Math.PI) / 180));
-    return {
-        lng: o.lng + (radiusKm / (KM_PER_DEG * cosLat)) * Math.cos(ang),
-        lat: o.lat + (radiusKm / KM_PER_DEG) * Math.sin(ang)
-    };
-}
+export const polarFrom = offsetKmPolar;
 
 // Direction (math angle, east=0) from one point to another, in polarFrom's basis.
 export function bearingTo(from, to) {
-    const cosLat = Math.max(0.05, Math.cos((from.lat * Math.PI) / 180));
-    let dLng = to.lng - from.lng; // shortest way around — never steer the long way past the antimeridian
-    while (dLng > 180) dLng -= 360;
-    while (dLng < -180) dLng += 360;
-    return Math.atan2(to.lat - from.lat, dLng * cosLat);
+    const dLng = unwrapLng(to.lng - from.lng, 0);
+    return Math.atan2(to.lat - from.lat, dLng * cosLatSafe(from.lat));
 }
 
 // Rotate `cur` toward `target` by at most `maxDelta`, shortest way around.
 function turnToward(cur, target, maxDelta) {
-    let d = target - cur;
-    while (d > Math.PI) d -= 2 * Math.PI;
-    while (d < -Math.PI) d += 2 * Math.PI;
+    const d = wrapAnglePi(target - cur);
     return Math.abs(d) <= maxDelta ? target : cur + Math.sign(d) * maxDelta;
 }
 
@@ -57,10 +48,8 @@ function turnToward(cur, target, maxDelta) {
 export function advance(u, desired, speedKm, turnRate, dt) {
     u.hdg = turnToward(u.hdg == null ? desired : u.hdg, desired, turnRate * dt);
     const p = polarFrom(u, speedKm * dt, u.hdg);
-    u.lng = p.lng;
+    u.lng = unwrapLng(p.lng, 0); // keep coordinates sane across the antimeridian
     u.lat = p.lat;
-    while (u.lng > 180) u.lng -= 360; // keep coordinates sane across the antimeridian
-    while (u.lng < -180) u.lng += 360;
     u.face = polarFrom(u, Math.max(18, speedKm), u.hdg);
 }
 
@@ -71,8 +60,8 @@ export function hangarCapOf(baseType, acType) {
 // Rate-limited approach toward a target — kills every altitude pop (go-arounds,
 // capture handoffs) by slewing instead of snapping.
 export function slew(cur, tgt, maxDelta) {
-    const d = tgt - (cur ?? tgt);
-    return (cur ?? tgt) + Math.max(-maxDelta, Math.min(maxDelta, d));
+    const base = cur ?? tgt;
+    return base + clampSym(tgt - base, maxDelta);
 }
 
 export function recordTrail(u, dt) {
@@ -347,7 +336,7 @@ export function flyRotary(w, u, def, base, dt) {
 // any entry angle — no carrot-chasing wobble. Shared by the cruise and hold phases.
 function flyOrbitHold(base, u, sp, tr, R, dt) {
     const rd = Math.max(1, haversine(base.lng, base.lat, u.lng, u.lat));
-    const desired = bearingTo(base, u) + Math.PI / 2 + Math.max(-FLIGHT.ORBIT_BANK_RAD, Math.min(FLIGHT.ORBIT_BANK_RAD, (rd - R) / FLIGHT.ORBIT_RADIAL_DIV));
+    const desired = bearingTo(base, u) + Math.PI / 2 + clampSym((rd - R) / FLIGHT.ORBIT_RADIAL_DIV, FLIGHT.ORBIT_BANK_RAD);
     advance(u, desired, sp, tr, dt);
 }
 
@@ -402,21 +391,17 @@ export function flyHold(w, u, base, sp, tr, dt) {
 function flyApproachIntercept(u, base, ra, sp, tr, dt) {
     u.alt = 1;
     u.vis = 1;
-    const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
-    let dLng = u.lng - base.lng;
-    while (dLng > 180) dLng -= 360;
-    while (dLng < -180) dLng += 360;
+    const cosLat = cosLatSafe(base.lat);
+    const dLng = unwrapLng(u.lng - base.lng, 0);
     const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
     const axx = Math.cos(ra), axy = Math.sin(ra);
     const along = -(px * axx + py * axy);        // km out on the APPROACH side of the threshold
     const cross = -px * axy + py * axx;          // signed cross-track distance from the centerline
     const LEAD = Math.min(FLIGHT.LEAD_MAX_KM, Math.max(FLIGHT.LEAD_MIN_KM, (sp / tr) * FLIGHT.LEAD_SPEED_TURN_MULT));
     if (along > FLIGHT.INTERCEPT_ALONG_KM) {
-        const desired = ra + Math.max(-FLIGHT.INTERCEPT_TURN_RAD, Math.min(FLIGHT.INTERCEPT_TURN_RAD, -cross / FLIGHT.INTERCEPT_CROSS_DIV));
+        const desired = ra + clampSym(-cross / FLIGHT.INTERCEPT_CROSS_DIV, FLIGHT.INTERCEPT_TURN_RAD);
         advance(u, desired, sp, tr, dt);
-        let dh = ra - (u.hdg ?? ra);
-        while (dh > Math.PI) dh -= 2 * Math.PI;
-        while (dh < -Math.PI) dh += 2 * Math.PI;
+        const dh = wrapAnglePi(ra - (u.hdg ?? ra));
         if (Math.abs(cross) < FLIGHT.INTERCEPT_CAPTURE_CROSS_KM && Math.abs(dh) < FLIGHT.INTERCEPT_CAPTURE_HDG_RAD) u._land = "final";
     } else {
         // Outbound to pattern entry: offset to the jet's own side so the
@@ -433,10 +418,8 @@ function flyApproachIntercept(u, base, ra, sp, tr, dt) {
 // altitude slewing down the glide slope. No sideways position bleeding — the
 // jet only ever moves where its nose points.
 function flyApproachFinal(u, base, ra, sp, tr, dt) {
-    const cosLat = Math.max(0.05, Math.cos((base.lat * Math.PI) / 180));
-    let dLng = u.lng - base.lng;
-    while (dLng > 180) dLng -= 360;
-    while (dLng < -180) dLng += 360;
+    const cosLat = cosLatSafe(base.lat);
+    const dLng = unwrapLng(u.lng - base.lng, 0);
     const px = dLng * cosLat * KM_PER_DEG, py = (u.lat - base.lat) * KM_PER_DEG;
     const axx = Math.cos(ra), axy = Math.sin(ra);
     const along = -(px * axx + py * axy);
@@ -459,9 +442,9 @@ function flyApproachFinal(u, base, ra, sp, tr, dt) {
             return;
         }
     }
-    const desired = ra + Math.max(-FLIGHT.FINAL_TURN_RAD, Math.min(FLIGHT.FINAL_TURN_RAD, -cross / FLIGHT.FINAL_CROSS_DIV));
+    const desired = ra + clampSym(-cross / FLIGHT.FINAL_CROSS_DIV, FLIGHT.FINAL_TURN_RAD);
     advance(u, desired, sp * FLIGHT.FINAL_SPEED_MULT, tr, dt);
-    u.alt = slew(u.alt, Math.max(0, Math.min(1, along / (APPROACH_KM * FLIGHT.GLIDE_SLOPE_FRAC))), dt / FLIGHT.FINAL_ALT_SLEW_T);
+    u.alt = slew(u.alt, clamp01(along / (APPROACH_KM * FLIGHT.GLIDE_SLOPE_FRAC)), dt / FLIGHT.FINAL_ALT_SLEW_T);
     u.vis = 1;
     if (along <= sp * FLIGHT.FINAL_SPEED_MULT * dt + FLIGHT.TOUCHDOWN_ARRIVE_PAD_KM && Math.abs(cross) < FLIGHT.CROSS_CAPTURE_KM) {
         u._land = "rollout";

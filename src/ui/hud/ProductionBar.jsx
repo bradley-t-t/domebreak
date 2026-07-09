@@ -1,6 +1,7 @@
 import UnitIcon from "../common/UnitIcon.jsx";
 import {WARHEADS} from "../../game/engine.js";
 import {prodIcon, prodLabel, prodTime} from "../lib/prod.js";
+import {fmtPct} from "../lib/format.js";
 
 // The national production line, docked bottom-center over the map: the item on
 // the line with live progress, then everything queued behind it in order. Click
@@ -13,7 +14,7 @@ export default function ProductionBar({world, api, mySlot}) {
     const label = (it) => prodLabel(it, me?.iso);
     const time = prodTime;
     const icon = prodIcon;
-    const pct = cur ? Math.round(cur.progress * 100) : 0;
+    const pct = cur ? fmtPct(cur.progress) : 0;
     // Seconds of work left on the item currently on the line (whole-second, at 1×
     // game speed) — a concrete countdown alongside the percentage.
     const eta = cur ? Math.max(0, Math.ceil(time(cur.item) * (1 - cur.progress))) : 0;

@@ -9,6 +9,7 @@ import {DIPLOMACY, STABILITY} from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {formAlliance, makePeace} from "./production.js";
+import {countBy} from "../../lib/iter.js";
 
 // A city's original owner (fallback to current slot for legacy saves predating owner0).
 const origin = (c) => c.owner0 ?? c.slot;
@@ -31,10 +32,7 @@ function allyCount(n) {
 function startCounts(w) {
     if (w._startOwner) return w._startOwner;
     const m = {};
-    for (const c of w.cities) {
-        const o = origin(c);
-        m[o] = (m[o] || 0) + 1;
-    }
+    for (const [k, v] of countBy(w.cities, origin)) m[k] = v;
     w._startOwner = m;
     return m;
 }

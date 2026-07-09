@@ -11,6 +11,7 @@ import {LEADERSHIP} from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {ensureHangar, launchEscort, launchFerry} from "./aircraft.js";
+import {clamp} from "../../lib/math.js";
 
 // One airstrip may only launch a ferry every LEADERSHIP.launchGapSec — a takeoff
 // queue, so a strip staggers its departures instead of scrambling its whole
@@ -63,7 +64,7 @@ function seedLeadership(n, ownCities) {
     }
     // Capital keeps the biggest slice, but never so much that the other selected
     // cities can't each hold at least one leader.
-    const capTokens = Math.max(1, Math.min(Math.round(total * LEADERSHIP.capitalShare), total - (selected.length - 1)));
+    const capTokens = clamp(Math.round(total * LEADERSHIP.capitalShare), 1, total - (selected.length - 1));
     const others = selected.slice(1);
     const rest = total - capTokens;
     const wsum = others.reduce((s, c) => s + (c.pop || 1), 0) || 1;

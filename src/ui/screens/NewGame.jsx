@@ -30,9 +30,13 @@ export default function NewGame({data, onStart, onBack, settings}) {
             <div className={cn(card(), "db-newgame w-[min(460px,94vw)] text-left max-h-[90vh] overflow-auto")}>
                 <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim">New Game</div>
                 {!data && <p className="text-dim m-0 mb-5 text-sm leading-[1.5]">Loading world data…</p>}
-                <label className={label()} id="db-newgame-nation-label">Choose Your Nation — Every Other Country Is
-                    a Live AI {sel &&
-                        <span className={chip({subtle: true})}><Flag iso={sel.iso}/> {sel.name}</span>}</label>
+                <div id="db-newgame-nation-label" className={cn(label(), "flex flex-wrap items-center gap-x-2 gap-y-1.5")}>
+                    <span>Choose Your Nation — Every Other Country Is a Live AI</span>
+                    {sel && <span className={cn(chip({subtle: true}), "max-w-full inline-flex items-center gap-1.5 normal-case tracking-normal")}>
+                        <Flag iso={sel.iso}/>
+                        <span className="truncate">{sel.name}</span>
+                    </span>}
+                </div>
                 <div className="db-country-list flex flex-col gap-1 max-h-[34vh] overflow-auto mt-1.5 border border-line-soft rounded p-1.5 bg-sunk"
                      role="list" aria-labelledby="db-newgame-nation-label">
                     {!GREAT_POWERS.includes(iso) && sel && (

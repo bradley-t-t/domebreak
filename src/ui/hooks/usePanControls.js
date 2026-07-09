@@ -11,6 +11,8 @@
 import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
 import {PAN_LAT_LIMIT, PAN_PX_PER_SEC} from "../../game/data/constants.js";
+import {clampSym} from "../../lib/math.js";
+import {unwrapLng} from "../../lib/geo.js";
 
 export function usePanControls({globe, overlayOpen, K, mapRef}) {
     useEffect(() => {
@@ -45,11 +47,10 @@ export function usePanControls({globe, overlayOpen, K, mapRef}) {
                 const c = m.getCenter();
                 const pc = m.project(c);
                 const ref = 10;
-                let dLngRef = m.unproject([pc.x + ref, pc.y]).lng - c.lng;
-                if (dLngRef > 180) dLngRef -= 360; else if (dLngRef < -180) dLngRef += 360;
+                const dLngRef = unwrapLng(m.unproject([pc.x + ref, pc.y]).lng - c.lng, 0);
                 const degPerPxLng = dLngRef / ref;
                 const degPerPxLat = (m.unproject([pc.x, pc.y - ref]).lat - c.lat) / ref;
-                const lat = Math.max(-PAN_LAT_LIMIT, Math.min(PAN_LAT_LIMIT, c.lat - ny * distPx * degPerPxLat));
+                const lat = clampSym(c.lat - ny * distPx * degPerPxLat, PAN_LAT_LIMIT);
                 m.easeTo({center: [c.lng + nx * distPx * degPerPxLng, lat], duration: SEG_MS, easing: (t) => t});
             } else {
                 // Flat mercator: a raw panBy has no latitude limit, so W/S can drive
@@ -60,7 +61,7 @@ export function usePanControls({globe, overlayOpen, K, mapRef}) {
                 const c = m.getCenter();
                 const pc = m.project(c);
                 const dest = m.unproject([pc.x + nx * distPx, pc.y + ny * distPx]);
-                const lat = Math.max(-PAN_LAT_LIMIT, Math.min(PAN_LAT_LIMIT, dest.lat));
+                const lat = clampSym(dest.lat, PAN_LAT_LIMIT);
                 m.easeTo({center: [dest.lng, lat], duration: SEG_MS, easing: (t) => t});
             }
             timer = setTimeout(runSeg, SEG_MS - 60); // slight overlap → seamless continuous motion

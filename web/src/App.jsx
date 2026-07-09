@@ -9,31 +9,20 @@ import CtaBand from "./components/CtaBand.jsx";
 import Footer from "./components/Footer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import ShortcutsOverlay from "./components/ShortcutsOverlay.jsx";
+import WikiPage from "./components/WikiPage.jsx";
 import {AccountProvider} from "./components/AccountContext.jsx";
 import {useAccount} from "./lib/accountStore.js";
 import {useHotkeys} from "./hooks/useHotkeys.js";
+import {useHashRoute, isWikiRoute} from "./hooks/useHashRoute.js";
 import {SHORTCUTS, scrollToId} from "./lib/nav.js";
 
-function Shell() {
-    const {signedIn} = useAccount();
-    const [authOpen, setAuthOpen] = useState(false);
-    const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-    const handlers = useMemo(() => {
-        const h = {};
-        for (const s of SHORTCUTS) h[s.key] = () => scrollToId(s.target);
-        h["s"] = () => !signedIn && setAuthOpen(true);
-        h["?"] = () => setShortcutsOpen((v) => !v);
-        return h;
-    }, [signedIn]);
-    useHotkeys(handlers);
-
+function Landing({onSignIn, onShowShortcuts}) {
     return (
         <div className="relative min-h-screen bg-bg text-text">
-            <Nav onSignIn={() => setAuthOpen(true)}/>
+            <Nav onSignIn={onSignIn}/>
             <main>
                 {/* Alternating dark / light bands down the page. */}
-                <Hero onSignIn={() => setAuthOpen(true)}/>
+                <Hero onSignIn={onSignIn}/>
 
                 <div className="db-paper border-t border-line">
                     <Manifesto/>
@@ -107,11 +96,39 @@ function Shell() {
 
                 <CtaBand/>
             </main>
-            <Footer onShowShortcuts={() => setShortcutsOpen(true)}/>
+            <Footer onShowShortcuts={onShowShortcuts}/>
+        </div>
+    );
+}
+
+function Shell() {
+    const {signedIn} = useAccount();
+    const [authOpen, setAuthOpen] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
+    const [hash] = useHashRoute();
+    const onWiki = isWikiRoute(hash);
+
+    const handlers = useMemo(() => {
+        const h = {};
+        for (const s of SHORTCUTS) h[s.key] = () => scrollToId(s.target);
+        h["s"] = () => !signedIn && setAuthOpen(true);
+        h["?"] = () => setShortcutsOpen((v) => !v);
+        return h;
+    }, [signedIn]);
+    useHotkeys(handlers);
+
+    const openSignIn = () => setAuthOpen(true);
+    const openShortcuts = () => setShortcutsOpen(true);
+
+    return (
+        <>
+            {onWiki
+                ? <WikiPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
+                : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
 
             <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}/>
             <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
-        </div>
+        </>
     );
 }
 

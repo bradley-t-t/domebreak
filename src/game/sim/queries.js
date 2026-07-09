@@ -5,6 +5,7 @@ import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
 import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+import {clamp, clamp01} from "../../lib/math.js";
 
 // Fallout cloud intensity (0..1) for a given age in sim seconds: ramps up over
 // riseSec, holds at peak through fadeFrac of its life, then decays linearly to 0
@@ -72,7 +73,7 @@ export function nationName(w, slot) {
 export function vitalityOf(c) {
     if (!c || !c.alive) return 0;
     const max = c.maxHp || 1;
-    return Math.max(0, Math.min(1, (c.hp ?? max) / max));
+    return clamp01((c.hp ?? max) / max);
 }
 
 // Flat points/s produced by a nation's standing industry structures.
@@ -142,7 +143,7 @@ export function industryCountOf(w, slot) {
 // Losing cities lowers the ceiling; surplus structures above it are grandfathered.
 export function industryCapOf(w, slot) {
     const pop = populationOf(w, slot);
-    return Math.max(INDUSTRY.base, Math.min(INDUSTRY.max, INDUSTRY.base + Math.floor(pop / INDUSTRY.popPer)));
+    return clamp(INDUSTRY.base + Math.floor(pop / INDUSTRY.popPer), INDUSTRY.base, INDUSTRY.max);
 }
 
 // A point belongs to `slot` only if the NEAREST living city of ANY nation is one

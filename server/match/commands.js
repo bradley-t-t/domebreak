@@ -22,7 +22,7 @@ import {
     setWarhead,
     shelterLeadership,
     stopSail,
-} from "../src/game/engine.js";
+} from "../../src/game/engine.js";
 
 const num = (v) => (Number.isFinite(v) ? v : null);
 const str = (v, max = 40) => (typeof v === "string" ? v.slice(0, max) : null);
