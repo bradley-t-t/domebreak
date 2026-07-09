@@ -8,6 +8,7 @@ import NationPanel from "../hud/NationPanel.jsx";
 import NewsTicker from "../hud/NewsTicker.jsx";
 import LeadershipAlert from "../hud/LeadershipAlert.jsx";
 import WarOutcomeModal from "../hud/WarOutcomeModal.jsx";
+import GraceIndicator from "../hud/GraceIndicator.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
@@ -604,6 +605,7 @@ export default function LiveGame({
                 err.kind === "warn" && "bg-[rgba(140,255,58,0.12)] border-[rgba(140,255,58,0.55)] text-[#d6ff9e]"
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
+            {!w.over && <GraceIndicator world={w}/>}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
             {w.over && (
                 <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">

@@ -120,5 +120,35 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     // Author's rules ride along on the setup so createWorld can stamp them onto
     // world.rules — normalized here so any downstream reader sees a valid shape.
     const rules = normalizeRules(opts.rules);
+    // Balanced start: level the economic playing field across ACTIVE participants
+    // (neutrals stay real-world sized — they're scenery, not opponents). Every
+    // active nation is given the average of the active roster's GDP, and each of
+    // its cities is scaled so its total population matches the active-average pop.
+    // Preserves the per-city share within a nation (capital > minor city) but
+    // erases inter-nation head starts.
+    if (rules.balanced) applyBalanced(nations, cities);
     return {mySlot: 0, seed: seed || 1, nations, cities, belligerents, rules};
+}
+
+function applyBalanced(nations, cities) {
+    const activeNations = nations.filter((n) => n.active !== false);
+    if (!activeNations.length) return;
+    const totalGdp = activeNations.reduce((s, n) => s + (n.gdp || 0), 0);
+    const avgGdp = totalGdp / activeNations.length;
+    const activeSlots = new Set(activeNations.map((n) => n.slot));
+    const popBySlot = new Map();
+    for (const c of cities) {
+        if (!activeSlots.has(c.slot)) continue;
+        popBySlot.set(c.slot, (popBySlot.get(c.slot) || 0) + (c.pop || 0));
+    }
+    const totalPop = [...popBySlot.values()].reduce((s, p) => s + p, 0);
+    const avgPop = totalPop / activeNations.length;
+    for (const n of activeNations) n.gdp = avgGdp;
+    for (const c of cities) {
+        if (!activeSlots.has(c.slot)) continue;
+        const nationTotal = popBySlot.get(c.slot) || 0;
+        if (nationTotal <= 0) continue;
+        const share = (c.pop || 0) / nationTotal; // per-city weight within the nation
+        c.pop = Math.max(1, Math.round(avgPop * share));
+    }
 }
