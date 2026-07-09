@@ -5,6 +5,8 @@ import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import HoverReadout from "./HoverReadout.jsx";
+import {cn} from "../lib/cn.js";
+import {popoverCard} from "../lib/variants.js";
 import {fmtPop} from "../lib/format.js";
 import {toGid3} from "../../game/data/iso3.js";
 import {
@@ -27,17 +29,21 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                 const nation = w.nations.find((n) => toGid3(n.iso) === hover.gid);
                 const name = gl?.name || hover.gid;
                 const iso = gl?.iso || nation?.iso;
-                const cities = nation ? w.cities.filter((c) => c.slot === nation.slot && c.alive) : [];
-                const pop = nation ? populationOf(w, nation.slot) : 0;
-                const rows = nation ? [
+                // Neutral: a country outside w.nations, or an inactive (non-participating)
+                // nation. Both are pure scenery — swap the details readout for a plaque.
+                const neutral = !nation || nation.active === false;
+                if (neutral) {
+                    return <NeutralReadout x={hover.x} y={hover.y}
+                                           header={<>{iso ? <Flag iso={iso}/> : null}<span>{name}</span></>}/>;
+                }
+                const cities = w.cities.filter((c) => c.slot === nation.slot && c.alive);
+                const pop = populationOf(w, nation.slot);
+                const rows = [
                     ["Status", nation.slot === mySlot ? "Yours" : relation(nation.slot) === "war" ? "At War" : "At Peace"],
                     ["Standing", cities.length ? "Active" : "Eliminated"],
                     ["Population", fmtPop(pop)],
                     ["GDP", `$${gdpOf(w, nation.slot).toFixed(2)}T`],
                     ["States", cities.length],
-                ] : [
-                    ["Status", "Non-combatant"],
-                    ["Role", "Neutral"],
                 ];
                 return (
                     <HoverReadout x={hover.x} y={hover.y} clampBottom={190} rows={rows}
@@ -84,5 +90,25 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                 return <HoverReadout x={hover.x} y={hover.y} clampBottom={200} header={header} rows={rows} footer={footer}/>;
             })()}
         </>
+    );
+}
+
+// The map hover plaque for a neutral (non-participating) country. Reuses the shared
+// popover shell and cursor-flip math from HoverReadout but drops the stat grid — a
+// neutral is scenery, so there's nothing to report beyond the name and its status.
+function NeutralReadout({x, y, header}) {
+    const left = x + 18 > window.innerWidth - 250 ? Math.max(12, x - 248) : x + 18;
+    const top = Math.min(Math.max(60, y - 14), window.innerHeight - 170);
+    return (
+        <div className={cn(popoverCard(), "fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3")}
+             style={{left, top}} aria-hidden="true">
+            <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{header}</div>
+            <div className="mt-[10px] inline-flex items-center gap-[6px] px-[8px] py-[3px] rounded-full border border-line-soft text-[10px] tracking-[0.8px] uppercase text-dim">
+                <span>Neutral Territory</span>
+            </div>
+            <p className="mt-[9px] text-[11.5px] leading-[1.45] text-dim">
+                Not participating in this game — this country stays neutral throughout the match.
+            </p>
+        </div>
     );
 }
