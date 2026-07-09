@@ -2,7 +2,7 @@ import {useLayoutEffect, useRef, useState} from "react";
 import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityBreakdown, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
-import {fmtNet, fmtPop} from "../lib/format.js";
+import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import {cn} from "../lib/cn.js";
 import AmmoBar from "./AmmoBar.jsx";
 import {iconButton, popoverCard} from "../lib/variants.js";
@@ -108,7 +108,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                     <div className="w-px self-stretch bg-line-soft"/>
                     <div className="flex flex-col items-end leading-[1.15]"><span
                         className="text-[9px] tracking-[1px] uppercase text-faint">GDP</span><span
-                        className="text-sm font-bold font-mono">${gdp.toFixed(2)}T</span><span
+                        className="text-sm font-bold font-mono">{fmtGdp(gdp)}</span><span
                         className="text-[10px] text-dim">Industry +{ind.toFixed(1)}/s</span></div>
                     <div className="w-px self-stretch bg-line-soft"/>
                     <div className="flex flex-col items-end leading-[1.15]"><span

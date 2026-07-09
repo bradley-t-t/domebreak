@@ -1,5 +1,6 @@
 import {leadershipStatus} from "../../game/engine.js";
 import {cn} from "../lib/cn.js";
+import {shareOfPct} from "../lib/format.js";
 
 // Persistent, non-dismissing leadership prompt.
 // Derives entirely from world state — it owns no state and dispatches the normal
@@ -26,7 +27,7 @@ export default function LeadershipAlert({world, api, mySlot}) {
         // "X% evacuated · Y% exposed". atCity + inTransit are still at risk until
         // they land in the bunker, so both count as exposed.
         const total = s.total || 1;
-        const pctOf = (v) => Math.round((v / total) * 100);
+        const pctOf = (v) => shareOfPct(v, total);
         const evacuated = pctOf(s.sheltered);
         const exposed = pctOf(s.atCity + s.inTransit);
         const lost = pctOf(s.lost);

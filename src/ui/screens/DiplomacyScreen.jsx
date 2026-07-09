@@ -9,6 +9,7 @@ import Flag from "../common/Flag.jsx";
 import {colorForSlot} from "../../game/data/constants.js";
 import {miniButton, input} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
+import {fmtGdp} from "../lib/format.js";
 
 export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     const [q, setQ] = useState("");
@@ -111,7 +112,7 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
                                 <span role="cell"><span className={cn("inline-block px-[10px] py-[3px] font-mono text-[10px] tracking-[0.5px] border border-line rounded-full text-dim", s.cls)}>{s.label}</span></span>
                                 <span className="text-right font-mono text-xs" role="cell">{n.alive ? citiesOf(n.slot) : "—"}</span>
                                 <span className="text-right font-mono text-xs" role="cell">{n.alive ? forcesOf(n.slot) : "—"}</span>
-                                <span className="text-right font-mono text-xs" role="cell">${(n.gdp ?? 0).toFixed(1)}T</span>
+                                <span className="text-right font-mono text-xs" role="cell">{fmtGdp(n.gdp, 1)}</span>
                                 <span role="cell">
                                     {isMe ? <span className="font-mono text-[11px] text-dim">Home</span>
                                         : !n.alive ? <span className="font-mono text-[11px] text-dim">Eliminated</span>

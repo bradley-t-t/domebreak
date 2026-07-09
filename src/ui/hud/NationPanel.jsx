@@ -8,7 +8,7 @@ import {
     populationOf,
     vitalityOf,
 } from "../../game/engine.js";
-import {fmtNet, fmtPop} from "../lib/format.js";
+import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";
@@ -91,7 +91,7 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                     </div>
                     <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
                         <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">GDP</span>
-                        <span className="font-display text-[15px] font-semibold text-text">${view.gdp.toFixed(2)}T</span>
+                        <span className="font-display text-[15px] font-semibold text-text">{fmtGdp(view.gdp)}</span>
                     </div>
                     <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
                         <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Net</span>

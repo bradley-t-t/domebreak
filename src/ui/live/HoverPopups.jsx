@@ -5,7 +5,7 @@ import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import HoverReadout from "./HoverReadout.jsx";
-import {fmtPop} from "../lib/format.js";
+import {fmtGdp, fmtKm, fmtPop} from "../lib/format.js";
 import {toGid3} from "../../game/data/iso3.js";
 import {
     defenseRange,
@@ -33,7 +33,7 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                     ["Status", nation.slot === mySlot ? "Yours" : relation(nation.slot) === "war" ? "At War" : "At Peace"],
                     ["Standing", cities.length ? "Active" : "Eliminated"],
                     ["Population", fmtPop(pop)],
-                    ["GDP", `$${gdpOf(w, nation.slot).toFixed(2)}T`],
+                    ["GDP", fmtGdp(gdpOf(w, nation.slot))],
                     ["States", cities.length],
                 ] : [
                     ["Status", "Non-combatant"],
@@ -53,7 +53,7 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                         rows.push(["Output", `+${def.output}/s`]);
                         rows.push(["GDP", `+$${def.gdpAdd}T`]);
                     } else {
-                        rows.push(["Range", `${Math.round(def.kind === "defense" ? defenseRange(w, hoverEnt) : def.range).toLocaleString()} km`]);
+                        rows.push(["Range", fmtKm(def.kind === "defense" ? defenseRange(w, hoverEnt) : def.range)]);
                     }
                     if (armOf(hoverEnt.type, hoverEnt.slot)) rows.push(["Armament", armOf(hoverEnt.type, hoverEnt.slot)]);
                     if (def.navalSpeed) rows.push(["Speed", `${def.navalSpeed} kn${hoverEnt.dest ? " · Sailing" : ""}`]);
