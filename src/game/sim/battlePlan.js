@@ -11,6 +11,7 @@ import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
 import {nationOf} from "./worldState.js";
 import {atWar} from "./queries.js";
+import {cmpStr} from "../../lib/iter.js";
 
 // The warhead an offense unit will actually fire — its loaded payload, or the
 // platform's default if it has never been set.
@@ -55,7 +56,7 @@ export function planAttackers(w, plan, mySlot) {
     const types = new Set(plan.attackerTypes || []);
     return w.units
         .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type))
-        .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        .sort(cmpStr((u) => u.id));
 }
 
 // Which target CATEGORY an at-war entity falls into (BATTLE_PLAN.targetCategories): a
