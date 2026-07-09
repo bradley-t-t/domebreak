@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {AnimatePresence, motion} from "motion/react";
+import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {X, Loader2} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button, input, label as labelCva} from "../lib/variants.js";
@@ -11,6 +11,7 @@ import GameIcon from "./GameIcon.jsx";
 // sign-up), same as the in-game login. Uses the shared account context.
 export default function AuthModal({open, onClose, initialMode = "signin"}) {
     const {signIn, signUp} = useAccount();
+    const reduce = useReducedMotion();
     const [mode, setMode] = useState(initialMode);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -82,16 +83,16 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
                         role="dialog"
                         aria-modal="true"
                         aria-label={signup ? "Create account" : "Sign in"}
-                        initial={{opacity: 0, transform: "translateY(10px) scale(0.98)"}}
-                        animate={{opacity: 1, transform: "translateY(0px) scale(1)"}}
-                        exit={{opacity: 0, transform: "translateY(8px) scale(0.98)"}}
+                        initial={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(10px) scale(0.98)"}}
+                        animate={reduce ? {opacity: 1} : {opacity: 1, transform: "translateY(0px) scale(1)"}}
+                        exit={reduce ? {opacity: 0} : {opacity: 0, transform: "translateY(8px) scale(0.98)"}}
                         transition={{duration: 0.22, ease: [0.23, 1, 0.32, 1]}}
                         className="relative db-tick db-seam w-[min(420px,94vw)] overflow-hidden rounded-lg border border-line bg-panel-solid p-7 shadow"
                     >
                         <button
                             onClick={onClose}
                             aria-label="Close"
-                            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-sm border border-line text-dim transition-colors hover:border-blue hover:text-text"
+                            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-sm border border-line text-dim transition-[color,border-color,transform] duration-150 ease-out-db hover:border-blue hover:text-text active:scale-95"
                         >
                             <X size={15}/>
                         </button>
