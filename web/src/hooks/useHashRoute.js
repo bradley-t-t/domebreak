@@ -29,3 +29,7 @@ export function useHashRoute() {
 export function isWikiRoute(hash = window.location.hash) {
     return hash.startsWith("#/wiki");
 }
+
+export function isDownloadRoute(hash = window.location.hash) {
+    return hash.startsWith("#/download");
+}

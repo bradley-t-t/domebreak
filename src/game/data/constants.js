@@ -282,8 +282,8 @@ export const BATTLE_PLAN = {
     targetCategories: [
         {id: "city", label: "Cities", types: null},
         {id: "strike", label: "Missile Platforms", types: ["silo", "launcher", "battleship", "hypersonicbty", "orbitalstrike", "sub-ssbn", "sub-ssn"]},
-        {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "sbi", "orbitallaser"]},
-        {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat", "warnsat"]},
+        {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "orbitallaser"]},
+        {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat"]},
         {id: "airbases", label: "Airbases", types: ["airstrip", "carrier", "armybase"]},
         {id: "command", label: "Command", types: ["bunker", "spacehq"]},
         {id: "ground", label: "Ground Forces", types: ["infantry", "artillery", "tank"]},
@@ -294,15 +294,14 @@ export const BATTLE_PLAN = {
 export * from "./units.js";
 
 // Radar coverage overlay ring colors by sensor type. Dedicated ground sensors get
-// distinct hues so the two warning tiers read apart; every other emitter keeps its
-// faction color. The `space` violet is the orbital-sensor tier; the recon and
-// missile-warning satellite types map onto it (RADAR_RING_COLORS[unit.type]).
+// distinct hues so the warning tiers read apart; every other emitter keeps its
+// faction color. The `space` violet is the orbital-sensor tier that reconsat maps
+// onto (RADAR_RING_COLORS[unit.type]).
 export const RADAR_RING_COLORS = {
     oth: "#e8a33d",
     radar: "#4fc3e8",
     space: "#b98cff",
     reconsat: "#b98cff",
-    warnsat: "#b98cff",
 };
 
 // Warhead registry (WARHEADS, WARHEAD_ICON, WARHEAD_ORDER, AMMO_START, BLAST,

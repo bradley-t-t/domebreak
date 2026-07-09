@@ -949,7 +949,27 @@
         animation: dbBootScan 1.15s ease-in-out infinite;
     }
 
+    /* ---- orbital-satellite marker ----
+       Live orbital assets (SBI, Orbital Laser, ReconSat, Missile-Warning Sat,
+       Orbital Strike Platform) float above the ground in the map layer. The
+       icon itself is offset up by orbitLift × ORBIT_LIFT_PX; this class adds a
+       gentle vertical hover and a soft outer glow so a satellite reads as
+       being in orbit rather than sitting on a country. */
+    .db-orbital {
+        animation: dbOrbitalHover 4.6s ease-in-out infinite;
+        filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 1px 2px #000) drop-shadow(0 0 8px rgba(180, 200, 255, 0.35));
+    }
+
     /* ---- all @keyframes ---- */
+    @keyframes dbOrbitalHover {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-2px);
+        }
+    }
+
     @keyframes dbDropInY {
         from {
             opacity: 0;
