@@ -132,8 +132,8 @@ export const UNITS = {
         reload: 3,
         fireCost: 14,
         radarKm: 400,
-        // The surface ASW picket: its sonar reveals submerged hulls within sonarKm
-        // (× nation sonarMult), the counter to enemy subs.
+        // The surface ASW picket: its sonar reveals submerged hulls within sonarKm,
+        // the counter to enemy subs.
         asw: true,
         sonarKm: 300,
         hp: 60,

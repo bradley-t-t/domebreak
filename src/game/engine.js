@@ -25,37 +25,14 @@ export function createWorld(setup) {
         alive: true,
         relations: {},
         _ai: 2 + n.slot * 0.3,
-        // Everything is unlocked from the start: every tech id is marked done so all
-        // unit gates open, and each tech's effect is applied once below so nations
-        // begin fully teched.
-        research: {queue: [], current: null, done: Object.keys(TECHS)},
+        // Every tech id is marked done so every requiresTech unit is buildable from
+        // the first tick. Techs no longer carry stat effects — this list is a pure
+        // unit-unlock gate (see requiresTech in data/units.js).
+        research: {done: Object.keys(TECHS)},
         ammo: {...AMMO_START},
         prod: {queue: [], current: null},
-        dmgMult: 1,
-        interceptAdd: 0,
-        incomeMult: 1,
-        rangeMult: 1,
-        reloadMult: 1,
-        defRangeMult: 1,
-        radarMult: 1,
-        interceptorSpeedMult: 1,
-        buildCostMult: 1,
-        upkeepMult: 1,
-        researchSpeedMult: 1,
-        moveCostMult: 1,
-        // Tech multipliers (default identities; scaled by Space Age / Early Warning
-        // techs):
-        //   hypersonicEvasion — additive intercept-evasion for hypersonic boost-glide
-        //     weapons (off8 Hypersonic Glide Vehicles).
-        //   sonarMult — multiplies ASW sonarKm so det tracking/fusion techs turn hulls
-        //     into better sub-hunters (det7/8/11/12).
-        hypersonicEvasion: 0,
-        sonarMult: 1,
         stability: 100,   // national stability 0–100 (see sim/stability.js)
     }));
-    // Apply every tech's effect once per nation, so the fully-unlocked tree's stat
-    // multipliers (dmgMult, interceptAdd, ranges, sonar, …) are all live at start.
-    for (const n of nations) for (const id of n.research.done) TECHS[id].apply(n);
     const cities = setup.cities.map((c) => ({
         id: c.id,
         slot: c.slot,

@@ -126,7 +126,7 @@ export function stepMovement(w, dt) {
                 continue;
             }
             const n = nationOf(w, u.slot);
-            if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
+            if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range) {
                 ensureProd(n);
                 if (def.targets === "land") {
                     // Ground forces (infantry/tank/artillery) fight like ground
@@ -140,7 +140,7 @@ export function stepMovement(w, dt) {
                     // flip by CAPTURE.assaultMult while u.targetId is this city).
                     // Fire on enemy ground UNITS still lands as normal damage.
                     if (!(def.capture && t.kind === "city")) directFire(w, u, t);
-                    u.cooldown = def.reload * (n?.reloadMult ?? 1);
+                    u.cooldown = def.reload;
                 } else {
                     // Missile units spend a warhead from the strategic arsenal (and can't
                     // fire when it's empty). Conventional air/sea units — aircraft, ships —
@@ -151,7 +151,7 @@ export function stepMovement(w, dt) {
                         launch(w, u, t, _wh);
                         // Ships rearming under a Replenishment Ship recycle faster.
                         const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
-                        u.cooldown = def.reload * (n?.reloadMult ?? 1) * replen;
+                        u.cooldown = def.reload * replen;
                     }
                 }
             }
@@ -219,10 +219,10 @@ export function stepCombat(w, dt) {
                 d.cooldown = (UNITS[d.type].reload || DEFAULT_RELOAD) * dReplen;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
-                // firing nation's evasion. Floored to a small residual chance
-                // (derived from INTERCEPT_CAP, no magic number) so evasion makes a
-                // strike hard to stop but never truly un-interceptable.
-                const baseProb = Math.min(INTERCEPT_CAP, UNITS[d.type].intercept + (dn.interceptAdd ?? 0));
+                // munition's evasion. Floored to a small residual chance (derived
+                // from INTERCEPT_CAP, no magic number) so evasion makes a strike
+                // hard to stop but never truly un-interceptable.
+                const baseProb = Math.min(INTERCEPT_CAP, UNITS[d.type].intercept);
                 const evadeFloor = baseProb * (1 - INTERCEPT_CAP);
                 const hitProb = Math.max(evadeFloor, baseProb - (p.evasion ?? 0));
                 w.interceptors.push({
@@ -231,7 +231,7 @@ export function stepCombat(w, dt) {
                     srcType: d.type,   // firing battery type — drives the sky sprite variant
                     targetId: p.id,
                     hitProb,
-                    speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1),
+                    speed: INTERCEPTOR_SPEED,
                     altNorm: 0,
                     launchDist: Math.max(1, dToTarget),
                     fromLng: d.lng,
