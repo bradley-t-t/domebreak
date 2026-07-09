@@ -110,19 +110,15 @@ export function useLiveLayers({
             return c;
         })
     }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot, globe]);
-    // Emitter centers + coverage radius for the animated PPI sweep — same filter
-    // and radius as radarFC, so the sweep tracks the ring exactly. RadarSweep
-    // rebuilds the rotating wedge geometry itself each animation frame; this only
-    // feeds it where the emitters are and how far they reach.
+    // Emitter centers + coverage radius for the animated ping — same filter and
+    // radius as radarFC, so the pulse tracks the ring exactly. RadarPulse rebuilds
+    // the expanding ring geometry itself each animation frame; this only feeds it
+    // where the emitters are and how far they reach.
     const radarEmitters = useMemo(() => layers.radar
         ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => ({
             lng: u.lng, lat: u.lat,
             rKm: radarRangeOf(u.type),
-            color: RADAR_RING_COLORS[u.type] || teamColor(u.slot),
-            // Orbital sensors don't behave like a rotating PPI dish — they cover a
-            // wide ground footprint under their track. Flagged here so RadarSweep can
-            // render an expanding "ping" pulse for them instead of a sweep hand.
-            orbital: !!UNITS[u.type]?.orbital
+            color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)
         }))
         : [], [layers.radar, w.units, w.time, mySlot]);
     const defenseFC = useMemo(() => layers.defense ? ({
