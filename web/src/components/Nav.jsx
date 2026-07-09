@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 import {scrollToId} from "../lib/nav.js";
-import {useAccount} from "./AccountContext.jsx";
+import {useAccount} from "../lib/accountStore.js";
 import {Wordmark} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
 import AccountMenu from "./AccountMenu.jsx";

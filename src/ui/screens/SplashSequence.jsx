@@ -1,7 +1,7 @@
 // Boot splash: TaylorURL publisher card, then the solo-developer credit.
 // Skippable at any moment (click or any key) and honors reduced motion with
 // instant cuts instead of fades.
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {cn} from "../lib/cn.js";
 
 const LOGO_MS = 2600;
@@ -11,17 +11,17 @@ const REDUCED_MS = 1300;
 export default function SplashSequence({reduceMotion, onDone}) {
     const [step, setStep] = useState(0); // 0 = logo card, 1 = credit card
     const done = useRef(false);
-    const finish = () => {
+    const finish = useCallback(() => {
         if (done.current) return;
         done.current = true;
         onDone();
-    };
+    }, [onDone]);
 
     useEffect(() => {
         const hold = reduceMotion ? REDUCED_MS : step === 0 ? LOGO_MS : CREDIT_MS;
         const t = setTimeout(() => (step === 0 ? setStep(1) : finish()), hold);
         return () => clearTimeout(t);
-    }, [step, reduceMotion]);
+    }, [step, reduceMotion, finish]);
 
     useEffect(() => {
         const skip = () => finish();
@@ -31,7 +31,7 @@ export default function SplashSequence({reduceMotion, onDone}) {
             window.removeEventListener("keydown", skip);
             window.removeEventListener("pointerdown", skip);
         };
-    }, []);
+    }, [finish]);
 
     const cardCls = cn(
         "text-center motion-reduce:animate-none",

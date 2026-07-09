@@ -10,7 +10,7 @@ export function useMapBoot({w, mySlot, mapRef, setMapReady, setBooting}) {
     useEffect(() => {
         const t = setTimeout(() => setBooting(false), START_CAM.bootMs);
         return () => clearTimeout(t);
-    }, []);
+    }, [setBooting]);
 
     // Open the game already looking at home: center on the player's capital at a
     // zoom that fits most of their nation. The frame is the geographic span of

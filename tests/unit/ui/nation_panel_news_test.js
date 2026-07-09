@@ -7,7 +7,7 @@ import React from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {createWorld} from "../../../src/game/engine.js";
 import NationPanel from "../../../src/ui/hud/NationPanel.jsx";
-import {headline} from "../../../src/ui/hud/NewsTicker.jsx";
+import {headline} from "../../../src/ui/hud/newsHeadline.js";
 
 // A two-nation world; slot 0 is the player with four cities spanning every
 // status band, plus two factories so industry count is non-zero.

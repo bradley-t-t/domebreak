@@ -6,15 +6,14 @@ import {useEffect, useRef, useState} from "react";
 // right away.
 export function useInViewOnce({rootMargin = "-10% 0px -10% 0px"} = {}) {
     const ref = useRef(null);
-    const [inView, setInView] = useState(false);
+    // Start visible when IntersectionObserver is unavailable, so content is never
+    // hidden and the effect needs no synchronous fallback setState.
+    const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
 
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
-        if (typeof IntersectionObserver === "undefined") {
-            setInView(true);
-            return;
-        }
+        if (typeof IntersectionObserver === "undefined") return;
         const io = new IntersectionObserver((entries) => {
             if (entries.some((e) => e.isIntersecting)) {
                 setInView(true);

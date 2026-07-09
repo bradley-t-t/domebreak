@@ -7,12 +7,13 @@
  * bathymetry (+ animated coastal shimmer / drifting isobaths), then the
  * political fills/borders which thin out on zoom-in so the real terrain reads.
  */
-import {useEffect, useMemo, useRef} from "react";
+import {useCallback, useEffect, useMemo, useRef} from "react";
 import maplibregl from "maplibre-gl";
 import {Protocol} from "pmtiles";
 import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {startWater} from "./water.js";
+import {COUNTRY_FILL_OPACITY} from "./mapPaint.js";
 import {WORLD_ZOOM} from "../game/data/constants.js";
 
 let pmtilesRegistered = false;
@@ -52,7 +53,6 @@ const OCEAN_DEPTH_COLOR = ["match", ["get", "depth"],
 // fades the real relief in and thins the political wash so terrain shows through.
 const RELIEF_OPACITY = ["interpolate", ["linear"], ["zoom"], 3.2, 0, 3.9, 0.2, 5.5, 0.92];
 const REGIONS_FILL_OPACITY = ["interpolate", ["linear"], ["zoom"], 3, 0.85, 4, 0.82, 5.5, 0.42];
-export const COUNTRY_FILL_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.96, 3, 0.9, 4, 0.62, 5.5, 0.24];
 // Far out, land is a light grey that clearly reads against the near-black ocean;
 // as you zoom in and the real (desaturated) relief fades up, land settles darker.
 const COUNTRY_FILL_COLOR = ["interpolate", ["linear"], ["zoom"], 2, "#767b84", 3.2, "#4c515a", 4.2, "#3a3f47", 5.5, "#2e3239"];
@@ -153,16 +153,16 @@ export default function WorldMap({
     const mapStyle = useMemo(() => buildStyle(initialGlobe), [initialGlobe]);
     ensurePmtiles();
 
-    const applyProjection = (map) => {
+    const applyProjection = useCallback((map) => {
         try {
             map.setProjection({type: globe ? "globe" : "mercator"});
         } catch { /* older gl */
         }
-    };
+    }, [globe]);
     useEffect(() => {
         const map = mapRef.current?.getMap?.();
         if (map) applyProjection(map);
-    }, [globe]);
+    }, [applyProjection]);
     useEffect(() => () => {
         stopWater.current?.();
     }, []);

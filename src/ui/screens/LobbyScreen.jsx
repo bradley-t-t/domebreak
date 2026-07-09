@@ -180,7 +180,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             if (m.getLayer("lobby-pick-line")) m.setPaintProperty("lobby-pick-line", "line-color", expr);
         } catch { /* style not ready / tearing down */
         }
-    }, [members, mapReady, optimisticIso, myMember?.slot, me?.id]);
+    }, [members, mapReady, optimisticIso, myMember, me?.id]);
 
     // Fly the globe to the nation the local player just claimed.
     useEffect(() => {

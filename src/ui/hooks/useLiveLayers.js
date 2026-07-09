@@ -1,6 +1,11 @@
 // Memoized map-layer FeatureCollection builders for LiveGame's <Source> layers. Nothing
 // here owns state; it only derives GeoJSON from engine state (w) and the handful of UI
 // toggles/inputs the map layers care about.
+//
+// The world is mutated in place, so w and its arrays keep the same identity every
+// tick; each memo lists w.time (the tick counter) as its recompute trigger. That
+// pattern is invisible to exhaustive-deps, so it's disabled for this file.
+/* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo} from "react";
 import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";

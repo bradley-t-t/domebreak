@@ -105,7 +105,10 @@ export function usePanControls({globe, overlayOpen, K, mapRef}) {
             window.removeEventListener("keyup", up);
             window.removeEventListener("blur", clear);
             if (timer) clearTimeout(timer);
+            // The map initializes async, so it's read lazily (a setup-time snapshot
+            // could be null); the current instance is what we want to stop.
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             mapRef.current?.stop();
         };
-    }, [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]);
+    }, [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight, mapRef]);
 }

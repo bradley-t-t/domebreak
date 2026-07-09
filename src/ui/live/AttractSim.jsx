@@ -6,6 +6,10 @@
 // map carries the same political tints, unit sprites and dying cities the live
 // game shows — so the backdrop reads as an actual match in progress. Pointer
 // events are disabled — this layer is scenery, never a control surface.
+//
+// Runs a real engine world mutated in place and re-rendered on its own tick, so
+// its effects/memos key off w.time — a trigger exhaustive-deps can't model; off here.
+/* eslint-disable react-hooks/exhaustive-deps */
 import {useEffect, useMemo, useRef, useState} from "react";
 import {Layer, Marker, Source} from "react-map-gl/maplibre";
 import WorldMap from "../../map/WorldMap.jsx";

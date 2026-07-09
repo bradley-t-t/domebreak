@@ -11,6 +11,10 @@ import {miniButton} from "../lib/variants.js";
 // on the map. Presentation only: it reads the pure solver for live status and edits
 // plan intent through the useBattlePlans handlers (`bp`); the reconciler turns intent
 // into real orders.
+//
+// The world is mutated in place; the memos below derive from w keyed on w.time (the
+// tick counter) — a trigger exhaustive-deps can't model, so it's off for this file.
+/* eslint-disable react-hooks/exhaustive-deps */
 
 function Toggle({on, onClick, label, hint, accent}) {
     return (

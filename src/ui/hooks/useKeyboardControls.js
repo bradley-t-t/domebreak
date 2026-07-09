@@ -33,7 +33,8 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [menu, disembarkId, moving, placing, attackMode, panel, onPause]);
+    }, [menu, disembarkId, moving, placing, attackMode, panel, onPause,
+        setMenu, setDisembarkId, setMoving, setPlacing, setAttackMode, setPanel]);
 
     // Command-screen hotkeys: toggle the Production and Diplomacy screens
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
@@ -50,7 +51,7 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, w.over, K.production, K.diplomacy]);
+    }, [overlayOpen, w.over, K.production, K.diplomacy, setPanel]);
 
     // Controls reference toggle: "?" or F1 opens/closes the command reference.
     // Fixed keys (not rebindable) — the overlay itself lists every binding.
@@ -64,7 +65,7 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen]);
+    }, [overlayOpen, setHelpOpen]);
 
     // Game speed hotkeys, RTS-style: pause toggle + speed up/down step the speed
     // (bindings configurable in Settings; defaults Space / = / −), and the fixed
@@ -109,5 +110,5 @@ export function useKeyboardControls({
         };
         window.addEventListener("keydown", h);
         return () => window.removeEventListener("keydown", h);
-    }, [overlayOpen, K.zoomIn, K.zoomOut]);
+    }, [overlayOpen, K.zoomIn, K.zoomOut, mapRef]);
 }
