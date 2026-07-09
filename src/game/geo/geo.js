@@ -3,18 +3,18 @@
 const R_EARTH_KM = 6371;
 const TWO_PI = 2 * Math.PI;
 
-// GeoJSON Polygon Feature for a unit's range ring of radius `km`. Drawn in
+// GeoJSON Polygon Feature for a unit's range ring of radius `km`, drawn in
 // Web-Mercator space (X and Y scale identically there) so the ring is round on
 // screen and centred on the unit at every latitude — sized to `km` on the
 // ground at the unit's latitude.
 //
-// Why not a true geodesic cap: a geodesic circle is distance-accurate but
-// Mercator stretches a large one so badly the unit no longer sits at the visual
-// centre — a 5000 km OTH ring pushes it ~1/4 of the way up from the bottom, and
-// with radar research the cap can wrap the pole and leave the unit on the edge.
-// This is overlay-only; actual detection stays geodesic (sensorsCover uses
-// haversine), so accuracy where it matters is untouched. For small rings the
-// two are visually identical.
+// THIS IS THE FLAT-VIEW ring. On the globe use geoCircle() instead: the Mercator
+// disc, when the globe projection wraps its lng/lat onto the sphere, stretches
+// into an off-centre egg (worse the bigger the ring and the higher the latitude),
+// which is why globe radar coverage looked wrong. A true geodesic cap renders
+// round on the globe but stretches on the flat map — so each projection uses the
+// ring that is round in it. This is overlay-only; detection stays geodesic
+// (sensorsCover uses haversine), so accuracy where it matters is untouched.
 // Pass innerKm > 0 to punch a concentric keep-out hole (an annulus) — e.g. a
 // THAAD battery whose interceptors can't engage inside a minimum range. The hole
 // is a second polygon ring, so fill layers leave it empty and line layers outline
@@ -43,6 +43,115 @@ export function circle(lng, lat, km, steps = 56, innerKm = 0) {
     const rings = [ring(km)];
     if (innerKm > 0 && innerKm < km) rings.push(ring(innerKm));
     return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: rings}};
+}
+
+// Web-Mercator projection shared by the sweep helpers below — the same unit-square
+// mapping circle() uses, so a sweep drawn over a coverage ring lines up exactly.
+// Screen Y grows downward here, so an angle sweeping 0→360 reads as clockwise.
+const RAD = Math.PI / 180, DEG = 180 / Math.PI;
+const mercXY = (lng, lat) => [lng / 360 + 0.5, 0.5 - Math.asinh(Math.tan(lat * RAD)) / TWO_PI];
+const mercLngLat = (x, y) => [(x - 0.5) * 360, Math.atan(Math.sinh((0.5 - y) * TWO_PI)) * DEG];
+const mercRho = (km, lat) => (km / R_EARTH_KM) / (TWO_PI * Math.max(0.05, Math.cos(lat * RAD)));
+
+// Rotating radar-sweep wedge (FLAT view): a filled sector from the emitter out to
+// `km`, spanning `arcDeg` of trailing arc behind the leading edge at `headDeg`,
+// drawn in the same Mercator space as circle() so it tracks the flat-view ring.
+// This is the fading "afterglow" behind the sweep line; pair with sweepLine() for
+// the bright leading edge. On the globe use geoSweepSector() instead. Overlay-only.
+export function sweepSector(lng, lat, km, headDeg, arcDeg = 42, steps = 16) {
+    const [x0, y0] = mercXY(lng, lat);
+    const rho = mercRho(km, lat);
+    const head = headDeg * RAD, span = arcDeg * RAD;
+    const coords = [mercLngLat(x0, y0)];
+    for (let i = 0; i <= steps; i++) {
+        const a = head - span * (i / steps);
+        coords.push(mercLngLat(x0 + rho * Math.cos(a), y0 + rho * Math.sin(a)));
+    }
+    coords.push(mercLngLat(x0, y0));   // close the wedge back at the emitter
+    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: [coords]}};
+}
+
+// The bright leading edge of the radar sweep (FLAT view): a line from the emitter
+// to the ring edge at `headDeg`, in the same Mercator space as circle().
+export function sweepLine(lng, lat, km, headDeg) {
+    const [x0, y0] = mercXY(lng, lat);
+    const rho = mercRho(km, lat);
+    const a = headDeg * RAD;
+    return {
+        type: "Feature", properties: {},
+        geometry: {type: "LineString", coordinates: [mercLngLat(x0, y0), mercLngLat(x0 + rho * Math.cos(a), y0 + rho * Math.sin(a))]}
+    };
+}
+
+// ---- Globe-view coverage geometry (true geodesic) ----------------------------
+// On the globe the Mercator disc above stretches into an off-centre egg, so these
+// draw the ring/sweep as a great-circle cap: vertices at a constant SURFACE
+// distance `km` from the centre, which the globe projection renders as a proper
+// round cap centred on the unit. The catch is a cap wider than a hemisphere folds
+// back toward the antipode and stops reading as a ring — so callers keep the
+// Mercator disc above GEODESIC_MAX_KM (satellites), and use these below it.
+export const GEODESIC_MAX_KM = 6000;
+
+// Destination [lng,lat] (deg) a great-circle distance `km` from (lng,lat) on
+// compass bearing `brngDeg` (0 = due north, increasing clockwise).
+function geoDest(lng, lat, km, brngDeg) {
+    const la1 = lat * RAD, dr = km / R_EARTH_KM, brng = brngDeg * RAD;
+    const sinLa1 = Math.sin(la1), cosLa1 = Math.cos(la1), sinDr = Math.sin(dr), cosDr = Math.cos(dr);
+    const sinLa2 = sinLa1 * cosDr + cosLa1 * sinDr * Math.cos(brng);
+    const la2 = Math.asin(Math.max(-1, Math.min(1, sinLa2)));
+    const lo2 = lng * RAD + Math.atan2(Math.sin(brng) * sinDr * cosLa1, cosDr - sinLa1 * sinLa2);
+    return [lo2 * DEG, la2 * DEG];
+}
+
+// Keep a ring/sweep's longitudes continuous across the ±180° seam so a polygon
+// spanning it doesn't streak across the map (same trick as gcTrail).
+function unwrapLng(lng, prev) {
+    while (lng - prev > 180) lng -= 360;
+    while (lng - prev < -180) lng += 360;
+    return lng;
+}
+
+// True geodesic range ring — the globe-view counterpart of circle(); same Feature
+// shape and innerKm annulus.
+export function geoCircle(lng, lat, km, steps = 56, innerKm = 0) {
+    const ring = (radiusKm) => {
+        const n = Math.min(480, Math.max(steps, Math.ceil(radiusKm / 40)));
+        const coords = [];
+        let prev = lng;
+        for (let i = 0; i <= n; i++) {
+            const [clng, clat] = geoDest(lng, lat, radiusKm, (360 * i) / n);
+            const x = unwrapLng(clng, prev);
+            prev = x;
+            coords.push([x, clat]);
+        }
+        return coords;
+    };
+    const rings = [ring(km)];
+    if (innerKm > 0 && innerKm < km) rings.push(ring(innerKm));
+    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: rings}};
+}
+
+// Globe-view sweep wedge — geodesic counterpart of sweepSector().
+export function geoSweepSector(lng, lat, km, headDeg, arcDeg = 42, steps = 16) {
+    const coords = [[lng, lat]];
+    let prev = lng;
+    for (let i = 0; i <= steps; i++) {
+        const [clng, clat] = geoDest(lng, lat, km, headDeg - arcDeg * (i / steps));
+        const x = unwrapLng(clng, prev);
+        prev = x;
+        coords.push([x, clat]);
+    }
+    coords.push([lng, lat]);
+    return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: [coords]}};
+}
+
+// Globe-view sweep leading edge — geodesic counterpart of sweepLine().
+export function geoSweepLine(lng, lat, km, headDeg) {
+    const [dlng, dlat] = geoDest(lng, lat, km, headDeg);
+    return {
+        type: "Feature", properties: {},
+        geometry: {type: "LineString", coordinates: [[lng, lat], [unwrapLng(dlng, lng), dlat]]}
+    };
 }
 
 // Initial great-circle bearing from point 1 to point 2, compass degrees

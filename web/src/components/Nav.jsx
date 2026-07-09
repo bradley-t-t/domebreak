@@ -1,5 +1,4 @@
 import {useEffect, useState} from "react";
-import {Keyboard} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 import {scrollToId} from "../lib/nav.js";
@@ -19,7 +18,7 @@ function NavLink({to, children}) {
     );
 }
 
-export default function Nav({onSignIn, onShowShortcuts}) {
+export default function Nav({onSignIn}) {
     const {loading, signedIn} = useAccount();
     const [scrolled, setScrolled] = useState(false);
 
@@ -54,21 +53,11 @@ export default function Nav({onSignIn, onShowShortcuts}) {
 
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     <NavLink to="features">Briefing</NavLink>
-                    <NavLink to="download">Download</NavLink>
-
-                    <button
-                        onClick={onShowShortcuts}
-                        aria-label="Keyboard shortcuts"
-                        title="Keyboard shortcuts (?)"
-                        className="hidden h-9 w-9 items-center justify-center rounded-sm border border-line text-dim transition-colors duration-150 hover:border-blue hover:text-text sm:flex"
-                    >
-                        <Keyboard size={15}/>
-                    </button>
 
                     {loading ? (
                         <div className="h-9 w-9 rounded-sm border border-line bg-panel"/>
                     ) : signedIn ? (
-                        <AccountMenu onDownload={() => scrollToId("download")}/>
+                        <AccountMenu/>
                     ) : (
                         <>
                             <button

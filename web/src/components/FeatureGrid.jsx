@@ -4,12 +4,12 @@ import GameIcon from "./GameIcon.jsx";
 
 // Icons are the game's own unit/asset art (from /icons), tinted to match.
 const FEATURES = [
-    {icon: "reconsat", title: "The Living Map", body: "Real borders, real cities, real population. Fought on a 3D globe rendered from actual geography."},
-    {icon: "spacehq", title: "Live-AI Powers", body: "Every other nation is an autonomous AI running its own economy, defense, and doctrine — reacting to you."},
-    {icon: "dome", title: "Missile Defense", body: "Blanket your territory in radar and early warning. Layer interceptors, THAAD, and area defense to hold the dome."},
-    {icon: "silo", title: "Missile Offense", body: "Author a plan of attack — pick launchers, choose targets, route the trajectory, and let it fly."},
-    {icon: "factory", title: "Command Economy", body: "Balance GDP, industry, leadership, and stability. Every silo and interceptor is paid for in real points."},
-    {icon: "spacehq", title: "Desktop-First", body: "A native app for macOS and Windows. Fully playable offline, saves stay on your machine."},
+    {icon: "reconsat", title: "The world map", body: "Real borders, real cities, real population, on a 3D globe built from actual geography."},
+    {icon: "spacehq", title: "Rival powers", body: "Every other nation runs its own economy, defenses, and doctrine, and reacts to what you do. No two matches play out the same."},
+    {icon: "dome", title: "Missile defense", body: "Blanket your territory in radar and early warning. Layer interceptors, THAAD, and area defense to hold the dome."},
+    {icon: "silo", title: "Missile offense", body: "Plan an attack — pick launchers, choose targets, route the trajectory, and let it fly."},
+    {icon: "factory", title: "A nation to run", body: "Balance GDP, industry, and stability. Every silo and interceptor is paid for out of a real budget."},
+    {icon: "spacehq", title: "Desktop-first", body: "A native app for macOS and Windows. Fully playable offline; saves stay on your machine."},
 ];
 
 export default function FeatureGrid() {

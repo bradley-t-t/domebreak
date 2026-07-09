@@ -324,3 +324,34 @@ export function reconcileLeadership(w) {
     }
     for (const n of w.nations) if (n.lead && n.lead.lost > n.lead.total) n.lead.lost = n.lead.total;
 }
+
+// A city with exposed (at_city) leaders is CAPTURED rather than destroyed. Its
+// leaders don't defect to the conqueror — a decapitation strike by ground is still
+// a decapitation: they're killed and permanently lost to their own nation. Credited
+// to the city's CURRENT owner (call this BEFORE flipping c.slot). Fires a
+// `leadership` event flagged `captured` so the news ticker can distinguish it.
+export function captureCityLeaders(w, city) {
+    if (!(city.leaders > 0)) return;
+    const n = nationOf(w, city.slot);
+    if (n?.lead) {
+        n.lead.lost += city.leaders;
+        if (n.lead.lost > n.lead.total) n.lead.lost = n.lead.total;
+        leadershipEvent(w, city.slot, city.leaders, {cityId: city.id, lng: city.lng, lat: city.lat, captured: 1});
+    }
+    city.leaders = 0;
+}
+
+// Total decapitation: wipe a nation's entire leadership pool at once — every token,
+// wherever it sits (cities, in-transit ferries, the bunker) is lost. Used when the
+// enemy CAPTURES the Leadership Bunker: seizing national command ends the nation, no
+// matter how its leaders were dispersed. warResolution.decapitationTick then reads
+// the zeroed pool and eliminates the nation. Fires a `leadership` event (`decapitated`).
+export function decapitateNation(w, slot) {
+    const n = nationOf(w, slot);
+    if (!n?.lead || !n.lead.total) return;
+    for (const c of w.cities) if (c.slot === slot) c.leaders = 0;
+    for (const u of w.units) if (u.slot === slot && u.mission?.role === "leadershipFerry") u.mission.cargo = 0;
+    n.lead.sheltered = 0;
+    n.lead.lost = n.lead.total;
+    leadershipEvent(w, slot, n.lead.total, {decapitated: 1});
+}

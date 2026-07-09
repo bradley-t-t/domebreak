@@ -37,11 +37,11 @@ import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
 import MapLayers from "./MapLayers.jsx";
 import MapMarkers from "./MapMarkers.jsx";
+import PlacementGhost from "./PlacementGhost.jsx";
 import HoverPopups from "./HoverPopups.jsx";
 import {
     armamentOf,
     isActive,
-    COAST_KM,
     inTerritory,
     placementBlocked,
     sensorsCover,
@@ -82,6 +82,14 @@ export default function LiveGame({
     const myNation = w.nations.find((n) => n.slot === mySlot);
     const myGid = useMemo(() => toGid3(myNation?.iso), [myNation?.iso]);
     const mapRef = useRef(null);
+    // The cursor-following placement ring owns its own position state inside
+    // PlacementGhost; we drive it imperatively so a mousemove updates only that
+    // one source, never LiveGame's marker fan-out (see PlacementGhost / onMove).
+    const ghostRef = useRef(null);
+    // rAF-coalescing for onMove: MapLibre fires mousemove per raw event (well over
+    // one per frame). We stash the latest event and process at most once per frame.
+    const moveRAF = useRef(0);
+    const lastMoveEvt = useRef(null);
 
     // null | "production" | "battle" | "diplomacy" — the top-bar command screens.
     const [panel, setPanel] = useState(null);
@@ -90,8 +98,6 @@ export default function LiveGame({
     const [selUnit, setSelUnit] = useState(null);
     const [selCity, setSelCity] = useState(null);
     const [attackMode, setAttackMode] = useState(false);
-    const [cursor, setCursor] = useState(null);
-    const [placeValid, setPlaceValid] = useState(true);
     const [hoveredGid, setHoveredGid] = useState(null);
     const [layers, setLayers] = useState(DEFAULT_LAYERS);
     const [mapReady, setMapReady] = useState(0);
@@ -115,10 +121,11 @@ export default function LiveGame({
     // touches world state.
     const {layout: hud, update: setHud, resetPanel: resetHudPanel, resetAll: resetHudAll} = useHudLayout();
 
-    // Battle Planning: the player's authored attack plans (intent only — session
-    // state, never world state) plus the reconciler that turns armed/executed plans
-    // into real orders through the sanctioned engine commands. See its GDD/ADR.
-    const bp = useBattlePlans();
+    // Battle Planning: the player's authored attack plans (intent) plus the reconciler
+    // that turns armed/executed plans into real orders through the sanctioned engine
+    // commands. Plans are seeded from — and mirrored back onto — the world so they
+    // persist across save/load and can be drafted in peacetime. See its GDD/ADR.
+    const bp = useBattlePlans(w);
     useBattlePlanReconciler({world: w, api, mySlot, plans: bp.plans, onFired: (id, n) => flash(n ? `Strike launched — ${n} on the way.` : "No units in range to fire.", n ? "info" : undefined)});
 
     const relation = (slot) => {
@@ -232,6 +239,7 @@ export default function LiveGame({
         mySensors,
         visUnits,
         radarFC,
+        radarEmitters,
         defenseFC,
         popFC,
         ranges,
@@ -240,21 +248,24 @@ export default function LiveGame({
         planArcsFC,
         planTargetsFC
     } = useLiveLayers({
-        w, mySlot, myNation, backdrop, layers, placing, moving, cursor, selUnit, placeValid, teamColor, COAST_KM
+        w, mySlot, myNation, backdrop, layers, selUnit, teamColor, globe
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
     // Diplomacy map filter: recolor every nation by your standing (see useDiplomacyLayer).
     const diplomacy = useDiplomacyLayer(w, mySlot);
 
-    const onMove = (e) => {
+    // The actual per-move work: a country hit-test, the placement-validity probe
+    // (which pushes the ghost ring's position straight into PlacementGhost, off
+    // LiveGame's render path), and the zoom-aware hover readout. Run at most once
+    // per frame via the rAF gate below.
+    const processMove = (e) => {
         const m = mapRef.current;
         if (!m) return;
         const feats = m.queryRenderedFeatures(e.point, {layers: ["country-fill"]});
         const gid = feats[0]?.properties?.GID_0 || null;
         const activeType = placing || (moving && w.units.find((u) => u.id === moving)?.type);
         if (activeType) {
-            setCursor(e.lngLat);
             const onLandHere = feats.length > 0, inTerr = inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
             const myLandHere = myGid ? feats.some((f) => f.properties?.GID_0 === myGid) : (onLandHere && inTerr);
             // A marching ground unit may head anywhere on land (same freedom ships
@@ -263,7 +274,8 @@ export default function LiveGame({
             const terrainOk = marching ? onLandHere
                 : UNITS[activeType]?.coastal ? (myLandHere && nearWater(e))
                     : isSea(activeType) ? (!onLandHere && inTerr) : myLandHere;
-            setPlaceValid(terrainOk && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null));
+            const valid = terrainOk && !placementBlocked(w, e.lngLat.lng, e.lngLat.lat, moving || null);
+            ghostRef.current?.update(e.lngLat.lng, e.lngLat.lat, valid);
         }
         if (gid !== hoveredGid) setHoveredGid(gid);
         // Localized hover probe: zoomed out → whole-country readout; zoomed in → the
@@ -280,6 +292,19 @@ export default function LiveGame({
             }
         }
     };
+    const onMove = (e) => {
+        lastMoveEvt.current = e;
+        if (moveRAF.current) return;
+        moveRAF.current = requestAnimationFrame(() => {
+            moveRAF.current = 0;
+            const e2 = lastMoveEvt.current;
+            lastMoveEvt.current = null;
+            if (e2) processMove(e2);
+        });
+    };
+    useEffect(() => () => {
+        if (moveRAF.current) cancelAnimationFrame(moveRAF.current);
+    }, []);
     const onMapClick = (e) => {
         if (disembarkId) {
             const r = api.disembark(disembarkId, e.lngLat.lng, e.lngLat.lat);
@@ -409,10 +434,12 @@ export default function LiveGame({
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
                            popFC={popFC}
-                           backdropFC={backdropFC} radarFC={radarFC} defenseFC={defenseFC} ranges={ranges}
+                           backdropFC={backdropFC} radarFC={radarFC} radarEmitters={radarEmitters} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
-                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}/>
+                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}
+                           globe={globe}/>
+                <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} myNation={myNation} globe={globe}/>
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
                             visUnits={visUnits} unitHeading={unitHeading} unitColor={unitColor} labelOf={labelOf}
                             nationName={nationName} selUnit={selUnit} onUnitClick={onUnitClick}

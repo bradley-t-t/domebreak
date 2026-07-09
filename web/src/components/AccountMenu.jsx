@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {AnimatePresence, motion} from "motion/react";
-import {ChevronDown, LogOut, Download} from "lucide-react";
+import {ChevronDown, LogOut} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {useAccount} from "../lib/AccountContext.jsx";
 import GameIcon from "./GameIcon.jsx";
@@ -41,7 +41,7 @@ function Stat({value, label}) {
     );
 }
 
-export default function AccountMenu({onDownload}) {
+export default function AccountMenu() {
     const {profile, stats, signOut} = useAccount();
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -58,7 +58,7 @@ export default function AccountMenu({onDownload}) {
         };
     }, [open]);
 
-    const name = profile?.username || "Commander";
+    const name = profile?.username || "Player";
     const total = stats?.total_matches ?? 0;
     const wins = stats?.wins ?? 0;
     const losses = stats?.losses ?? 0;
@@ -94,7 +94,7 @@ export default function AccountMenu({onDownload}) {
                             <div className="min-w-0">
                                 <div className="truncate font-display text-[14px] font-bold text-text">{name}</div>
                                 <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
-                                    Commander{profile?.created_at ? ` · since ${monthYear(profile.created_at)}` : ""}
+                                    {profile?.created_at ? `Member since ${monthYear(profile.created_at)}` : "Player"}
                                 </div>
                             </div>
                         </div>
@@ -108,17 +108,6 @@ export default function AccountMenu({onDownload}) {
                         </div>
 
                         <div className="p-2">
-                            <button
-                                role="menuitem"
-                                onClick={() => {
-                                    setOpen(false);
-                                    onDownload?.();
-                                }}
-                                className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[13px] text-dim transition-colors hover:bg-bg-2 hover:text-text"
-                            >
-                                <Download size={15}/>
-                                <span>Download the game</span>
-                            </button>
                             <button
                                 role="menuitem"
                                 onClick={() => {

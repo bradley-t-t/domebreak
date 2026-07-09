@@ -12,6 +12,5 @@ export function scrollToId(id) {
 export const SHORTCUTS = [
     {key: "g", label: "Top", target: "top", hint: "G"},
     {key: "b", label: "Briefing", target: "features", hint: "B"},
-    {key: "d", label: "Download", target: "download", hint: "D"},
     {key: "w", label: "Request access", target: "waitlist", hint: "W"},
 ];

@@ -1,16 +1,15 @@
 import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
-import {ChevronDown, ArrowRight} from "lucide-react";
+import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import HeroGlobe from "./HeroGlobe.jsx";
 import GameIcon from "./GameIcon.jsx";
 import {Eyebrow, Wordmark} from "./ui.jsx";
-import {scrollToId} from "../lib/nav.js";
 
 const SPECS = [
     {icon: "reconsat", label: "195 nations"},
-    {icon: "spacehq", label: "8 live-AI powers"},
-    {icon: "dome", label: "Real-time"},
+    {icon: "silo", label: "Defense & offense"},
+    {icon: "dome", label: "Real-time strategy"},
 ];
 
 const fadeUp = (reduce, delay) => ({
@@ -46,8 +45,8 @@ export default function Hero({onSignIn}) {
                     <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
                     Threat board · Live
                 </div>
-                <div className="mt-1 text-dim/80">195 powers tracked</div>
-                <div className="mt-1">Sim · 4× · Globe view</div>
+                <div className="mt-1 text-dim/80">195 nations in play</div>
+                <div className="mt-1">Real-time · globe view</div>
             </motion.div>
 
             {/* Command rail. */}
@@ -55,40 +54,31 @@ export default function Hero({onSignIn}) {
                 style={reduce ? undefined : {y: contentY, opacity: contentOpacity}}
                 className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center px-5 pt-24 pb-16 sm:px-8"
             >
-                <div className="relative max-w-2xl db-tick pl-1">
+                <div className="relative max-w-xl db-tick pl-1">
                     <motion.div {...fadeUp(reduce, 0)}>
                         <Eyebrow>System Online — Pre-Registration Open</Eyebrow>
                         <h1 className="mt-6">
-                            <Wordmark glow className="block text-[clamp(3rem,11vw,7.5rem)]"/>
+                            <Wordmark stacked glow className="text-[clamp(3.25rem,8vw,6rem)]"/>
                         </h1>
-                        <p className="mt-4 font-display text-[13px] font-semibold uppercase tracking-[0.34em] text-dim sm:text-[15px]">
+                        <p className="mt-5 font-display text-[12px] font-semibold uppercase tracking-[0.3em] text-dim sm:text-[13.5px]">
                             Global Missile Command
                         </p>
                     </motion.div>
 
                     <motion.p
                         {...fadeUp(reduce, 0.12)}
-                        className="mt-8 max-w-xl text-[clamp(1rem,1.5vw,1.2rem)] leading-relaxed text-dim"
+                        className="mt-7 max-w-lg text-[clamp(0.98rem,1.35vw,1.15rem)] leading-relaxed text-dim"
                     >
-                        A real-time strategy game of missile defense and offense on a
-                        <span className="text-text"> living world map</span>. Every nation is a
-                        <span className="text-text"> live AI</span>. One dome stands between
-                        order and annihilation.
+                        A real-time strategy game of missile defense and offense, fought on the
+                        <span className="text-text"> real world map</span>. Build your dome, plan
+                        your strikes, and outlast every <span className="text-text">rival nation</span>.
                     </motion.p>
 
-                    <motion.div {...fadeUp(reduce, 0.24)} className="mt-9">
+                    <motion.div {...fadeUp(reduce, 0.24)} className="mt-8">
                         <WaitlistForm source="hero" cta="Request Access"/>
-                        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
-                            <button
-                                onClick={() => scrollToId("download")}
-                                className="group inline-flex items-center gap-1.5 text-text transition-colors hover:text-gold-hi"
-                            >
-                                Download the game
-                                <ArrowRight size={13} className="transition-transform duration-200 group-hover:translate-x-0.5"/>
-                            </button>
-                            <span className="text-line">·</span>
+                        <div className="mt-4 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
                             <button onClick={onSignIn} className="text-dim transition-colors hover:text-text">
-                                Sign in
+                                Have an account? Sign in
                             </button>
                         </div>
                     </motion.div>
@@ -96,7 +86,7 @@ export default function Hero({onSignIn}) {
                     {/* Spec strip — game-icon telemetry. */}
                     <motion.div
                         {...fadeUp(reduce, 0.34)}
-                        className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hair pt-5"
+                        className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hair pt-6"
                     >
                         {SPECS.map((s) => (
                             <span key={s.label} className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-faint">
