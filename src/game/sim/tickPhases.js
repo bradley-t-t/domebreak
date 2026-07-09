@@ -230,8 +230,6 @@ export function stepCombat(w, dt) {
             // like THAAD, which can't kill a target that's already dived in close).
             const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
             if (dToTarget <= defenseRange(w, d) && dToTarget >= defenseMinRange(w, d)) {
-                const dn = nationOf(w, d.slot);
-                if (dn.points <= 0 && netIncomeOf(w, d.slot) < 0) continue; // upkeep unmet — interceptors offline
                 p.tried.push(d.id);
                 // Sea-based defenses (cruiser/destroyer/Aegis afloat) reload faster
                 // while replenished by a nearby oiler.

@@ -1,12 +1,12 @@
 // AI strategic placement: sites each unit by role and spreads forces across a
 // nation's cities rather than piling everything onto the capital. All sampling
 // uses the seeded rand(w).
-import {AI_TUNING, UNITS} from "../data/constants.js";
+import {AI_TUNING, COAST_KM, UNITS} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
 import {defenseRange, inOwnCountry, inTerritory, placementBlocked, radarRangeOf} from "./queries.js";
 import {isSea} from "../geo/seaRoute.js";
-import {cosLatSafe} from "../../lib/geo.js";
+import {cosLatSafe, offsetKmPolar} from "../../lib/geo.js";
 import {jitter, randRange} from "../../lib/random.js";
 
 // Coastal-water spot near the capital for naval builds — probes outward until it
@@ -18,6 +18,40 @@ function aiSeaSpot(w, slot, city) {
         const a = rand(w) * Math.PI * 2;
         const lng = city.lng + Math.cos(a) * r, lat = city.lat + Math.sin(a) * r;
         if (isSea(lng, lat) && inTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
+    }
+    return null;
+}
+
+// A live land spot inside the nation with open sea within COAST_KM — the AI's
+// equivalent of the human's "click a coastline" gate for seaports.
+function nearSea(lng, lat) {
+    for (const r of [COAST_KM * 0.55, COAST_KM]) {
+        for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2;
+            const p = offsetKmPolar({lng, lat}, r, a);
+            if (isSea(p.lng, p.lat)) return true;
+        }
+    }
+    return false;
+}
+
+function aiCoastalLandSpot(w, slot, cities, myUnits) {
+    for (const anchor of cities) {
+        const cosLat = cosLatSafe(anchor.lat, 0.2);
+        for (let ring = 0; ring < 4; ring++) {
+            const rDeg = 0.35 + ring * 0.35;
+            for (let k = 0; k < 8; k++) {
+                const ang = rand(w) * Math.PI * 2;
+                const lat = anchor.lat + Math.cos(ang) * rDeg;
+                const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
+                if (isSea(lng, lat)) continue;
+                if (!inOwnCountry(w, slot, lng, lat)) continue;
+                if (placementBlocked(w, lng, lat, null)) continue;
+                if (crowdsSameRole("industry", myUnits, lng, lat)) continue;
+                if (!nearSea(lng, lat)) continue;
+                return {lng, lat};
+            }
+        }
     }
     return null;
 }
@@ -177,6 +211,7 @@ export function aiPlace(w, n, type, myUnits, cities, front) {
     }
     if (!anchor) return null;
     if (def.domain === "sea") return aiSeaSpot(w, n.slot, anchor);
+    if (def.coastal) return aiCoastalLandSpot(w, n.slot, cities, myUnits);
     const away = role === "industry" || type === "bunker" || type === "spacehq";
     return spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
 }
