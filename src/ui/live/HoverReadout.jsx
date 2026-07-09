@@ -1,6 +1,7 @@
 import {cn} from "../lib/cn.js";
 import {popoverCard} from "../lib/variants.js";
 import StatGrid from "../common/StatGrid.jsx";
+import {clamp} from "../../lib/math.js";
 
 // HoverReadout — the shared popover shell for the map's hover probes (the
 // zoomed-out whole-country readout and the zoomed-in unit/city readout).
@@ -13,7 +14,7 @@ import StatGrid from "../common/StatGrid.jsx";
 // Presentation only — callers own what to show and any game-state lookups.
 export default function HoverReadout({x, y, clampBottom, header, rows, footer}) {
     const left = x + 18 > window.innerWidth - 250 ? Math.max(12, x - 248) : x + 18;
-    const top = Math.min(Math.max(60, y - 14), window.innerHeight - clampBottom);
+    const top = clamp(y - 14, 60, window.innerHeight - clampBottom);
     return (
         <div className={cn(popoverCard(), "fixed z-6 min-w-[206px] max-w-[244px] py-[11px] px-[13px] pb-3")} style={{left, top}} aria-hidden="true">
             <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{header}</div>

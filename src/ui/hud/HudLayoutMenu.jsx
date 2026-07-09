@@ -1,14 +1,14 @@
-import {useState} from "react";
 import {Eye, EyeOff, RotateCcw, SlidersHorizontal} from "lucide-react";
 import {HUD_PANELS} from "../../game/platform/hudLayout.js";
 import {cn} from "../lib/cn.js";
+import {useDisclosure} from "../../lib/hooks/useDisclosure.js";
 
 // Always-visible HUD hub, docked bottom-left over the map. It's the reliable way
 // back for anything the player has hidden or dragged astray: toggle each panel's
 // visibility and reset the whole layout — reachable even when every adjustable
 // panel is hidden. Complements the per-panel drag toolbars.
 export default function HudLayoutMenu({layout, onToggle, onResetAll}) {
-    const [open, setOpen] = useState(false);
+    const {open, toggle} = useDisclosure(false);
     const hiddenCount = HUD_PANELS.filter((p) => layout[p.id]?.hidden).length;
 
     return (
@@ -44,7 +44,7 @@ export default function HudLayoutMenu({layout, onToggle, onResetAll}) {
                         "relative w-9 h-9 grid place-items-center rounded border border-line bg-panel text-dim backdrop-blur-[8px] transition-[color,border-color] duration-150 ease-out-db hover:text-text hover:border-blue",
                         open && "text-text border-blue",
                     )}
-                    onClick={() => setOpen((v) => !v)}
+                    onClick={toggle}
                     aria-expanded={open} aria-haspopup="menu"
                     title="Customize HUD layout" aria-label="Customize HUD layout">
                 <SlidersHorizontal size={16} aria-hidden="true"/>

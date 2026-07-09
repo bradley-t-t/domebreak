@@ -1,8 +1,9 @@
-import {useMemo, useState} from "react";
+import {useMemo} from "react";
 import {Check, ChevronDown, Target} from "lucide-react";
 import {evaluateObjectives} from "../../game/engine.js";
 import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";
+import {useDisclosure} from "../../lib/hooks/useDisclosure.js";
 
 // How many incomplete objectives the panel foregrounds at once. Purely a
 // presentation cap (keeps the to-do list short) — not a gameplay tuning value.
@@ -34,7 +35,7 @@ export default function ObjectivesPanel({world, mySlot}) {
         // eslint-disable-next-line react-hooks/exhaustive-deps -- throttled to the game-second clock; world/mySlot read inside
         [second, mySlot],
     );
-    const [logOpen, setLogOpen] = useState(false);
+    const {open: logOpen, toggle: toggleLog} = useDisclosure(false);
     if (!objectives.length) return null;
 
     const active = objectives.filter((o) => !o.done);
@@ -111,7 +112,7 @@ export default function ObjectivesPanel({world, mySlot}) {
 
             {doneCount > 0 && (
                 <div className="border-t border-hair">
-                    <button type="button" onClick={() => setLogOpen((v) => !v)}
+                    <button type="button" onClick={toggleLog}
                             className="w-full flex items-center gap-2 px-3 py-[8px] text-left hover:bg-panel-1/60 transition-colors"
                             aria-expanded={logOpen} aria-controls="objectives-log">
                         <Check size={12} className="flex-none text-good" aria-hidden="true"/>

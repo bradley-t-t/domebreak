@@ -8,6 +8,8 @@ import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initia
 import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
+import {clamp01} from "../../lib/math.js";
+import {fmtPct, shareOfPct} from "../lib/format.js";
 
 // The domain "pill" row under the unit name — kind is always shown; the rest
 // are conditional badges keyed off the unit def (naval hull, fixed-wing/rotary
@@ -37,7 +39,7 @@ export default function SelectionPanel({
                                            flash
                                        }) {
     const def = UNITS[selectedUnit.type];
-    const hpFrac = Math.max(0, Math.min(1, selectedUnit.hp / def.hp));
+    const hpFrac = clamp01(selectedUnit.hp / def.hp);
     return (
         <div className="db-selpanel absolute bottom-[84px] right-[22px] z-5 w-[276px] bg-panel-2 border border-line rounded p-[15px] shadow-[var(--shadow),inset_0_1px_0_var(--hair)] backdrop-blur-[14px] pointer-events-auto motion-safe:animate-[dbPop_220ms_var(--ease-out)]">
             <div className="font-display font-bold text-[15px] flex items-center gap-2"><UnitIcon name={UNIT_ICON[selectedUnit.type]} color={teamColor(mySlot)}
@@ -121,7 +123,7 @@ export default function SelectionPanel({
                                     {curHere && <>
                                         <div className="flex items-center justify-between text-[10.5px] text-text">
                                             <span>Building {labelOf(curHere.item.type, mySlot)}</span>
-                                            <b className="font-mono font-semibold">{Math.round(curHere.progress * 100)}%</b>
+                                            <b className="font-mono font-semibold">{fmtPct(curHere.progress, {suffix: true})}</b>
                                         </div>
                                         <Meter frac={curHere.progress} fillClass="bg-[var(--flame,#ff8a1a)]"/>
                                     </>}
@@ -161,7 +163,7 @@ export default function SelectionPanel({
             {selectedUnit.type === "bunker" && selectedUnit.slot === mySlot && (() => {
                 const lead = leadershipStatus(w, mySlot);
                 if (!lead) return null;
-                const leadPct = (v) => Math.round((v / (lead.total || 1)) * 100);
+                const leadPct = (v) => shareOfPct(v, lead.total || 1);
                 const sheltering = lead.mode === "shelter";
                 const releasing = lead.mode === "release";
                 const act = (fn) => {
@@ -212,7 +214,7 @@ export default function SelectionPanel({
                     </div>
                 );
                 const holding = city.capture && city.capture.slot === selectedUnit.slot;
-                const pct = Math.round((holding ? city.capture.progress : 0) * 100);
+                const pct = fmtPct(holding ? city.capture.progress : 0);
                 const assaulting = selectedUnit.targetId === city.id;
                 return (
                     <div className="mt-2 pt-[9px] border-t border-line-soft">

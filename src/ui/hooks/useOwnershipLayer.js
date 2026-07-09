@@ -15,6 +15,10 @@
 import {useEffect, useRef, useState} from "react";
 import {colorForSlot} from "../../game/data/constants.js";
 import {toGid3} from "../../game/data/iso3.js";
+import {loadJsonAsset} from "../../lib/fetchJson.js";
+import {rgbTuple} from "../../lib/color.js";
+import {indexBy} from "../../lib/iter.js";
+import {useCancellableEffect} from "../../lib/hooks/useCancellableEffect.js";
 
 const EMPTY = "rgba(0,0,0,0)";
 
@@ -26,19 +30,19 @@ export function useOwnershipLayer(w) {
     const [ids, setIds] = useState([]);
 
     // Static lookups, loaded once. Bump sigRef so the next tick rebuilds once ready.
-    useEffect(() => {
-        let live = true;
-        fetch("/assets/city-region.json").then((r) => r.json()).then((j) => {
-            if (live) { cityRegionRef.current = j; sigRef.current = null; }
-        }).catch(() => { /* overlay just stays empty */ });
-        fetch("/assets/colors.json").then((r) => r.json()).then((cols) => {
-            if (!live) return;
+    useCancellableEffect((t) => {
+        loadJsonAsset("/assets/city-region.json", {cache: true}).then((j) => {
+            if (t.cancelled || !j) return;
+            cityRegionRef.current = j;
+            sigRef.current = null;
+        });
+        loadJsonAsset("/assets/colors.json", {cache: true}).then((cols) => {
+            if (t.cancelled || !cols) return;
             const f = {};
-            for (const [gid, c] of Object.entries(cols)) f[gid] = `rgb(${c[0]},${c[1]},${c[2]})`;
+            for (const [gid, c] of Object.entries(cols)) f[gid] = rgbTuple(c);
             flagRef.current = f;
             sigRef.current = null;
-        }).catch(() => { /* conquered land falls back to a slot color */ });
-        return () => { live = false; };
+        });
     }, []);
 
     useEffect(() => {
@@ -62,7 +66,7 @@ export function useOwnershipLayer(w) {
             m.set(c.slot, (m.get(c.slot) || 0) + (c.pop || 1));
         }
 
-        const nationBySlot = new Map(w.nations.map((n) => [n.slot, n]));
+        const nationBySlot = indexBy(w.nations, (n) => n.slot);
         const flags = flagRef.current || {};
         const pairs = [];   // gid1, color, ... for the fill match
         const lineIds = [];

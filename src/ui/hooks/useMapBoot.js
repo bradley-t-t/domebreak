@@ -1,6 +1,8 @@
 // Loading veil + first-frame camera framing for the live match.
 import {useEffect} from "react";
 import {START_CAM} from "../../game/data/constants.js";
+import {unwrapLng} from "../../lib/geo.js";
+import {safeMap} from "../lib/mapSafe.js";
 
 export function useMapBoot({w, mySlot, mapRef, setMapReady, setBooting}) {
     // Failsafe: never let the loading veil stick, even if the map's onLoad never
@@ -24,19 +26,16 @@ export function useMapBoot({w, mySlot, mapRef, setMapReady, setBooting}) {
         // across the antimeridian so a nation split by ±180 still frames sanely.
         let dLat = 0.05, dLng = 0.05;
         for (const c of mine) {
-            let dl = c.lng - cap.lng;
-            if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
+            const dl = unwrapLng(c.lng - cap.lng, 0);
             dLat = Math.max(dLat, Math.abs(c.lat - cap.lat));
             dLng = Math.max(dLng, Math.abs(dl));
         }
         dLat *= START_CAM.spanPad;
         dLng *= START_CAM.spanPad;
-        try {
-            m.fitBounds(
-                [[cap.lng - dLng, cap.lat - dLat], [cap.lng + dLng, cap.lat + dLat]],
-                {padding: START_CAM.padPx, maxZoom: START_CAM.maxZoom, duration: 0}
-            );
-        } catch { /* projection not ready — keep the default view */ }
+        safeMap(m, (mm) => mm.fitBounds(
+            [[cap.lng - dLng, cap.lat - dLat], [cap.lng + dLng, cap.lat + dLat]],
+            {padding: START_CAM.padPx, maxZoom: START_CAM.maxZoom, duration: 0},
+        ));
     };
 
     // Map is live: frame home, then hold the loading veil until the tiles settle
@@ -50,11 +49,7 @@ export function useMapBoot({w, mySlot, mapRef, setMapReady, setBooting}) {
         // without this the globe renders tiny in the corner and the rest of the
         // view is black. Re-fit now, next frame, and shortly after to cover any
         // late layout (the lobby map does the same via its own resize()).
-        const fit = () => {
-            try {
-                m.resize();
-            } catch { /* map tearing down */ }
-        };
+        const fit = () => safeMap(m, (mm) => mm.resize());
         fit();
         requestAnimationFrame(fit);
         setTimeout(fit, 200);

@@ -1,4 +1,5 @@
 import {useEffect, useRef} from "react";
+import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 
 // Modal accessibility primitive: focus-trap + Escape-to-close + focus
 // restoration. Attach the returned ref to the modal container (give it
@@ -15,12 +16,8 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
 export function useModal(onClose, {autoFocus = true} = {}) {
     const ref = useRef(null);
     // Keep the latest onClose without re-running the focus effect (which would
-    // drop and re-take focus every render). Updated in a commit-phase effect so
-    // the keydown handler always calls the current onClose.
-    const onCloseRef = useRef(onClose);
-    useEffect(() => {
-        onCloseRef.current = onClose;
-    });
+    // drop and re-take focus every render).
+    const onCloseRef = useLatestRef(onClose);
 
     useEffect(() => {
         const node = ref.current;

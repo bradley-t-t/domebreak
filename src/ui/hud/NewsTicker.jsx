@@ -1,6 +1,7 @@
 import {useEffect, useLayoutEffect, useRef, useState} from "react";
 import {cn} from "../lib/cn.js";
 import {headline} from "./newsHeadline.js";
+import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 
 const CAP = 40;       // rolling headlines retained (the sim only keeps the last ~60 events)
 const SPEED = 40;     // px/sec — wall-clock scroll speed, independent of game speed
@@ -21,12 +22,9 @@ export default function NewsTicker({world, mySlot}) {
     const [items, setItems] = useState([]);
     const seen = useRef(new Set());
     const itemsRef = useRef([]);            // mirror of items, matches the committed DOM between scans
-    const ctx = useRef({world, mySlot});
     // Keep the scanner's view of world/mySlot current (engine mutates world in
     // place); updated after each render, well ahead of the 300 ms scan cadence.
-    useEffect(() => {
-        ctx.current = {world, mySlot};
-    });
+    const ctx = useLatestRef({world, mySlot});
 
     const trackRef = useRef(null);
     const runRef = useRef(null);
@@ -64,6 +62,7 @@ export default function NewsTicker({world, mySlot}) {
         scan();
         const id = setInterval(scan, SCAN_MS);
         return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Trimming the front shifts remaining content left; add the removed width back

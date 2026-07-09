@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useReducer, useRef} from "react";
+import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 import {
     cancelProd,
     commandAttack,
@@ -33,8 +34,7 @@ import {
 // smooths the server's snapshots without re-simulating server-authoritative state.
 export function useEngine(world, online = false) {
     const ref = useRef(world);
-    const onlineRef = useRef(online);
-    onlineRef.current = online;
+    const onlineRef = useLatestRef(online);
     const [, force] = useReducer((x) => x + 1, 0);
     useEffect(() => {
         let raf, last = performance.now(), acc = 0;
@@ -52,6 +52,7 @@ export function useEngine(world, online = false) {
         };
         raf = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(raf);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     const api = useMemo(() => ({
         setSpeed: (m) => {

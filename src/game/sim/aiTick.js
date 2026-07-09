@@ -11,6 +11,8 @@ import {
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
 import {atWar, netIncomeOf} from "./queries.js";
+import {randRange, weightedPick} from "../../lib/random.js";
+import {clamp} from "../../lib/math.js";
 import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, setAwacsPatrol, setMarch, setPatrolSize, unitLockReason} from "./production.js";
 import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
@@ -38,10 +40,7 @@ function pickTarget(w, n, from) {
     if (!scored.length) return null;
     scored.sort((a, b) => b[1] - a[1]);
     const top = scored.slice(0, AI_TUNING.targetTopN);
-    const total = top.reduce((s, [, v]) => s + v, 0);
-    let r = rand(w) * total;
-    for (const [c, v] of top) { r -= v; if (r <= 0) return c; }
-    return top[0][0];
+    return weightedPick(top, () => rand(w));
 }
 
 // Tech-gated unit types the AI pursues once unlocked, in build priority. Space
@@ -142,10 +141,10 @@ export function diploTick(w, dt) {
     let firing = null;
     for (const n of w.nations) {
         if (!n.isAi || !n.alive || n.active === false) continue;   // neutrals never run diplomacy
-        if (n._diplo == null) n._diplo = DIPLOMACY.thinkMin + rand(w) * DIPLOMACY.thinkSpan;
+        if (n._diplo == null) n._diplo = randRange(rand(w), DIPLOMACY.thinkMin, DIPLOMACY.thinkSpan);
         n._diplo -= dt;
         if (n._diplo > 0) continue;
-        n._diplo = DIPLOMACY.thinkMin + rand(w) * DIPLOMACY.thinkSpan;
+        n._diplo = randRange(rand(w), DIPLOMACY.thinkMin, DIPLOMACY.thinkSpan);
         (firing || (firing = [])).push(n);
     }
     if (!firing) return;
@@ -182,12 +181,8 @@ function diploProposeAlliance(w, n, caps) {
         total += weight;
     }
     if (!cand.length || total <= 0) return;
-    let r = rand(w) * total;
-    for (const [slot, weight] of cand) {
-        r -= weight;
-        if (r <= 0) return void proposeAlliance(w, n.slot, slot);
-    }
-    proposeAlliance(w, n.slot, cand[cand.length - 1][0]);
+    const target = weightedPick(cand, () => rand(w));
+    if (target != null) proposeAlliance(w, n.slot, target);
 }
 
 // An AI's negotiated exit: once a war is older than minWarSec it may offer white peace
@@ -221,17 +216,13 @@ function diploDeclareWar(w, n, caps, alive) {
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.warRangeKm) continue;
         const gdpB = Math.max(0.1, m.gdp || 0.1), cB = Math.max(1, alive.get(m.slot) || 0);
         let weight = Math.pow(gdpB / gdpA, DIPLOMACY.wGdp) * Math.pow(cA / cB, DIPLOMACY.wWeak);
-        weight = Math.min(DIPLOMACY.wMax, Math.max(DIPLOMACY.wMin, weight));
+        weight = clamp(weight, DIPLOMACY.wMin, DIPLOMACY.wMax);
         rivals.push([m.slot, weight]);
         total += weight;
     }
     if (!rivals.length || total <= 0) return;
-    let r = rand(w) * total;
-    for (const [slot, weight] of rivals) {
-        r -= weight;
-        if (r <= 0) return void declareWar(w, n.slot, slot);
-    }
-    declareWar(w, n.slot, rivals[rivals.length - 1][0]);
+    const target = weightedPick(rivals, () => rand(w));
+    if (target != null) declareWar(w, n.slot, target);
 }
 
 export function aiTick(w, dt) {
@@ -254,8 +245,8 @@ export function aiTick(w, dt) {
         // tracks the action on the map rather than the size of the roster.
         const active = warCount(n) > 0 || nearPlayer(w, n, caps);
         n._ai = active
-            ? AI_TUNING.thinkMin + rand(w) * AI_TUNING.thinkSpan
-            : DIPLOMACY.idleThinkMin + rand(w) * DIPLOMACY.idleThinkSpan;
+            ? randRange(rand(w), AI_TUNING.thinkMin, AI_TUNING.thinkSpan)
+            : randRange(rand(w), DIPLOMACY.idleThinkMin, DIPLOMACY.idleThinkSpan);
         ensureProd(n);
         const myUnits = unitsBySlot.get(n.slot) || [];
         const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
