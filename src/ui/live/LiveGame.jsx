@@ -35,6 +35,7 @@ import {cn} from "../lib/cn.js";
 import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
+import PlayerListOverlay from "../screens/PlayerListOverlay.jsx";
 import MapLayers from "./MapLayers.jsx";
 import MapMarkers from "./MapMarkers.jsx";
 import PlacementGhost from "./PlacementGhost.jsx";
@@ -108,6 +109,8 @@ export default function LiveGame({
     const [pins, setPins] = useState([]);
     // In-game controls reference (toggled with ? / F1, or the corner button).
     const [helpOpen, setHelpOpen] = useState(false);
+    // In-game scoreboard (Tab): every active power, their commander, and stats.
+    const [playerListOpen, setPlayerListOpen] = useState(false);
     const [err, setErr] = useState(null);
     // Loading veil: covers the map from mount until the style + tiles finish
     // (map "idle"), so the player only sees the world once it's fully drawn and
@@ -203,6 +206,7 @@ export default function LiveGame({
         placing, setPlacing,
         attackMode, setAttackMode,
         panel, setPanel,
+        playerListOpen, setPlayerListOpen,
         onPause,
         overlayOpen,
         w,
@@ -545,6 +549,8 @@ export default function LiveGame({
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
             {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
+            {playerListOpen && <PlayerListOverlay world={w} mySlot={mySlot} players={net?.players}
+                                                  onClose={() => setPlayerListOpen(false)}/>}
             <HoverPopups hover={hover} hoverEnt={hoverEnt} countryByGid={countryByGid} w={w} mySlot={mySlot}
                          relation={relation} nationName={nationName} labelOf={labelOf} armOf={armOf}
                          teamColor={teamColor}/>
