@@ -12,7 +12,7 @@ import {cn} from "../lib/cn.js";
 // country picks it as your nation, every member's pick is tinted on the sphere,
 // and a Ready button arms the launch. There is no host and no manual start — the
 // server auto-launches once every member is ready (or on its lobby-ready
-// timeout), per adr-004. Each player claims their own nation inside the full
+// timeout). Each player claims their own nation inside the full
 // living world (every other country is world AI, as in single player).
 
 const RAIL_PAD = 360;       // left projection padding so the globe clears the rail
@@ -180,7 +180,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
             if (m.getLayer("lobby-pick-line")) m.setPaintProperty("lobby-pick-line", "line-color", expr);
         } catch { /* style not ready / tearing down */
         }
-    }, [members, mapReady, optimisticIso, myMember?.slot, me?.id]);
+    }, [members, mapReady, optimisticIso, myMember, me?.id]);
 
     // Fly the globe to the nation the local player just claimed.
     useEffect(() => {

@@ -1,6 +1,5 @@
-// Placement/terrain validity checks shared by placement, movement orders, and
-// the on-map cursor probe. Pulled out of LiveGame.jsx verbatim — same feature
-// queries, same coastline sampling, same per-domain rules.
+// Placement/terrain validity checks shared by placement, movement orders, and the on-map
+// cursor probe.
 import {COAST_KM, inTerritory, UNITS} from "../../game/engine.js";
 
 export function usePlacementChecks({mapRef, w, mySlot, myGid}) {

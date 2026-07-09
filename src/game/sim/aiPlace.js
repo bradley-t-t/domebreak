@@ -1,8 +1,6 @@
-// AI strategic placement (design/quick-specs/ai-strategic-placement-2026-07-06.md)
-// The AI sites each unit by role and spreads its forces across its cities rather
-// than piling everything onto the capital. All sampling uses the seeded rand(w).
-// Split out of aiTick.js — see that file for the build-decision loop that calls
-// into this placer.
+// AI strategic placement: sites each unit by role and spreads forces across a
+// nation's cities rather than piling everything onto the capital. All sampling
+// uses the seeded rand(w).
 import {AI_TUNING, UNITS} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
@@ -55,9 +53,9 @@ function defenseCovers(w, myUnits, lng, lat) {
     return false;
 }
 
-// Is a point already inside a friendly radar's coverage? Used to SPREAD early warning
-// across the nation — each new array goes to a city not yet under the radar picture,
-// instead of stacking every sensor on the one frontier city (the old clustering bug).
+// Is a point already inside a friendly radar's coverage? Used to spread early
+// warning across the nation — each new array goes to a city not yet under the
+// radar picture, instead of stacking every sensor on one frontier city.
 function radarCovered(w, myUnits, lng, lat) {
     for (const u of myUnits) {
         if (u.hp <= 0 || radarRangeOf(u.type) <= 0) continue;
@@ -124,10 +122,10 @@ function crowdsSameRole(role, myUnits, lng, lat) {
 
 // Sample a valid build spot around an anchor city — biased toward the front (sensors,
 // forward offense) or away into the interior (industry, command), and spread from
-// same-role units. Every candidate must sit inside the nation's own POLITICAL border
-// (inOwnCountry) — the same rule the human player is bound to — so the AI never sites
-// a unit on a neighbour's (or the player's) land. Falls back to any valid in-country
-// spot; returns null if none is found (the caller simply skips the build this tick).
+// same-role units. Every candidate must sit inside the nation's own political border
+// (inOwnCountry), the same rule the human player is bound to, so the AI never sites a
+// unit on a neighbour's (or the player's) land. Falls back to any valid in-country
+// spot; returns null if none is found (the caller skips the build this tick).
 function spotAround(w, slot, anchor, front, role, toward, away, myUnits) {
     const cosLat = Math.max(0.2, Math.cos((anchor.lat * Math.PI) / 180));
     let brng = null;

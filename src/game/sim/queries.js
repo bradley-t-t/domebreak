@@ -232,7 +232,7 @@ export function sensorsOf(w, slot) {
 
 // Anti-submarine sensors only: platforms flagged asw:true, radiating a sonar
 // bubble of sonarKm × the nation's sonarMult (det tracking/fusion techs widen
-// it — spec §8c). Submerged hulls are detected only within one of these.
+// it). Submerged hulls are detected only within one of these.
 export function subSensorsOf(w, slot) {
     const n = nationOf(w, slot);
     const sonarMult = n?.sonarMult ?? 1;
@@ -293,7 +293,7 @@ export function radarLandCoverage(w, slot) {
 // Own units are always visible. Submarines (submarine:true hulls) are stealthy —
 // ordinary radar and satellites don't reveal them; they show only when an ASW
 // sensor (subSensorsOf) covers them. Everything else uses the normal radar net.
-// The live UI reads this to build its visible-units set (spec §8c).
+// The live UI reads this to build its visible-units set.
 export function unitVisibleTo(w, viewerSlot, u, sensors, subSensors) {
     if (u.slot === viewerSlot) return true;
     if (UNITS[u.type]?.submarine) {

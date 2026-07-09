@@ -1,21 +1,19 @@
 import {useEffect, useRef, useState} from "react";
 
-// Reveal-on-scroll built on the native IntersectionObserver. More reliable than
-// motion's whileInView wrapper (which didn't fire for already-in-view elements
-// here), and it fails OPEN: if IO is unavailable, content shows immediately.
-// The observer also emits an initial callback for elements already on screen,
-// so above-the-fold content reveals right away.
+// Reveal-on-scroll built on the native IntersectionObserver. Fails open: if IO
+// is unavailable, content shows immediately. The observer emits an initial
+// callback for elements already on screen, so above-the-fold content reveals
+// right away.
 export function useInViewOnce({rootMargin = "-10% 0px -10% 0px"} = {}) {
     const ref = useRef(null);
-    const [inView, setInView] = useState(false);
+    // Start visible when IntersectionObserver is unavailable, so content is never
+    // hidden and the effect needs no synchronous fallback setState.
+    const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
 
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
-        if (typeof IntersectionObserver === "undefined") {
-            setInView(true);
-            return;
-        }
+        if (typeof IntersectionObserver === "undefined") return;
         const io = new IntersectionObserver((entries) => {
             if (entries.some((e) => e.isIntersecting)) {
                 setInView(true);

@@ -10,7 +10,7 @@ import {persistKey, removeKey} from "./localData.js";
 const PREFIX = "domebreak.save.";
 // Bump on ANY change to the world shape; older saves become unreadable (no migration).
 //   v2: unit type ids renamed to generic roles (interceptor, strikefighter, …).
-//   v3: bounded-match / neutral-world model — nations carry an `active` flag (adr-008).
+//   v3: bounded-match / neutral-world model — nations carry an `active` flag.
 //   v4: world carries `battlePlans` (authored attack plans now persist with the save).
 //   v5: battle plans carry `targetNations` (per-plan enemy-nation target scope).
 const VERSION = 5;

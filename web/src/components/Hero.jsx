@@ -4,7 +4,7 @@ import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import HeroGlobe from "./HeroGlobe.jsx";
 import GameIcon from "./GameIcon.jsx";
-import {Eyebrow, Wordmark} from "./ui.jsx";
+import {Eyebrow, Wordmark} from "./Primitives.jsx";
 
 const SPECS = [
     {icon: "reconsat", label: "195 nations"},

@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import {useInViewOnce} from "../lib/useInViewOnce.js";
+import {useInViewOnce} from "../hooks/useInViewOnce.js";
 
 const prefersReduced = () =>
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -9,13 +9,10 @@ const prefersReduced = () =>
 export default function CountUp({value, duration = 1.4, format = (n) => Math.round(n).toString(), className}) {
     const [ref, inView] = useInViewOnce();
     const reduce = prefersReduced();
-    const [display, setDisplay] = useState(reduce ? value : 0);
+    const [display, setDisplay] = useState(0);
 
     useEffect(() => {
-        if (!inView || reduce) {
-            if (reduce) setDisplay(value);
-            return;
-        }
+        if (!inView || reduce) return;
         let raf;
         let start;
         const step = (t) => {
@@ -29,5 +26,5 @@ export default function CountUp({value, duration = 1.4, format = (n) => Math.rou
         return () => cancelAnimationFrame(raf);
     }, [inView, value, duration, reduce]);
 
-    return <span ref={ref} className={className}>{format(display)}</span>;
+    return <span ref={ref} className={className}>{format(reduce ? value : display)}</span>;
 }

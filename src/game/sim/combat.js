@@ -241,7 +241,7 @@ export function resolveHit(w, p) {
 // damage-over-time; the map renders its footprint and epicenter. Deterministic —
 // no rng — so replays and tests stay stable.
 export function spawnFallout(w, lng, lat, slot) {
-    if (!w.effects) w.effects = []; // saves from before fallout existed
+    if (!w.effects) w.effects = []; // legacy saves predate fallout
     w.effects.push({
         id: nextId(w, "fx"),
         type: "fallout",

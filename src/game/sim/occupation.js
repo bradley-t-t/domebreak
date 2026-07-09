@@ -1,10 +1,8 @@
-// Ground occupation: infantry/tank battalions that hold an enemy city long
-// enough capture it, flipping the whole state to the occupier. Territory in
-// DomeBreak is a Voronoi partition of living cities (see inTerritory in
-// queries.js), so flipping a city's slot transfers its surrounding territory for
-// free — this module only has to move ownership. Pure/deterministic (no rng):
-// capture is a function of positions, ownership, war state, and dt, so replays
-// and headless tests stay stable. See design/gdd/ground-combat-and-occupation.md.
+// Ground occupation: infantry/tank battalions that hold an enemy city long enough
+// capture it, flipping the whole state to the occupier. Territory is a Voronoi
+// partition of living cities (see inTerritory in queries.js), so flipping a city's
+// slot transfers its surrounding territory for free. Pure/deterministic: capture
+// is a function of positions, ownership, war state, and dt.
 import {haversine} from "../geo/geo.js";
 import {CAPTURE, UNITS} from "../data/constants.js";
 import {nextId} from "./worldState.js";
@@ -18,10 +16,10 @@ function isCaptor(u) {
 }
 
 // Flip every living city sharing the captured city's current owner AND state name
-// to the occupier — Trenton's direction: capturing a city takes the whole state/
-// province it sits in. Cities keep their hp/pop/econ (occupied, not destroyed) and
-// immediately produce for the occupier; income/pop/territory queries read c.slot
-// live, so no cache needs touching.
+// to the occupier — capturing a city takes the whole state/province it sits in.
+// Cities keep their hp/pop/econ (occupied, not destroyed) and immediately produce
+// for the occupier; income/pop/territory queries read c.slot live, so no cache
+// needs touching.
 function flipState(w, city, toSlot) {
     const fromSlot = city.slot, state = city.state || "";
     for (const c of w.cities) {

@@ -1,16 +1,9 @@
-// Battle Planning — the reconciler. This is the bridge between player intent
-// (plans, owned by useBattlePlans) and the game: it never mutates world state
-// directly, it computes the fire allocation with the pure solver and pushes the
-// result onto units through the SAME sanctioned commands the rest of the UI uses
-// (commandAttack for standing orders, produceAmmo for resupply). Everything is
-// diffed, so a steady state issues zero commands and causes no re-render churn.
-//
-// Two flows, matching the per-plan mode:
-//   • Standing + armed → re-solved on a fixed cadence; each attacker's targetId is
-//     kept in sync with the solve, and disarming (or a unit dropping out of the
-//     solve) clears the orders this reconciler set — never the player's own.
-//   • One-shot → applied once each time executePlan() bumps the plan's fireNonce.
-// See design/gdd/battle-planning.md and docs/architecture/adr-007-battle-plan-reconciler.md.
+// Battle Planning reconciler: turns player plans (from useBattlePlans) into real orders
+// through the same sanctioned commands the UI uses (commandAttack, produceAmmo), never
+// mutating world state directly. Everything is diffed, so a steady state issues zero
+// commands. Standing+armed plans re-solve on a fixed cadence, and their orders clear on
+// disarm or when a unit drops from the solve (never the player's own orders); one-shot
+// plans apply once per executePlan() fireNonce bump.
 import {useEffect, useRef} from "react";
 import {solvePlan, prodCount} from "../../game/engine.js";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
