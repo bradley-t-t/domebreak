@@ -29,7 +29,11 @@ export function createWorld(setup) {
         points: startPoints,
         alive: true,
         relations: {},
-        _ai: 2 + n.slot * 0.3,
+        // Small staggered first-think offset. Modulo (not raw slot) so the
+        // singleplayer neutral-world roster — where active AIs are scattered
+        // across a 222-nation slot space — can't leave a high-slot participant
+        // idle for over a minute waiting for its first tick.
+        _ai: 2 + (n.slot % 20) * 0.3,
         // Every tech id is marked done so every requiresTech unit is buildable from
         // the first tick. Techs no longer carry stat effects — this list is a pure
         // unit-unlock gate (see requiresTech in data/units.js).
@@ -59,8 +63,8 @@ export function createWorld(setup) {
     distributeLeadership(nations, cities);
     return {
         time: 0,
-        speed: rules.startSpeed || 1,
-        paused: true,
+        speed: 1,
+        paused: true,       // fresh worlds load paused — the commander presses play
         mySlot: setup.mySlot,
         seed: setup.seed || 1,
         rules,

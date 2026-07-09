@@ -3,7 +3,7 @@
 // multiplayer (chosen in the lobby before Ready Up) can customize the war they
 // spin up. The core sim reads these off `world.rules` at tick time, so a rule
 // change is instantly authoritative for the running match — no re-seeding.
-import {DIPLOMACY, GAME_SPEEDS, NEUTRAL, START_POINTS} from "../data/constants.js";
+import {DIPLOMACY, NEUTRAL, START_POINTS} from "../data/constants.js";
 import {clamp} from "../../lib/math.js";
 
 export const DEFAULT_RULES = Object.freeze({
@@ -11,17 +11,19 @@ export const DEFAULT_RULES = Object.freeze({
     startPoints: START_POINTS,                    // opening points every nation starts with
     dominationPopFrac: DIPLOMACY.dominationPopFrac, // world-pop share that wins the war
     playerGraceSec: DIPLOMACY.playerGraceSec,     // opening ceasefire before AIs may declare on the player
-    startSpeed: 1,                                // opening sim speed (SP only — MP is server-locked to 1x)
+    balanced: false,                              // equalize GDP/pop across nations for a level opening
 });
 
 // Per-rule UI metadata: label, help copy, bounds, step, formatter. The
 // GameRulesForm renders one control per entry here. `sp/mp` gate which flow a
-// rule shows in — some rules simply don't apply online (speed is locked).
+// rule shows in — MP still ignores knobs that don't apply online.
+// `type` selects the control: "range" (default) or "toggle".
 export const RULES_META = [
     {
         key: "activeCount",
         label: "Active Nations",
         help: "How many nations actually fight this war. The rest of the map stays as passive, capturable neutrals.",
+        type: "range",
         min: NEUTRAL.minActive,
         max: NEUTRAL.maxActive,
         step: 1,
@@ -32,6 +34,7 @@ export const RULES_META = [
         key: "startPoints",
         label: "Starting Points",
         help: "Points every nation starts with. Higher = faster opening buildouts.",
+        type: "range",
         min: 100,
         max: 2000,
         step: 50,
@@ -42,6 +45,7 @@ export const RULES_META = [
         key: "dominationPopFrac",
         label: "Domination Threshold",
         help: "Share of surviving world population you must hold to win by domination.",
+        type: "range",
         min: 0.25,
         max: 0.9,
         step: 0.05,
@@ -50,30 +54,33 @@ export const RULES_META = [
     },
     {
         key: "playerGraceSec",
-        label: "Opening Grace (s)",
-        help: "Seconds at match start during which AIs won't declare war on a human commander.",
+        label: "Opening Grace",
+        help: "Seconds at match start during which AIs won't declare war on a human commander. Up to one full hour.",
+        type: "range",
         min: 0,
-        max: 300,
-        step: 5,
-        format: (v) => `${v}s`,
+        max: 3600,
+        step: 30,
+        format: formatGrace,
         sp: true, mp: true,
     },
     {
-        key: "startSpeed",
-        label: "Starting Speed",
-        help: "Opening sim speed — the HUD's speed hotkeys still work in-game.",
-        min: 0,
-        max: GAME_SPEEDS.length - 1,
-        step: 1,
-        format: (v) => `${GAME_SPEEDS[clamp(v, 0, GAME_SPEEDS.length - 1) | 0]}x`,
-        toStored: (idx) => GAME_SPEEDS[clamp(idx, 0, GAME_SPEEDS.length - 1) | 0],
-        fromStored: (mult) => {
-            const i = GAME_SPEEDS.indexOf(mult);
-            return i < 0 ? GAME_SPEEDS.indexOf(1) : i;
-        },
-        sp: true, mp: false,
+        key: "balanced",
+        label: "Balanced Start",
+        help: "Equalize every nation's GDP and population at match start so no one begins with an economic edge.",
+        type: "toggle",
+        sp: true, mp: true,
     },
 ];
+
+// Pretty-print a grace duration: seconds under a minute, m:ss under an hour,
+// "1h" at the top of the range.
+export function formatGrace(sec) {
+    const s = Math.max(0, Math.round(sec));
+    if (s < 60) return `${s}s`;
+    if (s >= 3600) return "1h";
+    const m = Math.floor(s / 60), r = s % 60;
+    return r === 0 ? `${m}m` : `${m}m ${r}s`;
+}
 
 // Merge caller input over the defaults with per-rule clamps, so a saved payload
 // (older shape, out-of-range value, garbage) can never propagate an invalid rule
@@ -84,9 +91,8 @@ export function normalizeRules(input) {
     for (const meta of RULES_META) {
         const raw = input[meta.key];
         if (raw == null) continue;
-        if (meta.key === "startSpeed") {
-            const mult = Number(raw);
-            out.startSpeed = GAME_SPEEDS.includes(mult) ? mult : DEFAULT_RULES.startSpeed;
+        if (meta.type === "toggle") {
+            out[meta.key] = !!raw;
             continue;
         }
         const num = Number(raw);
