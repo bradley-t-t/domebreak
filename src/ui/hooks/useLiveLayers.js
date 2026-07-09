@@ -118,7 +118,11 @@ export function useLiveLayers({
         ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => ({
             lng: u.lng, lat: u.lat,
             rKm: radarRangeOf(u.type),
-            color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)
+            color: RADAR_RING_COLORS[u.type] || teamColor(u.slot),
+            // Orbital sensors don't behave like a rotating PPI dish — they cover a
+            // wide ground footprint under their track. Flagged here so RadarSweep can
+            // render an expanding "ping" pulse for them instead of a sweep hand.
+            orbital: !!UNITS[u.type]?.orbital
         }))
         : [], [layers.radar, w.units, w.time, mySlot]);
     const defenseFC = useMemo(() => layers.defense ? ({
