@@ -63,8 +63,8 @@ export function createWorld(setup) {
     distributeLeadership(nations, cities);
     return {
         time: 0,
-        speed: rules.startSpeed || 1,
-        paused: true,
+        speed: 1,
+        paused: true,       // fresh worlds load paused — the commander presses play
         mySlot: setup.mySlot,
         seed: setup.seed || 1,
         rules,
