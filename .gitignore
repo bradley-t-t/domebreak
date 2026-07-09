@@ -10,3 +10,4 @@ release
 .vscode/
 *.iml
 *.sql
+/.claude/
