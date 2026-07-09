@@ -1,16 +1,13 @@
-// DomeBreak matchmaker (ADR-0004: real-players-only). Second responsibility of
-// the same authoritative server process introduced in ADR-0003: groups waiting
-// `matchmaking_queue` rows into a match and forms the `lobbies`/`lobby_members`
-// rows — REAL PLAYERS ONLY, no bots. A match forms once at least MIN_PLAYERS are
-// queued (admitting up to MAX_PLAYERS); a lone waiter keeps waiting. It then
-// auto-launches by flipping `lobbies.status` to `'starting'` — which the existing
-// claim path (server/index.js `claimLobby`) picks up unchanged. Each player
+// DomeBreak matchmaker: groups waiting `matchmaking_queue` rows into a match and
+// forms the `lobbies`/`lobby_members` rows — real players only, no bots. A match
+// forms once at least MIN_PLAYERS are queued (admitting up to MAX_PLAYERS); a
+// lone waiter keeps waiting. It then auto-launches by flipping `lobbies.status`
+// to `'starting'`, which server/index.js `claimLobby` picks up. Each player
 // claims their own nation inside the full living world (server/match.js).
 //
-// Outbound-only, same as ADR-0003: a periodic sweep (the only thing that MUST
-// exist, since it is what fires window-expiry with no new queue event) plus a
-// best-effort Realtime subscription to react a little faster when a new waiter
-// arrives. Every write uses the service-role `db` client passed in from
+// Drive is a periodic sweep (which fires window-expiry when there's no new queue
+// event) plus a best-effort Realtime subscription to react faster to a new
+// waiter. Every write uses the service-role `db` client passed in from
 // server/index.js — never a client-supplied identity.
 import {
     LOBBY_READY_TIMEOUT_MS,
@@ -62,7 +59,7 @@ export function buildGroup(rows, maxPlayers = MAX_PLAYERS) {
     return players;
 }
 
-const SWEEP_MS = 1000;        // must exist: fires window-expiry with no new events
+const SWEEP_MS = 1000;        // fires window-expiry when there's no new queue event
 const READY_POLL_MS = 700;    // per-lobby all-ready re-check cadence
 
 // Per-lobby bookkeeping so timers/intervals get cleared exactly once, the

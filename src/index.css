@@ -1,25 +1,22 @@
-/* DomeBreak — the single stylesheet (Tailwind v4).
-   ADR-0005 end-state: this file holds ONLY the Tailwind import, the :root
-   token layer, the @theme mapping onto Tailwind's namespace, and one @layer
-   for irreducible procedural/keyframe VFX. Everything else is utility
-   classes on components.
+/* DomeBreak's single stylesheet (Tailwind v4): the Tailwind import, the :root
+   token layer, the @theme mapping onto Tailwind's namespace, and one @layer for
+   procedural/keyframe VFX that utilities can't express. Everything else is
+   utility classes on components.
 
-   Anduril-school reskin: stark neutral blacks, hairline borders, squared
-   corners, zero glow, grotesk uppercase micro-labels, mono data. Modal cards
-   flip to light "paper" surfaces (scoped token overrides) for the mixed
-   light/dark editorial look; the persistent HUD stays dark and tactical.
+   Design language: stark neutral blacks, hairline borders, squared corners,
+   zero glow, grotesk uppercase micro-labels, mono data. Modal cards flip to
+   light "paper" surfaces (scoped token overrides) for a mixed light/dark
+   editorial look; the persistent HUD stays dark and tactical.
 
-   Preflight is ON — this is the full `@import "tailwindcss"`, so Tailwind's
-   base reset governs the app now (styles.css and its own reset are gone). */
+   Tailwind's Preflight base reset governs the app. */
 
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
-/* Global base reset carried over from the legacy styles.css preamble. These
-   target html/body/#root — elements no utility class can attach to — so they
-   MUST live here, not on a component. The height:100% chain is load-bearing:
-   the MapLibre map and every height:100% layout collapse to 0px without it.
-   In @layer base so component utilities still win. */
+/* Global base reset. These target html/body/#root — elements no utility class
+   can attach to — so they must live here, not on a component. The height:100%
+   chain is load-bearing: the MapLibre map and every height:100% layout collapse
+   to 0px without it. In @layer base so component utilities still win. */
 @layer base {
     html,
     body,
@@ -85,11 +82,9 @@
     }
 }
 
-/* All custom properties from the legacy styles.css :root, copied verbatim.
-   Every remaining var(--x) reference — in the vfx layer below and in
-   components' dynamic inline styles (e.g. --era, --flame, --i, --a, --dist,
-   --delay, --sz set from JS) — keeps resolving against this single source
-   of truth. */
+/* Design tokens — the single source of truth. Every var(--x) reference (in the
+   vfx layer below and in components' dynamic inline styles, e.g. --era, --flame,
+   --i, --a, --dist, --delay, --sz set from JS) resolves against these. */
 :root {
     --bg: #08090b;
     --bg-2: #0e1013;
@@ -133,17 +128,16 @@
 }
 
 /* Maps the palette/typography/radius tokens onto Tailwind's namespace so
-   utilities generate (bg-panel, text-dim, border-line, font-mono, etc.).
-   Every value is a var() reference back to :root above — one source of
-   truth, no duplicated literals.
+   utilities generate (bg-panel, text-dim, border-line, font-mono, etc.). Every
+   value is a var() reference back to :root above.
 
-   `inline` is load-bearing: it makes each utility emit the underlying
-   var(--x) directly (e.g. `.bg-sunk { background: var(--sunk) }`) instead of
-   a pre-resolved `--color-sunk`. Without it, Tailwind resolves `var(--sunk)`
-   once at :root (dark) and the value never re-resolves, so the `.db-card`
-   paper re-theme below — which overrides the base vars — silently fails and
-   modal cards render dark guts on a light surface. With `inline`, the base-var
-   override cascades into every utility inside .db-card, as intended. */
+   `inline` is load-bearing: it makes each utility emit the underlying var(--x)
+   directly (e.g. `.bg-sunk { background: var(--sunk) }`) instead of a
+   pre-resolved `--color-sunk`. Without it, Tailwind resolves `var(--sunk)` once
+   at :root (dark) and it never re-resolves, so the `.db-card` paper re-theme
+   below — which overrides the base vars — silently fails and modal cards render
+   dark guts on a light surface. With `inline`, the override cascades into every
+   utility inside .db-card, as intended. */
 @theme inline {
     --color-bg: var(--bg);
     --color-bg-2: var(--bg-2);
@@ -187,13 +181,11 @@
     --ease-io: var(--ease-io);
 }
 
-/* Irreducible procedural/animation VFX — everything Tailwind utilities
-   fundamentally cannot express: every @keyframes block, the custom tactical
-   scrollbars, the missile/THAAD interceptor sprites, the fireball
-   detonation, the radioactive fallout cloud, the targeting brackets, the
-   tech-tree era banding + unlock medallion, and the boot-scan bar. Selectors
-   and rules are copied verbatim from styles.css so components keep their
-   existing classNames and this art keeps working unchanged. */
+/* Procedural/animation VFX — everything Tailwind utilities can't express: every
+   @keyframes block, the custom tactical scrollbars, the missile/THAAD
+   interceptor sprites, the fireball detonation, the radioactive fallout cloud,
+   the targeting brackets, the tech-tree era banding + unlock medallion, and the
+   boot-scan bar. */
 @layer vfx {
     /* ---- Custom tactical scrollbars ---- */
     /* .db-scroll is the reusable dark-panel scrollbar; .db-savelist is an alias
@@ -957,7 +949,7 @@
         animation: dbBootScan 1.15s ease-in-out infinite;
     }
 
-    /* ---- all @keyframes (26), verbatim ---- */
+    /* ---- all @keyframes ---- */
     @keyframes dbDropInY {
         from {
             opacity: 0;
@@ -1250,10 +1242,9 @@
    Scoped "light paper" re-theme for .db-card (modal surfaces).
    INTENTIONALLY UNLAYERED: unlayered rules win over Tailwind's layered
    utilities in the cascade, so these descendant re-skins override the button
-   utilities emitted by variants.js — exactly the legacy specificity behavior.
-   Custom-property block flips the dark palette to light for the card + every
-   descendant that reads var(--text)/var(--line)/etc. The persistent dark HUD
-   is untouched — this is scoped under .db-card, never :root.
+   utilities. The custom-property block flips the dark palette to light for the
+   card + every descendant that reads var(--text)/var(--line)/etc. The
+   persistent dark HUD is untouched — this is scoped under .db-card, never :root.
    ============================================================================ */
 .db-card {
     --text: #14171b;

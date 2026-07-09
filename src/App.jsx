@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import StartMenu from "./ui/screens/StartMenu.jsx";
 import NewGame from "./ui/screens/NewGame.jsx";
 import LiveGame from "./ui/live/LiveGame.jsx";
@@ -231,7 +231,7 @@ export default function App() {
         // Bounded neutral-world match: the player claims `iso`; up to
         // NEUTRAL.defaultActive nations participate (the player plus scattered great
         // powers), and every other country stays on the map as a passive, capturable
-        // neutral. See adr-008-active-and-neutral-nations.
+        // neutral.
         const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: NEUTRAL.defaultActive});
         const w = createWorld(setup);
         w.speed = settings.speed;
@@ -253,7 +253,7 @@ export default function App() {
         const list = listSaves();
         if (list.length) onLoadSlot(list[0].slot);
     };
-    const doSave = (slot) => {
+    const doSave = useCallback((slot) => {
         if (!world) return;
         saveGame(slot, world, {
             at: Date.now(),
@@ -263,7 +263,7 @@ export default function App() {
             nations: world.nations.filter((n) => n.alive).length,
             belligerents
         });
-    };
+    }, [world, profile, belligerents]);
     const pause = () => {
         // Online matches never pause — the server is authoritative and would just
         // overwrite it on the next snapshot; only the menu overlay opens.
@@ -363,7 +363,7 @@ export default function App() {
             if (world && !world.over) doSave(AUTOSAVE);
         }, 60000);
         return () => clearInterval(t);
-    }, [screen, world, netClient]);
+    }, [screen, world, netClient, doSave]);
 
     const closeOverlay = () => setOverlay(screen === "playing" ? "pause" : null);
 

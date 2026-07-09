@@ -2,8 +2,8 @@ import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
 import {cn} from "../lib/cn.js";
 import Reveal from "./Reveal.jsx";
-import {Eyebrow} from "./ui.jsx";
-import {useInViewOnce} from "../lib/useInViewOnce.js";
+import {Eyebrow} from "./Primitives.jsx";
+import {useInViewOnce} from "../hooks/useInViewOnce.js";
 import GameIcon from "./GameIcon.jsx";
 
 // One feature showcase: framed in-game screenshot on one side, briefing copy on

@@ -1,5 +1,4 @@
 // War resolution: the three ways a war ends — Victory, Defeat, White Peace.
-// See design/gdd/war-resolution.md.
 //
 // Occupation (sim/occupation.js) flips a city's `slot` to whoever holds it the
 // moment it's captured, mid-war. This module decides whether those flips STICK or

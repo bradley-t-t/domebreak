@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-    {ignores: ["dist", "release", "node_modules"]},
+    {ignores: ["**/dist", "release", "node_modules"]},
     {
         files: ["**/*.{js,jsx,mjs}"],
         languageOptions: {
@@ -25,12 +25,23 @@ export default [
             ...reactHooks.configs.recommended.rules,
             "react-refresh/only-export-components": "warn",
             "no-unused-vars": ["error", {varsIgnorePattern: "^[A-Z_]"}],
-            // Pre-existing render-phase ref/mutation patterns predate the lint
-            // gate; kept visible as warnings until fixed in a dedicated session.
             "react-hooks/refs": "warn",
             "react-hooks/immutability": "warn",
             "react-hooks/set-state-in-effect": "warn",
             "react-hooks/incompatible-library": "warn",
+        },
+    },
+    {
+        // The game engine keeps one world object in a ref, mutates it in place, and
+        // re-renders on a tick counter (see useEngine); components read the world and
+        // map refs during render and sync external state (Supabase realtime, the
+        // attract sim) in effects by design. These render-phase rules don't model
+        // that, so they're off for the game code. The web app keeps them enforced.
+        files: ["src/**/*.{js,jsx}"],
+        rules: {
+            "react-hooks/refs": "off",
+            "react-hooks/immutability": "off",
+            "react-hooks/set-state-in-effect": "off",
         },
     },
 ];

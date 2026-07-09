@@ -1,8 +1,6 @@
 // Selected-unit detail card: stats, move/set-sail control, hangar + patrol
-// controls for airbases, and the warhead/attack controls for offense units.
-// Pulled out of LiveGame.jsx verbatim (same JSX, same classes) as a pure
-// presentational component — it reads props only and calls back through the
-// same api/setState functions the parent already owns.
+// controls for airbases, and the warhead/attack controls for offense units. A pure presentational component: it reads props only and calls
+// back through the api/setState functions the parent owns.
 import UnitIcon from "../common/UnitIcon.jsx";
 import StatGrid from "../common/StatGrid.jsx";
 import Meter from "../common/Meter.jsx";

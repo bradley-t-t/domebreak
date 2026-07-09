@@ -1,21 +1,17 @@
-// Battle Planning — React state for the player's authored attack plans. A plan is
-// player INTENT: a set of attacker unit TYPES, a set of target CATEGORIES, an
-// engagement range, and a few toggles. Plans can be drafted (and armed) in peacetime;
-// an armed standing plan simply has nothing to shoot at until war begins, then engages
-// automatically. Plans PERSIST across save/load: they are seeded from the world on
-// mount and mirrored back to it on every change (through readBattlePlans /
-// writeBattlePlans), so the existing save serialization carries them. The reconciler
-// (useBattlePlanReconciler) turns an armed/executed plan into real orders through the
-// sanctioned engine commands. Attacker unit TYPES are EXCLUSIVE across plans — a type
-// belongs to at most one plan, so a given platform is only ever driven by one plan;
-// target categories may overlap. See design/gdd/battle-planning.md.
+// Battle Planning: React state for the player's authored attack plans. A plan is player
+// INTENT — attacker unit types, target categories, an engagement range, and a few toggles.
+// Plans can be drafted and armed in peacetime; an armed standing plan engages automatically
+// once war begins. Plans persist across save/load, seeded from the world on mount and
+// mirrored back on every change via readBattlePlans/writeBattlePlans. Attacker unit TYPES
+// are EXCLUSIVE across plans (a type serves at most one plan); target categories may
+// overlap. The reconciler (useBattlePlanReconciler) turns plans into real orders.
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
 import {readBattlePlans, writeBattlePlans} from "../../game/engine.js";
 
-// Monotonic plan id source (UI-only). Kept out of the state updaters so those stay
-// pure under React strict-mode double-invocation. Seeded past any restored plan id on
-// load (see seedSeq) so a fresh session never mints an id that collides with a saved one.
+// Monotonic plan id source (UI-only), kept out of the state updaters so those stay pure
+// under React strict-mode double-invocation. Seeded past any restored plan id (seedSeq)
+// so a fresh session never mints an id that collides with a saved one.
 let SEQ = 0;
 
 // Bump SEQ past the highest numeric suffix among restored plan ids (e.g. "plan-7" → 7),

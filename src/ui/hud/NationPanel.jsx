@@ -8,7 +8,7 @@ import {
     populationOf,
     vitalityOf,
 } from "../../game/engine.js";
-import {fmtNet, fmtPop} from "../common/format.js";
+import {fmtNet, fmtPop} from "../lib/format.js";
 import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";

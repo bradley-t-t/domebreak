@@ -1,6 +1,5 @@
-import {createContext, useContext, useEffect, useRef, useState} from "react";
-
-const Ctx = createContext(null);
+import {useEffect, useRef, useState} from "react";
+import {AccountCtx} from "../lib/accountStore.js";
 
 // Shared DomeBreak game-account state. The account module (which pulls in
 // supabase-js, ~110 KB) is loaded LAZILY — dynamically imported after the page
@@ -14,7 +13,7 @@ export function AccountProvider({children}) {
 
     // Cache the dynamic import so every caller shares one module instance.
     const modRef = useRef(null);
-    const getMod = () => (modRef.current ||= import("./account.js"));
+    const getMod = () => (modRef.current ||= import("../lib/account.js"));
 
     useEffect(() => {
         let alive = true;
@@ -71,11 +70,5 @@ export function AccountProvider({children}) {
             setStats(null);
         },
     };
-    return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-export function useAccount() {
-    const v = useContext(Ctx);
-    if (!v) throw new Error("useAccount must be used within AccountProvider");
-    return v;
+    return <AccountCtx.Provider value={value}>{children}</AccountCtx.Provider>;
 }
