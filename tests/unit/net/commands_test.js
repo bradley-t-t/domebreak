@@ -11,10 +11,10 @@ import {createWorld} from "../../../src/game/engine.js";
 // offerPeace/respondPeace). Keep in sync with src/ui/hooks/useEngine.js — a client
 // api that isn't here (or a whitelist entry that's missing) is the bug this guards.
 const CLIENT_COMMANDS = [
-    "buyPlace", "commandAttack", "research", "unqueue", "move", "setSail", "stopSail",
+    "buyPlace", "commandAttack", "move", "setSail", "stopSail",
     "queueAircraft", "setPatrolSize", "setAwacsPatrol", "declareWar", "scrap",
     "produceAmmo", "cancelProd", "setWarhead", "embark", "disembark", "march",
-    "setAutoResearch", "shelterLeadership", "releaseLeadership",
+    "shelterLeadership", "releaseLeadership",
 ];
 
 function w2() {
@@ -89,16 +89,6 @@ describe("leadership commands (Shelter / Release) route into the engine", () => 
         const w = w2();
         w.units.push(unit({id: "bk", type: "bunker"}), unit({id: "as", type: "airstrip"}));
         expect(COMMANDS.releaseLeadership(w, 0)).toEqual({error: "No leadership is sheltered."});
-    });
-});
-
-describe("setAutoResearch toggles the sender's automation", () => {
-    it("test_setAutoResearch_on_then_off", () => {
-        const w = w2();
-        COMMANDS.setAutoResearch(w, 0, [true]);
-        expect(w.nations[0].autoResearch).toBe(true);
-        COMMANDS.setAutoResearch(w, 0, [false]);
-        expect(w.nations[0].autoResearch).toBe(false);
     });
 });
 

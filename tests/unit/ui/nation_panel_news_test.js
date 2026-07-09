@@ -121,11 +121,6 @@ describe("NewsTicker headline mapping", () => {
         expect(headline({type: "peace", a: 0, b: 1}, w, 0).tone).toBe("good");
     });
 
-    it("test_research_names_the_tech", () => {
-        const h = headline({type: "research", slot: 1, techId: "off1"}, w, 0);
-        expect(h.text).toContain("Fission Warheads");
-    });
-
     it("test_inbound_launch_only_when_targeting_player", () => {
         expect(headline({type: "launch", slot: 1, tgtSlot: 0, seen: [0]}, w, 0).tone).toBe("danger");
         expect(headline({type: "launch", slot: 1, tgtSlot: 1, seen: [1]}, w, 0)).toBeNull();

@@ -12,7 +12,7 @@ import {cn} from "../lib/cn.js";
 // country picks it as your nation, every member's pick is tinted on the sphere,
 // and a Ready button arms the launch. There is no host and no manual start — the
 // server auto-launches once every member is ready (or on its lobby-ready
-// timeout), per adr-004. Each player claims their own nation inside the full
+// timeout). Each player claims their own nation inside the full
 // living world (every other country is world AI, as in single player).
 
 const RAIL_PAD = 360;       // left projection padding so the globe clears the rail

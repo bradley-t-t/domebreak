@@ -25,8 +25,7 @@ export {growCities};
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
 // end-of-tick cleanup (dead unit/projectile pruning, win condition). A thin
-// orchestrator over the phases above, run in the exact order the original
-// inline tick did.
+// orchestrator over the phases above.
 //
 // `predict` marks a CLIENT-SIDE prediction tick in an online match. The server is
 // authoritative and ships full-world snapshots ~2×/s; between them the client runs

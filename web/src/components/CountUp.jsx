@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import {useInViewOnce} from "../lib/useInViewOnce.js";
+import {useInViewOnce} from "../hooks/useInViewOnce.js";
 
 const prefersReduced = () =>
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;

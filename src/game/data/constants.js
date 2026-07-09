@@ -1,7 +1,5 @@
-// Up to 16 participants, each a distinct, readable color on the dark map.
-// Slot 0 is always the local commander — rendered WHITE so "you" reads as the
-// neutral friendly force in the black-&-white tactical scheme; hostiles keep
-// their distinct hues so nations stay tellable apart on the map.
+// Per-participant map colors, up to 16 slots. Slot 0 (the local commander) is
+// white so "you" reads as the friendly force; hostiles keep distinct hues.
 export const SLOT_COLOR = {
     0: "#f0f3f7", 1: "#ff5d5d", 2: "#f4c02a", 3: "#46d38a", 4: "#b57bff", 5: "#ff9f43",
     6: "#2ee6d6", 7: "#ff6ec7", 8: "#8ed14a", 9: "#5c7cfa", 10: "#ff8a5c", 11: "#c0e05a",
@@ -9,12 +7,10 @@ export const SLOT_COLOR = {
 };
 export const MAX_SLOTS = 16;
 
-// Distinct per-nation colors. Slots 0–15 use the hand-tuned palette above; every
-// slot beyond it (the full-world roster runs to ~222 live nations) gets a
-// deterministic color via golden-angle hue spacing, so adjacent slots stay
-// tellable apart wherever nations are enumerated with a color chip. The player
-// (slot 0) is always white. Data, not chrome — it lives here with the palette.
-export const COLOR_S = 68, COLOR_L = 62;
+// Per-nation colors. Slots 0–15 use the hand-tuned palette above; every slot
+// beyond it (the roster runs to ~222 nations) gets a deterministic color via
+// golden-angle hue spacing so adjacent slots stay tellable apart.
+const COLOR_S = 68, COLOR_L = 62;
 
 export function colorForSlot(slot) {
     const hand = SLOT_COLOR[slot];
@@ -26,9 +22,8 @@ export function colorForSlot(slot) {
 // Simulation speed multipliers, slowest → fastest. Shared by the HUD, settings, and hotkeys.
 export const GAME_SPEEDS = [0.5, 1, 2, 4, 10];
 
-// Opening camera framing: when a game begins the view centers on the player's
-// capital at a zoom that fits most of their nation. The frame is derived from
-// the geographic span of the player's cities around the capital, then clamped.
+// Opening camera framing: centers on the player's capital at a zoom fitting most
+// of their nation, derived from the geographic span of their cities, then clamped.
 export const START_CAM = {
     spanPad: 1.1,  // grow the nation's span before fitting, so it isn't edge-to-edge
     padPx: 60,      // pixel inset so the framed nation clears the HUD chrome
@@ -37,45 +32,37 @@ export const START_CAM = {
 };
 
 // Interactive world-map zoom limits (MapLibre zoom levels; lower = further out).
-// The floor is per-surface: gameplay clamps hard so the player stays in-theatre,
-// while the attract globe and lobby nation-select keep a permissive floor so their
-// pulled-back framing (~1.85–1.9) still renders. LiveGame passes `min`; the other
-// surfaces use WorldMap's `menuMin` default.
+// The floor is per-surface: gameplay clamps hard to keep the player in-theatre,
+// while attract/lobby keep a permissive floor so their pulled-back framing still
+// renders. LiveGame passes `min`; other surfaces use WorldMap's `menuMin` default.
 export const WORLD_ZOOM = {
-    min: 3.8,       // gameplay zoom-out floor (was 1.1 → 1.43 → 1.8 → 2.2 → 3.0; tightened further)
+    min: 3.8,       // gameplay zoom-out floor
     menuMin: 1.1,   // permissive floor for attract/lobby so their wide framing isn't clamped
     max: 7,         // closest zoom-in allowed
 };
 
-// Keyboard (WASD) map-pan speed, in screen pixels per second. The pan is driven
-// by short constant-velocity ease segments (see LiveGame's pan effect).
+// Keyboard (WASD) map-pan speed, in screen pixels per second.
 export const PAN_PX_PER_SEC = 1500;
 
-// Hard latitude limit for camera panning, in degrees. Kept safely inside the
-// tile/relief data edge (MERC_LAT ≈ 85.05°) AND short of the projection
-// singularity at the poles, where meridians converge (deg-per-pixel blows up)
-// and the vector map re-settles over the most-stretched part of the pyramid —
-// the cause of the polar pan stutter/lag. Applied in BOTH projections so flat
-// mode stops before the data edge the same way globe already does.
+// Hard latitude limit for camera panning, in degrees. Kept inside the tile/relief
+// data edge (MERC_LAT ≈ 85.05°) and short of the polar projection singularity
+// where meridians converge and the vector map re-settles — the cause of polar pan
+// stutter. Applied in both projections.
 export const PAN_LAT_LIMIT = 82;
 
-// --- Core sim tuning (moved from engine.js — behavior-preserving extraction) ---
+// Core sim tuning.
 export const START_POINTS = 500;
 export const MISSILE_SPEED = 140;
 export const INTERCEPTOR_SPEED = 520;
 export const RADAR_RANGE_MULT = 2.5;
 export const TERRITORY_RADIUS = 550;
 export const MOVE_COST_FRAC = 0.25;
-// Ground occupation (see design/gdd/ground-combat-and-occupation.md). A capture-
-// flagged ground unit (infantry/tank) that holds within holdKm of an enemy city
-// — with no hostile unit inside contestKm to fight it off — accrues capture
-// progress over captureSec game-seconds, then flips that city's whole state to
-// the occupier. Progress bleeds off at decayPerSec when unheld or contested.
-// A captor that also ASSAULTS the city (attacks it while holding) drives the
-// flip assaultMult times faster: a capture-flagged unit's fire on a city it
-// could take is converted to capture pressure instead of razing it (tick.js),
-// so "attack the city" accelerates the capture rather than destroying it.
-// Data-driven per coding standards — no capture number is hardcoded in systems.
+// Ground occupation. A capture-flagged ground unit (infantry/tank) that holds
+// within holdKm of an enemy city — with no hostile unit inside contestKm — accrues
+// capture progress over captureSec game-seconds, then flips that city's state to
+// the occupier. Progress bleeds off at decayPerSec when unheld or contested. A
+// captor that also assaults the city drives the flip assaultMult times faster:
+// its fire is converted to capture pressure instead of razing the city.
 export const CAPTURE = {
     holdKm: 70,
     contestKm: 140,
@@ -106,9 +93,9 @@ export const DEFAULT_BUILD_TIME = 10, DEFAULT_RELOAD = 3, DEFAULT_HIT_PROB = 0.8
 // Effective GDP ($T) assumed for nations missing from the GDP_T table.
 export const GDP_FALLBACK_T = 0.5;
 
-// Income formula coefficients (see incomeOf in sim/queries.js):
-// GDP-rated nations earn base + coef·√GDP·(surviving economy share) + industry;
-// unrated nations fall back to a flat floor plus a per-surviving-city bonus.
+// Income formula coefficients (see incomeOf in sim/queries.js). GDP-rated nations
+// earn base + coef·√GDP·(surviving economy share) + industry; unrated nations fall
+// back to a flat floor plus a per-surviving-city bonus.
 export const ECONOMY = {
     incomeBase: 1.5,
     incomeGdpCoef: 4,
@@ -116,22 +103,20 @@ export const ECONOMY = {
     fallbackPerCity: 0.6,
 };
 
-// Industry capacity: a nation may sustain BASE_INDUSTRY structures plus one more
-// per POP_PER_INDUSTRY living people, capped at MAX_INDUSTRY. Living population
-// scales with city health (see vitalityOf), so bombing enemy cities lowers their
-// industrial ceiling and throttles their ability to rebuild. Shared across all
-// kind:"industry" types (factory/port/refinery/techpark).
+// Industry capacity: a nation may sustain `base` structures plus one more per
+// `popPer` living people, capped at `max`. Living population scales with city
+// health, so bombing enemy cities lowers their industrial ceiling. Shared across
+// all kind:"industry" types (factory/port/refinery/techpark).
 export const INDUSTRY = {
     base: 3,
     popPer: 40e6,
     max: 24,
 };
 
-// Population growth (see design/quick-specs/population-growth-2026-07-06.md).
-// Each living city's people grow every tick, scaled by its vitality (hp/maxHp)
-// so healthy cities repopulate and battered ones barely recover, capped at a
-// multiple of the city's starting population. Pure/deterministic — a function of
-// stored pop, hp, and dt, no RNG. Feeds populationOf → industry cap / domination.
+// Population growth. Each living city's people grow every tick, scaled by its
+// vitality (hp/maxHp) so healthy cities repopulate and battered ones barely
+// recover, capped at a multiple of starting population. Deterministic — a function
+// of stored pop, hp, and dt. Feeds populationOf → industry cap / domination.
 export const POPULATION = {
     growthPerSec: 0.00015,   // fractional pop growth per game-second at full vitality
     growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
@@ -153,18 +138,16 @@ export const AI_TUNING = {
     industryTarget: 3, factoryReserve: 120,
     researchMinPoints: 350, researchChance: 0.55,
     siloReserve: 200, siloMinNet: 3,
-    // Deep-tree tuning: the AI keeps researching past the Cold War tiers and
-    // builds the units its completed techs unlock (see aiTick in sim/tick.js).
-    // researchDepthTarget caps how deep any single track is pushed; deepReserve
-    // is the extra points cushion required before committing to Modern/Space
-    // tiers (they cost far more); unlockedBuildChance is the per-decision odds
-    // the AI builds a freshly-unlocked tech-gated unit; spaceHqReserve is the
-    // cushion before committing to the Space Command HQ prerequisite.
+    // Deep-tree tuning: the AI researches past the Cold War tiers and builds units
+    // its completed techs unlock. researchDepthTarget caps how deep any single track
+    // is pushed; deepReserve is the extra cushion before committing to the costlier
+    // Modern/Space tiers; unlockedBuildChance is the per-decision odds of building a
+    // freshly-unlocked tech-gated unit; spaceHqReserve is the cushion before the
+    // Space Command HQ prerequisite.
     researchDepthTarget: 12, deepReserve: 300, deepTierGate: 8,
     unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
-    // Strategic placement (see ai-strategic-placement-2026-07-06.md and aiPlace in
-    // sim/tick.js). The AI sites units by role and spreads them across its cities
-    // instead of piling everything onto the capital.
+    // Strategic placement (aiPlace in sim/tick.js). The AI sites units by role and
+    // spreads them across its cities instead of piling everything onto the capital.
     spreadKm: 150,                   // min distance the AI keeps between two same-role units
     defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
     radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
@@ -179,9 +162,8 @@ export const AI_TUNING = {
     patrolSize: 2,            // default fighter patrol an AI stands up on its airbases once at war
 };
 
-// Strategic objectives — the guided goals shown in the in-game Objectives menu
-// (see sim/objectives.js). All tuning lives here, never hardcoded in the objective
-// definitions or the panel. Counts are "how many of this structure the goal wants";
+// Strategic objectives — the guided goals shown in the Objectives menu (see
+// sim/objectives.js). Counts are how many of a structure the goal wants;
 // radarLandCover is the fraction (0..1) of the nation's own land area that must sit
 // under its radar picture to clear the early-warning objective.
 export const OBJECTIVES_TUNING = {
@@ -199,11 +181,10 @@ export const OBJECTIVES_TUNING = {
 };
 
 // Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
-// in sim/tick.js. Every country on the map is a live AI nation; these knobs govern
-// how wars start and end between them, how hard distant peaceful nations are
-// throttled, the fielding cap that bounds the global unit count, and the player's
-// domination-victory threshold. All diplomacy rolls use the seeded rand(w), so the
-// entire world history is reproducible from (seed, playerIso).
+// in sim/tick.js. These knobs govern how wars start and end, how hard distant
+// peaceful nations are throttled, the fielding cap on global unit count, and the
+// player's domination-victory threshold. Diplomacy rolls use the seeded rand(w),
+// so world history is reproducible from (seed, playerIso).
 export const DIPLOMACY = {
     // War/peace rhythm.
     thinkMin: 12, thinkSpan: 10,     // seconds between a nation's diplomacy evaluations
@@ -216,7 +197,7 @@ export const DIPLOMACY = {
     surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction
     minWarSec: 90,                   // minimum war duration before a white-peace offer
     peaceOfferChance: 0.06,          // odds per diplo tick an AI offers white peace once past minWarSec
-    // Alliances (mutual-defense pacts — see design/gdd/alliances.md).
+    // Alliances (mutual-defense pacts).
     maxAllies: 2,                    // simultaneous alliances a nation will hold
     allyRangeKm: 4200,               // max capital-to-capital distance to propose an alliance
     allyProposeChance: 0.05,         // odds per diplo tick an eligible AI proposes an alliance
@@ -231,11 +212,9 @@ export const DIPLOMACY = {
     dominationPopFrac: 0.5,
 };
 
-// Bounded-match / neutral-world model (design/gdd/match-model-and-neutral-world.md,
-// adr-008-active-and-neutral-nations). A match runs at most `maxActive` participating
-// ("active") nations; every other country stays on the map as a passive, capturable
-// NEUTRAL that never builds and never wages war. Data-driven — setup, capture, and
-// victory read these, nothing hardcodes them.
+// Bounded-match / neutral-world model. A match runs at most `maxActive`
+// participating ("active") nations; every other country stays on the map as a
+// passive, capturable NEUTRAL that never builds and never wages war.
 export const NEUTRAL = {
     maxActive: 8,        // hard cap on active (participating) nations in a match
     minActive: 2,        // floor — you plus at least one rival
@@ -243,13 +222,11 @@ export const NEUTRAL = {
     scatterMinKm: 3000,  // seeding target: greedy farthest-point keeps active capitals apart
 };
 
-// Leadership continuity (see design/gdd/leadership.md). Each nation's national
-// command is a pool of `startTokens` leader tokens seeded across its top cities —
-// the capital holds the largest share, the rest spread over other major cities;
-// Leadership% = (startTokens - lost) / startTokens. Tokens are airlifted to the
-// Leadership Bunker by transport ferries (from every airstrip, several per strip)
-// when war exposes them. All values are data-driven tuning knobs — no leadership
-// number is hardcoded in systems code.
+// Leadership continuity. Each nation's command is a pool of `startTokens` leader
+// tokens seeded across its top cities — the capital holds the largest share, the
+// rest spread over other major cities; Leadership% = (startTokens - lost) /
+// startTokens. Tokens are airlifted to the Leadership Bunker by transport ferries
+// when war exposes them.
 export const LEADERSHIP = {
     startTokens: 12,            // leader tokens per nation (also the Leadership% denominator)
     leaderCities: 5,            // how many of a nation's cities hold leadership (capital + top others)
@@ -273,11 +250,10 @@ export const LEADERSHIP = {
     bunkerKillWarheads: ["thermo", "thermomirv"],
 };
 
-// National Stability (see design/gdd/stability.md). Each nation's stability (0–100)
-// eases toward a live target of 100 − Σ penalties, drawn from population loss, wars
-// beyond the first, leadership killed or bunkered, and points deficits. It is an
-// ambient HUD pressure readout with no mechanical consequence of its own. All values
-// are data-driven knobs — no stability number is hardcoded in systems code.
+// National Stability. Each nation's stability (0–100) eases toward a live target of
+// 100 − Σ penalties, drawn from population loss, wars beyond the first, leadership
+// killed or bunkered, and points deficits. An ambient HUD pressure readout with no
+// mechanical consequence of its own.
 export const STABILITY = {
     easePerSec: 0.05,           // fraction of the gap to target closed per game-second
     freeWars: 1,                // simultaneous wars allowed before the "too many wars" penalty starts
@@ -291,10 +267,8 @@ export const STABILITY = {
                                 // (HUD clock: 1 game-sec = 30 in-game min → 365·24·60/30 = 17520)
 };
 
-// Battle Planning — player-authored attack plans (design/gdd/battle-planning.md).
-// Tuning for the plan solver, the auto-resupply cadence, and the globe preview.
-// Data-driven per the coding standards: the solver, reconciler, and panel read
-// these numbers; none are hardcoded in those systems.
+// Battle Planning — player-authored attack plans. Tuning for the plan solver, the
+// auto-resupply cadence, and the globe preview.
 export const BATTLE_PLAN = {
     maxPlans: 8,                // cap on simultaneous plans a player may author
     defaultEngagementKm: 20000, // starting dial — wide open (active nations are seeded far
@@ -310,7 +284,7 @@ export const BATTLE_PLAN = {
     // Target categories for the Battle Planning screen. A plan selects attacker unit
     // TYPES and these target CATEGORIES (type → type), never individual map units; the
     // solver maps each at-war enemy entity to a category. `city` (types:null) = enemy
-    // cities. Data-driven so the screen and solver read the same source of truth.
+    // cities.
     targetCategories: [
         {id: "city", label: "Cities", types: null},
         {id: "strike", label: "Missile Platforms", types: ["silo", "launcher", "battleship", "hypersonicbty", "orbitalstrike", "sub-ssbn", "sub-ssn"]},
@@ -322,19 +296,13 @@ export const BATTLE_PLAN = {
     ],
 };
 
-// --- Unit registry (extracted to units.js; behavior-preserving refactor to
-// keep this file under the size budget — no values changed). Re-exported here
-// so every prior constants.js import (UNITS, UNIT_ICON, unitLabel, armamentOf)
-// keeps working unchanged.
+// Unit registry (UNITS, UNIT_ICON, unitLabel, armamentOf).
 export * from "./units.js";
 
 // Radar coverage overlay ring colors by sensor type. Dedicated ground sensors get
-// distinct hues so the two warning tiers read apart at a glance; every other
-// emitter (ships, aircraft, carriers) keeps its faction color. Map overlay
-// colors are data, not chrome — they live here with the faction palette. The
-// `space` violet is the third warning tier for orbital sensors; the recon and
-// missile-warning satellite unit types map onto it so the coverage-ring lookup
-// (RADAR_RING_COLORS[unit.type] in useLiveLayers) resolves them to the space hue.
+// distinct hues so the two warning tiers read apart; every other emitter keeps its
+// faction color. The `space` violet is the orbital-sensor tier; the recon and
+// missile-warning satellite types map onto it (RADAR_RING_COLORS[unit.type]).
 export const RADAR_RING_COLORS = {
     oth: "#e8a33d",
     radar: "#4fc3e8",
@@ -343,28 +311,21 @@ export const RADAR_RING_COLORS = {
     warnsat: "#b98cff",
 };
 
-// --- Warhead registry (extracted to warheads.js; behavior-preserving refactor
-// — no values changed). Re-exported here so every prior constants.js import
-// (WARHEADS, WARHEAD_ICON, WARHEAD_ORDER, AMMO_START, BLAST, MIRV_SPLIT_AT,
-// FALLOUT, allowedAmmo, initialWarhead, launchersForAmmo) keeps working unchanged.
+// Warhead registry (WARHEADS, WARHEAD_ICON, WARHEAD_ORDER, AMMO_START, BLAST,
+// MIRV_SPLIT_AT, FALLOUT, allowedAmmo, initialWarhead, launchersForAmmo).
 export * from "./warheads.js";
 
-// Spatial audio: the viewport is the listener. A world event's cue is placed in
-// the stereo field by where it projects on screen and faded toward the edges;
-// anything projecting outside the view (plus a small margin) is silent — combat
-// you can't see doesn't reach you. Zoom is not modeled separately: on-screen
-// plays, off-screen doesn't. See spatialize() in ui/live/LiveGame.jsx.
+// Spatial audio: the viewport is the listener. A world event's cue is placed in the
+// stereo field by where it projects on screen and faded toward the edges; anything
+// outside the view (plus a small margin) is silent — combat you can't see doesn't
+// reach you. See spatialize() in ui/live/LiveGame.jsx.
 export const AUDIO_SPATIAL = {
     edgeMargin: 0.08,       // fraction of the viewport past each edge still audible before the hard cut to silence
     edgeGain: 0.55,         // on-screen loudness at the far corner (0..1); dead-centre is 1.0
     minGain: 0.3,           // floor under the radial rolloff so visible-but-edge cues stay present
 };
 
-// --- Tech tree registry (extracted to techs.js; behavior-preserving refactor
-// — no values changed). Re-exported here so every prior constants.js import
-// (TECHS, TECH_PATHS, ERAS, TECH_COST_BASE/GROWTH, TECH_TIME_BASE/GROWTH,
-// AUTO_RESEARCH_RESERVE_MULT, eraForTier, techCostForTier, techTimeForTier)
-// keeps working unchanged.
+// Tech tree registry.
 export * from "./techs.js";
 
 // Hangar complement per base type — aircraft live as STOCK (counts), not units,
@@ -398,8 +359,7 @@ export const TRAIL_DT = 0.4, TRAIL_LEN = 9;
 // Flight-model tuning for flyAircraft/flyFerry's per-phase state machines: climb-out
 // speed/vis ramps, orbit-hold bank geometry, localizer intercept/final-approach
 // tolerances, touchdown/rollout deceleration, and the leadership ferry's
-// point-to-point approach easing. Finer-grained control-law tuning that sits
-// inside the runway/orbit geometry constants above.
+// point-to-point approach easing.
 export const FLIGHT = {
     // Climb-out (takeoff phase)
     ROLL_SPEED_MULT: 0.5,      // ground-roll speed added atop half airSpeed while rolling
@@ -450,8 +410,8 @@ export const FLIGHT = {
 };
 
 // Real-world country populations (2024 estimates). City/state populations in the
-// bundled data are metro figures; at setup newGame.js scales them so each
-// nation's total matches reality, and each state's share becomes its economy %.
+// bundled data are metro figures; at setup newGame.js scales them so each nation's
+// total matches reality, and each state's share becomes its economy %.
 export const REAL_POP = {
     US: 335e6, RU: 144e6, CN: 1411e6, IN: 1429e6, GB: 68e6, FR: 68e6, DE: 84e6, JP: 124e6,
     BR: 216e6, KR: 52e6, IR: 89e6, TR: 85e6, SA: 37e6, PK: 240e6, CA: 40e6, AU: 27e6,

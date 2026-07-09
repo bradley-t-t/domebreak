@@ -7,9 +7,7 @@
 // clamps at the poles and distorts velocity). Short segments keep `move`
 // flowing (overlays + unit markers track the camera) at a true, constant px/s,
 // while `moveend` (the heavy part) runs ~once/sec, like a mouse drag. panBy
-// works in both projections. Pulled out of LiveGame.jsx verbatim — same
-// closures, same [globe, overlayOpen, K.panUp, K.panLeft, K.panDown, K.panRight]
-// dependency array.
+// works in both projections.
 import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
 import {PAN_LAT_LIMIT, PAN_PX_PER_SEC} from "../../game/data/constants.js";

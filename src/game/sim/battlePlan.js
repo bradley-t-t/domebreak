@@ -2,11 +2,10 @@
 // intent: a roster of my offensive units, a set of enemy targets, an engagement
 // range, and a couple of toggles. This module turns that intent into concrete
 // per-unit fire assignments (which the reconciler pushes onto units via the
-// existing commandAttack standing order) plus the munitions the plan wants
-// auto-built. Pure and deterministic — it reads world state and the plan and
-// mutates nothing, so the tick stays reproducible and the solver is unit-testable.
-// All tuning is data-driven (BATTLE_PLAN / UNITS / WARHEADS). See
-// design/gdd/battle-planning.md and docs/architecture/adr-007-battle-plan-reconciler.md.
+// commandAttack standing order) plus the munitions the plan wants auto-built.
+// Pure and deterministic — it reads world state and the plan and mutates nothing,
+// so the tick stays reproducible and the solver is unit-testable. All tuning is
+// data-driven (BATTLE_PLAN / UNITS / WARHEADS).
 import {haversine} from "../geo/geo.js";
 import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";

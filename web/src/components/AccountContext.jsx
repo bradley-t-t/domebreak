@@ -14,7 +14,7 @@ export function AccountProvider({children}) {
 
     // Cache the dynamic import so every caller shares one module instance.
     const modRef = useRef(null);
-    const getMod = () => (modRef.current ||= import("./account.js"));
+    const getMod = () => (modRef.current ||= import("../lib/account.js"));
 
     useEffect(() => {
         let alive = true;

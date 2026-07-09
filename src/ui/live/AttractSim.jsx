@@ -16,7 +16,7 @@ import {atWar, createWorld, declareWar, UNIT_ICON, UNITS, vitalityOf} from "../.
 import {buildSetup} from "../../game/sim/newGame.js";
 import {MAX_SLOTS} from "../../game/data/constants.js";
 import {useEngine} from "../hooks/useEngine.js";
-import {vitPaint} from "../common/status.js";
+import {vitPaint} from "../lib/status.js";
 
 const CAST_SIZE = MAX_SLOTS; // fill every belligerent slot the engine supports (16)
 const SIM_SPEED = 4;         // wall-clock drama without the 10× blur

@@ -1,8 +1,5 @@
-// Battle audio + toast/explosion pipeline: turns fresh world.events into
-// synthesized sfx, screen toasts, and explosion markers. Pulled out of
-// LiveGame.jsx verbatim — same refs, same effect body, same [w.time]
-// dependency array — so the event-seen bookkeeping and explosion lifecycle
-// behave identically to when this lived inline.
+// Battle audio + toast/explosion pipeline: turns fresh world.events into synthesized
+// sfx, screen toasts, and explosion markers.
 import {useEffect, useRef} from "react";
 import {FALLOUT, haversine} from "../../game/engine.js";
 import {AUDIO_SPATIAL} from "../../game/data/constants.js";

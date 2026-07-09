@@ -2,9 +2,9 @@ import {Component} from "react";
 import {menuButton} from "../lib/variants.js";
 
 // Catches render/runtime errors in its subtree so a crash surfaces a readable
-// message (and a console error for diagnosis) instead of a silent black screen —
-// notably on the lobby->match handoff, where a bad snapshot would otherwise just
-// blank the view. Pass onReset to offer a recovery action (e.g. back to menu).
+// message (and a console error) instead of a silent black screen — notably on
+// the lobby->match handoff, where a bad snapshot would otherwise blank the view.
+// Pass onReset to offer a recovery action.
 export default class ErrorBoundary extends Component {
     constructor(props) {
         super(props);

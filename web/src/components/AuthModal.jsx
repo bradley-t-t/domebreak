@@ -4,7 +4,7 @@ import {X, Loader2} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {button, input, label as labelCva} from "../lib/variants.js";
 import {AUTH_RULES} from "../lib/authRules.js";
-import {useAccount} from "../lib/AccountContext.jsx";
+import {useAccount} from "./AccountContext.jsx";
 import GameIcon from "./GameIcon.jsx";
 
 // Sign in / sign up with a DomeBreak game account. Email + password (username on

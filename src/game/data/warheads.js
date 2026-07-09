@@ -1,6 +1,4 @@
-// Warhead registry — extracted verbatim from constants.js (behavior-preserving
-// refactor to keep constants.js under the file-size budget; no values changed).
-// Re-exported from constants.js so the public import surface is unchanged.
+// Warhead registry.
 import { UNITS } from "./units.js";
 
 // Map warhead type -> public/icons SVG basename (production queue + arsenal UI).
@@ -26,7 +24,7 @@ export const WARHEADS = {
         name: "Cluster",
         short: "CLU",
         role: "Area",
-        mirv: true,         // splits into submunitions at reentry (data-driven MIRV trigger)
+        mirv: true,         // splits into submunitions at reentry
         dmgMult: 0.75,
         prodCost: 55,
         prodTime: 6,
@@ -70,8 +68,7 @@ export const WARHEADS = {
         desc: "City-killer yield. Expensive and slow to produce."
     },
     // Single heavy ballistic round of the road-mobile TEL — bigger warhead than a
-    // conventional ICBM, shorter reach than a silo. A single-round platform, so it
-    // never shows a warhead picker.
+    // conventional ICBM, shorter reach than a silo. Single-round, so no warhead picker.
     sicbm: {
         name: "SICBM",
         short: "SICBM",
@@ -85,9 +82,9 @@ export const WARHEADS = {
         trailW: 2.6,
         desc: "Road-mobile short-range ballistic missile with a heavy single warhead. Fired by the TEL."
     },
-    // Thermonuclear MIRV — a multi-warhead strategic bus. Splits into a few
-    // thermonuclear sub-warheads (fewer than a conventional Cluster), each leaving
-    // fallout: a multi-city capstone strike, not single-target overkill.
+    // Thermonuclear MIRV — a multi-warhead strategic bus. Splits into a few thermo
+    // sub-warheads (fewer than a conventional Cluster), each leaving fallout: a
+    // multi-city capstone strike, not single-target overkill.
     thermomirv: {
         name: "Thermonuclear MIRV",
         short: "TMRV",
@@ -109,10 +106,9 @@ export const WARHEADS = {
     },
 };
 // Ground-zero blast: on detonation every unit within a warhead's blastKm takes
-// proximity-scaled damage — a fraction of the warhead's yield at the core, linearly
-// down to the edge — on top of the direct hit. Cities keep direct-hit-only so the
-// existing scoring/economy balance is untouched. Data-driven per the coding
-// standards: the tick reads these numbers, they are never hardcoded in systems.
+// proximity-scaled damage — a fraction of the yield at the core, linearly down to
+// the edge — on top of the direct hit. Cities keep direct-hit-only so the
+// scoring/economy balance is untouched.
 export const BLAST = {
     aoeShare: 0.6,   // peak blast damage as a fraction of the warhead's full yield, at ground zero
     edgeFrac: 0.3,   // fraction of that peak still dealt at the blast edge (0..1); core is 1
@@ -126,17 +122,16 @@ export const WARHEAD_ORDER = ["standard", "cluster", "thermo", "thermomirv", "hg
 export const AMMO_START = {standard: 6, cluster: 0, thermo: 0, thermomirv: 0, hgv: 0, sicbm: 0};
 
 // Which strategic warheads each launcher may load. Warhead-capable units carry an
-// explicit `ammo` allow-list on their UNITS entry; anything else falls back to the
-// full order. The strike UI, the fire logic, and the setWarhead command all gate on
-// this, so a platform can never load — or be shown — a payload it cannot carry.
+// explicit `ammo` allow-list; anything else falls back to the full order. The strike
+// UI, fire logic, and setWarhead command all gate on this, so a platform can never
+// load — or be shown — a payload it cannot carry.
 export function allowedAmmo(type) {
     return UNITS[type]?.ammo || WARHEAD_ORDER;
 }
-// The warhead a freshly built platform comes loaded with. Ready-to-fire platforms
-// default to the cheap Standard round they always have in stock; a strategic-only
-// platform not cleared for Standard (the SSBN) loads its signature round instead —
-// so the default is never a payload the platform can't carry. This is the single
-// source of truth for the initial/fallback warhead; nothing hardcodes "standard".
+// The warhead a freshly built platform comes loaded with. Platforms default to the
+// cheap Standard round; a strategic-only platform not cleared for Standard (the
+// SSBN) loads its signature round instead — so the default is never a payload the
+// platform can't carry.
 export function initialWarhead(type) {
     const u = UNITS[type];
     if (!u?.warheads) return "standard";
@@ -151,12 +146,9 @@ export function launchersForAmmo(key) {
     return Object.keys(UNITS).filter((t) => UNITS[t].warheads && allowedAmmo(t).includes(key));
 }
 
-// Radioactive fallout: certain warheads scatter long-lived contamination at
-// ground zero. The resulting cloud drifts on the prevailing wind and irradiates
-// every city and unit inside it — friend or foe alike — for damage over time
-// until it decays. Data-driven per the coding standards: the tick and renderers
-// read these numbers, they are never hardcoded in systems. See
-// design/gdd/radioactive-fallout.md for the model and formulas.
+// Radioactive fallout: certain warheads scatter long-lived contamination at ground
+// zero. The resulting cloud drifts on the prevailing wind and irradiates every city
+// and unit inside it — friend or foe alike — for damage over time until it decays.
 export const FALLOUT = {
     warheads: ["thermo", "thermomirv"],   // warhead keys that leave a fallout cloud on impact
     radiusKm: 480,          // contamination radius at ground zero

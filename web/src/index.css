@@ -2,10 +2,10 @@
 @plugin "tailwindcss-animate";
 
 /*
-  DomeBreak landing page — shares the in-game "Anduril-school" design language:
-  stark neutral blacks, hairline borders, squared corners, zero glow, grotesk
-  uppercase micro-labels, mono data. Tokens are lifted from the game's
-  src/index.css so the marketing surface reads as the same product.
+  DomeBreak landing page — shares the in-game design language: stark neutral
+  blacks, hairline borders, squared corners, zero glow, grotesk uppercase
+  micro-labels, mono data. Tokens match the game's src/index.css so the
+  marketing surface reads as the same product.
 */
 
 :root {
@@ -248,9 +248,9 @@ body {
 
 
 /* ---- In-game combat/globe VFX (missiles, interceptors, explosions, units,
-   scan bars) — extracted verbatim from the game's src/index.css @layer vfx so
-   the reused AttractSim renders identically. Kept unlayered so it reliably
-   applies over Tailwind utilities. ---- */
+   scan bars) — mirrors the game's src/index.css @layer vfx so the reused
+   AttractSim renders identically. Unlayered so it reliably applies over
+   Tailwind utilities. ---- */
 
     /* ---- Custom tactical scrollbars ---- */
     /* .db-scroll is the reusable dark-panel scrollbar; .db-savelist is an alias
@@ -1068,7 +1068,7 @@ body {
         animation: dbBootScan 1.15s ease-in-out infinite;
     }
 
-    /* ---- all @keyframes (26), verbatim ---- */
+    /* ---- all @keyframes ---- */
     @keyframes dbDropInY {
         from {
             opacity: 0;

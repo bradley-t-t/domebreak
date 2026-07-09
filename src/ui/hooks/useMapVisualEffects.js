@@ -1,8 +1,7 @@
-// Map-visual side effects driven by layer toggles, style-ready renders, and
-// zoom: countries layer visibility, the per-country border/tint recolor
-// fetched from colors.json, the unit-marker fade-with-zoom CSS var, and the
-// GID_0 -> country-label lookup for the zoomed-out hover readout. Pulled out
-// of LiveGame.jsx verbatim — same effects, same dependency arrays, same order.
+// Map-visual side effects driven by layer toggles, style-ready renders, and zoom:
+// countries layer visibility, the per-country border/tint recolor fetched from
+// colors.json, the unit-marker fade-with-zoom CSS var, and the GID_0 -> country-label
+// lookup for the zoomed-out hover readout.
 import {useEffect, useMemo, useState} from "react";
 import {COUNTRY_FILL_OPACITY} from "../../map/WorldMap.jsx";
 import {toGid3} from "../../game/data/iso3.js";

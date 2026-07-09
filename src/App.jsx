@@ -231,7 +231,7 @@ export default function App() {
         // Bounded neutral-world match: the player claims `iso`; up to
         // NEUTRAL.defaultActive nations participate (the player plus scattered great
         // powers), and every other country stays on the map as a passive, capturable
-        // neutral. See adr-008-active-and-neutral-nations.
+        // neutral.
         const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: NEUTRAL.defaultActive});
         const w = createWorld(setup);
         w.speed = settings.speed;

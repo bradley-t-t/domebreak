@@ -10,7 +10,7 @@ const HEARTBEAT_QUEUE_MS = 5000; // liveness ping cadence while searching (serve
 // placing the caller in a formed lobby. Owns its own quick_match enrollment
 // (mount + Retry) so App only needs to switch screens; purely observes the
 // caller's own matchmaking_queue row via Realtime (+ a poll fallback) for the
-// status:'matched' transition, per adr-004.
+// status:'matched' transition.
 export default function SearchingScreen({onMatched, onCancel, reduceMotion, preQueued}) {
     const [elapsedS, setElapsedS] = useState(0);
     const [timedOut, setTimedOut] = useState(false);

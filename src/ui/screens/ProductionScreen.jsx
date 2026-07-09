@@ -24,8 +24,8 @@ import {
     WARHEADS,
 } from "../../game/engine.js";
 import {FALLOUT, INTERCEPT_CAP, WARHEAD_ICON} from "../../game/data/constants.js";
-import {fmtNet} from "../common/format.js";
-import {prodIcon, prodLabel, prodTime} from "../common/prod.js";
+import {fmtNet} from "../lib/format.js";
+import {prodIcon, prodLabel, prodTime} from "../lib/prod.js";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
 

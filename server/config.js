@@ -24,21 +24,19 @@ export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
 export const TICK_MS = 100;      // simulation step cadence
 // Full-world broadcast cadence. Lower = more realtime economy/production/spawns
 // (motion is already client-predicted), at a serialize+gzip + bandwidth cost that
-// scales with match count on this single-threaded process. 200ms (5Hz) measured
-// safe on the Sunday host even at MAX_MATCHES; env-tunable without a redeploy. A
-// future delta-encoding pass would let this go much higher — see adr-003.
+// scales with match count on this single-threaded process. 200ms (5Hz) is safe
+// on the Sunday host even at MAX_MATCHES; env-tunable without a redeploy.
 export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "200", 10);
 // Opening freeze (seconds): an online match holds paused this long at the start
 // so every commander loads in before the war begins, then releases to
 // permanently-locked 1x play (online has no pause/speed control at all).
 export const MATCH_START_PAUSE_S = parseInt(process.env.GD_MATCH_START_PAUSE_S || "30", 10);
 
-// ---- matchmaker (ADR-0004: real-players-only) -------------------------------
-// Human-only matchmaking: NO bots. A match forms once at least MIN_PLAYERS real
+// ---- matchmaker -------------------------------------------------------------
+// Human-only matchmaking: no bots. A match forms once at least MIN_PLAYERS real
 // players are queued, admitting up to MAX_PLAYERS, and each player claims their
-// own nation inside the full living world (every other country is world AI, as
-// in single player). A lone waiter simply keeps waiting — a match never starts
-// below MIN_PLAYERS.
+// own nation inside the full living world (every other country is world AI). A
+// lone waiter keeps waiting — a match never starts below MIN_PLAYERS.
 export const MIN_PLAYERS = parseInt(process.env.GD_MIN_PLAYERS || "2", 10);
 export const MAX_PLAYERS = parseInt(process.env.GD_MAX_PLAYERS || "6", 10);
 // Human-gather window (ms) measured from the anchor (oldest waiter)'s
@@ -52,9 +50,9 @@ export const MATCH_WINDOW_MS = parseInt(process.env.GD_MATCH_WINDOW_MS || "12000
 export const LOBBY_READY_TIMEOUT_MS = parseInt(process.env.GD_LOBBY_READY_TIMEOUT_MS || "45000", 10);
 // Queue liveness (ms): a 'waiting' row is only grouped if its owner has
 // heartbeated within this window. The Searching client refreshes last_seen every
-// ~5s (SearchingScreen); a row that goes silent (app closed, crash, network drop)
-// falls stale and is skipped, so real players are never matched to an offline
-// ghost that quit without cancelling. db-lobby deletes rows staler than this on
-// its sweep. Must comfortably exceed the client heartbeat cadence so ordinary
-// jitter never drops a live waiter.
+// ~5s; a row that goes silent (app closed, crash, network drop) falls stale and
+// is skipped, so real players are never matched to an offline ghost that quit
+// without cancelling. db-lobby deletes rows staler than this on its sweep. Must
+// comfortably exceed the client heartbeat cadence so jitter never drops a live
+// waiter.
 export const QUEUE_STALE_MS = parseInt(process.env.GD_QUEUE_STALE_MS || "20000", 10);
