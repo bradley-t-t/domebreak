@@ -1,0 +1,26 @@
+name: Reconcile behind PRs
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: reconcile-behind-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fire reconcile routine
+        env:
+          ROUTINE_FIRE_URL: ${{ secrets.ROUTINE_FIRE_URL }}
+          ROUTINE_FIRE_TOKEN: ${{ secrets.ROUTINE_FIRE_TOKEN }}
+        run: |
+          curl -sS --fail -X POST "$ROUTINE_FIRE_URL" \
+            -H "Authorization: Bearer $ROUTINE_FIRE_TOKEN" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"repo: ${{ github.repository }}\"}"
