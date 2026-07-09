@@ -5,6 +5,8 @@
 // country is a live participant.
 import {GDP_FALLBACK_T, GDP_T, NEUTRAL, REAL_POP} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
+import {clamp} from "../../lib/math.js";
+import {cmpStr} from "../../lib/iter.js";
 
 let _data = null;
 
@@ -70,7 +72,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     if (aiIsos == null) {
         const rest = Object.keys(data.cities)
             .filter((iso) => iso !== playerIso && data.cities[iso]?.length)
-            .sort((a, b) => (GDP_T[b] || GDP_FALLBACK_T) - (GDP_T[a] || GDP_FALLBACK_T) || (a < b ? -1 : a > b ? 1 : 0));
+            .sort((a, b) => (GDP_T[b] || GDP_FALLBACK_T) - (GDP_T[a] || GDP_FALLBACK_T) || cmpStr()(a, b));
         chosen = (data.cities[playerIso]?.length ? [playerIso] : []).concat(rest);
     } else {
         const others = aiIsos.filter((i) => i !== playerIso && data.cities[i]?.length);
@@ -85,7 +87,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     if (aiIsos == null && opts.activeCount) {
         const participants = (opts.participantIsos?.length ? opts.participantIsos : [playerIso])
             .filter((iso) => data.cities[iso]?.length);
-        const count = Math.max(NEUTRAL.minActive, Math.min(NEUTRAL.maxActive, opts.activeCount));
+        const count = clamp(opts.activeCount, NEUTRAL.minActive, NEUTRAL.maxActive);
         activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || GREAT_POWERS, count));
     }
     const nations = [], cities = [];

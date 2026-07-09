@@ -9,11 +9,11 @@ import {
     radarRangeOf,
     UNITS
 } from "../../game/engine.js";
+import {fmtKm as km} from "../lib/format.js";
 
 export function useUnitStats({w, myNation, mySlot, armOf}) {
     return (u) => {
         const def = UNITS[u.type];
-        const km = (v) => `${Math.round(v).toLocaleString()} km`;
         const rows = [];
         if (def.kind === "defense") {
             rows.push(["Intercept", `${Math.round(Math.min(INTERCEPT_CAP, def.intercept + (myNation?.interceptAdd ?? 0)) * 100)}%`]);

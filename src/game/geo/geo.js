@@ -1,5 +1,7 @@
 // Geodesic helpers shared by the sim engine and the map overlays.
 
+import {unwrapLng} from "../../lib/geo.js";
+
 const R_EARTH_KM = 6371;
 const TWO_PI = 2 * Math.PI;
 
@@ -103,14 +105,6 @@ function geoDest(lng, lat, km, brngDeg) {
     return [lo2 * DEG, la2 * DEG];
 }
 
-// Keep a ring/sweep's longitudes continuous across the ±180° seam so a polygon
-// spanning it doesn't streak across the map (same trick as gcTrail).
-function unwrapLng(lng, prev) {
-    while (lng - prev > 180) lng -= 360;
-    while (lng - prev < -180) lng += 360;
-    return lng;
-}
-
 // True geodesic range ring — the globe-view counterpart of circle(); same Feature
 // shape and innerKm annulus.
 export function geoCircle(lng, lat, km, steps = 56, innerKm = 0) {
@@ -188,10 +182,7 @@ export function gcTrail(lng1, lat1, lng2, lat2, progress, steps = 24) {
         const p = interpGC(lng1, lat1, lng2, lat2, (progress * i) / steps);
         // Unwrap longitude so a pole-crossing path never jumps +/-360 (which would
         // otherwise draw a stray loop/line across the map near the poles).
-        if (prev) {
-            while (p[0] - prev[0] > 180) p[0] -= 360;
-            while (p[0] - prev[0] < -180) p[0] += 360;
-        }
+        if (prev) p[0] = unwrapLng(p[0], prev[0]);
         pts.push(p);
         prev = p;
     }

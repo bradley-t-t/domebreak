@@ -1,14 +1,7 @@
 import {useState} from "react";
 import {menuButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
-
-// "Month Year" from an ISO created_at timestamp, e.g. "July 2026".
-const monthYear = (iso) => {
-    if (!iso) return null;
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString(undefined, {month: "long", year: "numeric"});
-};
+import {fmtMonthYear, fmtPlaytimeHours, winRatePct} from "../lib/format.js";
 
 export default function StartMenu({
                                       onNew,
@@ -26,10 +19,10 @@ export default function StartMenu({
     // Single Player and Multiplayer each open a sub-panel. Settings opens its
     // own screen directly. Section state is local — App's callbacks are unchanged.
     const [section, setSection] = useState(null); // null | "single" | "multi"
-    const since = monthYear(profile?.created_at);
+    const since = fmtMonthYear(profile?.created_at);
     const total = stats?.total_matches ?? 0;
-    const winRate = total > 0 ? Math.round(((stats?.wins ?? 0) / total) * 100) : 0;
-    const hours = stats ? (stats.total_playtime_s / 3600).toFixed(1) : null;
+    const winRate = winRatePct(stats);
+    const hours = fmtPlaytimeHours(stats);
     return (
         // Command rail: all menu chrome lives in a slim left-anchored console so the
         // live attract war owns the center of the globe, uncovered.

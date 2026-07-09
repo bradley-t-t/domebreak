@@ -9,6 +9,7 @@ import {gameData} from "../data.js";
 import {COMMANDS} from "./commands.js";
 import {openingFreeze} from "./openingFreeze.js";
 import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "../config.js";
+import {indexBy} from "../../src/lib/iter.js";
 
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
@@ -48,13 +49,13 @@ export class Match {
         // great power), then build the full world seeded on the first player.
         const isos = resolveIsos(roster.map((r) => r.iso));
         const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1);
-        const slotOfIso = new Map(setup.nations.map((n) => [n.iso, n.slot]));
+        const slotOfIso = indexBy(setup.nations, (n) => n.iso, (n) => n.slot);
         this.players = roster.map((r, i) => ({...r, iso: isos[i], slot: slotOfIso.get(isos[i])}));
 
         // Hand each player their nation; a human who never readied (force-launched)
         // stays AI until they connect (attach flips isAi=false). Every other nation
         // in the world stays AI.
-        const bySlot = new Map(this.players.map((p) => [p.slot, p]));
+        const bySlot = indexBy(this.players, (p) => p.slot);
         setup.nations.forEach((n) => {
             const p = bySlot.get(n.slot);
             n.isAi = p ? (p.ready === false) : true;

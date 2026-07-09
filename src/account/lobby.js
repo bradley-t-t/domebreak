@@ -6,11 +6,9 @@
 // Pressing Play enrolls the caller in `matchmaking_queue`; the authoritative
 // server groups/forms/bot-fills/auto-launches the lobby.
 import {supabase} from "./client.js";
+import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/database.js";
 
-async function invoke(body) {
-    const {data, error} = await supabase.functions.invoke("db-lobby", {body});
-    return error ? {error: error.message} : (data ?? {ok: true});
-}
+const invoke = createEdgeInvoker("db-lobby");
 
 // Enroll the caller as a 'waiting' matchmaking_queue row. Idempotent server-side.
 export const quickMatch = (iso) => invoke({action: "quick_match", ...(iso ? {iso} : {})});
@@ -25,42 +23,35 @@ export const setLobbyIso = (iso) => invoke({action: "set_iso", iso});
 export const setReady = (ready) => invoke({action: "ready", ready});
 
 // The caller's own matchmaking_queue row (RLS scopes this to own row only).
-export async function fetchMyQueue() {
-    const {data} = await supabase.from("matchmaking_queue").select("*").maybeSingle();
-    return data ?? null;
+export function fetchMyQueue() {
+    return readRow("matchmaking_queue");
 }
 
 // Realtime on the caller's own queue row, plus a heartbeat refetch fallback
-// so a missed/late Realtime event can't strand the Searching screen. Mirrors
-// watchLobby's pattern below. Returns an unsubscribe fn.
+// so a missed/late Realtime event can't strand the Searching screen. Returns
+// an unsubscribe fn.
 export function watchQueue(cb) {
-    let ch = null;
-    let beat = null;
     let stopped = false;
-    supabase.auth.getUser().then(({data}) => {
-        const uid = data?.user?.id;
+    let unwatch = null;
+    currentUserId().then((uid) => {
         if (stopped || !uid) return;
-        ch = supabase.channel(`queue-${uid}`)
-            .on("postgres_changes", {
-                event: "*",
-                schema: "public",
-                table: "matchmaking_queue",
-                filter: `user_id=eq.${uid}`,
-            }, cb)
-            .subscribe();
-        beat = setInterval(cb, 3000);
+        unwatch = watchRows({
+            channel: `queue-${uid}`,
+            tables: [{table: "matchmaking_queue", filter: `user_id=eq.${uid}`}],
+            pollMs: 3000,
+            cb,
+        });
     });
     return () => {
         stopped = true;
-        if (beat) clearInterval(beat);
-        if (ch) supabase.removeChannel(ch);
+        if (unwatch) unwatch();
     };
 }
 
 // Full room state for one lobby: row + members (human + bot), sorted by slot.
 export async function fetchLobby(lobbyId) {
-    const [{data: lobby}, {data: members}] = await Promise.all([
-        supabase.from("lobbies").select("*").eq("id", lobbyId).maybeSingle(),
+    const [lobby, {data: members}] = await Promise.all([
+        readRow("lobbies", {eq: ["id", lobbyId]}),
         supabase.from("lobby_members")
             .select("user_id, slot, iso, ready, is_bot, display_name, profiles(username)")
             .eq("lobby_id", lobbyId).order("slot"),
@@ -79,18 +70,13 @@ export async function fetchLobby(lobbyId) {
 // Realtime: cb fires on any change to the lobby row or its members (and on a
 // heartbeat refetch every 5s as a fallback). Returns an unsubscribe fn.
 export function watchLobby(lobbyId, cb) {
-    const ch = supabase.channel(`lobby-${lobbyId}`)
-        .on("postgres_changes", {event: "*", schema: "public", table: "lobbies", filter: `id=eq.${lobbyId}`}, cb)
-        .on("postgres_changes", {
-            event: "*",
-            schema: "public",
-            table: "lobby_members",
-            filter: `lobby_id=eq.${lobbyId}`
-        }, cb)
-        .subscribe();
-    const beat = setInterval(cb, 5000);
-    return () => {
-        clearInterval(beat);
-        supabase.removeChannel(ch);
-    };
+    return watchRows({
+        channel: `lobby-${lobbyId}`,
+        tables: [
+            {table: "lobbies", filter: `id=eq.${lobbyId}`},
+            {table: "lobby_members", filter: `lobby_id=eq.${lobbyId}`},
+        ],
+        pollMs: 5000,
+        cb,
+    });
 }
