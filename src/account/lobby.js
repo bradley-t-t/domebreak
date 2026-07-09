@@ -6,7 +6,7 @@
 // Pressing Play enrolls the caller in `matchmaking_queue`; the authoritative
 // server groups/forms/bot-fills/auto-launches the lobby.
 import {supabase} from "./client.js";
-import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/supabase.js";
+import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/database.js";
 
 const invoke = createEdgeInvoker("db-lobby");
 

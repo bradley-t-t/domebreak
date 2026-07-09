@@ -1,7 +1,7 @@
 // Account surface for the UI: auth session, profile/stats reads (RLS), and
 // mutations via the db-account edge function. The client never writes tables.
 import {supabase} from "./client.js";
-import {createEdgeInvoker, currentUserId, readRow} from "../lib/supabase.js";
+import {createEdgeInvoker, currentUserId, readRow} from "../lib/database.js";
 
 export async function signUp(email, password, username) {
     const {error} = await supabase.auth.signUp({email, password, options: {data: {username}}});

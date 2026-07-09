@@ -7,7 +7,7 @@ import {
     launchPartyPrivate, leaveParty, queuePartyPublic, setPartyIso, setPartyJoinMode,
     setPartyReady, watchParty,
 } from "../../account/party.js";
-import {currentUserId} from "../../lib/supabase.js";
+import {currentUserId} from "../../lib/database.js";
 import {useCancellableEffect} from "../../lib/hooks/useCancellableEffect.js";
 
 export function useParty(enabled) {

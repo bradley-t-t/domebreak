@@ -1,7 +1,7 @@
 // Party surface: all writes go through the db-party edge function; reads of my
 // own party are watched live under RLS. A party is a social group I lead and
 // friends join, separate from a match lobby.
-import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/supabase.js";
+import {createEdgeInvoker, currentUserId, readRow, watchRows} from "../lib/database.js";
 
 const invoke = createEdgeInvoker("db-party");
 

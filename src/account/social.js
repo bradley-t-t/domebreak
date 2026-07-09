@@ -1,6 +1,6 @@
 // Friends surface: reads under RLS, writes through db-social.
 import {supabase} from "./client.js";
-import {createEdgeInvoker, currentUserId} from "../lib/supabase.js";
+import {createEdgeInvoker, currentUserId} from "../lib/database.js";
 
 const invoke = createEdgeInvoker("db-social");
 

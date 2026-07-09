@@ -1,7 +1,8 @@
-// Single home for the Supabase glue used across account / lobby / party /
+// Single home for the database glue used across account / lobby / party /
 // social and presence hooks: edge-function invoker factory, RLS-scoped
 // single-row read, current-user id, and the channel + poll live-watch
-// lifecycle. Semantics match the pre-extraction copies in src/account/*.
+// lifecycle. Concrete backend is Supabase (see src/account/client.js);
+// semantics match the pre-extraction copies in src/account/*.
 
 import {supabase} from "../account/client.js";
 

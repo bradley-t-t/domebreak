@@ -12,7 +12,7 @@
 import {useEffect, useRef, useState} from "react";
 import {supabase} from "../../account/client.js";
 import {heartbeat} from "../../account/api.js";
-import {currentUserId} from "../../lib/supabase.js";
+import {currentUserId} from "../../lib/database.js";
 
 const HEARTBEAT_MS = 90_000;
 
