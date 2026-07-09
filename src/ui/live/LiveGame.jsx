@@ -36,6 +36,7 @@ import ProductionScreen from "../screens/ProductionScreen.jsx";
 import DiplomacyScreen from "../screens/DiplomacyScreen.jsx";
 import ControlsOverlay from "../screens/ControlsOverlay.jsx";
 import PlayerListOverlay from "../screens/PlayerListOverlay.jsx";
+import CountryInfoPopup from "../screens/CountryInfoPopup.jsx";
 import MapLayers from "./MapLayers.jsx";
 import MapMarkers from "./MapMarkers.jsx";
 import PlacementGhost from "./PlacementGhost.jsx";
@@ -112,6 +113,10 @@ export default function LiveGame({
     const [helpOpen, setHelpOpen] = useState(false);
     // In-game scoreboard (Tab): every active power, their commander, and stats.
     const [playerListOpen, setPlayerListOpen] = useState(false);
+    // Country dossier popup — the slot whose CountryInfoPopup is showing, or null.
+    // Opened by clicking a flag (scoreboard, WarBar) or right-clicking a hovered
+    // country plaque.
+    const [countryPopupSlot, setCountryPopupSlot] = useState(null);
     const [err, setErr] = useState(null);
     // Loading veil: covers the map from mount until the style + tiles finish
     // (map "idle"), so the player only sees the world once it's fully drawn and
@@ -228,6 +233,7 @@ export default function LiveGame({
         attackMode, setAttackMode,
         panel, setPanel,
         playerListOpen, setPlayerListOpen,
+        countryPopupSlot, setCountryPopupSlot,
         onPause,
         overlayOpen,
         w,
@@ -428,6 +434,15 @@ export default function LiveGame({
         }
         const feat = e.features?.find((f) => f.layer.id === "live-cities");
         if (feat) return openCityMenu(feat.properties.id, e.originalEvent);
+        // Zoomed out enough that the whole-country plaque is up: right-clicking
+        // the country opens its dossier (declare war / manage alliance / etc.).
+        if (hover?.kind === "country") {
+            const country = w.nations.find((n) => toGid3(n.iso) === hover.gid);
+            if (country) {
+                setCountryPopupSlot(country.slot);
+                return;
+            }
+        }
         // Selected friendly ship + right-click on open water = sail there directly.
         const sel = w.units.find((u) => u.id === selUnit);
         if (sel && sel.slot === mySlot && UNITS[sel.type].navalSpeed && !onLand(e)) {
@@ -547,7 +562,7 @@ export default function LiveGame({
                              className="absolute bottom-4 right-4 z-5"
                              tabAlign="right">
                 <div className="flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
-                    {!w.over && <WarBar world={w} mySlot={mySlot}/>}
+                    {!w.over && <WarBar world={w} mySlot={mySlot} onOpenCountry={setCountryPopupSlot}/>}
                     <LayerBar layers={layers} onToggle={toggleLayer}/>
                 </div>
             </AdjustablePanel>
@@ -606,7 +621,12 @@ export default function LiveGame({
             )}
             {/* Rendered after the outcome modal so a Tab-hold still surfaces the scoreboard when the match has ended. */}
             {playerListOpen && <PlayerListOverlay world={w} mySlot={mySlot} players={net?.players}
+                                                  onOpenCountry={setCountryPopupSlot}
                                                   onClose={() => setPlayerListOpen(false)}/>}
+            {countryPopupSlot != null &&
+                <CountryInfoPopup world={w} api={api} mySlot={mySlot} online={!!net}
+                                  targetSlot={countryPopupSlot} players={net?.players}
+                                  onClose={() => setCountryPopupSlot(null)}/>}
 
             <div className={cn(
                 "absolute inset-0 z-60 grid place-items-center [background:radial-gradient(120%_120%_at_50%_42%,#0b0e13_0%,#05070b_72%)] transition-opacity duration-[520ms] ease-out-db",

@@ -13,7 +13,7 @@ import {gdpOf, populationOf} from "../../game/engine.js";
 // engine queries only; never mutates. In multiplayer the netClient's roster
 // supplies each human's username; AI seats stay labelled AI in both single-
 // and multi-player.
-export default function PlayerListOverlay({world, mySlot, players, onClose}) {
+export default function PlayerListOverlay({world, mySlot, players, onOpenCountry, onClose}) {
     const usernameOf = useMemo(() => {
         const m = new Map();
         for (const p of (players || [])) m.set(p.slot, p.username);
@@ -84,10 +84,20 @@ export default function PlayerListOverlay({world, mySlot, players, onClose}) {
                         const r = relOf(n);
                         const s = seatOf(n);
                         const cmd = commanderOf(n);
+                        const open = onOpenCountry ? () => onOpenCountry(n.slot) : undefined;
                         return (
                             <div key={n.slot}
-                                 className={cn(rowGrid, !n.alive && "opacity-50", isMe && "bg-[rgba(245,197,49,0.05)]")}
-                                 role="row" aria-current={isMe ? "true" : undefined}>
+                                 className={cn(rowGrid, !n.alive && "opacity-50", isMe && "bg-[rgba(245,197,49,0.05)]", open && "cursor-pointer hover:bg-[rgba(255,255,255,0.03)]")}
+                                 role={open ? "button" : "row"} tabIndex={open ? 0 : undefined}
+                                 aria-current={isMe ? "true" : undefined}
+                                 aria-label={open ? `Open ${n.name} dossier` : undefined}
+                                 onClick={open}
+                                 onKeyDown={open ? (e) => {
+                                     if (e.key === "Enter" || e.key === " ") {
+                                         e.preventDefault();
+                                         open();
+                                     }
+                                 } : undefined}>
                                 <span className="text-right font-mono text-xs text-faint" role="cell">{i + 1}</span>
                                 <span className="flex items-center gap-[11px] min-w-0" role="rowheader">
                                     <span className="flex-none w-[30px] h-[20px] grid place-items-center overflow-hidden border rounded-[3px] [&>*]:w-full [&>*]:h-full [&>*]:object-cover"
