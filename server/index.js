@@ -60,6 +60,9 @@ async function claimLobby(row) {
     const match = new Match({
         lobbyId: row.id,
         roster,
+        // Shared match rules the lobby authored (may be null on older schemas —
+        // Match falls back to defaults).
+        rules: row.rules ?? null,
         onFinished: async (m) => {
             const {error} = await db.from("matches").insert(m.resultRows());
             if (error) log("result insert failed", m.id, error.message);

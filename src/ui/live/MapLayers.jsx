@@ -6,7 +6,7 @@
 // useLiveLayers/useOwnershipLayer.
 import {Layer, Source} from "react-map-gl/maplibre";
 import {vitPaint} from "../lib/status.js";
-import RadarSweep from "./RadarSweep.jsx";
+import RadarPulse from "./RadarPulse.jsx";
 
 const REGIONS_URL = `pmtiles://${typeof window !== "undefined" ? window.location.origin : ""}/assets/regions.pmtiles`;
 // Controlled-territory tint: strong enough to read the owner color at the whole-earth
@@ -76,8 +76,8 @@ export default function MapLayers({
                            "line-dasharray": [3, 3]
                        }}/>
             </Source>}
-            {/* Rotating PPI sweep over the coverage rings — animated old-radar look. */}
-            {layers.radar && <RadarSweep emitters={radarEmitters} globe={globe}/>}
+            {/* Expanding "ping" pulses over the coverage rings — animated sensor return. */}
+            {layers.radar && <RadarPulse emitters={radarEmitters} globe={globe}/>}
             {layers.defense && <Source id="defall-src" type="geojson" data={defenseFC}>
                 <Layer id="defall-fill" type="fill" paint={{"fill-color": ["get", "color"], "fill-opacity": 0.05}}/>
                 <Layer id="defall-line" type="line"

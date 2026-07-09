@@ -79,6 +79,14 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
         if (u.hidden) continue;
         (groups[catOf(key, u)] ||= []).push([key, u]);
     }
+    // Space category has an explicit ordering rule: Space Command HQ leads (it's
+    // the prerequisite for everything else in the section), then the rest by cost
+    // ascending — cheapest orbital platform to most expensive.
+    if (groups.Space) groups.Space.sort(([ak, au], [bk, bu]) => {
+        if (ak === "spacehq") return -1;
+        if (bk === "spacehq") return 1;
+        return (au.cost || 0) - (bu.cost || 0);
+    });
     const countFor = (id) => id === "all"
         ? Object.values(groups).reduce((a, g) => a + g.length, 0) + WARHEAD_ORDER.length
         : id === "Munitions" ? WARHEAD_ORDER.length : (groups[id]?.length || 0);

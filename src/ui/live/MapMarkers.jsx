@@ -10,6 +10,12 @@ import {cn} from "../lib/cn.js";
 import {falloutIntensity, UNIT_ICON, UNITS} from "../../game/engine.js";
 import {fmtPct} from "../lib/format.js";
 
+// Screen-pixel lift per unit of def.orbitLift for satellites. Sized so a sat
+// reads as being clearly above the surface layer rather than sitting on the
+// map — combined with per-type orbitLift multipliers this puts orbital assets
+// well up in the sky column, matching the "in orbit" flavor.
+const ORBIT_LIFT_PX = 34;
+
 export default function MapMarkers({
                                         selectedCity, w, mySlot, teamColor, visUnits, unitHeading, unitColor,
                                         labelOf, nationName, selUnit, onUnitClick, openUnitMenu, setHover,
@@ -59,9 +65,19 @@ export default function MapMarkers({
                     iconStyle.opacity = u.vis ?? 1; // engine drives fade-in on takeoff / out on landing
                     iconStyle.transform = `${iconStyle.transform || ""} scale(${(0.7 + alt * 0.3).toFixed(3)})`.trim(); // rises off the deck
                 }
+                // Orbital units always float above the surface with a subtle hover so
+                // they read as being in orbit rather than sitting on the ground. The
+                // per-type orbitLift lifts the icon in screen space; no ground tether
+                // — a sat sweeps its parallel of latitude and the engine advances
+                // its longitude every tick (stepMovement), so the icon visibly walks
+                // around the globe on its own. Works identically in flat and globe
+                // modes: the marker anchor stays on the sat's live ground coordinate
+                // and the icon is offset in CSS pixels above it.
+                const orbital = !!def.orbital;
+                const lift = orbital ? Math.round((def.orbitLift || 1) * ORBIT_LIFT_PX) : 0;
                 return (
                     <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
-                            opacityWhenCovered="0" offset={air ? [0, -alt * 30] : undefined}>
+                            opacityWhenCovered="0" offset={orbital ? [0, -lift] : (air ? [0, -alt * 30] : undefined)}>
                         <div
                             className={cn(
                                 "grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)",
@@ -85,8 +101,9 @@ export default function MapMarkers({
                                 y: e.clientY
                             } : h))}
                             onMouseLeave={() => setHover((h) => (h && h.kind === "unit" && h.id === u.id ? null : h))}>
-              <span className="inline-flex transition-transform duration-[170ms] ease-linear" style={Object.keys(iconStyle).length ? iconStyle : undefined}>
-                <UnitIcon name={iconName} color={unitColor(u)} size={air ? 16 : 22}/>
+              <span className={cn("inline-flex transition-transform duration-[170ms] ease-linear", orbital && "db-orbital")}
+                    style={Object.keys(iconStyle).length ? iconStyle : undefined}>
+                <UnitIcon name={iconName} color={unitColor(u)} size={air ? 16 : orbital ? 18 : 22}/>
               </span>
                         </div>
                     </Marker>

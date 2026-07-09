@@ -14,7 +14,7 @@ export const CATEGORIES = [
         id: "defense",
         label: "Missile Defense",
         blurb: "Interceptors, area defense, and the layered shield.",
-        include: ["battery", "patriot", "aegis", "thaad", "dome", "sbi", "orbitallaser"],
+        include: ["battery", "patriot", "aegis", "thaad", "dome", "orbitallaser"],
     },
     {
         id: "offense",
@@ -26,7 +26,7 @@ export const CATEGORIES = [
         id: "sensors",
         label: "Sensors & Warning",
         blurb: "Radars and satellites that build the picture.",
-        include: ["radar", "oth", "warnsat", "reconsat"],
+        include: ["radar", "oth", "reconsat"],
     },
     {
         id: "naval",

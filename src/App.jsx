@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import StartMenu from "./ui/screens/StartMenu.jsx";
 import NewGame from "./ui/screens/NewGame.jsx";
+import NewGameRules from "./ui/screens/NewGameRules.jsx";
 import LiveGame from "./ui/live/LiveGame.jsx";
 import ErrorBoundary from "./ui/common/ErrorBoundary.jsx";
 import PauseMenu from "./ui/screens/PauseMenu.jsx";
@@ -11,7 +12,7 @@ import SplashSequence from "./ui/screens/SplashSequence.jsx";
 import AttractSim from "./ui/live/AttractSim.jsx";
 import {createWorld} from "./game/engine.js";
 import {buildSetup, loadGameData} from "./game/sim/newGame.js";
-import {NEUTRAL} from "./game/data/constants.js";
+import {DEFAULT_RULES, normalizeRules} from "./game/sim/gameRules.js";
 import {loadSettings, saveSettings} from "./game/platform/settings.js";
 import {resolveKeys} from "./game/platform/keybindings.js";
 import {applyAudioSettings, initAudio} from "./game/platform/audio.js";
@@ -23,7 +24,7 @@ import MeBadge from "./ui/common/MeBadge.jsx";
 import TitleBarDrag from "./ui/common/TitleBarDrag.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
-import {menuButton} from "./ui/lib/variants.js";
+import NetErrorOverlay from "./ui/screens/NetErrorOverlay.jsx";
 import {usePresence} from "./ui/hooks/usePresence.js";
 import {useParty} from "./ui/hooks/useParty.js";
 
@@ -46,13 +47,28 @@ export default function App() {
     const [data, setData] = useState(null);
     const [profile, setProfile] = useState({name: "Commander", iso: "US"});
     const [splashDone, setSplashDone] = useState(false);
+    // Nation chosen on NewGame, carried into the rules step. Cleared when the
+    // rules step is exited (back or Start War).
+    const [newGameIso, setNewGameIso] = useState(null);
+    // Last-authored SP rules — seeded from settings, remembered across the
+    // menu so the next New Game doesn't start from cold defaults.
+    const [spRules, setSpRules] = useState(() => normalizeRules(loadSettings().rules ?? DEFAULT_RULES));
     // Online play: current lobby room and the live match connection.
     const [lobbyId, setLobbyId] = useState(null);
     // True while the search screen is watching a party's public queue (the party
     // is already enrolled by db-party, so the search screen must not re-enqueue).
     const [partySearch, setPartySearch] = useState(false);
     const [netClient, setNetClient] = useState(null);
-    const [netStatus, setNetStatus] = useState(null); // null | "connecting" | "lost"
+    const [netStatus, setNetStatus] = useState(null); // null | "connecting" | "failed" | "lost"
+    // Detail dump surfaced by NetErrorOverlay when netStatus is "failed" or "lost"
+    // — the multi-line technical trace from connectMatch (URLs tried, ws close
+    // code, server error, matchId) so a player can Copy it into a bug report
+    // instead of getting silently punted to the menu. Cleared when the overlay
+    // dismisses.
+    const [netError, setNetError] = useState(null);
+    // The lobby the last join attempt targeted — held so the failure overlay's
+    // Retry button can re-invoke joinMatch with the same match_id + server_url.
+    const retryLobbyRef = useRef(null);
     // Honor both the OS motion preference and the in-game toggle.
     const reduceMotion = settings.reduceMotion ||
         (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -223,20 +239,25 @@ export default function App() {
         reportedRef.current = false;
     };
 
-    const onStart = (iso) => {
+    const onStart = (iso, rulesIn) => {
         if (!data) return;
         // Your in-game identity is your account username — no separate "commander
         // name" is collected anywhere.
         const name = accountProfile?.username || "Commander";
+        const rules = normalizeRules(rulesIn ?? spRules);
         // Bounded neutral-world match: the player claims `iso`; up to
-        // NEUTRAL.defaultActive nations participate (the player plus scattered great
+        // rules.activeCount nations participate (the player plus scattered great
         // powers), and every other country stays on the map as a passive, capturable
         // neutral.
-        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: NEUTRAL.defaultActive});
+        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: rules.activeCount, rules});
         const w = createWorld(setup);
-        w.speed = settings.speed;
+        // Opening speed comes from the rule (SP-only). settings.speed is the HUD's
+        // last-used hotkey preference, which the rule now supersedes at launch.
+        w.speed = rules.startSpeed;
         w.paused = true; // solo matches load in paused — the commander presses play to begin
         w.meta = {playerIso: iso, playerName: name, belligerents: setup.belligerents};
+        setSpRules(rules);
+        saveSettings({...settings, rules});
         enterGame(w, setup.belligerents, {name, iso});
     };
     const onLoadSlot = (slot) => {
@@ -317,6 +338,8 @@ export default function App() {
                 });
             }
         }
+        setNetError(null);
+        retryLobbyRef.current = null;
         setLobbyId(null);
         setOverlay(null);
         setScreen("menu");
@@ -324,21 +347,31 @@ export default function App() {
     };
 
     // A lobby the player is in went active: dial the game server it advertised.
+    // On any failure we hold on the "failed" state (NetErrorOverlay renders a
+    // copyable dump) instead of silently dumping the player back to the menu —
+    // that path was indistinguishable from a legitimate quit and lost every clue
+    // about why the handoff failed.
     const joinMatch = async (lobby) => {
         if (netClient || netStatus === "connecting") return;
+        retryLobbyRef.current = lobby;
         setNetStatus("connecting");
+        setNetError(null);
         try {
             const client = await connectMatch({
                 urls: (lobby.server_url || "").split(",").map((s) => s.trim()).filter(Boolean),
                 matchId: lobby.match_id,
                 getJwt: async () => (await supabase.auth.getSession()).data.session?.access_token ?? "",
                 onOver: () => fetchStats().then(setAccountStats),
-                onClose: (why) => {
-                    if (why === "lost") setNetStatus("lost");
+                onClose: (why, details) => {
+                    if (why === "lost") {
+                        setNetStatus("lost");
+                        setNetError(details || null);
+                    }
                 },
             });
             setNetClient(client);
             setNetStatus(null);
+            setNetError(null);
             setWorld(client.world);
             setBelligerents(client.world.nations.map((n) => n.iso));
             setProfile({
@@ -350,11 +383,43 @@ export default function App() {
             setScreen("playing");
             setOverlay(null);
         } catch (e) {
-            setNetStatus(null);
-            setLobbyId(null);
-            setScreen("menu");
             console.warn("match connect failed", e);
+            const detail = [
+                e?.details,
+                `matchId: ${lobby?.match_id || "(none)"}`,
+                `serverUrls: ${lobby?.server_url || "(none advertised)"}`,
+                `error: ${e?.message || String(e)}`,
+            ].filter(Boolean).join("\n");
+            setNetStatus("failed");
+            setNetError(detail);
         }
+    };
+
+    // Retry: re-invoke joinMatch against the same lobby snapshot. Clears the
+    // overlay so the connecting state can render underneath while we wait.
+    const retryJoinMatch = () => {
+        const lobby = retryLobbyRef.current;
+        if (!lobby) return dismissNetError();
+        setNetError(null);
+        setNetStatus(null);
+        void joinMatch(lobby);
+    };
+
+    // Dismiss the failure/lost overlay and drop the player back at the main
+    // menu — clears every online-match handle so a fresh Play from the menu is
+    // clean.
+    const dismissNetError = () => {
+        if (netClient) {
+            netClient.close();
+            setNetClient(null);
+        }
+        retryLobbyRef.current = null;
+        setNetStatus(null);
+        setNetError(null);
+        setLobbyId(null);
+        setOverlay(null);
+        setWorld(null);
+        setScreen("menu");
     };
 
     useEffect(() => {
@@ -407,7 +472,13 @@ export default function App() {
                            }} onSettings={() => setOverlay("settings")} profile={accountProfile}
                            stats={accountStats} onSignOut={signOut} onlineCount={onlineCount}/>}
             {screen === "newgame" &&
-                <NewGame data={data} settings={settings} onStart={onStart} onBack={() => setScreen("menu")}/>}
+                <NewGame data={data} settings={settings}
+                         onStart={(iso) => { setNewGameIso(iso); setScreen("newgame-rules"); }}
+                         onBack={() => setScreen("menu")}/>}
+            {screen === "newgame-rules" && newGameIso &&
+                <NewGameRules data={data} iso={newGameIso} initialRules={spRules}
+                              onStart={(rules) => { onStart(newGameIso, rules); setNewGameIso(null); }}
+                              onBack={() => { setNewGameIso(null); setScreen("newgame"); }}/>}
             {screen === "searching" &&
                 <SearchingScreen reduceMotion={reduceMotion} preQueued={partySearch}
                                   onMatched={(id) => {
@@ -437,10 +508,19 @@ export default function App() {
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
                                                 players={netClient?.players} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}/>
                 </ErrorBoundary>}
+            {netStatus === "failed" &&
+                <NetErrorOverlay
+                    title="Match Connect Failed"
+                    message="Couldn't hand off from the war room to the game server."
+                    details={netError}
+                    onRetry={retryJoinMatch}
+                    onDismiss={dismissNetError}/>}
             {netStatus === "lost" && screen === "playing" &&
-                <div className="db-netlost fixed inset-0 z-30 w-fit h-fit m-auto grid justify-items-center gap-4 max-w-[360px] px-8 py-[26px] text-center border border-danger rounded bg-[rgba(20,10,10,0.92)] text-[#ffd7dd] text-[13.5px] shadow animate-[dbPop_200ms_var(--ease-out)]">CONNECTION LOST — the war goes on without you.
-                    <button className={menuButton()} onClick={quitToMenu}>Return to Menu</button>
-                </div>}
+                <NetErrorOverlay
+                    title="Connection Lost"
+                    message="Your link to the war server dropped. The war goes on without you."
+                    details={netError}
+                    onDismiss={quitToMenu}/>}
 
             {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => {
                 setSaveMode("save");
