@@ -105,9 +105,10 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                     </div>
                 </div>
 
-                <div className="px-3 py-[10px] border-b border-hair">
+                <div className="px-3 py-[10px] border-b border-hair"
+                     title={`Built ${view.indCount} of ${view.indCap} industry slots (factories, ports, refineries, tech parks). Cap grows with population. Combined output +${view.indOut.toFixed(1)} pts/s.`}>
                     <div className="flex items-baseline justify-between mb-[6px]">
-                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Industry</span>
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Industry (built / cap)</span>
                         <span className="font-display text-[12.5px] text-dim">{view.indCount}<span
                             className="text-faint font-normal text-xs">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
                     </div>
