@@ -5,9 +5,9 @@
 // list is the single source of what the UI offers.
 export const AVATAR_ICONS = [
     "dome", "aegis", "thaad", "patriot", "battery", "silo", "hypersonic",
-    "interceptor", "sbi", "orbitallaser", "orbitalstrike", "spacehq",
+    "interceptor", "orbitallaser", "orbitalstrike", "spacehq",
     "jet", "strike-fighter", "awacs", "helo", "bunker", "radar", "oth",
-    "reconsat", "warnsat", "tank", "artillery", "infantry", "armybase",
+    "reconsat", "tank", "artillery", "infantry", "armybase",
     "carrier", "battleship", "destroyer", "cruiser", "sub-ssbn", "sub-ssn",
     "amphib", "port", "factory", "techpark", "refinery",
 ];

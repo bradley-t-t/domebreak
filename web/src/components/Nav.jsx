@@ -54,6 +54,7 @@ export default function Nav({onSignIn}) {
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     <NavLink to="features">Briefing</NavLink>
                     <NavLink to="wiki">Wiki</NavLink>
+                    <NavLink to="download">Download</NavLink>
 
                     {loading ? (
                         <div className="h-9 w-9 rounded-sm border border-line bg-panel"/>

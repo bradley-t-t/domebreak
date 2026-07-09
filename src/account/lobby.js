@@ -21,6 +21,9 @@ export const heartbeatQueue = () => invoke({action: "heartbeat_queue"});
 export const leaveLobby = () => invoke({action: "leave"});
 export const setLobbyIso = (iso) => invoke({action: "set_iso", iso});
 export const setReady = (ready) => invoke({action: "ready", ready});
+// Shared match rules for this lobby. Any seated member may propose a change;
+// the last write wins so the panel behaves like a live shared config.
+export const setLobbyRules = (rules) => invoke({action: "set_rules", rules});
 
 // The caller's own matchmaking_queue row (RLS scopes this to own row only).
 export function fetchMyQueue() {
@@ -49,6 +52,8 @@ export function watchQueue(cb) {
 }
 
 // Full room state for one lobby: row + members (human + bot), sorted by slot.
+// The row's `rules` JSONB (may be null on older schemas) is the shared match
+// config all members read/write via set_rules.
 export async function fetchLobby(lobbyId) {
     const [lobby, {data: members}] = await Promise.all([
         readRow("lobbies", {eq: ["id", lobbyId]}),
@@ -59,6 +64,7 @@ export async function fetchLobby(lobbyId) {
     if (!lobby) return null;
     return {
         ...lobby,
+        rules: lobby.rules ?? null,
         members: (members ?? []).map((m) => ({
             userId: m.user_id, slot: m.slot, iso: m.iso, ready: m.ready, isBot: m.is_bot,
             username: (Array.isArray(m.profiles) ? m.profiles[0] : m.profiles)?.username

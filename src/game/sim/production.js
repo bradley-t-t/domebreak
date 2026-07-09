@@ -162,10 +162,16 @@ export function queueUnit(w, slot, type, lng, lat, territoryOk) {
     }
     // Industry is exempt from the deficit gate — building it is how you recover.
     if (netIncomeOf(w, slot) < 0 && def.kind !== "industry") return {error: "Cannot build while in deficit."};
-    const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
-    if (!okTerr) return {error: "Outside your territory."};
-    const blocked = placementBlocked(w, lng, lat, null);
-    if (blocked) return {error: blocked};
+    // Orbital assets are placed in orbit: any latitude the player wants, any
+    // longitude (including over foreign land or open ocean), and no MIN_SEP check
+    // — sats orbit above the surface, so a ground-unit proximity rule is
+    // meaningless for them.
+    if (!def.orbital) {
+        const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
+        if (!okTerr) return {error: "Outside your territory."};
+        const blocked = placementBlocked(w, lng, lat, null);
+        if (blocked) return {error: blocked};
+    }
     const cost = def.cost;
     if (n.points < cost) return {error: "Not enough points."};
     n.points -= cost;
@@ -255,10 +261,16 @@ export function disembark(w, slot, transportId, lng, lat) {
 export function moveUnit(w, slot, unitId, lng, lat, territoryOk) {
     const u = w.units.find((x) => x.id === unitId && x.slot === slot);
     if (!u) return {error: "Unit not found."};
-    const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
-    if (!okTerr) return {error: "Outside your territory."};
-    const blocked = placementBlocked(w, lng, lat, unitId);
-    if (blocked) return {error: blocked};
+    // Orbital assets can be re-tasked to any latitude/longitude; MIN_SEP and
+    // territory gates don't apply to something in orbit. The engine then walks
+    // the sat back into a live orbit from its new starting point.
+    const orbital = !!UNITS[u.type]?.orbital;
+    if (!orbital) {
+        const okTerr = territoryOk === undefined ? inTerritory(w, slot, lng, lat) : !!territoryOk;
+        if (!okTerr) return {error: "Outside your territory."};
+        const blocked = placementBlocked(w, lng, lat, unitId);
+        if (blocked) return {error: blocked};
+    }
     const n = nationOf(w, slot);
     const cost = Math.round(UNITS[u.type].cost * MOVE_COST_FRAC);
     if (n.points < cost) return {error: "Not enough points to relocate."};
