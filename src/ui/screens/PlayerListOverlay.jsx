@@ -6,11 +6,13 @@ import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
 import {gdpOf, populationOf} from "../../game/engine.js";
 
-// In-game scoreboard. Toggle with Tab (Esc or ✕ closes it). Every active
-// power in the match — flag, country, its seat (You / an online commander /
-// AI), holdings and standing at a glance. Reads engine queries only; never
-// mutates. In multiplayer the netClient's roster supplies each human's
-// username; AI seats stay labelled AI in both single- and multi-player.
+// In-game scoreboard. Hold Tab to reveal, release to hide (Esc or ✕ also
+// close). Every active power in the match — including eliminated ones,
+// shown ghosted with an "Eliminated" tag — with flag, country, seat
+// (You / online commander / AI), holdings and standing at a glance. Reads
+// engine queries only; never mutates. In multiplayer the netClient's roster
+// supplies each human's username; AI seats stay labelled AI in both single-
+// and multi-player.
 export default function PlayerListOverlay({world, mySlot, players, onClose}) {
     const usernameOf = useMemo(() => {
         const m = new Map();
@@ -61,9 +63,9 @@ export default function PlayerListOverlay({world, mySlot, players, onClose}) {
                 <div className="flex items-start justify-between gap-3 mb-1">
                     <div>
                         <div className={menuTitle({sm: true})} id="db-players-title">Players</div>
-                        <div className="font-mono text-[11px] tracking-[0.02em] text-dim mt-1">Every active power in this match — Tab or Esc to close</div>
+                        <div className="font-mono text-[11px] tracking-[0.02em] text-dim mt-1">Every active power in this match — release Tab to close</div>
                     </div>
-                    <button className={iconButton()} onClick={onClose} title="Close (Tab / Esc)" aria-label="Close player list">✕
+                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close player list">✕
                     </button>
                 </div>
                 <div className="mt-3" role="table" aria-label="Players in this match">

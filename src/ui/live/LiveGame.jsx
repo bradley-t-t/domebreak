@@ -549,8 +549,6 @@ export default function LiveGame({
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
             {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
-            {playerListOpen && <PlayerListOverlay world={w} mySlot={mySlot} players={net?.players}
-                                                  onClose={() => setPlayerListOpen(false)}/>}
             <HoverPopups hover={hover} hoverEnt={hoverEnt} countryByGid={countryByGid} w={w} mySlot={mySlot}
                          relation={relation} nationName={nationName} labelOf={labelOf} armOf={armOf}
                          teamColor={teamColor}/>
@@ -576,6 +574,9 @@ export default function LiveGame({
                     </div>
                 </div>
             )}
+            {/* Rendered after the outcome modal so a Tab-hold still surfaces the scoreboard when the match has ended. */}
+            {playerListOpen && <PlayerListOverlay world={w} mySlot={mySlot} players={net?.players}
+                                                  onClose={() => setPlayerListOpen(false)}/>}
 
             <div className={cn(
                 "absolute inset-0 z-60 grid place-items-center [background:radial-gradient(120%_120%_at_50%_42%,#0b0e13_0%,#05070b_72%)] transition-opacity duration-[520ms] ease-out-db",
