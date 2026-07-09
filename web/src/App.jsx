@@ -10,10 +10,11 @@ import Footer from "./components/Footer.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import ShortcutsOverlay from "./components/ShortcutsOverlay.jsx";
 import WikiPage from "./components/WikiPage.jsx";
+import DownloadPage from "./components/DownloadPage.jsx";
 import {AccountProvider} from "./components/AccountContext.jsx";
 import {useAccount} from "./lib/accountStore.js";
 import {useHotkeys} from "./hooks/useHotkeys.js";
-import {useHashRoute, isWikiRoute} from "./hooks/useHashRoute.js";
+import {useHashRoute, isWikiRoute, isDownloadRoute} from "./hooks/useHashRoute.js";
 import {SHORTCUTS, scrollToId} from "./lib/nav.js";
 
 function Landing({onSignIn, onShowShortcuts}) {
@@ -107,6 +108,7 @@ function Shell() {
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [hash] = useHashRoute();
     const onWiki = isWikiRoute(hash);
+    const onDownload = isDownloadRoute(hash);
 
     const handlers = useMemo(() => {
         const h = {};
@@ -124,7 +126,9 @@ function Shell() {
         <>
             {onWiki
                 ? <WikiPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
-                : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
+                : onDownload
+                    ? <DownloadPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
+                    : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
 
             <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}/>
             <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>

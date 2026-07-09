@@ -6,6 +6,20 @@ const HELLO_TIMEOUT_MS = 4000;
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 2000;
 
+// Attach a structured .details string to every error surfaced from this module
+// so the client's error overlay can render (and copy) an actionable dump.
+// Keeps message short + user-facing; details is the debuggable technical trace.
+function tagError(err, details) {
+    if (err && typeof err === "object") err.details = details;
+    return err;
+}
+function formatDetails(fields) {
+    return Object.entries(fields)
+        .filter(([, v]) => v !== undefined && v !== null && v !== "")
+        .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+        .join("\n");
+}
+
 // Overwrite the live world with a server snapshot, preserving identity: the same
 // world object is kept (so engine refs stay valid) — keys absent from the snapshot
 // are dropped, the snapshot's keys are copied over, and mySlot is re-stamped.
@@ -20,10 +34,15 @@ export function absorb(target, snapshot, mySlot) {
 
 function dial(url, timeoutMs) {
     return new Promise((resolve, reject) => {
-        const ws = new WebSocket(url);
+        let ws;
+        try {
+            ws = new WebSocket(url);
+        } catch (e) {
+            return reject(tagError(new Error(`bad WebSocket URL: ${url}`), formatDetails({url, cause: e?.message || String(e)})));
+        }
         const t = setTimeout(() => {
-            ws.close();
-            reject(new Error("timeout"));
+            try { ws.close(); } catch { /* already gone */ }
+            reject(tagError(new Error(`connect timeout (${timeoutMs}ms) — ${url}`), formatDetails({url, phase: "dial", timeoutMs})));
         }, timeoutMs);
         ws.onopen = () => {
             clearTimeout(t);
@@ -31,21 +50,27 @@ function dial(url, timeoutMs) {
         };
         ws.onerror = () => {
             clearTimeout(t);
-            reject(new Error("connect failed"));
+            reject(tagError(new Error(`connect failed — ${url}`), formatDetails({url, phase: "dial"})));
         };
     });
 }
 
 async function dialAny(urls) {
-    let last = null;
+    if (!urls?.length) {
+        throw tagError(new Error("no server URL advertised"), formatDetails({phase: "dial", urls: "[]"}));
+    }
+    const attempts = [];
     for (const url of urls) {
         try {
             return await dial(url, HELLO_TIMEOUT_MS);
         } catch (e) {
-            last = e;
+            attempts.push(`  - ${url}: ${e?.message || e}`);
         }
     }
-    throw last || new Error("no server reachable");
+    throw tagError(
+        new Error(`no server reachable (${urls.length} URL${urls.length === 1 ? "" : "s"} tried)`),
+        formatDetails({phase: "dial", tried: `\n${attempts.join("\n")}`}),
+    );
 }
 
 // Resolves once the server accepts the hello and sends the initial world.
@@ -75,11 +100,16 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
         };
 
         let resolved = false;
+        let lastCloseInfo = null; // {code, reason} from the most recent ws close
 
         const attach = async () => {
             const ws = await dialAny(urls);
             client._ws = ws;
             const jwt = await getJwt();
+            if (!jwt) {
+                try { ws.close(); } catch { /* gone */ }
+                throw tagError(new Error("no auth session"), formatDetails({phase: "hello", matchId, cause: "getJwt() returned an empty token — session expired?"}));
+            }
             ws.onmessage = (ev) => {
                 let msg;
                 try {
@@ -111,7 +141,10 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 } else if (msg.t === "err") {
                     if (!resolved) {
                         resolved = true;
-                        reject(new Error(msg.error));
+                        reject(tagError(
+                            new Error(`server rejected: ${msg.error}`),
+                            formatDetails({phase: "hello", matchId, url: ws.url, serverError: msg.error}),
+                        ));
                     }
                     client._closed = true;
                     try {
@@ -120,7 +153,8 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                     }
                 }
             };
-            ws.onclose = async () => {
+            ws.onclose = async (ev) => {
+                lastCloseInfo = {code: ev?.code, reason: ev?.reason || ""};
                 client.connected = false;
                 if (client._closed) return onClose?.("left");
                 for (let i = 0; i < RECONNECT_ATTEMPTS && !client._closed; i++) {
@@ -131,7 +165,13 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                     } catch { /* next attempt */
                     }
                 }
-                onClose?.("lost");
+                onClose?.("lost", formatDetails({
+                    phase: "reconnect",
+                    matchId,
+                    attempts: RECONNECT_ATTEMPTS,
+                    wsCloseCode: lastCloseInfo?.code,
+                    wsCloseReason: lastCloseInfo?.reason || undefined,
+                }));
             };
             ws.send(JSON.stringify({t: "hello", jwt, matchId}));
         };

@@ -42,7 +42,8 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, g
             const t = type ? UNITS[type] : null;
             const rad = t?.coastal ? COAST_KM
                 : t?.detect ? radarRangeOf(type)
-                    : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
+                    : t?.orbital ? t.range
+                        : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
             const c = coverageRing(globe, cur.lng, cur.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
                 color: cur.valid ? "#46d38a" : "#ff5d5d",

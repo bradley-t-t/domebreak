@@ -110,10 +110,10 @@ export function useLiveLayers({
             return c;
         })
     }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot, globe]);
-    // Emitter centers + coverage radius for the animated PPI sweep — same filter
-    // and radius as radarFC, so the sweep tracks the ring exactly. RadarSweep
-    // rebuilds the rotating wedge geometry itself each animation frame; this only
-    // feeds it where the emitters are and how far they reach.
+    // Emitter centers + coverage radius for the animated ping — same filter and
+    // radius as radarFC, so the pulse tracks the ring exactly. RadarPulse rebuilds
+    // the expanding ring geometry itself each animation frame; this only feeds it
+    // where the emitters are and how far they reach.
     const radarEmitters = useMemo(() => layers.radar
         ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => ({
             lng: u.lng, lat: u.lat,
@@ -149,8 +149,16 @@ export function useLiveLayers({
                 // draws, so selection and coverage never disagree.
                 radius = def.detect ? radarRangeOf(sel.type) : def.range;
                 isRadar = 1;
+            } else if (def.kind === "offense" && def.orbital) {
+                // Orbital offensive platforms (orbital strike) are global: show their
+                // ground footprint so the player can see the reach the sat covers.
+                radius = def.range;
             }
-            if (radius && (def.detect || radius <= 4000)) {
+            // Orbital assets are the whole point of "see where the sat covers", so
+            // always draw their footprint on selection — the 4000km cap only exists
+            // to hide dedicated-sensor rings from cluttering the surface map, and
+            // that no longer applies to satellites.
+            if (radius && (def.detect || def.orbital || radius <= 4000)) {
                 const c = coverageRing(globe, sel.lng, sel.lat, radius, 56, def.kind === "defense" ? defenseMinRange(w, sel) : 0);
                 c.properties = {color: teamColor(mySlot), sel: 1, radar: isRadar};
                 f.push(c);
