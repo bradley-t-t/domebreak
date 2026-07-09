@@ -1,7 +1,20 @@
 import {cn} from "../lib/cn.js";
 
 // The DOME / BREAK wordmark — dim + bright split, exactly as the game title.
-export function Wordmark({className, glow = false}) {
+// `stacked` renders it as a two-line logotype (DOME over BREAK) with tight
+// leading, for the hero; the default is the inline one-line lockup.
+export function Wordmark({className, glow = false, stacked = false}) {
+    if (stacked) {
+        // Tight leading lives on the inner block spans: cn()/tailwind-merge
+        // strips a `leading-*` off the outer span because it collides with the
+        // arbitrary `text-[clamp(...)]` font-size passed in via className.
+        return (
+            <span className={cn("block font-display font-bold uppercase tracking-[0.09em]", className)}>
+                <span className="block leading-[0.82] text-dim">DOME</span>
+                <span className={cn("block leading-[0.82] text-text", glow && "db-title-glow")}>BREAK</span>
+            </span>
+        );
+    }
     return (
         <span className={cn("font-display font-bold uppercase leading-[0.92] tracking-[0.14em]", className)}>
             <span className="text-dim">DOME</span>

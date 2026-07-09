@@ -48,3 +48,15 @@ set("CFBundleDisplayName");
 try {
     execFileSync("touch", [app]);
 } catch { /* non-fatal */ }
+
+// A plist rewrite alone is not enough: the macOS Dock and Cmd-Tab switcher read
+// the app's display name from the LaunchServices database, which caches the old
+// "Electron" name and ignores an mtime bump. Force LaunchServices to re-register
+// this bundle so the Dock label picks up the new CFBundleName on next launch.
+const LSREGISTER = "/System/Library/Frameworks/CoreServices.framework"
+    + "/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister";
+if (existsSync(LSREGISTER)) {
+    try {
+        execFileSync(LSREGISTER, ["-f", app]);
+    } catch { /* non-fatal — Dock name will refresh after a cache rebuild */ }
+}

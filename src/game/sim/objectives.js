@@ -32,6 +32,42 @@ export const OBJECTIVES = [
             {id: "radar-cover", kind: "coverage", need: OBJECTIVES_TUNING.radarLandCover},
         ],
     },
+    {
+        id: "industrial-base",
+        title: "Industrial Base",
+        blurb: "Grow the war economy that pays for everything else.",
+        tasks: [
+            {id: "factories", kind: "build", type: "factory", need: OBJECTIVES_TUNING.factoriesRequired},
+            {id: "refineries", kind: "build", type: "refinery", need: OBJECTIVES_TUNING.refineriesRequired},
+        ],
+    },
+    {
+        id: "point-defense",
+        title: "Point Defense",
+        blurb: "Ring your cities with layered surface-to-air fire.",
+        tasks: [
+            {id: "sam-batteries", kind: "build", type: "battery", need: OBJECTIVES_TUNING.samBatteriesRequired},
+            {id: "patriots", kind: "build", type: "patriot", need: OBJECTIVES_TUNING.patriotsRequired},
+        ],
+    },
+    {
+        id: "missile-shield",
+        title: "Missile Shield",
+        blurb: "Stand up mid-course and terminal ballistic-missile defense.",
+        tasks: [
+            {id: "thaad", kind: "build", type: "thaad", need: OBJECTIVES_TUNING.thaadRequired},
+            {id: "aegis", kind: "build", type: "aegis", need: OBJECTIVES_TUNING.aegisRequired},
+        ],
+    },
+    {
+        id: "strike-force",
+        title: "Strike Force",
+        blurb: "Field the offensive missiles to threaten a first strike.",
+        tasks: [
+            {id: "silos", kind: "build", type: "silo", need: OBJECTIVES_TUNING.silosRequired},
+            {id: "launchers", kind: "build", type: "launcher", need: OBJECTIVES_TUNING.launchersRequired},
+        ],
+    },
 ];
 
 // Live count of a nation's standing (hp > 0) structures of a given unit type.

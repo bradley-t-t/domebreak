@@ -1,16 +1,31 @@
 // Battle Planning — React state for the player's authored attack plans. A plan is
-// player INTENT (session state, never world state): a set of attacker unit TYPES, a
-// set of target CATEGORIES, an engagement range, and a few toggles. The reconciler
+// player INTENT: a set of attacker unit TYPES, a set of target CATEGORIES, an
+// engagement range, and a few toggles. Plans can be drafted (and armed) in peacetime;
+// an armed standing plan simply has nothing to shoot at until war begins, then engages
+// automatically. Plans PERSIST across save/load: they are seeded from the world on
+// mount and mirrored back to it on every change (through readBattlePlans /
+// writeBattlePlans), so the existing save serialization carries them. The reconciler
 // (useBattlePlanReconciler) turns an armed/executed plan into real orders through the
 // sanctioned engine commands. Attacker unit TYPES are EXCLUSIVE across plans — a type
 // belongs to at most one plan, so a given platform is only ever driven by one plan;
 // target categories may overlap. See design/gdd/battle-planning.md.
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
+import {readBattlePlans, writeBattlePlans} from "../../game/engine.js";
 
-// Session-monotonic plan id source (UI-only). Kept out of the state updaters so those
-// stay pure under React strict-mode double-invocation.
+// Monotonic plan id source (UI-only). Kept out of the state updaters so those stay
+// pure under React strict-mode double-invocation. Seeded past any restored plan id on
+// load (see seedSeq) so a fresh session never mints an id that collides with a saved one.
 let SEQ = 0;
+
+// Bump SEQ past the highest numeric suffix among restored plan ids (e.g. "plan-7" → 7),
+// so newly-added plans keep unique ids after a load.
+function seedSeq(plans) {
+    for (const p of plans) {
+        const m = /^plan-(\d+)$/.exec(p.id || "");
+        if (m) SEQ = Math.max(SEQ, Number(m[1]));
+    }
+}
 
 function makePlan(index) {
     SEQ += 1;
@@ -20,6 +35,7 @@ function makePlan(index) {
         color: BATTLE_PLAN.planColors[index % BATTLE_PLAN.planColors.length],
         attackerTypes: [],   // my offensive unit types this plan commands (exclusive across plans)
         targetTypes: [],     // target category ids (BATTLE_PLAN.targetCategories)
+        targetNations: [],   // enemy nation slots this plan strikes; [] = every nation I'm at war with
         engagementKm: BATTLE_PLAN.defaultEngagementKm,
         mode: "standing",    // "standing" (auto-manage while armed) | "oneshot" (Execute applies once)
         armed: false,        // standing plans only: continuously reconciled while true
@@ -29,9 +45,22 @@ function makePlan(index) {
     };
 }
 
-export function useBattlePlans() {
-    const [plans, setPlans] = useState([]);
-    const [activeId, setActiveId] = useState(null);
+export function useBattlePlans(world) {
+    // Seed from the world once per session (a new match or a loaded save mounts a fresh
+    // LiveGame, so lazy init reads that world's persisted plans exactly once).
+    const [plans, setPlans] = useState(() => {
+        const restored = readBattlePlans(world);
+        seedSeq(restored.plans);
+        return restored.plans;
+    });
+    const [activeId, setActiveId] = useState(() => readBattlePlans(world).activeId);
+
+    // Mirror authored plans back onto the world so the next autosave / quit-save
+    // captures them. Cheap data assignment through the engine accessor; the tick never
+    // reads this slot, so it cannot affect determinism.
+    useEffect(() => {
+        writeBattlePlans(world, plans, activeId);
+    }, [world, plans, activeId]);
 
     const active = useMemo(() => plans.find((p) => p.id === activeId) || null, [plans, activeId]);
 
@@ -59,7 +88,7 @@ export function useBattlePlans() {
             const copy = makePlan(prev.length);
             // A clone inherits the targets + toggles but NOT the attacker types — those
             // are exclusive, so the copy starts empty and the player re-picks into it.
-            return [...prev, {...copy, name: `${src.name} copy`, targetTypes: [...src.targetTypes], engagementKm: src.engagementKm, mode: src.mode, overkill: src.overkill, autoBuild: src.autoBuild}];
+            return [...prev, {...copy, name: `${src.name} copy`, targetTypes: [...src.targetTypes], targetNations: [...src.targetNations], engagementKm: src.engagementKm, mode: src.mode, overkill: src.overkill, autoBuild: src.autoBuild}];
         });
     }, []);
 
@@ -85,8 +114,20 @@ export function useBattlePlans() {
         }));
     }, []);
 
+    // Toggle an enemy nation (by slot) into/out of plan `id`'s target scope. Nation
+    // scopes may overlap between plans, just like target categories. An empty scope means
+    // the plan hits every nation you're at war with; adding slots narrows it to those.
+    const toggleTargetNation = useCallback((id, slot) => {
+        setPlans((prev) => prev.map((p) => {
+            if (p.id !== id) return p;
+            const has = p.targetNations.includes(slot);
+            return {...p, targetNations: has ? p.targetNations.filter((x) => x !== slot) : [...p.targetNations, slot]};
+        }));
+    }, []);
+
     const clearAttackerTypes = useCallback((id) => patchPlan(id, {attackerTypes: []}), [patchPlan]);
     const clearTargetTypes = useCallback((id) => patchPlan(id, {targetTypes: []}), [patchPlan]);
+    const clearTargetNations = useCallback((id) => patchPlan(id, {targetNations: []}), [patchPlan]);
 
     // One-shot fire: bump the nonce the reconciler watches. Standing plans use `armed`.
     const executePlan = useCallback((id) => patchPlan(id, (p) => ({fireNonce: (p.fireNonce || 0) + 1})), [patchPlan]);
@@ -94,7 +135,8 @@ export function useBattlePlans() {
     return {
         plans, active, activeId, setActiveId,
         addPlan, removePlan, duplicatePlan, renamePlan, patchPlan,
-        toggleAttackerType, toggleTargetType, clearAttackerTypes, clearTargetTypes,
+        toggleAttackerType, toggleTargetType, toggleTargetNation,
+        clearAttackerTypes, clearTargetTypes, clearTargetNations,
         executePlan,
     };
 }

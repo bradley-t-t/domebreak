@@ -31,13 +31,13 @@ export default function CtaBand() {
             <div className="relative z-10 mx-auto max-w-[1400px] px-5 py-24 sm:px-8 sm:py-36">
                 <div className="mx-auto max-w-2xl text-center">
                     <Reveal>
-                        <Eyebrow className="justify-center">Pre-Registration Open</Eyebrow>
+                        <Eyebrow className="justify-center">Early access</Eyebrow>
                         <h2 className="mt-6 font-display text-[clamp(2.2rem,6vw,4.5rem)] font-bold uppercase leading-[1.02] text-text">
-                            Stand up your command
+                            Get in early
                         </h2>
                         <p className="mx-auto mt-5 max-w-lg text-[clamp(1rem,1.4vw,1.15rem)] leading-relaxed text-dim">
-                            Join the waitlist for early access. We'll send a single dispatch the day
-                            the dome goes live — nothing else.
+                            Join the waitlist for early access. We'll send one email the day it's
+                            playable — nothing else.
                         </p>
                     </Reveal>
 

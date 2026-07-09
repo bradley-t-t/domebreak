@@ -139,3 +139,38 @@ describe("battle-plan solver — eligibility + auto-build wants", () => {
         expect(r.ammoWanted.standard).toBe(2);
     });
 });
+
+describe("battle-plan solver — target-nation scope", () => {
+    // Two at-war enemy cities: nation 1 and nation 2. The scope decides which count.
+    const twoEnemies = () => world({units: [silo("s1", 0, 0)], cities: [city("cA", 1, 0, 1), city("cB", 2, 0, 1)]});
+
+    it("test_solver_nation_scope_empty_targets_all_at_war_nations", () => {
+        // Empty scope = legacy behavior: every nation you're at war with is eligible.
+        const t = planTargets(twoEnemies(), plan({targetNations: []}), 0);
+        expect(new Set(t.map((x) => x.slot))).toEqual(new Set([1, 2]));
+    });
+
+    it("test_solver_nation_scope_restricts_to_selected_nation", () => {
+        const w = twoEnemies();
+        const t = planTargets(w, plan({targetNations: [1]}), 0);
+        expect(t).toHaveLength(1);
+        expect(t[0].slot).toBe(1);
+        // And the solve only ever fires at the in-scope nation.
+        const r = solvePlan(w, plan({targetNations: [1]}), 0);
+        expect(r.assignments.get("s1")).toBe("cA");
+    });
+
+    it("test_solver_nation_scope_multi_selection_includes_each", () => {
+        const t = planTargets(twoEnemies(), plan({targetNations: [1, 2]}), 0);
+        expect(new Set(t.map((x) => x.slot))).toEqual(new Set([1, 2]));
+    });
+
+    it("test_solver_nation_scope_at_peace_power_yields_no_targets", () => {
+        // Scoping to nation 3 (neutral — never at war) can't manufacture a target: the
+        // at-war gate still governs, so nothing fires even though a city of 3 exists.
+        const w = world({units: [silo("s1", 0, 0)], cities: [city("cN", 3, 0, 1)]});
+        const r = solvePlan(w, plan({targetNations: [3]}), 0);
+        expect(r.targetsLive).toBe(0);
+        expect(r.firing).toBe(0);
+    });
+});

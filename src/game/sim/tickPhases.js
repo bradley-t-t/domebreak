@@ -292,7 +292,9 @@ export function stepFallout(w, dt) {
                 }
             }
             for (const u of w.units) {
-                if (u.hp <= 0) continue;
+                // The bunker is sealed against fallout too — a direct thermonuclear
+                // hit or ground capture are the only ways to breach it.
+                if (u.hp <= 0 || u.type === "bunker") continue;
                 const prox = falloutProximity(haversine(fx.lng, fx.lat, u.lng, u.lat), fx.radiusKm);
                 if (prox > 0) u.hp -= rate * prox;
             }
