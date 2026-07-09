@@ -357,6 +357,13 @@ export const UNITS = {
         label: "Space-Based Interceptor",
         desc: "Orbital kinetic-kill layer — a global brilliant-pebbles net that engages boosters and midcourse threats anywhere.",
         kind: "defense",
+        // Orbital platforms float above the surface; the map lifts their icon by
+        // orbitLift and always draws their footprint under them (they never sit
+        // on the ground). All boost-phase / midcourse orbitals target ballistic
+        // ordnance only — they can't fire on aircraft or in-atmosphere threats.
+        orbital: true,
+        orbitLift: 0.8,
+        boostPhaseOnly: true,   // sbi kills boosters and midcourse RVs, not air-breathing threats
         requiresTech: "def9",
         requiresUnit: "spacehq",
         cost: 900,
@@ -373,6 +380,10 @@ export const UNITS = {
         label: "Orbital Laser",
         desc: "Space-based directed-energy shield — speed-of-light boost-phase kills with a near-perfect single-shot probability.",
         kind: "defense",
+        orbital: true,
+        orbitLift: 1.0,
+        boostPhaseOnly: true,
+        directedEnergy: true,   // speed-of-light — no interceptor projectile, instant kill roll on the target
         requiresTech: "def10",
         requiresUnit: "spacehq",
         cost: 1200,
@@ -401,6 +412,8 @@ export const UNITS = {
         label: "Reconnaissance Satellite",
         desc: "Fire-control-grade orbital sensor — a global surveillance eye that cues interceptors like a shore radar.",
         kind: "support",
+        orbital: true,
+        orbitLift: 0.9,
         requiresTech: "det6",
         requiresUnit: "spacehq",
         cost: 650,
@@ -416,6 +429,8 @@ export const UNITS = {
         label: "Missile-Warning Satellite",
         desc: "Infrared launch-warning constellation — spots plumes worldwide, but its tracks are warning-only, no fire control.",
         kind: "support",
+        orbital: true,
+        orbitLift: 1.1,
         requiresTech: "det4",
         requiresUnit: "spacehq",
         cost: 500,
@@ -436,6 +451,8 @@ export const UNITS = {
         desc: "Global kinetic-bombardment platform — a rod-from-god that can strike anywhere on the board, slow to recycle.",
         kind: "offense",
         ballistic: true,
+        orbital: true,
+        orbitLift: 1.2,
         requiresTech: "off11",
         requiresUnit: "spacehq",
         cost: 1100,

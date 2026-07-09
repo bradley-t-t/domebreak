@@ -201,9 +201,16 @@ export function stepCombat(w, dt) {
         const inboundSlot = findTarget(w, p.targetId)?.slot;
         const defenders = inboundSlot == null ? null : defBySlot.get(inboundSlot);
         if (defenders) for (const d of defenders) {
+            const ddef = UNITS[d.type];
             // Fighters kill what flies in the air column — not ballistic reentry
             // vehicles screaming down from space. BMD stays with ground/sea defenses.
-            if (UNITS[d.type].airSpeed && UNITS[p.type]?.ballistic) continue;
+            if (ddef.airSpeed && UNITS[p.type]?.ballistic) continue;
+            // Orbital BMD (SBI, Orbital Laser) is a boost-phase / midcourse layer:
+            // it engages ballistic ordnance only, never atmospheric threats like
+            // cruise missiles or aircraft-launched munitions. Without this gate a
+            // laser in orbit would try to burn every inbound cruise missile in
+            // atmosphere, which the flavour text explicitly rules out.
+            if (ddef.boostPhaseOnly && !UNITS[p.type]?.ballistic) continue;
             if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || !airborne(d)) continue;
             // Engage only within the battery's annulus: inside defenseRange (outer
             // reach) but outside defenseMinRange (the keep-out gap for area ABMs
@@ -215,16 +222,48 @@ export function stepCombat(w, dt) {
                 p.tried.push(d.id);
                 // Sea-based defenses (cruiser/destroyer/Aegis afloat) reload faster
                 // while replenished by a nearby oiler.
-                const dReplen = UNITS[d.type].domain === "sea" && replenishmentBuff(w, d) ? REPLENISH_RELOAD_MULT : 1;
-                d.cooldown = (UNITS[d.type].reload || DEFAULT_RELOAD) * dReplen;
+                const dReplen = ddef.domain === "sea" && replenishmentBuff(w, d) ? REPLENISH_RELOAD_MULT : 1;
+                d.cooldown = (ddef.reload || DEFAULT_RELOAD) * dReplen;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
                 // munition's evasion. Floored to a small residual chance (derived
                 // from INTERCEPT_CAP, no magic number) so evasion makes a strike
                 // hard to stop but never truly un-interceptable.
-                const baseProb = Math.min(INTERCEPT_CAP, UNITS[d.type].intercept);
+                const baseProb = Math.min(INTERCEPT_CAP, ddef.intercept);
                 const evadeFloor = baseProb * (1 - INTERCEPT_CAP);
                 const hitProb = Math.max(evadeFloor, baseProb - (p.evasion ?? 0));
+                // Directed-energy weapons (Orbital Laser) fire at light-speed: the
+                // kill roll resolves the instant the shot is taken, no interceptor
+                // sprite chases the target across the sky. Everything else launches
+                // a kinetic interceptor and steers it through the sky loop.
+                if (ddef.directedEnergy) {
+                    if (rand(w) < hitProb) {
+                        p._dead = true;
+                        w.events.push({
+                            id: nextId(w, "e"),
+                            t: w.time,
+                            type: "intercept",
+                            lng: p.lng,
+                            lat: p.lat,
+                            alt: p.altNorm ?? 0,
+                            byLng: d.lng,
+                            byLat: d.lat
+                        });
+                    } else {
+                        w.events.push({
+                            id: nextId(w, "e"),
+                            t: w.time,
+                            type: "miss",
+                            lng: p.lng,
+                            lat: p.lat,
+                            alt: p.altNorm ?? 0
+                        });
+                    }
+                    // A directed-energy hit destroys the projectile in place; no
+                    // further defender fires on this frame's dead track.
+                    if (p._dead) break;
+                    continue;
+                }
                 w.interceptors.push({
                     id: nextId(w, "i"),
                     slot: d.slot,

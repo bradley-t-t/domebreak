@@ -76,28 +76,37 @@ export function trackPoint(p, f) {
 // saw the launch (the shooter always; anyone else only if a sensor covers the
 // launch point — this is what an OTH array buys, visibility into the boost phase).
 export function launch(w, unit, target, warhead) {
+    const udef = UNITS[unit.type];
     const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
     const seenBy = [unit.slot];
     for (const nn of w.nations) {
         if (!nn.alive || nn.slot === unit.slot) continue;
         if (sensedBy(w, nn.slot, unit.lng, unit.lat)) seenBy.push(nn.slot);
     }
+    // An orbital strike is a rod-from-god drop from orbit: the projectile starts
+    // at its parent sat's altitude and falls into the target. Feeding altStart to
+    // the projectile makes tickPhases.stepCombat descend it from that altitude
+    // (see p.altStart handling), and SkyLayer's projGeom lifts the trail off the
+    // ground track by that fraction. A ground-launched round leaves altStart null
+    // and keeps the classic sine-arc trajectory it always had.
+    const altStart = udef.orbital ? (udef.orbitLift ? Math.min(1, udef.orbitLift) : 0.9) : undefined;
     w.projectiles.push({
         seenBy,
         id: nextId(w, "p"),
         slot: unit.slot,
         type: unit.type,
         warhead: warhead || "standard",
-        damage: UNITS[unit.type].damage * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
+        damage: udef.damage * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
         // Intercept-evasion: inherent on the launcher's unit type plus the loaded
         // warhead (an HGV payload is hard to intercept whatever fires it). The
         // defender subtracts this from its interceptor hit probability (tick.js).
-        evasion: (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
+        evasion: (udef.evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
         // Boost-glide rounds (HGV) overspeed the platform's baseline; speedMult is
         // data-driven on the warhead so a hypersonic payload is fast whatever fires it.
-        speed: (UNITS[unit.type].speed ?? MISSILE_SPEED) * (WARHEADS[warhead]?.speedMult ?? 1),
+        speed: (udef.speed ?? MISSILE_SPEED) * (WARHEADS[warhead]?.speedMult ?? 1),
         tried: [],
-        altNorm: 0,
+        altNorm: altStart ?? 0,
+        ...(altStart != null ? {altStart} : {}),
         fromLng: unit.lng,
         fromLat: unit.lat,
         toLng: target.lng,
