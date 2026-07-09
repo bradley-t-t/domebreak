@@ -59,6 +59,7 @@ export default function Footer({onShowShortcuts}) {
                     </Col>
 
                     <Col title="Get it">
+                        <FootLink onClick={() => scrollToId("download")}>Download</FootLink>
                         <FootLink onClick={() => scrollToId("waitlist")}>Request access</FootLink>
                     </Col>
 
@@ -93,7 +94,7 @@ export default function Footer({onShowShortcuts}) {
                         © {year} TaylorURL · Made solo by Trenton Taylor
                     </p>
                     <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
-                        macOS + Windows · Coming soon
+                        macOS + Windows · v1.3.0
                     </p>
                 </div>
             </div>
