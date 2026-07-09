@@ -15,6 +15,7 @@ export function useKeyboardControls({
                                          placing, setPlacing,
                                          attackMode, setAttackMode,
                                          panel, setPanel,
+                                         playerListOpen, setPlayerListOpen,
                                          onPause,
                                          overlayOpen,
                                          w,
@@ -28,15 +29,26 @@ export function useKeyboardControls({
         if (menu) setMenu(null); else if (disembarkId) setDisembarkId(null); else if (moving) setMoving(null);
         else if (placing) setPlacing(null); else if (attackMode) setAttackMode(false);
         // An open command screen (Production / Research / Diplomacy) closes on
-        // Escape before Escape falls through to the pause menu.
+        // Escape before Escape falls through to the pause menu; the Tab
+        // scoreboard closes ahead of both.
+        else if (playerListOpen) setPlayerListOpen(false);
         else if (panel) setPanel(null); else onPause?.();
+    });
+
+    // Tab toggles the in-game scoreboard (every active power in the match).
+    // Fixed binding — never falls through to browser focus cycling on the map.
+    useWindowEvent("keydown", (e) => {
+        if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (e.key !== "Tab") return;
+        e.preventDefault();
+        setPlayerListOpen((v) => !v);
     });
 
     // Command-screen hotkeys: toggle the Production and Diplomacy screens
     // open/closed (Escape also closes them). Bindings are configurable in Settings;
     // defaults are E / R.
     useWindowEvent("keydown", (e) => {
-        if (overlayOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (overlayOpen || playerListOpen || w.over || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         const code = keyToken(e);
         const target = code === K.production ? "production"
             : code === K.diplomacy ? "diplomacy" : null;
@@ -48,7 +60,7 @@ export function useKeyboardControls({
     // Controls reference toggle: "?" or F1 opens/closes the command reference.
     // Fixed keys (not rebindable) — the overlay itself lists every binding.
     useWindowEvent("keydown", (e) => {
-        if (overlayOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+        if (overlayOpen || playerListOpen || e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
         if (e.key === "?" || e.key === "F1") {
             e.preventDefault();
             setHelpOpen((v) => !v);
