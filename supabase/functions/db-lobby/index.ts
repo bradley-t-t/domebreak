@@ -1,7 +1,7 @@
 // Quick-match + lobby writes. The client never inserts/updates matchmaking_queue,
 // lobbies, or lobby_members directly; identity always derives from the verified
 // JWT. Match formation is entirely server-owned: the game server's matchmaker
-// (server/matchmaker.js) groups waiting queue rows, forms lobbies, and
+// (server/matchmaker/matchmaker.js) groups waiting queue rows, forms lobbies, and
 // auto-launches by flipping status to 'starting', which the game server's claim
 // path picks up. This function only enrolls/cancels queue entries and lets a
 // seated member adjust their own seat before launch.
