@@ -2,14 +2,15 @@
 // heartbeating. A player who queued then went offline (app closed, crash, network
 // drop) stops refreshing last_seen, so their row is filtered out and never seated
 // against a real player. Deterministic — `now` is injected. Spec: the
-// offline-matchmaking bug; see server/matchmaker.js liveWaiters + db-lobby sweep.
+// offline-matchmaking bug; see server/matchmaker/matchmaker.js liveWaiters +
+// db-lobby sweep.
 import {describe, expect, it} from "vitest";
 
 // server/config.js validates SUPABASE_* at import time; stub them so the pure
 // liveWaiters helper imports in a headless unit test.
 process.env.SUPABASE_URL ||= "http://localhost";
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
-const {liveWaiters} = await import("../../../server/matchmaker.js");
+const {liveWaiters} = await import("../../../server/matchmaker/matchmaker.js");
 
 const now = 1_000_000_000_000;
 const STALE = 20_000;
