@@ -351,35 +351,12 @@ export const UNITS = {
         upkeep: 3.5,
         glyph: "⬡"
     },
-    // Space assets — stationary national platforms with global/very-large reach,
-    // deliberately abstracted (no orbital physics). All require Space Command HQ.
-    sbi: {
-        label: "Space-Based Interceptor",
-        desc: "Orbital kinetic-kill layer — a brilliant-pebbles net riding a fixed inclination, engaging boosters and midcourse threats under its ground track.",
-        kind: "defense",
-        // Orbital platforms are not geo-stationary: each tick stepOrbits advances
-        // their longitude by orbitSpeedDegPerSec while latitude stays where the
-        // player placed them, so the sat sweeps a parallel of latitude around the
-        // globe. Instantaneous coverage is a single OTH-sized footprint under the
-        // sat; global reach comes from the orbit passing over everywhere on that
-        // parallel over time. boostPhaseOnly units engage ballistic ordnance only —
-        // they can't fire on aircraft or in-atmosphere threats.
-        orbital: true,
-        orbitLift: 2.4,
-        orbitSpeedDegPerSec: 1.5,
-        boostPhaseOnly: true,
-        requiresTech: "def9",
-        requiresUnit: "spacehq",
-        cost: 900,
-        buildTime: 30,
-        range: 3000,
-        intercept: 0.7,
-        reload: 5,
-        fireCost: 40,
-        hp: 90,
-        upkeep: 5,
-        glyph: "✦"
-    },
+    // Space assets — orbital platforms with global reach on a fixed inclination.
+    // Each tick stepOrbits advances their longitude by orbitSpeedDegPerSec while
+    // latitude stays where the player placed them, so the sat sweeps a parallel
+    // of latitude around the globe. Instantaneous coverage is a single OTH-sized
+    // footprint under the sat; global reach comes from the orbit passing over
+    // everywhere on that parallel over time. All require Space Command HQ.
     orbitallaser: {
         label: "Orbital Laser",
         desc: "Space-based directed-energy shield — speed-of-light boost-phase kills under the sat's ground track, near-perfect single-shot probability.",
@@ -387,6 +364,8 @@ export const UNITS = {
         orbital: true,
         orbitLift: 2.6,
         orbitSpeedDegPerSec: 0.9,
+        // boostPhaseOnly units engage ballistic ordnance only — they can't fire
+        // on aircraft or in-atmosphere threats.
         boostPhaseOnly: true,
         directedEnergy: true,   // speed-of-light — no interceptor projectile, instant kill roll on the target
         requiresTech: "def10",
@@ -415,14 +394,14 @@ export const UNITS = {
     },
     reconsat: {
         label: "Reconnaissance Satellite",
-        desc: "Fire-control-grade orbital sensor — sweeps a parallel of latitude, cueing interceptors under its ground track like a moving shore radar.",
+        desc: "Fire-control-grade orbital sensor with an integrated infrared launch-warning tier — sweeps a parallel of latitude, spotting plumes and cueing interceptors under its ground track.",
         kind: "support",
         orbital: true,
         orbitLift: 2.5,
         orbitSpeedDegPerSec: 1.2,
-        requiresTech: "det6",
+        requiresTech: "det4",
         requiresUnit: "spacehq",
-        cost: 650,
+        cost: 600,
         buildTime: 26,
         range: 3000,
         detect: true,
@@ -430,25 +409,6 @@ export const UNITS = {
         hp: 40,
         upkeep: 4,
         glyph: "❉"
-    },
-    warnsat: {
-        label: "Missile-Warning Satellite",
-        desc: "Infrared launch-warning constellation — spots plumes under its ground track as it sweeps its parallel, warning-only, no fire control.",
-        kind: "support",
-        orbital: true,
-        orbitLift: 2.7,
-        orbitSpeedDegPerSec: 1.3,
-        requiresTech: "det4",
-        requiresUnit: "spacehq",
-        cost: 500,
-        buildTime: 24,
-        range: 3000,
-        detect: true,
-        warnOnly: true,
-        radarKm: 3000,
-        hp: 35,
-        upkeep: 3,
-        glyph: "≋"
     },
     orbitalstrike: {
         label: "Orbital Strike Platform",
@@ -811,11 +771,9 @@ export const UNIT_ICON = {
     patriot: "patriot",
     aegis: "aegis",
     thaad: "thaad",
-    sbi: "sbi",
     orbitallaser: "orbitallaser",
     spacehq: "spacehq",
     reconsat: "reconsat",
-    warnsat: "warnsat",
     orbitalstrike: "orbitalstrike",
     "sub-ssn": "sub-ssn",
     "sub-ssbn": "sub-ssbn",
