@@ -8,7 +8,7 @@ import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 
 const VERSION = "1.3.0";
-const RELEASE_BASE = "https://github.com/bradley-t-t/domebreak/releases/download/v1.3.0";
+const RELEASE_BASE = "https://github.com/bradley-t-t/domebreak-dist/releases/download/v1.3.0";
 
 const BUILDS = [
     {
@@ -16,18 +16,18 @@ const BUILDS = [
         os: "macOS",
         arch: "Apple Silicon",
         icon: "carrier",
-        file: "DomeBreak-1.3.0-arm64.dmg",
-        size: "291 MB",
-        url: `${RELEASE_BASE}/DomeBreak-1.3.0-arm64.dmg`,
+        file: "DomeBreak-mac.dmg",
+        size: "134 MB",
+        url: `${RELEASE_BASE}/DomeBreak-mac.dmg`,
     },
     {
         id: "win",
         os: "Windows",
         arch: "x64 installer",
         icon: "factory",
-        file: "DomeBreak.Setup.1.3.0.exe",
-        size: "263 MB",
-        url: `${RELEASE_BASE}/DomeBreak.Setup.1.3.0.exe`,
+        file: "DomeBreak-win.exe",
+        size: "108 MB",
+        url: `${RELEASE_BASE}/DomeBreak-win.exe`,
     },
 ];
 
@@ -107,7 +107,7 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                     </div>
 
                     <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
-                        All releases · <a href="https://github.com/bradley-t-t/domebreak/releases" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">github.com/bradley-t-t/domebreak/releases</a>
+                        All releases · <a href="https://github.com/bradley-t-t/domebreak-dist/releases" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">github.com/bradley-t-t/domebreak-dist/releases</a>
                     </p>
                 </div>
             </main>
