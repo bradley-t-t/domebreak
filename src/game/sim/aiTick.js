@@ -5,17 +5,61 @@ import {
     allowedAmmo,
     initialWarhead,
     DIPLOMACY,
+    HANGAR_SPEC,
     UNITS,
     WARHEADS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {rand} from "./worldState.js";
-import {atWar, netIncomeOf} from "./queries.js";
+import {atWar, gdpOf, industryCapOf, industryCountOf, netIncomeOf, defenseRange} from "./queries.js";
 import {randRange, weightedPick} from "../../lib/random.js";
 import {clamp} from "../../lib/math.js";
-import {commandAttack, declareWar, ensureProd, prodCount, queueAmmo, queueUnit, setAwacsPatrol, setMarch, setPatrolSize, unitLockReason} from "./production.js";
+import {
+    commandAttack,
+    declareWar,
+    ensureProd,
+    prodCount,
+    queueAircraft,
+    queueAmmo,
+    queueUnit,
+    scrapUnit,
+    setAwacsPatrol,
+    setMarch,
+    setPatrolSize,
+    unitLockReason,
+} from "./production.js";
 import {offerPeace, proposeAlliance} from "./warResolution.js";
 import {aiCities, aiPlace, frontPos, protectPoints} from "./aiPlace.js";
+
+// --- Bloc-power math ---------------------------------------------------------
+// A nation's raw strength — GDP plus a hp-weighted military score. Cities pass
+// through gdpOf, so battered nations already look weaker. Units are weighted by
+// their build cost (a rough proxy for battle value) times remaining hp fraction.
+function nationPower(w, n) {
+    let force = 0;
+    for (const u of w.units) {
+        if (u.slot !== n.slot || u.hp <= 0) continue;
+        const def = UNITS[u.type];
+        const cost = def?.cost || 0;
+        const hpFrac = def?.hp ? (u.hp / def.hp) : 1;
+        force += cost * hpFrac;
+    }
+    // Scale force by ~1/300 so a 500-point silo (with a healthy hp) contributes
+    // ~1.7 units of "power" — comparable to a small-country GDP figure ($T).
+    return Math.max(0.1, gdpOf(w, n.slot)) + force / 300;
+}
+
+// n's bloc power = n + every ally still alive. Used to decide whether it's safe
+// to open a war on a target (must also count the target's allies).
+function blocPower(w, n) {
+    let sum = nationPower(w, n);
+    for (const s in n.relations) {
+        if (n.relations[s] !== "ally") continue;
+        const ally = w.nations.find((x) => x.slot === +s && x.alive);
+        if (ally) sum += nationPower(w, ally);
+    }
+    return sum;
+}
 
 // Strategic value of an at-war enemy city as a strike target, seen from `from`:
 // counter-value (population, capital weight) discounted by distance (nearer preferred).
@@ -27,15 +71,24 @@ function targetValue(from, c) {
     return pop * capW * distW;
 }
 
-// Best strike target for nation `n`: the highest-value living city of a nation it is
-// at war with, measured from `from` (its capital). Neutrals are never targeted. A
-// weighted pick over the strongest few keeps the AI concentrating on good targets
-// while staying varied; every roll uses the seeded rand(w), so it stays reproducible.
+// Best strike target for nation `n`: weighted over living cities of at-war rivals,
+// biased toward city value, distance, and how much weaker that rival's bloc is
+// than n's. Never targets neutrals. Reproducible via rand(w).
 function pickTarget(w, n, from) {
+    const myBloc = blocPower(w, n);
+    const enemyBlocs = new Map();
     const scored = [];
     for (const c of w.cities) {
         if (!c.alive || c.slot === n.slot || !atWar(w, n.slot, c.slot)) continue;
-        scored.push([c, targetValue(from, c)]);
+        let eb = enemyBlocs.get(c.slot);
+        if (eb == null) {
+            const en = w.nations.find((x) => x.slot === c.slot);
+            eb = en ? blocPower(w, en) : 1;
+            enemyBlocs.set(c.slot, eb);
+        }
+        // Weakness ratio: bigger when the enemy bloc is smaller than ours.
+        const weakness = Math.pow(myBloc / Math.max(0.1, eb), 0.5);
+        scored.push([c, targetValue(from, c) * weakness]);
     }
     if (!scored.length) return null;
     scored.sort((a, b) => b[1] - a[1]);
@@ -52,28 +105,19 @@ const AI_UNLOCK_BUILD_ORDER = [
     "reconsat", "orbitallaser", "hypersonicbty", "orbitalstrike",
 ];
 
-// Builds one freshly-unlocked, tech-gated unit the nation qualifies for. Honors
-// the unit's own requiresTech/requiresUnit/maxCount (via queueUnit) plus AI
-// reserves: the pricey space platforms wait behind spaceHqReserve, subs behind
-// subReserve. Returns true if it queued something (caller should yield the tick).
 function aiBuildUnlocked(w, n, myUnits, cities, front) {
     if (rand(w) >= AI_TUNING.unlockedBuildChance) return false;
     for (const type of AI_UNLOCK_BUILD_ORDER) {
         const def = UNITS[type];
         if (!def) continue;
-        // Only chase units this nation has actually unlocked.
         if (def.requiresTech && !n.research.done.includes(def.requiresTech)) continue;
-        // maxCount / already-satisfied: don't re-queue a one-off (e.g. spacehq).
         const have = myUnits.filter((u) => u.type === type).length + prodCount(n, "unit", type);
         if (def.maxCount && have >= def.maxCount) continue;
-        if (unitLockReason(w, n.slot, type)) continue; // prereq (spacehq) not up yet
-        // Reserve cushion: space platforms are the most expensive commitments.
+        if (unitLockReason(w, n.slot, type)) continue;
         const isSpace = def.requiresUnit === "spacehq" || type === "spacehq";
         const isSub = type === "sub-ssn" || type === "sub-ssbn";
         const reserve = isSpace ? AI_TUNING.spaceHqReserve : isSub ? AI_TUNING.subReserve : 0;
         if (n.points < def.cost + reserve) continue;
-        // aiPlace sites by role — sea hulls to coastal water, modern defenses over
-        // cities, space/command to the safe interior — and spreads same-role apart.
         const p = aiPlace(w, n, type, myUnits, cities, front);
         if (!p) continue;
         if (queueUnit(w, n.slot, type, p.lng, p.lat, true).ok) return true;
@@ -81,9 +125,6 @@ function aiBuildUnlocked(w, n, myUnits, cities, front) {
     return false;
 }
 
-// Static capital position per slot, cached on the world. Capitals never move, so
-// this is built once (the flagged capital city, else the nation's first city) and
-// reused by diplomacy (rival reachability) and the aiTick level-of-detail check.
 function capPositions(w) {
     if (w._capPos) return w._capPos;
     const caps = {};
@@ -95,51 +136,48 @@ function capPositions(w) {
     return caps;
 }
 
-// Living-city count per slot right now — one pass, reused across a diplomacy round.
 function aliveCityCounts(w) {
     const m = new Map();
     for (const c of w.cities) if (c.alive) m.set(c.slot, (m.get(c.slot) || 0) + 1);
     return m;
 }
 
-// How many wars a nation is currently fighting.
 function warCount(n) {
     let k = 0;
     for (const s in n.relations) if (n.relations[s] === "war") k++;
     return k;
 }
 
-// How many alliances a nation currently holds.
 function allyCount(n) {
     let k = 0;
     for (const s in n.relations) if (n.relations[s] === "ally") k++;
     return k;
 }
 
-// Does n share a live enemy with m (someone both are at war with)?
 function sharesEnemy(n, m) {
     for (const s in n.relations) if (n.relations[s] === "war" && m.relations[s] === "war") return true;
     return false;
 }
 
-// True when a nation is "hot" — at war, or its capital sits within activeRangeKm of
-// the player's. Hot nations run aiTick at full cadence; the rest idle-throttle.
 function nearPlayer(w, n, caps) {
     const a = caps[n.slot], p = caps[w.mySlot];
     if (!a || !p) return false;
     return haversine(a.lng, a.lat, p.lng, p.lat) <= DIPLOMACY.activeRangeKm;
 }
 
-// AI diplomacy — the living world. On each nation's staggered _diplo cadence it may
-// sue for peace (losing badly, or a random ceasefire once a war is old enough) and
-// may open a fresh war on a reachable rival, weighted toward wealthy/weak targets.
-// Every roll uses the seeded rand(w), so the whole diplomatic history is
-// reproducible from (seed, playerIso). Cheap timers run every tick; the O(N) rival
-// scan only fires on the few nations whose cadence elapses this tick.
+// Great-power reach: bigger economies see farther diplomatically. A $0.1T micro
+// state stays at the base radius; a $27T superpower reaches out to warRangeMaxKm.
+function warRangeFor(n) {
+    const gdp = Math.max(0.1, n.gdp || 0.1);
+    if (gdp <= AI_TUNING.warRangeGdpBoostT) return DIPLOMACY.warRangeKm;
+    const t = Math.min(1, Math.log(gdp / AI_TUNING.warRangeGdpBoostT) / Math.log(30));
+    return DIPLOMACY.warRangeKm + (AI_TUNING.warRangeMaxKm - DIPLOMACY.warRangeKm) * t;
+}
+
 export function diploTick(w, dt) {
     let firing = null;
     for (const n of w.nations) {
-        if (!n.isAi || !n.alive || n.active === false) continue;   // neutrals never run diplomacy
+        if (!n.isAi || !n.alive || n.active === false) continue;
         if (n._diplo == null) n._diplo = randRange(rand(w), DIPLOMACY.thinkMin, DIPLOMACY.thinkSpan);
         n._diplo -= dt;
         if (n._diplo > 0) continue;
@@ -156,10 +194,6 @@ export function diploTick(w, dt) {
     }
 }
 
-// An AI courts a mutual-defense pact. Below its ally ceiling it may (allyProposeChance)
-// propose to a reachable power it's at peace with, weighted toward one that shares a
-// current enemy (a bloc against a common foe), then toward wealth. proposeAlliance
-// resolves an AI↔AI proposal at once and routes an AI→player proposal to a popup.
 function diploProposeAlliance(w, n, caps) {
     if (allyCount(n) >= DIPLOMACY.maxAllies) return;
     if (rand(w) >= DIPLOMACY.allyProposeChance) return;
@@ -168,10 +202,9 @@ function diploProposeAlliance(w, n, caps) {
     const cand = [];
     let total = 0;
     for (const m of w.nations) {
-        if (m.slot === n.slot || !m.alive || m.active === false) continue;   // can't ally a neutral
+        if (m.slot === n.slot || !m.alive || m.active === false) continue;
         const rel = n.relations[m.slot];
         if (rel === "war" || rel === "ally") continue;
-        // Respect the player's opening grace window, same as war declarations.
         if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.allyRangeKm) continue;
@@ -184,10 +217,6 @@ function diploProposeAlliance(w, n, caps) {
     if (target != null) proposeAlliance(w, n.slot, target);
 }
 
-// An AI's negotiated exit: once a war is older than minWarSec it may offer white peace
-// (peaceOfferChance) to a foe. Surrender/Defeat when a nation is collapsing is handled
-// separately and continuously by warTick — this is only the no-loss, mutual ceasefire.
-// offerPeace resolves an AI↔AI offer at once and routes an AI→player offer to a popup.
 function diploOfferPeace(w, n) {
     for (const s in n.relations) {
         if (n.relations[s] !== "war") continue;
@@ -197,6 +226,9 @@ function diploOfferPeace(w, n) {
     }
 }
 
+// Weakness-first war declaration. Weigh every reachable rival by how much weaker
+// their whole bloc (target + its allies) is than mine (me + my allies). Skip the
+// declaration entirely if no rival bloc is soft enough (blocAdvantageMin).
 function diploDeclareWar(w, n, caps, alive) {
     if (warCount(n) >= DIPLOMACY.maxWars) return;
     // Opening grace is a world-wide ceasefire — during the window no AI opens a
@@ -205,29 +237,341 @@ function diploDeclareWar(w, n, caps, alive) {
     if (rand(w) >= DIPLOMACY.declareChance) return;
     const capA = caps[n.slot];
     if (!capA) return;
-    const gdpA = Math.max(0.1, n.gdp || 0.1), cA = Math.max(1, alive.get(n.slot) || 0);
+    const myBloc = blocPower(w, n);
+    const reach = warRangeFor(n);
     const rivals = [];
     let total = 0;
     for (const m of w.nations) {
-        if (m.slot === n.slot || !m.alive || m.active === false) continue;   // neutrals are captured, not warred
-        // Never open a war on an ally or a nation already being fought.
+        if (m.slot === n.slot || !m.alive || m.active === false) continue;
         if (n.relations[m.slot] === "war" || n.relations[m.slot] === "ally") continue;
         const capB = caps[m.slot];
-        if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.warRangeKm) continue;
-        const gdpB = Math.max(0.1, m.gdp || 0.1), cB = Math.max(1, alive.get(m.slot) || 0);
-        let weight = Math.pow(gdpB / gdpA, DIPLOMACY.wGdp) * Math.pow(cA / cB, DIPLOMACY.wWeak);
+        if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > reach) continue;
+        const theirBloc = blocPower(w, m);
+        // Bloc-advantage ratio drives the pick. Nations with strong allies protect
+        // each other — sharesEnemy nudges up slightly (a fresh enemy of my enemy).
+        const cA = Math.max(1, alive.get(n.slot) || 0);
+        const cB = Math.max(1, alive.get(m.slot) || 0);
+        const gdpRatio = Math.pow(myBloc / Math.max(0.1, theirBloc), AI_TUNING.blocGdpWeight);
+        const softness = Math.pow(cA / cB, AI_TUNING.blocForceWeight);
+        let weight = gdpRatio * softness;
+        if (sharesEnemy(n, m)) weight *= 1 + DIPLOMACY.allySharedEnemyW * 0.25;
+        // Never open a war that our own bloc is likely to lose.
+        if (myBloc < theirBloc * AI_TUNING.blocAdvantageMin) continue;
         weight = clamp(weight, DIPLOMACY.wMin, DIPLOMACY.wMax);
         rivals.push([m.slot, weight]);
         total += weight;
     }
     if (!rivals.length || total <= 0) return;
-    const target = weightedPick(rivals, () => rand(w));
+    // Focus the pick on the softest handful of options so weak neighbours get
+    // pounced on instead of the choice being diluted across everyone reachable.
+    rivals.sort((a, b) => b[1] - a[1]);
+    const top = rivals.slice(0, AI_TUNING.weaknessTopN);
+    const target = weightedPick(top, () => rand(w));
     if (target != null) declareWar(w, n.slot, target);
 }
 
+// --- Doctrine helpers --------------------------------------------------------
+
+function totalOf(myUnits, n, type) {
+    return myUnits.filter((u) => u.type === type).length + prodCount(n, "unit", type);
+}
+
+function totalDefenders(myUnits, n) {
+    const types = ["battery", "dome", "patriot", "aegis", "thaad", "cruiser", "destroyer", "orbitallaser"];
+    let k = 0;
+    for (const t of types) k += totalOf(myUnits, n, t);
+    return k;
+}
+
+// Cheapest defender the AI can afford right now that isn't gated off (patriot /
+// aegis / thaad by tech; orbital by spacehq). Returns null when nothing fits.
+function affordableDefender(w, n, points) {
+    const order = ["battery", "patriot", "dome", "aegis", "thaad"];
+    for (const t of order) {
+        const def = UNITS[t];
+        if (!def) continue;
+        if (unitLockReason(w, n.slot, t)) continue;
+        if (points >= def.cost) return t;
+    }
+    return null;
+}
+
+// Uncovered protect-points — points not inside any live friendly defender.
+function uncoveredPoints(w, slot, myUnits) {
+    const pts = protectPoints(w, slot, myUnits);
+    const out = [];
+    for (const p of pts) {
+        let covered = false;
+        for (const u of myUnits) {
+            if (UNITS[u.type].kind !== "defense") continue;
+            if (haversine(u.lng, u.lat, p.lng, p.lat) <= defenseRange(w, u)) { covered = true; break; }
+        }
+        if (!covered) out.push(p);
+    }
+    return out;
+}
+
+// Weakest / most-drainy unit we could safely scrap to escape a deficit — the
+// highest-upkeep unit that is NOT covering the capital / bunker, NOT engaged,
+// NOT the only defender we own, and NOT the last of its kind.
+function pickScrapCandidate(w, n, myUnits) {
+    const cap = capPositions(w)[n.slot];
+    const bunker = myUnits.find((u) => u.type === "bunker" && u.hp > 0);
+    const isRedundantKind = (u) => {
+        const type = u.type;
+        const kin = myUnits.filter((x) => x.type === type && x.hp > 0).length;
+        if (kin <= 1) return false; // last of its kind — keep it
+        if (UNITS[type].maxCount) return false; // never scrap uniques (bunker/spacehq)
+        if (UNITS[type].kind === "defense") {
+            const defenders = totalDefenders(myUnits, n);
+            if (defenders <= 2) return false;
+        }
+        return true;
+    };
+    let best = null, bestScore = -Infinity;
+    for (const u of myUnits) {
+        if (u.hp <= 0) continue;
+        if (u.type === "bunker" || u.type === "spacehq") continue;
+        if (u.targetId) continue;                    // firing at something — leave it
+        const def = UNITS[u.type];
+        if (!def) continue;
+        // Preserve anything defending the heart of the nation.
+        if (cap && def.kind === "defense" && haversine(cap.lng, cap.lat, u.lng, u.lat) <= AI_TUNING.scrapSafeRadiusKm) continue;
+        if (bunker && def.kind === "defense" && haversine(bunker.lng, bunker.lat, u.lng, u.lat) <= AI_TUNING.scrapSafeRadiusKm) continue;
+        if (!isRedundantKind(u)) continue;
+        // Score by upkeep (bigger = more relief) with a small bump for lower hp
+        // (finish off the least-useful hull first).
+        const upkeep = def.upkeep ?? 0;
+        const hpFrac = def.hp ? (u.hp / def.hp) : 1;
+        const score = upkeep + (1 - hpFrac) * 0.3;
+        if (score > bestScore) { bestScore = score; best = u; }
+    }
+    return best;
+}
+
+// Restock the base's hangar to the AI's per-type target via queueAircraft.
+// Returns true if it queued something (caller counts one line slot used).
+function restockHangar(w, n, myUnits) {
+    if (netIncomeOf(w, n.slot) < 0) return false;
+    const bases = myUnits.filter((u) => u.hp > 0 && UNITS[u.type].wing);
+    if (!bases.length) return false;
+    const targets = {
+        interceptor: AI_TUNING.hangarInterceptorTarget,
+        attack: AI_TUNING.hangarAttackTarget,
+        transport: AI_TUNING.hangarTransportTarget,
+        awacs: AI_TUNING.hangarAwacsTarget,
+        carrierfighter: AI_TUNING.hangarCarrierFighterTarget,
+        strikefighter: AI_TUNING.hangarStrikeFighterTarget,
+        helo: AI_TUNING.hangarHeloTarget,
+        transporthelo: AI_TUNING.hangarTransportHeloTarget,
+    };
+    for (const base of bases) {
+        const spec = HANGAR_SPEC[base.type];
+        if (!spec) continue;
+        for (const type of Object.keys(spec)) {
+            const cap = spec[type] || 0;
+            const desired = Math.min(cap, targets[type] || 0);
+            if (desired <= 0) continue;
+            const stock = base.hangar?.[type] || 0;
+            const live = w.units.filter((u) => u.baseId === base.id && u.type === type && u.hp > 0).length;
+            const queued = prodCount(n, "unit", type);
+            const total = stock + live + queued;
+            if (total >= desired) continue;
+            const cost = UNITS[type]?.cost || 0;
+            if (n.points < cost + 20) continue;
+            const r = queueAircraft(w, n.slot, base.id, type);
+            if (r.ok) return true;
+        }
+    }
+    return false;
+}
+
+// The core doctrine ladder. Returns true when it queues one thing (units + ammo
+// come through this one hook, so the caller can loop up to queueMax cleanly).
+// Ordering matters: cheaper survival needs first, then economy, then power
+// projection, and finally the pricey capstone platforms.
+function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
+    const net = netIncomeOf(w, n.slot);
+    const deficit = net < 0;
+    const place = (type) => aiPlace(w, n, type, myUnits, cities, front);
+    const q = (type) => {
+        const p = place(type);
+        if (!p) return false;
+        return queueUnit(w, n.slot, type, p.lng, p.lat, true).ok;
+    };
+    const canAfford = (type, reserve = 0) => n.points >= (UNITS[type]?.cost || 0) + reserve;
+
+    // Living defenders (counting anything on the line too).
+    const defenders = totalDefenders(myUnits, n);
+    const protects = protectPoints(w, n.slot, myUnits);
+    const protectN = protects.length;
+    const defenseTarget = Math.min(AI_TUNING.defenseMax, Math.max(1, Math.round(protectN * AI_TUNING.defensePerPoint)));
+
+    // 1. First-line defense over the capital — pick the cheapest defender we can
+    //    field, so a broke nation gets battery cover instead of freezing.
+    if (defenders === 0) {
+        const type = affordableDefender(w, n, n.points);
+        if (type && q(type)) return true;
+    }
+
+    // 2. Warhead stocks. Standard is always useful (any warhead-capable platform
+    //    can fall back to it). Strategic rounds stock lightly in peace and heavier
+    //    at war so an AI never enters a war with an empty magazine.
+    const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense")
+        || prodCount(n, "unit", "silo") > 0
+        || prodCount(n, "unit", "launcher") > 0
+        || prodCount(n, "unit", "hypersonicbty") > 0
+        || prodCount(n, "unit", "sub-ssbn") > 0;
+    const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
+    if (!deficit && hasOffense && stocked("standard") < AI_TUNING.stdStockTarget && canAfford("standard", 0) && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
+        if (queueAmmo(w, n.slot, "standard").ok) return true;
+    }
+    const thermoTarget = enemies.length ? AI_TUNING.thermoStockTarget : AI_TUNING.peaceThermoStock;
+    if (!deficit && hasOffense && stocked("thermo") < thermoTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
+        if (queueAmmo(w, n.slot, "thermo").ok) return true;
+    }
+    const hasHyper = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("hgv"))
+        || prodCount(n, "unit", "hypersonicbty") > 0;
+    const hgvTarget = enemies.length ? AI_TUNING.hgvStockTarget : AI_TUNING.peaceHgvStock;
+    if (!deficit && hasHyper && stocked("hgv") < hgvTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
+        if (queueAmmo(w, n.slot, "hgv").ok) return true;
+    }
+    const hasTel = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("sicbm"))
+        || prodCount(n, "unit", "launcher") > 0;
+    const sicbmTarget = enemies.length ? AI_TUNING.sicbmStockTarget : AI_TUNING.peaceSicbmStock;
+    if (!deficit && hasTel && stocked("sicbm") < sicbmTarget && n.points >= WARHEADS.sicbm.prodCost + AI_TUNING.sicbmReserve && rand(w) < AI_TUNING.sicbmChance) {
+        if (queueAmmo(w, n.slot, "sicbm").ok) return true;
+    }
+
+    // 3. Radar coverage — humans set up early warning before they build out. A
+    //    broke nation still gets radar since it's only 150 pts.
+    const radars = totalOf(myUnits, n, "radar");
+    const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
+    if (radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
+        if (q("radar")) return true;
+    }
+
+    // 4. Industry ladder — factory → port (coastal) → refinery → techpark, all
+    //    bounded by industryCapOf. In a deficit only factory is allowed (mirrors
+    //    the human deficit rule in queueUnit).
+    const indUsed = industryCountOf(w, n.slot);
+    const indCap = industryCapOf(w, n.slot);
+    const factories = totalOf(myUnits, n, "factory");
+    if (indUsed < indCap && factories < Math.max(3, Math.ceil(indCap * 0.4)) && canAfford("factory", AI_TUNING.factoryReserve)) {
+        if (q("factory")) return true;
+    }
+    if (!deficit && indUsed < indCap) {
+        const ports = totalOf(myUnits, n, "port");
+        if (ports < AI_TUNING.portTarget && canAfford("port", AI_TUNING.portReserve)) {
+            if (q("port")) return true;
+        }
+        const hasFactoryUp = myUnits.some((u) => u.type === "factory" && u.hp > 0);
+        if (hasFactoryUp) {
+            const refineries = totalOf(myUnits, n, "refinery");
+            if (refineries < AI_TUNING.refineryTarget && canAfford("refinery", AI_TUNING.refineryReserve)) {
+                if (q("refinery")) return true;
+            }
+            const techparks = totalOf(myUnits, n, "techpark");
+            if (techparks < AI_TUNING.techparkTarget && canAfford("techpark", AI_TUNING.techparkReserve)) {
+                if (q("techpark")) return true;
+            }
+        }
+    }
+
+    // 5. Leadership bunker — one hardened command node.
+    const hasBunker = totalOf(myUnits, n, "bunker") > 0;
+    if (!deficit && !hasBunker && cities.length >= AI_TUNING.bunkerMinCities && defenders > 0 && canAfford("bunker", AI_TUNING.bunkerReserve)) {
+        if (q("bunker")) return true;
+    }
+
+    // 5b. Airstrip — the evac field for leadership AND the home of the air wing.
+    //     A bunker without one leaves leaders stranded, so this shadows the bunker.
+    const hasStrip = totalOf(myUnits, n, "airstrip") > 0;
+    if (!deficit && !hasStrip && defenders > 0 && canAfford("airstrip", AI_TUNING.bunkerReserve)) {
+        if (q("airstrip")) return true;
+    }
+
+    // 6. Layered defense expansion — fill uncovered protect-points with the
+    //    cheapest defender we can field. Batteries first (150) then dome / aegis
+    //    for the highest-value gaps.
+    if (defenders < defenseTarget) {
+        const uncov = uncoveredPoints(w, n.slot, myUnits);
+        if (uncov.length) {
+            const type = affordableDefender(w, n, n.points);
+            if (type && q(type)) return true;
+        }
+    }
+
+    // 6b. Ground army — armybase then a tank/infantry/artillery mix. Artillery
+    //     rounds out the stack (currently ignored by the AI).
+    const hasArmybase = totalOf(myUnits, n, "armybase") > 0;
+    if (!deficit && defenders > 0 && !hasArmybase && canAfford("armybase", AI_TUNING.armyReserve)) {
+        if (q("armybase")) return true;
+    }
+    const groundForce = myUnits.filter((u) => UNITS[u.type].capture).length
+        + prodCount(n, "unit", "infantry") + prodCount(n, "unit", "tank") + prodCount(n, "unit", "artillery");
+    if (!deficit && hasArmybase && groundForce < AI_TUNING.groundTarget) {
+        const roll = rand(w);
+        const type = roll < AI_TUNING.artilleryShare ? "artillery" : (roll < 0.6 ? "tank" : "infantry");
+        if (canAfford(type, AI_TUNING.armyReserve) && q(type)) return true;
+    }
+
+    // 7. Strategic warning array.
+    const oths = totalOf(myUnits, n, "oth");
+    if (!deficit && radars > 0 && oths === 0 && canAfford("oth", AI_TUNING.othReserve)) {
+        if (q("oth")) return true;
+    }
+
+    // 8. Air-wing restock — humans keep hangars full via queueAircraft. Only
+    //    runs when solvent because queueAircraft rejects in deficit anyway.
+    if (restockHangar(w, n, myUnits)) return true;
+
+    // 9. Offense platforms — humans stand up a deterrent BEFORE the shooting.
+    //    Cheap launcher first, then hypersonic battery (if tech done), then silo.
+    if (!deficit) {
+        const launchers = totalOf(myUnits, n, "launcher");
+        if (launchers < AI_TUNING.launcherTarget && canAfford("launcher", AI_TUNING.launcherReserve)) {
+            if (q("launcher")) return true;
+        }
+        const hypers = totalOf(myUnits, n, "hypersonicbty");
+        if (!unitLockReason(w, n.slot, "hypersonicbty") && hypers < AI_TUNING.hyperTarget && canAfford("hypersonicbty", AI_TUNING.hyperReserve)) {
+            if (q("hypersonicbty")) return true;
+        }
+        const silos = totalOf(myUnits, n, "silo");
+        const wantSilos = enemies.length ? AI_TUNING.siloTarget : Math.max(1, Math.floor(AI_TUNING.siloTarget / 2));
+        if (silos < wantSilos && canAfford("silo", AI_TUNING.siloReserve) && net > AI_TUNING.siloMinNet) {
+            if (q("silo")) return true;
+        }
+    }
+
+    // 10. Advanced tech-gated units (space HQ, subs, modern defense layers).
+    if (!deficit && aiBuildUnlocked(w, n, myUnits, cities, front)) return true;
+
+    // 11. Naval surface group — coastal AIs pull together a screen. aiPlace's
+    //     sea-spot check returns null for landlocked capitals, so the build just
+    //     gets skipped there.
+    if (!deficit) {
+        const naval = [
+            ["destroyer", AI_TUNING.destroyerTarget, AI_TUNING.destroyerReserve],
+            ["cruiser", AI_TUNING.cruiserTarget, AI_TUNING.cruiserReserve],
+            ["battleship", AI_TUNING.battleshipTarget, AI_TUNING.battleshipReserve],
+            ["replenish", AI_TUNING.replenishTarget, AI_TUNING.replenishReserve],
+            ["amphib", AI_TUNING.amphibTarget, AI_TUNING.amphibReserve],
+            ["carrier", AI_TUNING.carrierTarget, AI_TUNING.carrierReserve],
+        ];
+        for (const [type, target, reserve] of naval) {
+            if (unitLockReason(w, n.slot, type)) continue;
+            const have = totalOf(myUnits, n, type);
+            if (have >= target) continue;
+            if (!canAfford(type, reserve)) continue;
+            if (q(type)) return true;
+        }
+    }
+
+    return false;
+}
+
 export function aiTick(w, dt) {
-    // Index living units by nation once per tick so each AI scans only its own
-    // forces (O(own units)), not the whole world's — the roster can be ~222 nations.
     const unitsBySlot = new Map();
     for (const u of w.units) {
         if (u.hp <= 0) continue;
@@ -237,46 +581,38 @@ export function aiTick(w, dt) {
     }
     const caps = capPositions(w);
     for (const n of w.nations) {
-        if (!n.isAi || !n.alive || n.active === false) continue;   // neutrals never build or attack
+        if (!n.isAi || !n.alive || n.active === false) continue;
         n._ai -= dt;
         if (n._ai > 0) continue;
-        // Level-of-detail: hot nations (at war, or with a capital near the player's)
-        // think at the normal cadence; the rest idle-throttle, so heavy AI work
-        // tracks the action on the map rather than the size of the roster.
         const active = warCount(n) > 0 || nearPlayer(w, n, caps);
         n._ai = active
             ? randRange(rand(w), AI_TUNING.thinkMin, AI_TUNING.thinkSpan)
             : randRange(rand(w), DIPLOMACY.idleThinkMin, DIPLOMACY.idleThinkSpan);
         ensureProd(n);
-        const myUnits = unitsBySlot.get(n.slot) || [];
+        let myUnits = unitsBySlot.get(n.slot) || [];
         const enemies = w.nations.filter((e) => e.alive && atWar(w, n.slot, e.slot));
-        // A launcher stuck on an empty magazine falls back to Standard — but only if
-        // the platform is cleared to carry it (the strategic-only SSBN is not, so it
-        // holds its selected round and waits for strategic stock instead).
+        // A launcher stuck on an empty magazine falls back to Standard.
         for (const u of myUnits) {
             if (UNITS[u.type].kind !== "offense") continue;
             const wh = u.warhead || initialWarhead(u.type);
             if (!(n.ammo[wh] > 0) && allowedAmmo(u.type).includes("standard") && (n.ammo.standard || 0) > 0) u.warhead = "standard";
         }
-        // Point an idle MISSILE platform (not a ground unit) at the best available
-        // at-war enemy target each think (neutrals are never targeted).
+        // Assign every idle strike platform (not ground units) a target using the
+        // bloc-aware weakness picker.
         const cap = caps[n.slot];
-        const idleOff = myUnits.find((u) => !u.targetId && UNITS[u.type].kind === "offense" && UNITS[u.type].targets !== "land");
-        if (idleOff) {
+        for (const u of myUnits) {
+            if (u.targetId) continue;
+            const def = UNITS[u.type];
+            if (def.kind !== "offense" || def.targets === "land") continue;
             const tgt = pickTarget(w, n, cap);
-            if (tgt) {
-                // Arm the platform with its signature round when one is stocked — a
-                // silo/sub/orbital reaches for the thermo city-killer, a hypersonic
-                // launcher/battery for the HGV. Warheads come only off the shelf and
-                // only onto a platform cleared to carry them.
-                const sig = UNITS[idleOff.type].signature;
-                const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : sig === "sicbm" ? AI_TUNING.sicbmChance : AI_TUNING.thermoChance;
-                if (sig && allowedAmmo(idleOff.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) idleOff.warhead = sig;
-                commandAttack(w, idleOff.id, tgt.id);
-            }
+            if (!tgt) break;
+            const sig = def.signature;
+            const sigChance = sig === "hgv" ? AI_TUNING.hgvChance : sig === "sicbm" ? AI_TUNING.sicbmChance : AI_TUNING.thermoChance;
+            if (sig && allowedAmmo(u.type).includes(sig) && (n.ammo[sig] || 0) > 0 && rand(w) < sigChance) u.warhead = sig;
+            commandAttack(w, u.id, tgt.id);
         }
-        // Ground forces press the war: send each idle capture-capable battalion to
-        // march on and assault the nearest at-war enemy city it can take (never neutrals).
+        // Ground forces press the war: send each idle capture-capable battalion
+        // to the nearest at-war city.
         for (const u of myUnits) {
             if (u.dest || u.hp <= 0 || !UNITS[u.type].capture) continue;
             let best = null, bd = Infinity;
@@ -290,9 +626,7 @@ export function aiTick(w, dt) {
                 commandAttack(w, u.id, best.id);
             }
         }
-        // Bring air power online: stand up fighter patrols + an AWACS orbit on idle
-        // airbases once a war is on — the wings then screen the sector and engage on
-        // their own.
+        // Bring air power online — patrols + AWACS orbit on every airbase.
         if (enemies.length) {
             for (const u of myUnits) {
                 if (u.hp <= 0 || !UNITS[u.type].wing) continue;
@@ -302,143 +636,35 @@ export function aiTick(w, dt) {
         }
         const myCap = w.cities.find((c) => c.slot === n.slot && c.alive);
         if (!myCap) continue;
-        // Fielding cap — a nation at its unit ceiling stops adding units, keeping the
-        // global unit count (and the interception loop with it) bounded no matter how
-        // many nations are simultaneously at war.
         if (myUnits.length >= DIPLOMACY.aiUnitCap) continue;
+
+        // Deficit response: humans SELL. Scrap the highest-upkeep redundant hull
+        // to shed drag before queueing anything else. Capped per think so we
+        // don't dismantle the whole force in one flurry.
         const net = netIncomeOf(w, n.slot);
-        const lineBusy = (n.prod.current ? 1 : 0) + n.prod.queue.length;
-        if (lineBusy >= AI_TUNING.queueMax) continue; // keep the line short — the AI plans, it doesn't hoard
-        // Strategic siting context, shared by every build this think: the nation's
-        // cities (value-sorted), the front it faces, and a role-aware placer.
+        if (net < AI_TUNING.scrapMinNet) {
+            let scrapped = 0;
+            while (scrapped < AI_TUNING.scrapMaxPerThink) {
+                const victim = pickScrapCandidate(w, n, myUnits);
+                if (!victim) break;
+                if (!scrapUnit(w, n.slot, victim.id).ok) break;
+                scrapped++;
+                // Refresh the local roster and world snapshot to reflect the sale.
+                myUnits = (unitsBySlot.get(n.slot) || []).filter((u) => u.id !== victim.id);
+                unitsBySlot.set(n.slot, myUnits);
+            }
+        }
+
+        // Build until the line is full or nothing more qualifies. Humans queue
+        // multiple items per session — same idea, bounded by queueMax.
         const cities = aiCities(w, n.slot);
         const front = frontPos(w, n, caps);
-        // aiPlace validates the spot against the nation's own political border
-        // (land) or coastal waters (sea) before returning it, so every queueUnit
-        // below passes territoryOk:true — territory is checked once, in the placer,
-        // as the human path does. This avoids queueUnit re-applying the looser
-        // Voronoi inTerritory rule and starving valid in-country builds near a frontier.
-        const place = (type) => aiPlace(w, n, type, myUnits, cities, front);
-        // In the red, everything else waits — industry is the only way back out
-        // (the same deficit gate the player lives under, enforced in queueUnit).
-        if (net < 0) {
-            if (n.points >= UNITS.factory.cost) {
-                const p = place("factory");
-                if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat, true).ok) return;
-            }
-            continue;
-        }
-        // Build doctrine, in priority order. Every placement goes through aiPlace,
-        // which sites by role (defense over cities, sensors/offense toward the front,
-        // industry/command in the interior) and spreads same-role units apart.
-        const defenders = myUnits.filter((u) => UNITS[u.type].kind === "defense").length
-            + prodCount(n, "unit", "dome") + prodCount(n, "unit", "battery");
-        const protectN = protectPoints(w, n.slot, myUnits).length;
-        const defenseTarget = Math.min(AI_TUNING.defenseMax, Math.max(1, Math.round(protectN * AI_TUNING.defensePerPoint)));
-
-        // 1. Cover the capital first — never leave the heart of the nation open.
-        if (defenders === 0 && n.points >= UNITS.dome.cost) {
-            const p = place("dome");
-            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat, true).ok) return;
-        }
-        // 2. Warheads — fed through the same line, same cost/time as the player.
-        const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense") || prodCount(n, "unit", "silo") > 0 || prodCount(n, "unit", "launcher") > 0;
-        const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
-        if (hasOffense && stocked("standard") < AI_TUNING.stdStockTarget && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
-            if (queueAmmo(w, n.slot, "standard").ok) return;
-        }
-        if (hasOffense && enemies.length && stocked("thermo") < AI_TUNING.thermoStockTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
-            if (queueAmmo(w, n.slot, "thermo").ok) return;
-        }
-        // Hypersonic rounds — only worth stocking if the nation fields a platform
-        // cleared to carry them (a launcher or battery), so glide-vehicle stock never
-        // piles up unused on a nation that only builds silos.
-        const hasHyper = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("hgv"));
-        if (hasHyper && enemies.length && stocked("hgv") < AI_TUNING.hgvStockTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
-            if (queueAmmo(w, n.slot, "hgv").ok) return;
-        }
-        // SICBM rounds — only worth stocking if the nation fields a TEL (the sole
-        // platform cleared to carry them).
-        const hasTel = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("sicbm"));
-        if (hasTel && enemies.length && stocked("sicbm") < AI_TUNING.sicbmStockTarget && n.points >= WARHEADS.sicbm.prodCost + AI_TUNING.sicbmReserve && rand(w) < AI_TUNING.sicbmChance) {
-            if (queueAmmo(w, n.slot, "sicbm").ok) return;
-        }
-        // 3. Early-warning radar — spread across the frontier for coverage.
-        const radars = myUnits.filter((u) => u.type === "radar").length + prodCount(n, "unit", "radar");
-        const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
-        if (defenders > 0 && radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
-            const p = place("radar");
-            if (p && queueUnit(w, n.slot, "radar", p.lng, p.lat, true).ok) return;
-        }
-        // 4. Industry — build the economy early (safe interior, factories spread) so
-        // the nation can actually afford the rest of its doctrine.
-        const industry = myUnits.filter((u) => UNITS[u.type].kind === "industry").length + prodCount(n, "unit", "factory");
-        if (defenders > 0 && industry < AI_TUNING.industryTarget && n.points >= UNITS.factory.cost + AI_TUNING.factoryReserve) {
-            const p = place("factory");
-            if (p && queueUnit(w, n.slot, "factory", p.lng, p.lat, true).ok) return;
-        }
-        // 5. Leadership bunker — one hardened command node, deep in the interior. A
-        // solvent nation (positive net income) banks toward it before lesser builds
-        // so command actually gets stood up; a nation with no spare income skips it
-        // and keeps developing — no freeze. It becomes a protect-point, so the
-        // defense-expansion below shields it too.
-        const hasBunker = myUnits.some((u) => u.type === "bunker") || prodCount(n, "unit", "bunker") > 0;
-        const wantBunker = !hasBunker && cities.length >= AI_TUNING.bunkerMinCities && defenders > 0;
-        if (wantBunker) {
-            if (n.points >= UNITS.bunker.cost + AI_TUNING.bunkerReserve) {
-                const p = place("bunker");
-                if (p && queueUnit(w, n.slot, "bunker", p.lng, p.lat, true).ok) return;
-            } else if (net > 0) {
-                continue; // income positive — bank toward the bunker before lesser builds
-            }
-        }
-        // 5b. Leadership airfield — at least one airstrip to fly the evacuation. A
-        // bunker with no strip is a dead end: leaders can never be airlifted to it,
-        // so a nation that has stood up (or queued) a bunker builds a supporting
-        // strip next, banking toward it the same way it banks toward the bunker.
-        const hasStrip = myUnits.some((u) => u.type === "airstrip") || prodCount(n, "unit", "airstrip") > 0;
-        if (hasBunker && !hasStrip && defenders > 0) {
-            if (n.points >= UNITS.airstrip.cost + AI_TUNING.bunkerReserve) {
-                const p = place("airstrip");
-                if (p && queueUnit(w, n.slot, "airstrip", p.lng, p.lat, true).ok) return;
-            } else if (net > 0) {
-                continue; // bank toward the evac airfield before lesser builds
-            }
-        }
-        // 6. Extend the shield — more air defense out to the target, each dome aimed
-        // (via aiPlace) at the most valuable point not yet inside a friendly envelope.
-        if (defenders < defenseTarget && n.points >= UNITS.dome.cost) {
-            const p = place("dome");
-            if (p && queueUnit(w, n.slot, "dome", p.lng, p.lat, true).ok) return;
-        }
-        // 6b. Ground army — stand up an army base, then a small mobile force. These are
-        // the engine of expansion: idle battalions march on and hold nearby enemy and
-        // neutral cities (see the ground-order assignment above).
-        const hasArmybase = myUnits.some((u) => u.type === "armybase") || prodCount(n, "unit", "armybase") > 0;
-        if (defenders > 0 && !hasArmybase && n.points >= UNITS.armybase.cost + AI_TUNING.armyReserve) {
-            const p = place("armybase");
-            if (p && queueUnit(w, n.slot, "armybase", p.lng, p.lat, true).ok) return;
-        }
-        const groundForce = myUnits.filter((u) => UNITS[u.type].capture).length + prodCount(n, "unit", "infantry") + prodCount(n, "unit", "tank");
-        if (hasArmybase && groundForce < AI_TUNING.groundTarget && n.points >= UNITS.tank.cost + AI_TUNING.armyReserve) {
-            const type = rand(w) < 0.5 ? "tank" : "infantry";
-            const p = place(type);
-            if (p && queueUnit(w, n.slot, type, p.lng, p.lat, true).ok) return;
-        }
-        // 7. One over-the-horizon array for strategic warning (safe interior).
-        const oths = myUnits.filter((u) => u.type === "oth").length + prodCount(n, "unit", "oth");
-        if (radars > 0 && oths === 0 && n.points >= UNITS.oth.cost + AI_TUNING.othReserve) {
-            const p = place("oth");
-            if (p && queueUnit(w, n.slot, "oth", p.lng, p.lat, true).ok) return;
-        }
-        // 8. Advanced units (space HQ, subs, modern defenses…), by role. All techs
-        //    are unlocked at start, so these are gated only by unit prereqs + cost.
-        if (aiBuildUnlocked(w, n, myUnits, cities, front)) return;
-        // 9. Offense — forward toward the front, once at war.
-        if (!enemies.length) continue;
-        if (n.points >= UNITS.silo.cost + AI_TUNING.siloReserve && net > AI_TUNING.siloMinNet) {
-            const p = place("silo");
-            if (p) queueUnit(w, n.slot, "silo", p.lng, p.lat, true);
+        for (let i = 0; i < AI_TUNING.queueMax + 2; i++) {
+            const lineBusy = (n.prod.current ? 1 : 0) + n.prod.queue.length;
+            if (lineBusy >= AI_TUNING.queueMax) break;
+            if (myUnits.length + n.prod.queue.length >= DIPLOMACY.aiUnitCap) break;
+            const built = aiBuildDoctrine(w, n, myUnits, cities, front, enemies);
+            if (!built) break;
         }
     }
 }
