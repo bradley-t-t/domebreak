@@ -45,6 +45,7 @@ import {
     isActive,
     inTerritory,
     placementBlocked,
+    radarRangeOf,
     sensorsCover,
     unitLabel,
     UNITS
@@ -162,6 +163,26 @@ export default function LiveGame({
         setTimeout(() => setErr(null), 1800);
     };
     const toggleLayer = (id) => setLayers((L) => ({...L, [id]: !L[id]}));
+    // Placing or relocating a radar-emitting unit: force the radar layer on so
+    // the ghost's coverage ring (and the pulse over it) is visible while you
+    // aim, then restore whatever the layer was before placement started. The
+    // saved value is captured only on the OFF→ON transition and cleared on
+    // ON→OFF, so a manual toggle mid-placement doesn't clobber the restore.
+    const savedRadarRef = useRef(null);
+    useEffect(() => {
+        const type = placing || (moving && w.units.find((u) => u.id === moving)?.type);
+        const emits = !!type && radarRangeOf(type) > 0;
+        if (emits && savedRadarRef.current === null) {
+            savedRadarRef.current = layers.radar;
+            if (!layers.radar) setLayers((L) => ({...L, radar: true}));
+        } else if (!emits && savedRadarRef.current !== null) {
+            const prev = savedRadarRef.current;
+            savedRadarRef.current = null;
+            setLayers((L) => (L.radar === prev ? L : {...L, radar: prev}));
+        }
+        // w.units read is intentionally not a dep — we only need to resolve the
+        // moving unit's type at each transition, not re-fire every sim tick.
+    }, [placing, moving]); // eslint-disable-line react-hooks/exhaustive-deps
     // Placement/terrain validity checks — see usePlacementChecks (same feature
     // queries, same coastline sampling, moved out verbatim).
     const {onLand, isSea, nearWater, placeError} = usePlacementChecks({mapRef, w, mySlot, myGid});
