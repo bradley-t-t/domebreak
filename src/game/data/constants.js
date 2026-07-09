@@ -108,7 +108,7 @@ export const ECONOMY = {
 // health, so bombing enemy cities lowers their industrial ceiling. Shared across
 // all kind:"industry" types (factory/port/refinery/techpark).
 export const INDUSTRY = {
-    base: 3,
+    base: 6,
     popPer: 40e6,
     max: 24,
 };
