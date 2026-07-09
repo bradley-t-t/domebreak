@@ -55,6 +55,7 @@ export default function Footer({onShowShortcuts}) {
                     <Col title="Explore">
                         <FootLink onClick={() => scrollToId("top")}>Top</FootLink>
                         <FootLink onClick={() => scrollToId("features")}>Briefing</FootLink>
+                        <FootLink onClick={() => scrollToId("wiki")}>Unit wiki</FootLink>
                     </Col>
 
                     <Col title="Get it">

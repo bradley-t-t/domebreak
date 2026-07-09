@@ -20,7 +20,7 @@ import {circle, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 const coverageRing = (globe, lng, lat, km, steps, innerKm = 0) =>
     (globe && km <= GEODESIC_MAX_KM ? geoCircle : circle)(lng, lat, km, steps, innerKm);
 
-const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, myNation, globe}, ref) {
+const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, globe}, ref) {
     // { lng, lat, valid } | null — the live cursor probe pushed in from LiveGame.
     const [cur, setCur] = useState(null);
 
@@ -41,7 +41,7 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, m
             const type = placing || w.units.find((u) => u.id === moving)?.type;
             const t = type ? UNITS[type] : null;
             const rad = t?.coastal ? COAST_KM
-                : t?.detect ? radarRangeOf(type) * (myNation?.radarMult ?? 1)
+                : t?.detect ? radarRangeOf(type)
                     : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
             const c = coverageRing(globe, cur.lng, cur.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
@@ -52,7 +52,7 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, m
             f.push(c);
         }
         return {type: "FeatureCollection", features: f};
-    }, [placing, moving, w, myNation, cur, globe]);
+    }, [placing, moving, w, cur, globe]);
 
     return (
         <Source id="ranges-ghost" type="geojson" data={data}>

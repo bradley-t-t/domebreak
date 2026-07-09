@@ -2,6 +2,8 @@
 // the missile sprites are, so it reads correctly in globe and flat. Falls back to a fixed
 // cant for static assets (the airstrip reads as angled).
 import {useRef} from "react";
+import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
+import {safeMap} from "../lib/mapSafe.js";
 
 // Fixed sprite cant for static assets on the map (airstrip reads as a diagonal
 // runway — angled the opposite way from the naval hulls in the arsenal).
@@ -18,14 +20,11 @@ export function useUnitHeading(mapRef) {
         if (ROT_UPRIGHT.has(u.type)) return null; // fixed-orientation icon — never rotate to heading
         const m = mapRef.current;
         let deg = ROT_STATIC[u.type] ?? null;
-        if (m && u.face) {
-            try {
-                const a = m.project([u.lng, u.lat]);
-                const b = m.project([u.face.lng, u.face.lat]);
-                if (Math.hypot(b.x - a.x, b.y - a.y) >= 0.6) deg = (Math.atan2(b.x - a.x, -(b.y - a.y)) * 180) / Math.PI;
-            } catch { /* projection not ready */
-            }
-        }
+        if (u.face) safeMap(m, (mm) => {
+            const a = mm.project([u.lng, u.lat]);
+            const b = mm.project([u.face.lng, u.face.lat]);
+            if (Math.hypot(b.x - a.x, b.y - a.y) >= 0.6) deg = screenHeadingDeg(b.x - a.x, b.y - a.y);
+        });
         if (deg == null) {
             delete rotMemo.current[u.id];
             return null;
@@ -33,10 +32,7 @@ export function useUnitHeading(mapRef) {
         // Unwrap: pick the representation nearest the last shown angle so the
         // 170ms CSS rotation transition never takes the long way around.
         const prev = rotMemo.current[u.id];
-        if (prev != null) {
-            while (deg - prev > 180) deg -= 360;
-            while (deg - prev < -180) deg += 360;
-        }
+        if (prev != null) deg = unwrapLng(deg, prev);
         rotMemo.current[u.id] = deg;
         if (Object.keys(rotMemo.current).length > 600) rotMemo.current = {[u.id]: deg};
         return deg;

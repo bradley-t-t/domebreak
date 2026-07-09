@@ -8,7 +8,7 @@ import {describe, expect, it} from "vitest";
 process.env.SUPABASE_URL ||= "http://localhost";
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
 process.env.GD_ABANDON_GRACE_S = "1";
-const {Match} = await import("../../../server/match.js");
+const {Match} = await import("../../../server/match/match.js");
 
 const roster = [
     {userId: "u-human", username: "Trent", iso: "US", isBot: false, ready: true},

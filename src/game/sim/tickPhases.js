@@ -19,6 +19,8 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nationOf, nextId, rand} from "./worldState.js";
+import {clamp01} from "../../lib/math.js";
+import {offsetKmPolar} from "../../lib/geo.js";
 import {
     airborne,
     atWar,
@@ -124,7 +126,7 @@ export function stepMovement(w, dt) {
                 continue;
             }
             const n = nationOf(w, u.slot);
-            if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range * (n?.rangeMult ?? 1)) {
+            if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range) {
                 ensureProd(n);
                 if (def.targets === "land") {
                     // Ground forces (infantry/tank/artillery) fight like ground
@@ -138,7 +140,7 @@ export function stepMovement(w, dt) {
                     // flip by CAPTURE.assaultMult while u.targetId is this city).
                     // Fire on enemy ground UNITS still lands as normal damage.
                     if (!(def.capture && t.kind === "city")) directFire(w, u, t);
-                    u.cooldown = def.reload * (n?.reloadMult ?? 1);
+                    u.cooldown = def.reload;
                 } else {
                     // Missile units spend a warhead from the strategic arsenal (and can't
                     // fire when it's empty). Conventional air/sea units — aircraft, ships —
@@ -149,7 +151,7 @@ export function stepMovement(w, dt) {
                         launch(w, u, t, _wh);
                         // Ships rearming under a Replenishment Ship recycle faster.
                         const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
-                        u.cooldown = def.reload * (n?.reloadMult ?? 1) * replen;
+                        u.cooldown = def.reload * replen;
                     }
                 }
             }
@@ -217,10 +219,10 @@ export function stepCombat(w, dt) {
                 d.cooldown = (UNITS[d.type].reload || DEFAULT_RELOAD) * dReplen;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
-                // firing nation's evasion. Floored to a small residual chance
-                // (derived from INTERCEPT_CAP, no magic number) so evasion makes a
-                // strike hard to stop but never truly un-interceptable.
-                const baseProb = Math.min(INTERCEPT_CAP, UNITS[d.type].intercept + (dn.interceptAdd ?? 0));
+                // munition's evasion. Floored to a small residual chance (derived
+                // from INTERCEPT_CAP, no magic number) so evasion makes a strike
+                // hard to stop but never truly un-interceptable.
+                const baseProb = Math.min(INTERCEPT_CAP, UNITS[d.type].intercept);
                 const evadeFloor = baseProb * (1 - INTERCEPT_CAP);
                 const hitProb = Math.max(evadeFloor, baseProb - (p.evasion ?? 0));
                 w.interceptors.push({
@@ -229,7 +231,7 @@ export function stepCombat(w, dt) {
                     srcType: d.type,   // firing battery type — drives the sky sprite variant
                     targetId: p.id,
                     hitProb,
-                    speed: INTERCEPTOR_SPEED * (dn.interceptorSpeedMult ?? 1),
+                    speed: INTERCEPTOR_SPEED,
                     altNorm: 0,
                     launchDist: Math.max(1, dToTarget),
                     fromLng: d.lng,
@@ -261,9 +263,12 @@ export function stepFallout(w, dt) {
             if (fx.type !== "fallout") continue;
             fx.age += dt;
             const driftKm = FALLOUT.driftKmPerSec * dt;
-            const brng = (FALLOUT.driftHeadingDeg * Math.PI) / 180;
-            fx.lat += (driftKm * Math.cos(brng)) / 111;
-            fx.lng += (driftKm * Math.sin(brng)) / (111 * Math.cos((fx.lat * Math.PI) / 180) || 1);
+            // Cloud drifts on a compass bearing; offsetKmPolar takes math angle
+            // (east = 0, CCW) so convert with `PI/2 - compassRad`.
+            const brng = Math.PI / 2 - (FALLOUT.driftHeadingDeg * Math.PI) / 180;
+            const drifted = offsetKmPolar({lng: fx.lng, lat: fx.lat}, driftKm, brng);
+            fx.lng = drifted.lng;
+            fx.lat = drifted.lat;
             const intensity = falloutIntensity(fx.age);
             if (intensity <= 0) continue;
             const rate = FALLOUT.dmgPerSec * intensity * dt;
@@ -330,7 +335,7 @@ export function stepSensors(w, dt) {
 // its hit probability against the tracked projectile.
 export function stepInterceptors(w, dt) {
     for (const it of w.interceptors) {
-        const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead);
+        const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead); // byId with predicate — keep inline
         if (!tgt) {
             it._dead = true;
             continue;
@@ -343,7 +348,7 @@ export function stepInterceptors(w, dt) {
         it.toLat = aim[1];
         const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
         const stepKm = it.speed * dt;
-        it.altNorm = (tgt.altNorm ?? 0) * Math.min(1, Math.max(0, 1 - dist / (it.launchDist || 1)));
+        it.altNorm = (tgt.altNorm ?? 0) * clamp01(1 - dist / (it.launchDist || 1));
         if (dist <= Math.max(INTERCEPT_KILL_RADIUS_KM, stepKm)) {
             it._dead = true;
             if (rand(w) < (it.hitProb ?? DEFAULT_HIT_PROB)) {

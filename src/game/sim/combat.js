@@ -3,19 +3,23 @@
 // orders all need the same city-or-unit lookup.
 import {haversine, interpGC} from "../geo/geo.js";
 import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
-import {nationOf, nextId, rand} from "./worldState.js";
+import {nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
+import {cosLatSafe, unwrapLng} from "../../lib/geo.js";
+import {clamp01} from "../../lib/math.js";
+import {byId} from "../../lib/iter.js";
+import {jitter, randRange} from "../../lib/random.js";
 
 // Resolves an order/attack target id to either a city or a unit, with a uniform
 // {kind, ref, slot, alive, lng, lat} shape. Shared by production orders and combat.
 export function findTarget(w, id) {
-    const c = w.cities.find((x) => x.id === id);
+    const c = byId(w.cities, id);
     if (c) return {
         kind: "city", ref: c, slot: c.slot, get alive() {
             return c.alive;
         }, lng: c.lng, lat: c.lat
     };
-    const u = w.units.find((x) => x.id === id);
+    const u = byId(w.units, id);
     if (u) return {
         kind: "unit", ref: u, slot: u.slot, get alive() {
             return u.hp > 0;
@@ -54,14 +58,12 @@ export function trackPoint(p, f) {
     const base = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, f);
     if (!p.spreadKm) return base;
     const ahead = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, Math.min(1, f + 0.02));
-    let dLng = ahead[0] - base[0];
-    while (dLng > 180) dLng -= 360;
-    while (dLng < -180) dLng += 360;
-    const cos = Math.max(0.05, Math.cos((base[1] * Math.PI) / 180));
+    const dLng = unwrapLng(ahead[0] - base[0], 0);
+    const cos = cosLatSafe(base[1]);
     const dx = dLng * cos, dy = ahead[1] - base[1];
     const len = Math.hypot(dx, dy) || 1;
     // Perpendicular offset peaking mid-flight, zero at release and at impact.
-    const off = p.spreadKm * Math.sin(Math.PI * Math.min(1, Math.max(0, f)));
+    const off = p.spreadKm * Math.sin(Math.PI * clamp01(f));
     // interpGC keeps base within ±90, but this lateral bow is a raw-degree nudge
     // that can push a sub-warhead past a pole near high latitudes. Clamp so the
     // shared track never yields an impossible latitude — an unclamped value crashes
@@ -74,7 +76,6 @@ export function trackPoint(p, f) {
 // saw the launch (the shooter always; anyone else only if a sensor covers the
 // launch point — this is what an OTH array buys, visibility into the boost phase).
 export function launch(w, unit, target, warhead) {
-    const n = nationOf(w, unit.slot);
     const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
     const seenBy = [unit.slot];
     for (const nn of w.nations) {
@@ -87,12 +88,11 @@ export function launch(w, unit, target, warhead) {
         slot: unit.slot,
         type: unit.type,
         warhead: warhead || "standard",
-        damage: UNITS[unit.type].damage * (n?.dmgMult ?? 1) * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
-        // Intercept-evasion: the firing nation's hypersonic-glide bonus (off8),
-        // stacked with any inherent evasion on the launcher's own unit type and on
-        // the loaded warhead (an HGV payload is hard to intercept whatever fires it).
-        // The defender subtracts this from its interceptor hit probability (tick.js).
-        evasion: (n?.hypersonicEvasion ?? 0) + (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
+        damage: UNITS[unit.type].damage * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
+        // Intercept-evasion: inherent on the launcher's unit type plus the loaded
+        // warhead (an HGV payload is hard to intercept whatever fires it). The
+        // defender subtracts this from its interceptor hit probability (tick.js).
+        evasion: (UNITS[unit.type].evasion ?? 0) + (WARHEADS[warhead]?.evasion ?? 0),
         // Boost-glide rounds (HGV) overspeed the platform's baseline; speedMult is
         // data-driven on the warhead so a hypersonic payload is fast whatever fires it.
         speed: (UNITS[unit.type].speed ?? MISSILE_SPEED) * (WARHEADS[warhead]?.speedMult ?? 1),
@@ -146,8 +146,7 @@ export function directFire(w, unit, target) {
         resolveBunkerStrike(w, target.ref, null, unit.slot);
         return;
     }
-    const n = nationOf(w, unit.slot);
-    const dmg = (UNITS[unit.type].damage || 0) * (n?.dmgMult ?? 1);
+    const dmg = UNITS[unit.type].damage || 0;
     target.ref.hp -= dmg;
     const dead = target.ref.hp <= 0;
     if (dead) {
@@ -279,7 +278,7 @@ export function mirvSplit(w, p) {
         const alt = i >= primaries && nearby.length ? nearby[(i - primaries) % nearby.length] : null;
         const tgt = alt || primary.ref;
         // Small aim scatter so the sub trajectories visibly diverge on the way down.
-        const jLng = (rand(w) - 0.5) * 0.5, jLat = (rand(w) - 0.5) * 0.5;
+        const jLng = jitter(rand(w), 0.5), jLat = jitter(rand(w), 0.5);
         const dist = Math.max(20, haversine(p.lng, p.lat, tgt.lng + jLng, tgt.lat + jLat));
         // Each sub flies its own lane: a signed lateral bow spread evenly across
         // the pattern width, so the volley fans out wide then closes on the target.
@@ -287,7 +286,7 @@ export function mirvSplit(w, p) {
         subs.push({
             id: nextId(w, "p"), slot: p.slot, type: p.type, warhead: p.warhead, sub: true,
             evasion: p.evasion ?? 0,
-            spreadKm: lane * (cwh.spread || 0) * (0.7 + rand(w) * 0.6),
+            spreadKm: lane * (cwh.spread || 0) * randRange(rand(w), 0.7, 0.6),
             seenBy: [...(p.seenBy || [])],
             damage: p.damage * (cwh.subDmgFrac ?? 0.25), speed: p.speed ?? MISSILE_SPEED, tried: [],
             altStart: p.altNorm ?? 0.8, altNorm: p.altNorm ?? 0.8,

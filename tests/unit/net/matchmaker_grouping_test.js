@@ -1,13 +1,14 @@
-// Matchmaker group formation (server/matchmaker.js buildGroup): from FIFO-ordered
-// live waiters, pick the next lobby group keeping publicly-queued parties intact —
-// never split a party across the seat cap, never seat more than the cap. Pure and
-// deterministic. Companion to matchmaker_liveness_test.js (the offline-ghost filter).
+// Matchmaker group formation (server/matchmaker/matchmaker.js buildGroup): from
+// FIFO-ordered live waiters, pick the next lobby group keeping publicly-queued
+// parties intact — never split a party across the seat cap, never seat more than
+// the cap. Pure and deterministic. Companion to matchmaker_liveness_test.js
+// (the offline-ghost filter).
 import {describe, expect, it} from "vitest";
 
 // server/config.js validates SUPABASE_* at import; stub before importing.
 process.env.SUPABASE_URL ||= "http://localhost";
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
-const {buildGroup} = await import("../../../server/matchmaker.js");
+const {buildGroup} = await import("../../../server/matchmaker/matchmaker.js");
 
 const solo = (id) => ({user_id: id, party_id: null});
 const party = (id, pid) => ({user_id: id, party_id: pid});

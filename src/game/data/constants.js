@@ -136,15 +136,10 @@ export const AI_TUNING = {
     sicbmStockTarget: 2, sicbmReserve: 150,
     radarReserve: 100, othReserve: 150,
     industryTarget: 3, factoryReserve: 120,
-    researchMinPoints: 350, researchChance: 0.55,
     siloReserve: 200, siloMinNet: 3,
-    // Deep-tree tuning: the AI researches past the Cold War tiers and builds units
-    // its completed techs unlock. researchDepthTarget caps how deep any single track
-    // is pushed; deepReserve is the extra cushion before committing to the costlier
-    // Modern/Space tiers; unlockedBuildChance is the per-decision odds of building a
-    // freshly-unlocked tech-gated unit; spaceHqReserve is the cushion before the
-    // Space Command HQ prerequisite.
-    researchDepthTarget: 12, deepReserve: 300, deepTierGate: 8,
+    // Deep-tree tuning: unlockedBuildChance is the per-decision odds of building a
+    // tech-gated unit; spaceHqReserve is the cushion before the Space Command HQ
+    // prerequisite; subReserve gates the pricier hulls.
     unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
     // Strategic placement (aiPlace in sim/tick.js). The AI sites units by role and
     // spreads them across its cities instead of piling everything onto the capital.
@@ -240,7 +235,6 @@ export const LEADERSHIP = {
     escortOffsetKm: 7,          // formation stand-off the escorts hold off the ferry
     arriveKm: 12,               // distance to count a ferry "arrived" at a waypoint
     commandFloor: 0.5,          // national output multiplier at 0% Leadership (1.0 at 100%)
-    penalizeResearch: true,     // scale research speed by the command factor too
     // The Leadership Bunker is hardened: ONLY a direct hit from one of these
     // warheads destroys it — everything else (conventional/cluster/HGV strikes,
     // blast waves, fallout, and ground fire) bounces off. Enemy infantry capturing

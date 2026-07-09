@@ -1,6 +1,7 @@
 // Placement/terrain validity checks shared by placement, movement orders, and the on-map
 // cursor probe.
 import {COAST_KM, inTerritory, UNITS} from "../../game/engine.js";
+import {offsetKmPolar} from "../../lib/geo.js";
 
 export function usePlacementChecks({mapRef, w, mySlot, myGid}) {
     const featsAt = (e) => {
@@ -18,12 +19,10 @@ export function usePlacementChecks({mapRef, w, mySlot, myGid}) {
     const nearWater = (e) => {
         const m = mapRef.current;
         if (!m) return false;
-        const cosLat = Math.max(0.05, Math.cos((e.lngLat.lat * Math.PI) / 180));
         for (const r of [COAST_KM * 0.55, COAST_KM]) {
             for (let i = 0; i < 10; i++) {
                 const a = (i / 10) * Math.PI * 2;
-                const lng = e.lngLat.lng + (r / (111 * cosLat)) * Math.cos(a);
-                const lat = e.lngLat.lat + (r / 111) * Math.sin(a);
+                const {lng, lat} = offsetKmPolar({lng: e.lngLat.lng, lat: e.lngLat.lat}, r, a);
                 const p = m.project([lng, lat]);
                 if (m.queryRenderedFeatures(p, {layers: ["country-fill"]}).length === 0) return true;
             }

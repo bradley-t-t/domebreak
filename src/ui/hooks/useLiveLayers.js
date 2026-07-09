@@ -7,7 +7,7 @@
 // pattern is invisible to exhaustive-deps, so it's disabled for this file.
 /* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 
@@ -22,7 +22,6 @@ const coverageRing = (globe, lng, lat, km, steps, innerKm = 0) =>
 export function useLiveLayers({
                                   w,
                                   mySlot,
-                                  myNation,
                                   backdrop,
                                   layers,
                                   selUnit,
@@ -38,9 +37,13 @@ export function useLiveLayers({
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [backdrop]);
+    // Cities in neutral (inactive) countries are pure scenery — no dot on the map,
+    // no ruin, no health halo. LiveGame's onCityClick / openCityMenu also treat them
+    // as non-interactable, so dropping them here keeps the map, the hit tests, and
+    // the game rules aligned.
     const liveFC = useMemo(() => ({
         type: "FeatureCollection",
-        features: w.cities.map((c) => ({
+        features: w.cities.filter((c) => isActive(w, c.slot)).map((c) => ({
             type: "Feature",
             properties: {
                 id: c.id,
@@ -52,7 +55,7 @@ export function useLiveLayers({
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
-    }), [w.cities, w.time, mySlot]);
+    }), [w.cities, w.nations, w.time, mySlot]);
 
     // Radioactive fallout footprints: one polygon per active cloud, its opacity
     // driven by the same intensity curve the tick uses for damage, so the visible
@@ -99,8 +102,7 @@ export function useLiveLayers({
     const radarFC = useMemo(() => layers.radar ? ({
         type: "FeatureCollection",
         features: visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => {
-            const n = w.nations.find((x) => x.slot === u.slot);
-            const c = coverageRing(globe, u.lng, u.lat, radarRangeOf(u.type) * (n?.radarMult ?? 1), 44);
+            const c = coverageRing(globe, u.lng, u.lat, radarRangeOf(u.type), 44);
             // Dedicated ground sensors ring in their own hue so the warning tiers
             // read apart (OTH amber, Early Warning cyan); mobile emitters keep
             // their faction color.
@@ -109,18 +111,15 @@ export function useLiveLayers({
         })
     }) : {type: "FeatureCollection", features: []}, [layers.radar, w.units, w.time, mySlot, globe]);
     // Emitter centers + coverage radius for the animated PPI sweep — same filter
-    // and research-scaled radius as radarFC, so the sweep tracks the ring exactly.
-    // RadarSweep rebuilds the rotating wedge geometry itself each animation frame;
-    // this only feeds it where the emitters are and how far they reach.
+    // and radius as radarFC, so the sweep tracks the ring exactly. RadarSweep
+    // rebuilds the rotating wedge geometry itself each animation frame; this only
+    // feeds it where the emitters are and how far they reach.
     const radarEmitters = useMemo(() => layers.radar
-        ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => {
-            const n = w.nations.find((x) => x.slot === u.slot);
-            return {
-                lng: u.lng, lat: u.lat,
-                rKm: radarRangeOf(u.type) * (n?.radarMult ?? 1),
-                color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)
-            };
-        })
+        ? visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u)).map((u) => ({
+            lng: u.lng, lat: u.lat,
+            rKm: radarRangeOf(u.type),
+            color: RADAR_RING_COLORS[u.type] || teamColor(u.slot)
+        }))
         : [], [layers.radar, w.units, w.time, mySlot]);
     const defenseFC = useMemo(() => layers.defense ? ({
         type: "FeatureCollection",
@@ -146,9 +145,9 @@ export function useLiveLayers({
             const def = UNITS[sel.type];
             let radius = null, isRadar = 0;
             if (def.kind === "defense") radius = defenseRange(w, sel); else if (def.kind === "support") {
-                // Sensors show their true coverage (research-scaled) — same circle
-                // the radar layer draws, so selection and coverage never disagree.
-                radius = def.detect ? radarRangeOf(sel.type) * (myNation?.radarMult ?? 1) : def.range;
+                // Sensors show their true coverage — same circle the radar layer
+                // draws, so selection and coverage never disagree.
+                radius = def.detect ? radarRangeOf(sel.type) : def.range;
                 isRadar = 1;
             }
             if (radius && (def.detect || radius <= 4000)) {

@@ -4,9 +4,8 @@
 // localStorage + on-disk mirror path as settings (see localData.persistKey), so
 // a player's HUD arrangement survives across sessions and lives with the game
 // install rather than any account.
-import {persistKey} from "./localData.js";
-
-const KEY = "domebreak.hudLayout";
+import {createPersistedStore} from "../../lib/storage.js";
+import {clamp} from "../../lib/math.js";
 
 // The adjustable regions. Order drives the layout-menu listing.
 export const HUD_PANELS = [
@@ -33,8 +32,6 @@ export const DEFAULT_HUD_LAYOUT = Object.fromEntries(
     HUD_PANELS.map((p) => [p.id, {...PANEL_DEFAULT}])
 );
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
 // Coerce one persisted (or caller-supplied) panel blob back into valid bounds,
 // filling any missing field from the default so an older/partial save still
 // resolves every property.
@@ -49,23 +46,15 @@ export function normalizePanel(p) {
     };
 }
 
-// Loads the saved layout merged over defaults (corrupt/absent storage →
-// defaults). Every known panel is always present and in-bounds after this.
-export function loadHudLayout() {
-    let saved = {};
-    try {
-        saved = JSON.parse(localStorage.getItem(KEY) || "{}") || {};
-    } catch { /* corrupt blob — fall back to defaults */ }
-    const out = {};
-    for (const p of HUD_PANELS) out[p.id] = normalizePanel(saved[p.id]);
-    return out;
-}
+// Every known panel is always present and in-bounds after load. Corrupt or
+// missing blobs fall back to defaults automatically.
+const store = createPersistedStore("domebreak.hudLayout", DEFAULT_HUD_LAYOUT, {
+    normalize: (saved) => {
+        const out = {};
+        for (const p of HUD_PANELS) out[p.id] = normalizePanel(saved?.[p.id]);
+        return out;
+    },
+});
 
-// Persists the full layout object (best-effort — storage errors are ignored),
-// mirroring it to the on-disk store on desktop.
-export function saveHudLayout(layout) {
-    try {
-        localStorage.setItem(KEY, JSON.stringify(layout));
-        persistKey(KEY);
-    } catch { /* ignore */ }
-}
+export const loadHudLayout = store.load;
+export const saveHudLayout = store.save;

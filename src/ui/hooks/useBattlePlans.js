@@ -8,6 +8,7 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {BATTLE_PLAN} from "../../game/data/constants.js";
 import {readBattlePlans, writeBattlePlans} from "../../game/engine.js";
+import {byId} from "../../lib/iter.js";
 
 // Monotonic plan id source (UI-only), kept out of the state updaters so those stay pure
 // under React strict-mode double-invocation. Seeded past any restored plan id (seedSeq)
@@ -58,7 +59,7 @@ export function useBattlePlans(world) {
         writeBattlePlans(world, plans, activeId);
     }, [world, plans, activeId]);
 
-    const active = useMemo(() => plans.find((p) => p.id === activeId) || null, [plans, activeId]);
+    const active = useMemo(() => byId(plans, activeId) || null, [plans, activeId]);
 
     const patchPlan = useCallback((id, patch) => {
         setPlans((prev) => prev.map((p) => (p.id === id ? {...p, ...(typeof patch === "function" ? patch(p) : patch)} : p)));
