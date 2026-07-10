@@ -193,4 +193,3 @@ export const CATEGORIES_WITH_UNITS = CATEGORIES.map((c) => ({
 })).filter((c) => c.units.length > 0);
 
 // Flattened list — used for "All" mode in the WikiPage.
-export const UNITS_LIST = CATEGORIES_WITH_UNITS.flatMap((c) => c.units);
