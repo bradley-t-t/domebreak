@@ -11,7 +11,7 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nationOf, rand} from "./worldState.js";
-import {atWar, gdpOf, industryCapOf, netIncomeOf, defenseRange} from "./queries.js";
+import {atWar, gdpOf, industryCapOf, netIncomeOf} from "./queries.js";
 import {randRange, weightedPick} from "../../lib/random.js";
 import {clamp} from "../../lib/math.js";
 import {
@@ -311,21 +311,6 @@ function pickDefender(w, n, myUnits, points) {
     return options[0].t;
 }
 
-// Uncovered protect-points — points not inside any live friendly defender.
-function uncoveredPoints(w, slot, myUnits) {
-    const pts = protectPoints(w, slot, myUnits);
-    const out = [];
-    for (const p of pts) {
-        let covered = false;
-        for (const u of myUnits) {
-            if (UNITS[u.type].kind !== "defense") continue;
-            if (haversine(u.lng, u.lat, p.lng, p.lat) <= defenseRange(w, u)) { covered = true; break; }
-        }
-        if (!covered) out.push(p);
-    }
-    return out;
-}
-
 // Weakest / most-drainy unit we could safely scrap to escape a deficit — the
 // highest-upkeep unit that is NOT covering the capital / bunker, NOT engaged,
 // NOT the only defender we own, and NOT the last of its kind.
@@ -464,15 +449,16 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
         if (type && q(type)) return true;
     }
 
-    // Industry gate — until every industrial slot is filled (live or on the
-    // line), hold every remaining point for the next slot. Downstream steps
-    // (defense expansion, warhead stocks, radar, bunker, air wing, offense,
-    // naval) all wait their turn. Deficit nations fall through: their only
-    // escape is to keep laddering the industry chain. Also fall through when
-    // the map is saturated (no land- or coastal-industry spot survives spread
-    // + border checks) so a small nation whose reachable ceiling sits below
-    // indCap doesn't stall the whole doctrine on a cap it can never fill.
-    if (industryTotal < indCap && !deficit
+    // Industry gate — hold points ONLY through the bootstrap floor, not the
+    // full population-scaled cap. Once the AI has a productive economic base
+    // (a few structures), the rest of the ladder — radar, offense, warhead
+    // stocks, bunker, airstrip, layered defense, ground, naval — competes for
+    // points alongside industry rather than starving behind it. The industry
+    // block above still runs first every think, so any point pile large
+    // enough for a techpark keeps going into economy first. Deficit nations
+    // and saturated maps still fall through so they can keep moving.
+    const industryFloor = Math.min(indCap, AI_TUNING.industryBootstrap);
+    if (industryTotal < industryFloor && !deficit
         && (aiPlace(w, n, "factory", myUnits, cities, front)
             || aiPlace(w, n, "port", myUnits, cities, front))) return false;
 
@@ -557,16 +543,16 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
         if (q("airstrip")) return true;
     }
 
-    // 7. Layered defense expansion — fill uncovered protect-points, cycling
-    //    across every buildable defense tier so the AI ends up with a real mix
-    //    of batteries, Patriots, Golden Domes, Aegis nodes, THAAD, and orbital
-    //    lasers instead of stacking one type.
+    // 7. Layered defense expansion — grow up to defenseTarget, cycling across
+    //    every buildable defense tier so the AI ends up with a real mix of
+    //    batteries, Patriots, Golden Domes, Aegis nodes, THAAD, and orbital
+    //    lasers instead of stacking one type. aiPlace already prefers
+    //    uncovered protect-points; we no longer refuse to build once every
+    //    city is technically covered, otherwise a single wide-area SAM leaves
+    //    a small nation with a single defender against a real strike package.
     if (defenders < defenseTarget) {
-        const uncov = uncoveredPoints(w, n.slot, myUnits);
-        if (uncov.length) {
-            const type = pickDefender(w, n, myUnits, n.points);
-            if (type && q(type)) return true;
-        }
+        const type = pickDefender(w, n, myUnits, n.points);
+        if (type && q(type)) return true;
     }
 
     // 7b. Ground army — armybase then a tank/infantry/artillery mix.
