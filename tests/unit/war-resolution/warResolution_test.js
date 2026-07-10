@@ -25,6 +25,7 @@ function fresh() {
             {id: "b3", slot: 1, name: "B-3", state: "BS3", cap: 0, pop: 50, econ: 1, lng: 12, lat: 0},
             {id: "c1", slot: 2, name: "C-Cap", state: "CS1", cap: 1, pop: 100, econ: 1, lng: 20, lat: 0},
         ],
+        rules: {playerGraceSec: 0}, // opening ceasefire off so t=0 declareWar calls stand up their wars
     });
     w.city = (id) => w.cities.find((c) => c.id === id);
     return w;
@@ -112,6 +113,20 @@ describe("warTick — auto-surrender through the live tick", () => {
         declareWar(w, 0, 1);
         step(w, 0.1);
         expect(atWar(w, 0, 1)).toBe(true);
+    });
+
+    it("test_prior_defeat_does_not_carry_a_surrender_ratio_into_the_next_war", () => {
+        const w = fresh();
+        w.paused = false;
+        declareWar(w, 0, 1);
+        w.city("b2").slot = 0;                             // A occupies two of B's three cities
+        w.city("b3").slot = 0;
+        endWar(w, 0, 1, 0);                                // A wins; B cedes b2 and b3 but keeps b1
+        expect(atWar(w, 0, 1)).toBe(false);
+        w.time += DIPLOMACY.minWarSec + 1;
+        declareWar(w, 0, 1);                               // fresh war against a shrunken B
+        step(w, 0.1);
+        expect(atWar(w, 0, 1)).toBe(true);                 // baseline rebaselined — B does not instantly capitulate
     });
 });
 

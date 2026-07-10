@@ -4,6 +4,7 @@ import {
     industryCapOf,
     industryCountOf,
     industryOutputOf,
+    industryPendingOf,
     netIncomeOf,
     populationOf,
     vitalityOf,
@@ -48,13 +49,15 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
             gdp: gdpOf(world, mySlot),
             net: netIncomeOf(world, mySlot),
             indCount: industryCountOf(world, mySlot),
+            indPending: industryPendingOf(world, mySlot),
             indCap: industryCapOf(world, mySlot),
             indOut: industryOutputOf(world, mySlot),
         };
     }, [world, mySlot]);
 
     if (!myNation) return null;
-    const indFrac = view.indCap > 0 ? Math.min(1, view.indCount / view.indCap) : 0;
+    const indUsed = view.indCount + view.indPending;
+    const indFrac = view.indCap > 0 ? Math.min(1, indUsed / view.indCap) : 0;
 
     const pillClass = {
         secure: "text-dim border-line",
@@ -106,10 +109,10 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                 </div>
 
                 <div className="px-3 py-[10px] border-b border-hair"
-                     title={`Built ${view.indCount} of ${view.indCap} industry slots (factories, ports, refineries, tech parks). Cap grows with population. Combined output +${view.indOut.toFixed(1)} pts/s.`}>
+                     title={`${view.indCount} standing${view.indPending ? ` + ${view.indPending} in production` : ""} of ${view.indCap} industry slots (factories, ports, refineries, tech parks). Cap grows with population. Combined output +${view.indOut.toFixed(1)} pts/s.`}>
                     <div className="flex items-baseline justify-between mb-[6px]">
-                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Industry (built / cap)</span>
-                        <span className="font-display text-[12.5px] text-dim">{view.indCount}<span
+                        <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Industry (used / cap)</span>
+                        <span className="font-display text-[12.5px] text-dim">{indUsed}<span
                             className="text-faint font-normal text-xs">/{view.indCap}</span> · +{view.indOut.toFixed(1)}/s</span>
                     </div>
                     <Meter frac={indFrac} className="h-[5px] rounded-[3px] bg-hair"

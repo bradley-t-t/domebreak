@@ -10,7 +10,7 @@ export const DEFAULT_RULES = Object.freeze({
     activeCount: NEUTRAL.defaultActive,          // participating nations in the match
     startPoints: START_POINTS,                    // opening points every nation starts with
     dominationPopFrac: DIPLOMACY.dominationPopFrac, // world-pop share that wins the war
-    playerGraceSec: DIPLOMACY.playerGraceSec,     // opening ceasefire before AIs may declare on the player
+    playerGraceSec: DIPLOMACY.playerGraceSec,     // opening ceasefire during which nobody may declare war
     balanced: false,                              // equalize GDP/pop across nations for a level opening
 });
 
@@ -55,7 +55,7 @@ export const RULES_META = [
     {
         key: "playerGraceSec",
         label: "Opening Grace",
-        help: "Seconds at match start during which AIs won't declare war on a human commander. Up to one full hour.",
+        help: "Seconds at match start during which no nation — human or AI — may declare war. Up to one full hour.",
         type: "range",
         min: 0,
         max: 3600,

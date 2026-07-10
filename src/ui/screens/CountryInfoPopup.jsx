@@ -8,7 +8,7 @@
 import {useMemo} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
-import {colorForSlot} from "../../game/data/constants.js";
+import {colorForSlot, DIPLOMACY} from "../../game/data/constants.js";
 import {miniButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
@@ -66,6 +66,8 @@ export default function CountryInfoPopup({world, api, mySlot, online, targetSlot
     };
 
     const canAct = !isMe && !neutral && !eliminated;
+    const graceSec = world.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
+    const graceActive = graceSec > 0 && (world.time ?? 0) < graceSec;
     const borderColor = n.color || colorForSlot(n.slot);
 
     return (
@@ -127,6 +129,8 @@ export default function CountryInfoPopup({world, api, mySlot, online, targetSlot
                                         onClick={() => call(() => api.proposeAlliance(n.slot))}>Propose Alliance</button>
                             )}
                             <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
+                                    disabled={graceActive}
+                                    title={graceActive ? "Opening grace — no wars can be declared yet." : undefined}
                                     onClick={() => call(() => api.declareWar(n.slot))}>Declare War</button>
                         </div>
                     )}

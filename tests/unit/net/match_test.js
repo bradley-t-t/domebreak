@@ -23,7 +23,9 @@ const fakeWs = () => ({readyState: 1, OPEN: 1, sent: [], send(p) { this.sent.pus
 
 let live = [];
 const mk = (onFinished) => {
-    const m = new Match({lobbyId: "L", roster: roster(), onFinished});
+    // Opening grace is on by default (playerGraceSec: 45); these tests declare war
+    // at t=0 to exercise routing/gating, so switch it off for the fixture world.
+    const m = new Match({lobbyId: "L", roster: roster(), rules: {playerGraceSec: 0}, onFinished});
     live.push(m);
     return m;
 };

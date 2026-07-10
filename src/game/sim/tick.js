@@ -1,12 +1,12 @@
 // The main simulation step: research/production progress, unit movement and
-// firing, projectile flight and interception, sensor sweeps, and the simple
-// opponent AI. This is the tick engine's single entry point (step()).
-// The tick phases live in ./tickPhases.js and the opponent AI / diplomacy
-// live in ./aiTick.js — step() below is a thin orchestrator over both.
+// firing, projectile flight and interception, sensor sweeps, and the opponent
+// AI. This is the tick engine's single entry point (step()).
+// The tick phases live in ./tickPhases.js and the opponent AI (including its
+// diplomacy) lives in ./ai/ — step() below is a thin orchestrator over both.
 import {evacTick} from "./leadership.js";
 import {updateStability} from "./stability.js";
 import {captureTick} from "./occupation.js";
-import {aiTick, diploTick} from "./aiTick.js";
+import {aiTick} from "./ai/index.js";
 import {decapitationTick, warTick} from "./warResolution.js";
 import {
     growCities,
@@ -56,7 +56,6 @@ export function step(w, dt, predict = false) {
     if (predict) return w;
 
     aiTick(w, dt);
-    diploTick(w, dt);
     // Dispatch/relaunch leadership evac ferries for nations actively sheltering
     // (player pressed Shelter, or an AI that has entered a war).
     evacTick(w);

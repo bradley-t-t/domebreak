@@ -134,6 +134,7 @@ export {
     falloutDoseAt,
     industryOutputOf,
     industryCountOf,
+    industryPendingOf,
     industryCapOf,
     gdpOf,
     incomeOf,

@@ -6,7 +6,7 @@
 import {useState} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
-import {colorForSlot} from "../../game/data/constants.js";
+import {colorForSlot, DIPLOMACY} from "../../game/data/constants.js";
 import {miniButton, input} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp} from "../lib/format.js";
@@ -38,6 +38,8 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     const standings = [...roster].sort((a, b) => (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
     const rankOf = new Map(standings.map((n, i) => [n.slot, i + 1]));
 
+    const graceSec = world.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
+    const graceActive = graceSec > 0 && (world.time ?? 0) < graceSec;
     const aliveCount = roster.filter((n) => n.alive).length;
     const atWar = roster.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "war").length;
     const allied = roster.filter((n) => n.slot !== mySlot && me?.relations[n.slot] === "ally").length;
@@ -138,6 +140,8 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
                                                             <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
                                                                     onClick={() => api.proposeAlliance(n.slot)}>Ally</button>}
                                                         <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
+                                                                disabled={graceActive}
+                                                                title={graceActive ? "Opening grace — no wars can be declared yet." : undefined}
                                                                 onClick={() => api.declareWar(n.slot)}>Declare War</button>
                                                     </>
                                                 )}

@@ -9,6 +9,7 @@ import {
     allowedAmmo,
     AMMO_START,
     AMPHIB_LIFT_KM,
+    DIPLOMACY,
     MOVE_COST_FRAC,
     PATROL_SIZES,
     SCRAP_REFUND_FRAC,
@@ -18,6 +19,7 @@ import {
 } from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
+import {recordAllianceBroken} from "./ai/diplomacy/ledger.js";
 import {findTarget} from "./combat.js";
 import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
@@ -25,7 +27,7 @@ import {haversine} from "../geo/geo.js";
 
 // Set the war relation between two nations and stamp the war-start time on both
 // sides so diplomacy can age the conflict regardless of which nation opened it
-// (see diploTick in sim/tick.js). Relation-only — events are the caller's job.
+// (see the diplomacy layer in sim/ai/). Relation-only — events are the caller's job.
 function setWar(w, na, nb, a, b) {
     na.relations[b] = "war";
     nb.relations[a] = "war";
@@ -56,6 +58,10 @@ export function declareWar(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
     if (!na || !nb || a === b) return {error: "Invalid order."};
     if (na.relations[b] === "ally") return {error: "You are allied — break the alliance first."};
+    // Opening grace is a hard ceasefire for the whole world — no nation, human
+    // or AI, may open a war until the window elapses.
+    const grace = w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec;
+    if (grace > 0 && w.time < grace) return {error: "Opening grace is in effect — no wars may be declared yet."};
     setWar(w, na, nb, a, b);
     w.events.push({id: nextId(w, "e"), t: w.time, type: "war", a, b});
     // Defensive pact: an attack on b pulls b's allies in against the aggressor.
@@ -77,11 +83,15 @@ export function formAlliance(w, a, b) {
 }
 
 // Dissolve an alliance — both sides fall back to peace. No-op on either side that
-// isn't actually allied, so a one-sided/legacy state can't be corrupted.
+// isn't actually allied, so a one-sided/legacy state can't be corrupted. Every
+// deliberate break — the player's included — lands on both diplomatic ledgers as
+// a backstab, so future proposals between the pair get harder (see ai/diplomacy).
 export function breakAlliance(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
+    const wasAllied = (na && na.relations[b] === "ally") || (nb && nb.relations[a] === "ally");
     if (na && na.relations[b] === "ally") na.relations[b] = "peace";
     if (nb && nb.relations[a] === "ally") nb.relations[a] = "peace";
+    if (wasAllied) recordAllianceBroken(w, a, b);
     w.events.push({id: nextId(w, "e"), t: w.time, type: "breakalliance", a, b});
     return {ok: true};
 }

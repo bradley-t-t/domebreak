@@ -36,7 +36,7 @@ export const START_CAM = {
 // while attract/lobby keep a permissive floor so their pulled-back framing still
 // renders. LiveGame passes `min`; other surfaces use WorldMap's `menuMin` default.
 export const WORLD_ZOOM = {
-    min: 3.8,       // gameplay zoom-out floor
+    min: 3.54,      // gameplay zoom-out floor
     menuMin: 1.1,   // permissive floor for attract/lobby so their wide framing isn't clamped
     max: 7,         // closest zoom-in allowed
 };
@@ -108,9 +108,9 @@ export const ECONOMY = {
 // health, so bombing enemy cities lowers their industrial ceiling. Shared across
 // all kind:"industry" types (factory/port/refinery/techpark).
 export const INDUSTRY = {
-    base: 6,
-    popPer: 40e6,
-    max: 24,
+    base: 12,
+    popPer: 20e6,
+    max: 48,
 };
 
 // Population growth. Each living city's people grow every tick, scaled by its
@@ -122,40 +122,7 @@ export const POPULATION = {
     growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
 };
 
-// Opponent-AI tuning (consumed by aiTick in sim/tick.js). Reserves are the
-// points cushion the AI keeps on hand before committing to that purchase.
-export const AI_TUNING = {
-    thinkMin: 3, thinkSpan: 3,       // seconds between decisions: min + rand·span
-    queueMax: 2,                     // keep the production line short — plan, don't hoard
-    thermoChance: 0.25,              // odds per decision to arm/order a thermo warhead
-    hgvChance: 0.3,                  // odds per decision to arm/order a hypersonic warhead
-    sicbmChance: 0.3,                // odds per decision to arm/order a SICBM round (TEL)
-    stdStockTarget: 4, stdReserve: 60,
-    thermoStockTarget: 1, thermoReserve: 300,
-    hgvStockTarget: 2, hgvReserve: 200,
-    sicbmStockTarget: 2, sicbmReserve: 150,
-    radarReserve: 100, othReserve: 150,
-    industryTarget: 3, factoryReserve: 120,
-    siloReserve: 200, siloMinNet: 3,
-    // Deep-tree tuning: unlockedBuildChance is the per-decision odds of building a
-    // tech-gated unit; spaceHqReserve is the cushion before the Space Command HQ
-    // prerequisite; subReserve gates the pricier hulls.
-    unlockedBuildChance: 0.5, spaceHqReserve: 700, subReserve: 260,
-    // Strategic placement (aiPlace in sim/tick.js). The AI sites units by role and
-    // spreads them across its cities instead of piling everything onto the capital.
-    spreadKm: 150,                   // min distance the AI keeps between two same-role units
-    defensePerPoint: 0.5, defenseMax: 6,   // defenses built = clamp(round(protectPts·perPoint),1,max)
-    radarPerCity: 0.25, radarMax: 3,       // radars built = clamp(round(cities·perCity),1,max)
-    bunkerMinCities: 3, bunkerReserve: 150, // raise one leadership bunker once this established
-    // Smart offensive targeting — value-weighted over at-war enemy cities.
-    targetDistScaleKm: 6000,  // distance at which a target's value roughly halves (nearer preferred)
-    targetTopN: 4,            // weighted-random pick among the N strongest candidates (concentration + variety)
-    // Ground expansion doctrine — the tool for taking and holding territory.
-    armyReserve: 120,         // points cushion kept before committing to army builds
-    groundTarget: 6,          // mobile capture-capable battalions an active AI fields to seize cities
-    // Air doctrine.
-    patrolSize: 2,            // default fighter patrol an AI stands up on its airbases once at war
-};
+// Opponent-AI tuning lives in sim/ai/tuning.js, organized by pipeline stage.
 
 // Strategic objectives — the guided goals shown in the Objectives menu (see
 // sim/objectives.js). Counts are how many of a structure the goal wants;
@@ -175,28 +142,29 @@ export const OBJECTIVES_TUNING = {
     launchersRequired: 2,
 };
 
-// Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
-// in sim/tick.js. These knobs govern how wars start and end, how hard distant
-// peaceful nations are throttled, the fielding cap on global unit count, and the
-// player's domination-victory threshold. Diplomacy rolls use the seeded rand(w),
-// so world history is reproducible from (seed, playerIso).
+// Living-world AI diplomacy + world-sim bounds. Consumed by the AI pipeline in
+// sim/ai/ (its own knobs live in sim/ai/tuning.js). These govern how wars start
+// and end, how hard distant peaceful nations are throttled, the fielding cap on
+// AI unit count, and the player's domination-victory threshold. Diplomacy rolls
+// use the seeded rand(w), so world history is reproducible from (seed, playerIso).
 export const DIPLOMACY = {
     // War/peace rhythm.
     thinkMin: 12, thinkSpan: 10,     // seconds between a nation's diplomacy evaluations
     warRangeKm: 4200,                // max capital-to-capital distance for a war to start
     maxWars: 2,                      // simultaneous wars a nation will sustain
     declareChance: 0.35,             // odds per diplo tick an eligible nation opens a war
-    playerGraceSec: 45,              // opening window before AIs may declare on the player
-    wGdp: 0.6, wWeak: 0.8,           // rival weighting exponents: prefer wealthier / weaker
+    playerGraceSec: 45,              // opening window during which no nation may declare war
     wMin: 0.15, wMax: 8,             // clamp on any single rival's selection weight
     surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction
     minWarSec: 90,                   // minimum war duration before a white-peace offer
     peaceOfferChance: 0.06,          // odds per diplo tick an AI offers white peace once past minWarSec
+    playerPeaceCooldownSec: 240,     // after sending a peace offer to a human (or being declined) an AI waits this long before offering again
     // Alliances (mutual-defense pacts).
     maxAllies: 2,                    // simultaneous alliances a nation will hold
     allyRangeKm: 4200,               // max capital-to-capital distance to propose an alliance
     allyProposeChance: 0.05,         // odds per diplo tick an eligible AI proposes an alliance
     allySharedEnemyW: 2,             // extra proposal weight toward a candidate that shares an enemy
+    playerAllianceCooldownSec: 240,  // after proposing alliance to a human (or being declined) an AI waits this long before proposing again
     // Level-of-detail: a nation at war or within activeRangeKm of the player runs its
     // build/attack AI (aiTick) at the normal cadence; everyone else runs on the slow
     // idle cadence — bounding heavy AI work to the action actually on the map.
