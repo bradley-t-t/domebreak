@@ -3,6 +3,7 @@
 // end-of-tick cleanup/victory checks. step() orchestrates these in order.
 import {
     initialWarhead,
+    CITY_REGEN,
     DEFAULT_BUILD_TIME,
     DEFAULT_HIT_PROB,
     DEFAULT_RELOAD,
@@ -19,7 +20,7 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nationOf, nextId, rand} from "./worldState.js";
-import {clamp01} from "../../lib/math.js";
+import {clamp, clamp01} from "../../lib/math.js";
 import {offsetKmPolar} from "../../lib/geo.js";
 import {
     airborne,
@@ -28,6 +29,7 @@ import {
     defenseMinRange,
     falloutIntensity,
     falloutProximity,
+    hasSurrendered,
     netIncomeOf,
     sensorsCover,
     sensorsOf,
@@ -41,20 +43,69 @@ import {reconcileLeadership, updateCommand} from "./leadership.js";
 import {REPLENISH_RELOAD_MULT} from "../data/constants.js";
 import {spawnQueuedUnit} from "./tickSpawn.js";
 
+// Per-slot prosperity multiplier for population growth: the nation's effective
+// GDP (surviving economy × baseline GDP + built industry — gdpOf's formula) over
+// its baseline GDP, clamped to [gdpGrowthFloor, gdpGrowthCap]. Batched in one
+// pass over cities+units — calling gdpOf() per nation would be O(nations × world)
+// every tick. Slots without a GDP-rated nation (tests, legacy saves) grow at 1×.
+function prosperityBySlot(w) {
+    const {gdpGrowthFloor, gdpGrowthCap} = POPULATION;
+    const econ = new Map(), industry = new Map();
+    for (const c of w.cities) {
+        if (!c.alive) continue;
+        econ.set(c.slot, (econ.get(c.slot) || 0) + (c.econ || 0) * vitalityOf(c));
+    }
+    for (const u of w.units ?? []) {
+        const g = u.hp > 0 ? UNITS[u.type].gdpAdd || 0 : 0;
+        if (g) industry.set(u.slot, (industry.get(u.slot) || 0) + g);
+    }
+    const out = new Map();
+    for (const n of w.nations ?? []) {
+        if (!(n.gdp > 0)) continue;
+        const gdp = n.gdp * (econ.get(n.slot) || 0) + (industry.get(n.slot) || 0);
+        out.set(n.slot, clamp(gdp / n.gdp, gdpGrowthFloor, gdpGrowthCap));
+    }
+    return out;
+}
+
 // Population growth: each living city's people grow toward a ceiling, scaled by
 // vitality so healthy cities repopulate over a match and battered ones barely
-// recover. Pure and deterministic — a function of stored pop/hp and dt, no RNG.
+// recover, and by national prosperity (prosperityBySlot above) so a wrecked or
+// conquered-away economy slows repopulation and built industry quickens it. Pure
+// and deterministic — a function of stored pop/hp, nation GDP, and dt, no RNG.
 // Raw pop is capped at pop0 * growthCapMult; pop0 falls back to current pop for
 // legacy saves.
 export function growCities(w, dt) {
     if (dt <= 0) return;
     const {growthPerSec, growthCapMult} = POPULATION;
     if (growthPerSec <= 0 || growthCapMult <= 1) return;
+    const prosperity = prosperityBySlot(w);
     for (const c of w.cities) {
         if (!c.alive) continue;
         const cap = (c.pop0 ?? c.pop) * growthCapMult;
         if (c.pop >= cap) continue;
-        c.pop = Math.min(cap, c.pop * (1 + growthPerSec * vitalityOf(c) * dt));
+        const rate = growthPerSec * vitalityOf(c) * (prosperity.get(c.slot) ?? 1);
+        c.pop = Math.min(cap, c.pop * (1 + rate * dt));
+    }
+}
+
+// City reconstruction: every damaged-but-living city rebuilds toward full health
+// at CITY_REGEN.hpFracPerSec of maxHp per game-second — provided its people are
+// still there (pop > 0) and its owner is still standing: alive, and not inside
+// the post-surrender window a lost war opens (hasSurrendered). A destroyed city
+// (alive=false — its population is gone) never comes back. Flat fraction of
+// maxHp, so a battered capital rebuilds on the same timescale as a town.
+export function healCities(w, dt) {
+    if (dt <= 0) return;
+    const rate = CITY_REGEN.hpFracPerSec;
+    if (rate <= 0) return;
+    const standing = new Set();
+    for (const n of w.nations ?? []) {
+        if (n.alive && !hasSurrendered(w, n)) standing.add(n.slot);
+    }
+    for (const c of w.cities) {
+        if (!c.alive || !(c.pop > 0) || c.hp >= c.maxHp || !standing.has(c.slot)) continue;
+        c.hp = Math.min(c.maxHp, c.hp + c.maxHp * rate * dt);
     }
 }
 
