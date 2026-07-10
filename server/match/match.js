@@ -12,6 +12,15 @@ import {openingFreeze} from "./openingFreeze.js";
 import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "../config.js";
 import {indexBy} from "../../src/lib/iter.js";
 
+// Player chat is relayed, never simulated: the sender is the authenticated
+// socket's slot, text is trimmed and capped, and a small per-slot burst limit
+// keeps one client from flooding the match. No history is kept server-side —
+// clients hold their own rolling log. (The client input caps at the same
+// length; this is the authoritative bound.)
+const CHAT_MAX_LEN = 240;
+const CHAT_BURST = 5;        // messages allowed per rolling window, per slot
+const CHAT_WINDOW_MS = 5000;
+
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
 function resolveIsos(picks) {
@@ -41,6 +50,7 @@ export class Match {
         this.onFinished = onFinished;
         this.startedAt = new Date().toISOString();
         this.sockets = new Map();   // slot -> ws
+        this.chatStamps = new Map(); // slot -> recent chat send times (flood limit)
         this.graceTimers = new Map();
         this.quit = new Set();      // userIds recorded as quit
         this.reported = false;
@@ -168,6 +178,24 @@ export class Match {
             return fn(this.world, slot, Array.isArray(args) ? args : []) ?? {ok: true};
         } catch (e) {
             return {error: String(e?.message || e)};
+        }
+    }
+
+    // Relay a chat line to every connected player. Deliberately not gated on
+    // world.over — sockets linger after the war ends so the outcome screen can
+    // still talk. Floods and junk are dropped silently (nothing to nack).
+    chat(slot, text) {
+        const p = this.players.find((x) => x.slot === slot);
+        const clean = typeof text === "string" ? text.trim().slice(0, CHAT_MAX_LEN) : "";
+        if (!p || !clean) return;
+        const now = Date.now();
+        const recent = (this.chatStamps.get(slot) || []).filter((t) => now - t < CHAT_WINDOW_MS);
+        if (recent.length >= CHAT_BURST) return;
+        recent.push(now);
+        this.chatStamps.set(slot, recent);
+        const payload = JSON.stringify({t: "chat", slot, username: p.username, text: clean, ts: now});
+        for (const ws of this.sockets.values()) {
+            if (ws.readyState === ws.OPEN) ws.send(payload);
         }
     }
 
