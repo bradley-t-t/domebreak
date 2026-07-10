@@ -35,7 +35,7 @@ function Landing({onSignIn, onShowShortcuts}) {
                     title="A map you can actually read"
                     body="Every capital, border, and city is real geography on a 3D globe. Switch the view — diplomacy, radar coverage, defense range, population — to read the whole theater at a glance."
                     points={[
-                        "195 nations on the real world map",
+                        "222 nations on the real world map",
                         "Zoom from the whole globe down to a single city",
                         "Overlays: diplomacy, radar, defense range, population",
                     ]}
