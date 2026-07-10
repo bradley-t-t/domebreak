@@ -468,8 +468,13 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
     // line), hold every remaining point for the next slot. Downstream steps
     // (defense expansion, warhead stocks, radar, bunker, air wing, offense,
     // naval) all wait their turn. Deficit nations fall through: their only
-    // escape is to keep laddering the industry chain.
-    if (industryTotal < indCap && !deficit) return false;
+    // escape is to keep laddering the industry chain. Also fall through when
+    // the map is saturated (no land- or coastal-industry spot survives spread
+    // + border checks) so a small nation whose reachable ceiling sits below
+    // indCap doesn't stall the whole doctrine on a cap it can never fill.
+    if (industryTotal < indCap && !deficit
+        && (aiPlace(w, n, "factory", myUnits, cities, front)
+            || aiPlace(w, n, "port", myUnits, cities, front))) return false;
 
     // 3. Radar coverage — early warning before anything else. A broke nation
     //    still gets radar since it's only 150 pts.
