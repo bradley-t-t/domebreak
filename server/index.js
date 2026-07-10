@@ -5,7 +5,7 @@
 //   2. Claim lobbies flipped to 'starting' (Realtime + poll fallback), build a
 //      Match, and advertise this server's WS URLs back on the lobby row.
 //   3. Terminate WebSockets: verify the Supabase JWT, map user -> slot, route
-//      whitelisted commands, stream snapshots.
+//      whitelisted commands, relay player chat, stream snapshots.
 //   4. Record results with the service role when a war ends.
 // It also serves the built client from ../dist so any browser on the network
 // can play without installing anything.
@@ -153,6 +153,8 @@ wss.on("connection", (ws) => {
         } else if (msg.t === "cmd" && match && slot != null) {
             const r = match.command(slot, msg.name, msg.args);
             if (r?.error && msg.seq != null) ws.send(JSON.stringify({t: "nack", seq: msg.seq, error: r.error}));
+        } else if (msg.t === "chat" && match && slot != null) {
+            match.chat(slot, msg.text);
         }
     });
     ws.on("close", () => {
