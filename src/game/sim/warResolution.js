@@ -218,11 +218,28 @@ export function respondAlliance(w, player, from, accept) {
     return r;
 }
 
+// Knock a routed belligerent out of the match. It becomes a passive NEUTRAL
+// (active = false — exactly like a non-participant) but stays on the map as
+// capturable territory, and carries a `wipedOut` flag so it reads as defeated-in-war
+// rather than a born neutral (the map tints its remnant land a darker wipeout grey).
+// Neutralizing it is what stops the "keeps surrendering" loop: nobody targets an
+// inactive nation (perception excludes them) and warTick skips it, so stray fallout
+// or in-flight strikes that keep it below the floor can't drag it into a new war and
+// re-surrender it. Idempotent.
+function wipeOut(w, n) {
+    if (n.active === false && n.wipedOut) return;
+    n.active = false;
+    n.wipedOut = true;
+}
+
 // Auto-surrender pass (every tick): any belligerent — AI or player — whose surviving-
 // city fraction has dropped below DIPLOMACY.surrenderThreshold capitulates in every war
 // it's fighting; the foe wins. One O(cities) alive-count pass, then a scan of each
 // nation's ≤maxWars relations. atWar is re-checked before each resolution so a single
-// tick can't double-end the same war.
+// tick can't double-end the same war. A routed AI that actually capitulates is then
+// neutralized (wipeOut) so it's out of the war game for good; the human commander is
+// never auto-neutralized — they keep fighting their remnant (and the victory check
+// assumes the local player stays an active belligerent).
 export function warTick(w) {
     ensureWar(w);
     const start = startCounts(w);
@@ -231,12 +248,15 @@ export function warTick(w) {
     for (const n of w.nations) {
         if (!n.alive || n.active === false) continue;   // neutrals aren't belligerents — they never surrender
         if ((aliveBy[n.slot] || 0) / (start[n.slot] || 1) >= DIPLOMACY.surrenderThreshold) continue;
+        let capitulated = false;
         for (const s in n.relations) {
             if (n.relations[s] !== "war") continue;
             const foe = +s;
             if (!atWar(w, n.slot, foe)) continue;      // may have ended earlier this pass
             endWar(w, foe, n.slot, foe);               // foe wins, n loses (Defeat)
+            capitulated = true;
         }
+        if (capitulated && n.isAi) wipeOut(w, n);      // routed AI leaves the match as a neutral wreck
     }
 }
 
@@ -259,6 +279,7 @@ export function decapitationTick(w) {
             endWar(w, foe, n.slot, foe);               // foe wins, n loses (Defeat)
         }
         n.alive = false;                                // eliminated — command decapitated
+        n.wipedOut = true;                              // tint its remnant land as a wipeout, like a routed surrender
         w.events.push({id: nextId(w, "e"), t: w.time, type: "conquest", loser: n.slot, decapitated: 1});
     }
 }
