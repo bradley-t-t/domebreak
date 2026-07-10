@@ -36,6 +36,20 @@ export function absorb(target, snapshot, mySlot) {
     target.mySlot = mySlot;
 }
 
+// Client-side prediction reconciliation. Each command the client sends carries a
+// monotonic seq and lands in client._pending; every server world overwrite carries
+// the last seq the server has applied for our slot. Here we drop the commands the
+// server has now baked into the snapshot, then re-apply the still-in-flight ones on
+// top of the authoritative world (via _reapply) so an optimistic action — selling a
+// unit, moving, buying — never blinks back when a snapshot generated before the
+// server processed it arrives. Exported for tests.
+export function reconcile(client, ack) {
+    if (ack != null) {
+        client._pending = client._pending.filter((c) => c.seq > ack);
+    }
+    client._reapply?.();
+}
+
 function dial(url, timeoutMs) {
     return new Promise((resolve, reject) => {
         let ws;
@@ -90,11 +104,21 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
             _ws: null,
             _closed: false,
             _forceRender: null, // wired up by useGameSession for instant snapshot renders
+            _reapply: null,     // wired up by useGameSession to replay in-flight commands
             _onChat: null,      // wired up by ChatBox for instant message renders
+            _seq: 0,            // monotonic command id for prediction reconciliation
+            _pending: [],       // sent-but-unacked commands [{seq, name, args}], replayed over each snapshot
             send(name, args) {
+                // Only a command that actually reaches the server may be predicted:
+                // if the socket is down we drop it (no seq, no pending entry) so the
+                // next snapshot cleanly reverts the optimistic local apply.
                 if (this._ws?.readyState === WebSocket.OPEN) {
-                    this._ws.send(JSON.stringify({t: "cmd", name, args}));
+                    const seq = ++this._seq;
+                    this._pending.push({seq, name, args});
+                    this._ws.send(JSON.stringify({t: "cmd", name, args, seq}));
+                    return seq;
                 }
+                return null;
             },
             sendChat(text) {
                 const t = String(text ?? "").trim().slice(0, CHAT_MAX_LEN);
@@ -134,8 +158,10 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 if (msg.t === "init") {
                     client.slot = msg.slot;
                     client.players = msg.players || [];
-                    if (client.world) absorb(client.world, msg.world, msg.slot);
-                    else {
+                    if (client.world) {
+                        absorb(client.world, msg.world, msg.slot);
+                        reconcile(client, msg.acks?.[msg.slot]);
+                    } else {
                         client.world = msg.world;
                         client.world.mySlot = msg.slot;
                     }
@@ -146,14 +172,20 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                     }
                     client._forceRender?.();
                 } else if (msg.t === "snap") {
-                    if (client.world) absorb(client.world, msg.world, client.slot);
+                    if (client.world) {
+                        absorb(client.world, msg.world, client.slot);
+                        reconcile(client, msg.acks?.[client.slot]);
+                    }
                     client._forceRender?.();
                 } else if (msg.t === "chat") {
                     client.chat.push({id: ++chatSeq, slot: msg.slot, username: msg.username, text: String(msg.text ?? ""), ts: msg.ts});
                     if (client.chat.length > CHAT_HISTORY) client.chat.splice(0, client.chat.length - CHAT_HISTORY);
                     client._onChat?.();
                 } else if (msg.t === "over") {
-                    if (client.world) absorb(client.world, msg.world, client.slot);
+                    if (client.world) {
+                        absorb(client.world, msg.world, client.slot);
+                        reconcile(client, msg.acks?.[client.slot]);
+                    }
                     client._forceRender?.();
                     onOver?.(msg.winnerSlot);
                 } else if (msg.t === "err") {
