@@ -30,7 +30,7 @@ function sharesEnemy(a, b) {
 // How stocked the war machine is against its own doctrine floor: strike
 // platforms, a standing wall, and rounds in the magazine. Prevents
 // "declare then scramble".
-export function warReadiness(frame) {
+function warReadiness(frame) {
     const strikers = have(frame, "silo") + have(frame, "launcher") + have(frame, "hypersonicbty")
         + have(frame, "sub-ssbn") + have(frame, "orbitalstrike");
     const wall = defenderCount(frame);

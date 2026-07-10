@@ -4,8 +4,8 @@
 // A slow coastal shimmer "breathes" over the shelf while the isobaths drift in a
 // gentle ellipse, reading as living current. Honors reduced-motion and pauses
 // when the tab is hidden so it never spins the GPU in the background.
-import {startPausableRaf} from "../lib/raf.js";
-import {safeMap} from "../ui/lib/mapSafe.js";
+import {startPausableRaf} from "../../lib/raf.js";
+import {safeMap} from "../../ui/lib/mapSafe.js";
 
 const FPS = 28;
 const MIN_DT = 1000 / FPS;

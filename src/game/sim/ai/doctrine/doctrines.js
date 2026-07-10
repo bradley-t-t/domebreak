@@ -13,7 +13,7 @@ import steamroller from "./steamroller.js";
 import firstStrike from "./firstStrike.js";
 import space from "./space.js";
 
-export const DOCTRINES = [turtle, balanced, projection, steamroller, firstStrike, space];
+const DOCTRINES = [turtle, balanced, projection, steamroller, firstStrike, space];
 
 export function selectDoctrines(frame, personality, posture) {
     let primary = balanced, best = -Infinity;

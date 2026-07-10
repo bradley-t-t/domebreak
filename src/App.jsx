@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {clamp} from "./lib/math.js";
 import StartMenu from "./ui/screens/StartMenu.jsx";
 import NewGame from "./ui/screens/NewGame.jsx";
 import NewGameRules from "./ui/screens/NewGameRules.jsx";
@@ -219,7 +220,7 @@ export default function App() {
             }
             const lat = sLa / arr.length, lng = sLo / arr.length, spanLo = maxLo - minLo;
             const ext = Math.max(spanLo * Math.cos((lat * Math.PI) / 180), maxLa - minLa);
-            let w = Math.max(0.45, Math.min(2.4, Math.log2(1 + ext) * 0.62));
+            let w = clamp(Math.log2(1 + ext) * 0.62, 0.45, 2.4);
             if (spanLo > 200) w = Math.min(w, 0.5); // dateline-crossing centroid is unreliable
             const cn = data.countries.find((c) => c.iso === iso);
             out.push({iso, name: cn?.name || iso, lng, lat, w, mine: slotOf[iso] === 0, combat: slotOf[iso] != null});

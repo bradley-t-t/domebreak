@@ -4,6 +4,7 @@ import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import {cn} from "../lib/cn.js";
+import {clamp} from "../../lib/math.js";
 import AmmoBar from "./AmmoBar.jsx";
 import {iconButton, popoverCard} from "../lib/variants.js";
 import {vitColor} from "../lib/status.js";
@@ -74,7 +75,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
             if (!bar || !lane) return;
             const avail = lane.clientWidth, natural = bar.scrollWidth;
             if (!avail || !natural) return;
-            const scale = Math.max(FIT_FLOOR, Math.min(1, avail / natural));
+            const scale = clamp(avail / natural, FIT_FLOOR, 1);
             const mb = scale < 1 ? -Math.round(bar.offsetHeight * (1 - scale)) : 0;
             setFit((p) => (Math.abs(p.scale - scale) < 0.004 && p.mb === mb ? p : {scale, mb}));
         };

@@ -5,6 +5,10 @@
 const HELLO_TIMEOUT_MS = 4000;
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 2000;
+// Rolling player-chat log retained on the client (the server keeps none).
+const CHAT_HISTORY = 100;
+// Courtesy cap on outgoing chat; the server enforces the same bound (match.js).
+const CHAT_MAX_LEN = 240;
 
 // Attach a structured .details string to every error surfaced from this module
 // so the client's error overlay can render (and copy) an actionable dump.
@@ -81,13 +85,22 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
             world: null,
             slot: null,
             players: [],
+            chat: [], // received chat lines [{id, slot, username, text, ts}], oldest first
             connected: false,
             _ws: null,
             _closed: false,
             _forceRender: null, // wired up by useGameSession for instant snapshot renders
+            _onChat: null,      // wired up by ChatBox for instant message renders
             send(name, args) {
                 if (this._ws?.readyState === WebSocket.OPEN) {
                     this._ws.send(JSON.stringify({t: "cmd", name, args}));
+                }
+            },
+            sendChat(text) {
+                const t = String(text ?? "").trim().slice(0, CHAT_MAX_LEN);
+                if (!t) return;
+                if (this._ws?.readyState === WebSocket.OPEN) {
+                    this._ws.send(JSON.stringify({t: "chat", text: t}));
                 }
             },
             close() {
@@ -101,6 +114,7 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
 
         let resolved = false;
         let lastCloseInfo = null; // {code, reason} from the most recent ws close
+        let chatSeq = 0;          // stable per-message id for React keys, survives reconnects
 
         const attach = async () => {
             const ws = await dialAny(urls);
@@ -134,6 +148,10 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 } else if (msg.t === "snap") {
                     if (client.world) absorb(client.world, msg.world, client.slot);
                     client._forceRender?.();
+                } else if (msg.t === "chat") {
+                    client.chat.push({id: ++chatSeq, slot: msg.slot, username: msg.username, text: String(msg.text ?? ""), ts: msg.ts});
+                    if (client.chat.length > CHAT_HISTORY) client.chat.splice(0, client.chat.length - CHAT_HISTORY);
+                    client._onChat?.();
                 } else if (msg.t === "over") {
                     if (client.world) absorb(client.world, msg.world, client.slot);
                     client._forceRender?.();

@@ -8,7 +8,7 @@ import {haversine} from "../../../geo/geo.js";
 import {PLACE} from "../tuning.js";
 
 // Coarse role for bias lookup — matches the scrapBias keys doctrines publish.
-export function unitRole(def) {
+function unitRole(def) {
     if (def.kind === "industry") return "industry";
     if (def.domain === "sea") return "naval";
     if (def.capture || (def.targets === "land" && def.landSpeed)) return "ground";

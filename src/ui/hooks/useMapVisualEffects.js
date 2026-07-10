@@ -3,7 +3,7 @@
 // colors.json, the unit-marker fade-with-zoom CSS var, and the GID_0 -> country-label
 // lookup for the zoomed-out hover readout.
 import {useEffect, useMemo, useState} from "react";
-import {COUNTRY_FILL_OPACITY} from "../../map/mapPaint.js";
+import {COUNTRY_FILL_OPACITY} from "../../map/lib/mapPaint.js";
 import {toGid3} from "../../game/data/iso3.js";
 import {norm01} from "../../lib/math.js";
 import {loadJsonAsset} from "../../lib/fetchJson.js";

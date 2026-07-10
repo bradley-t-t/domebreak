@@ -20,7 +20,7 @@ function cityValue(c) {
 }
 
 // A nation's alive cities, most valuable first.
-export function aiCities(w, slot) {
+function aiCities(w, slot) {
     const out = [];
     for (const c of w.cities) if (c.slot === slot && c.alive) out.push(c);
     out.sort((a, b) => cityValue(b) - cityValue(a));
@@ -30,7 +30,7 @@ export function aiCities(w, slot) {
 // High-value points a nation wants shielded: its cities plus its command assets
 // (leadership bunker, space HQ). Value-sorted so callers take the most valuable
 // uncovered one first.
-export function protectPoints(w, slot, myUnits) {
+function protectPoints(w, slot, myUnits) {
     const pts = [];
     for (const c of w.cities) if (c.slot === slot && c.alive) pts.push({lng: c.lng, lat: c.lat, val: cityValue(c)});
     for (const u of myUnits) if (u.type === "bunker" || u.type === "spacehq") pts.push({lng: u.lng, lat: u.lat, val: 8e6});
@@ -98,7 +98,7 @@ function coastal(w, n, cities) {
 
 // The front a war (or the peacetime map) orients to: nearest at-war capital, or
 // the nearest active rival's capital so outward-facing builds still make sense.
-export function frontPos(w, n, caps) {
+function frontPos(w, n, caps) {
     const a = caps[n.slot];
     if (!a) return null;
     let best = null, bd = Infinity;
