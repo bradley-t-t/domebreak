@@ -55,7 +55,8 @@ describe("stabilityTarget — penalties", () => {
 
     it("test_deficit_penalizes", () => {
         // No living cities → income == fallbackBase (2); a silo upkeep (4) → net < 0.
-        const def = nation({gdp: 0});
+        // Human nation so full upkeep applies (AI nations pay the reduced rate).
+        const def = nation({gdp: 0, isAi: false});
         const surplus = nation({gdp: 0});
         const wDef = world({nations: [def], units: [{slot: 5, type: "silo", hp: 60}]});
         const wSurplus = world({nations: [surplus]});
