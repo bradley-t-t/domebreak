@@ -114,6 +114,20 @@ describe("warTick — auto-surrender through the live tick", () => {
         step(w, 0.1);
         expect(atWar(w, 0, 1)).toBe(true);
     });
+
+    it("test_prior_defeat_does_not_carry_a_surrender_ratio_into_the_next_war", () => {
+        const w = fresh();
+        w.paused = false;
+        declareWar(w, 0, 1);
+        w.city("b2").slot = 0;                             // A occupies two of B's three cities
+        w.city("b3").slot = 0;
+        endWar(w, 0, 1, 0);                                // A wins; B cedes b2 and b3 but keeps b1
+        expect(atWar(w, 0, 1)).toBe(false);
+        w.time += DIPLOMACY.minWarSec + 1;
+        declareWar(w, 0, 1);                               // fresh war against a shrunken B
+        step(w, 0.1);
+        expect(atWar(w, 0, 1)).toBe(true);                 // baseline rebaselined — B does not instantly capitulate
+    });
 });
 
 describe("Defeat stability penalty — decay", () => {
