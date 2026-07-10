@@ -135,6 +135,8 @@ export function offerPeace(w, from, to) {
     if (!target) return {error: "No such power."};
     if (!target.isAi) {                                // offered TO a human → ask
         if (hasOffer(w, from, to)) return {ok: true};  // already pending
+        const src = nationOf(w, from);
+        if (src?.isAi) src._peaceToPlayerAt = w.time;  // starts the cooldown checked in diploOfferPeace
         w.pendingPeace.push({from, to, t: w.time});
         if (to === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "offer", foe: from});
         return {ok: true};
@@ -151,7 +153,13 @@ export function respondPeace(w, player, foe, accept) {
     const idx = w.pendingPeace.findIndex((o) => o.from === foe && o.to === player);
     w.pendingPeace = w.pendingPeace.filter((_, i) => i !== idx);
     w.warPopups = w.warPopups.filter((p) => !(p.kind === "offer" && p.foe === foe));
-    if (idx < 0 || !accept) return {ok: true, declined: !accept};
+    if (idx < 0 || !accept) {
+        if (idx >= 0 && !accept) {                     // declined — extend the AI's cooldown from now
+            const src = nationOf(w, foe);
+            if (src?.isAi) src._peaceToPlayerAt = w.time;
+        }
+        return {ok: true, declined: !accept};
+    }
     if (!atWar(w, player, foe)) return {ok: true};     // war already ended elsewhere
     return endWar(w, foe, player, null, {popup: false});
 }
@@ -183,6 +191,7 @@ export function proposeAlliance(w, from, to) {
     if (allyCount(a) >= DIPLOMACY.maxAllies) return {error: "You already hold the maximum alliances."};
     if (!b.isAi) {                                      // proposed TO a human → ask
         if (w.pendingAlliance.some((o) => o.from === from && o.to === to)) return {ok: true};
+        if (a.isAi) a._allianceToPlayerAt = w.time;     // starts the cooldown checked in diploProposeAlliance
         w.pendingAlliance.push({from, to, t: w.time});
         if (to === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-offer", foe: from});
         return {ok: true};
@@ -203,7 +212,13 @@ export function respondAlliance(w, player, from, accept) {
     const idx = w.pendingAlliance.findIndex((o) => o.from === from && o.to === player);
     w.pendingAlliance = w.pendingAlliance.filter((_, i) => i !== idx);
     w.warPopups = w.warPopups.filter((p) => !(p.kind === "ally-offer" && p.foe === from));
-    if (idx < 0 || !accept) return {ok: true, declined: !accept};
+    if (idx < 0 || !accept) {
+        if (idx >= 0 && !accept) {                     // declined — extend the AI's cooldown from now
+            const src = nationOf(w, from);
+            if (src?.isAi) src._allianceToPlayerAt = w.time;
+        }
+        return {ok: true, declined: !accept};
+    }
     if (atWar(w, player, from)) return {ok: true};     // relations changed since the offer
     return formAlliance(w, from, player);
 }
