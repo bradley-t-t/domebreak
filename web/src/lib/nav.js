@@ -12,15 +12,23 @@ export function scrollToId(id) {
     }
     // Any scroll target only makes sense on the landing page — hop back to it
     // first when we're currently on a hash-routed page.
-    if (window.location.hash.startsWith("#/")) {
+    const leavingRoute = window.location.hash.startsWith("#/");
+    if (leavingRoute) {
         history.replaceState(null, "", window.location.pathname + window.location.search);
         window.dispatchEvent(new HashChangeEvent("hashchange"));
     }
     if (id === "top") {
-        window.scrollTo({top: 0, behavior: "smooth"});
+        window.scrollTo({top: 0, behavior: leavingRoute ? "auto" : "smooth"});
         return;
     }
-    document.getElementById(id)?.scrollIntoView({behavior: "smooth", block: "start"});
+    // When we've just left a hash route the landing page hasn't rendered yet, so
+    // the target element doesn't exist — wait a frame for React to mount it.
+    const scroll = () => document.getElementById(id)?.scrollIntoView({behavior: "smooth", block: "start"});
+    if (leavingRoute) {
+        requestAnimationFrame(() => requestAnimationFrame(scroll));
+    } else {
+        scroll();
+    }
 }
 
 // Push the hash router to the Wiki. Kept separate so both the nav and the "u"

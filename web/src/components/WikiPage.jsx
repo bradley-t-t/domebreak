@@ -113,6 +113,13 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
         window.scrollTo({top: 0, behavior: "auto"});
     }, []);
 
+    // Selecting a category re-filters the list — jump back to the top so the new
+    // section reads from its header rather than wherever the last one left us.
+    function selectCategory(id) {
+        setActiveCategory(id);
+        window.scrollTo({top: 0, behavior: "smooth"});
+    }
+
     const shown = useMemo(() => {
         if (activeCategory === "all") return CATEGORIES_WITH_UNITS;
         return CATEGORIES_WITH_UNITS.filter((c) => c.id === activeCategory);
@@ -144,7 +151,7 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
                 <div className="sticky top-16 z-40 border-y border-line bg-[rgba(8,9,11,0.86)] backdrop-blur-[10px]">
                     <div className="mx-auto flex max-w-[1400px] items-center gap-2 overflow-x-auto px-5 py-3 sm:px-8 db-scroll">
                         <button
-                            onClick={() => setActiveCategory("all")}
+                            onClick={() => selectCategory("all")}
                             className={cn(
                                 chip({tone: activeCategory === "all" ? "gold" : "subtle"}),
                                 "shrink-0 cursor-pointer transition-colors"
@@ -155,7 +162,7 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
                         {CATEGORIES_WITH_UNITS.map((c) => (
                             <button
                                 key={c.id}
-                                onClick={() => setActiveCategory(c.id)}
+                                onClick={() => selectCategory(c.id)}
                                 className={cn(
                                     chip({tone: activeCategory === c.id ? "gold" : "subtle"}),
                                     "shrink-0 cursor-pointer transition-colors"
