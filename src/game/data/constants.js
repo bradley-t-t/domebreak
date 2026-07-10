@@ -148,6 +148,17 @@ export const AI_TUNING = {
     portTarget: 2, portReserve: 100,
     refineryTarget: 2, refineryReserve: 140,
     techparkTarget: 2, techparkReserve: 180,
+    // Bootstrap floor: the industry gate holds every remaining point for the
+    // next industrial slot only until this many structures are in the mix
+    // (live or on the line). Below the floor, defense/offense/radar/etc.
+    // wait their turn so the AI actually gets an economy going before it
+    // starts military spend. Above it, industry keeps its top-of-ladder
+    // priority — the industry block still runs first every think — but
+    // downstream builds compete for whatever points don't fit a
+    // factory/refinery/techpark. Kept well below indCap (base 12, up to 48)
+    // so a growing population doesn't keep pushing the gate past a nation's
+    // affordable/placeable ceiling and starving the rest of the doctrine.
+    industryBootstrap: 4,
     // Offensive platform posture — silos/launchers built in PEACE as deterrent.
     siloReserve: 100, siloMinNet: 1, siloTarget: 4,
     launcherReserve: 60, launcherTarget: 3,
