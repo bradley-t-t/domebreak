@@ -83,13 +83,12 @@ describe("Match.command gating", () => {
 });
 
 describe("attach / detach — reconnect grace and AI stewardship", () => {
-    it("test_attach_takes_the_nation_back_from_the_ai_and_disarms_the_reaper", () => {
+    it("test_attach_takes_the_nation_back_from_the_ai", () => {
         const m = mk();
         const p = m.players[1]; // started AI (unready)
         const ws = fakeWs();
         expect(m.attach("u1", ws)).toBeTruthy();
         expect(m.world.nations.find((n) => n.slot === p.slot).isAi).toBe(false);
-        expect(m.abandonTimer).toBeNull(); // a human is present
     });
 
     it("test_detach_hands_the_nation_to_the_ai_after_the_grace_window_and_records_a_quit", () => {
@@ -100,6 +99,42 @@ describe("attach / detach — reconnect grace and AI stewardship", () => {
         vi.advanceTimersByTime(1100); // past RECONNECT_GRACE_S (1s) — world stays frozen, no stepping
         expect(m.world.nations.find((n) => n.slot === p.slot).isAi).toBe(true);
         expect(m.quit.has("u0")).toBe(true);
+    });
+});
+
+describe("walkover — a PvP match ends when only one human is left connected", () => {
+    it("test_the_reaper_stays_armed_until_both_humans_are_connected", () => {
+        const m = mk();
+        m.attach("u0", fakeWs());
+        expect(m.reapTimer).not.toBeNull(); // one short — armed for the walkover
+        m.attach("u1", fakeWs());
+        expect(m.reapTimer).toBeNull();     // both present — nothing to reap
+    });
+
+    it("test_dropping_to_the_last_connected_human_ends_the_game_with_them_as_winner", () => {
+        let finished = null;
+        const m = mk((x) => { finished = x; });
+        m.attach("u0", fakeWs());
+        m.attach("u1", fakeWs());
+        m.detach(m.players[1].slot); // u1 leaves; u0 is the sole survivor
+        vi.advanceTimersByTime(2100); // past ABANDON_GRACE_S (2s)
+        expect(m.reported).toBe(true);
+        expect(finished).toBe(m);
+        expect(m.world.over).toBe(true);
+        expect(m.world.winnerSlot).toBe(m.players[0].slot); // the one still connected wins
+        expect(m.quit.has("u1")).toBe(true);                // the one who left is a quit
+        expect(m.quit.has("u0")).toBe(false);               // the winner did not quit
+    });
+
+    it("test_a_reconnect_within_grace_keeps_the_match_alive", () => {
+        const m = mk();
+        m.attach("u0", fakeWs());
+        m.attach("u1", fakeWs());
+        m.detach(m.players[1].slot);
+        vi.advanceTimersByTime(1000); // within ABANDON_GRACE_S
+        m.attach("u1", fakeWs());     // u1 returns before the walkover fires
+        vi.advanceTimersByTime(2100); // past the original grace
+        expect(m.reported).toBe(false); // both present again — never reaped
     });
 });
 

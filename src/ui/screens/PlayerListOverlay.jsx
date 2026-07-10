@@ -1,9 +1,9 @@
-import {useMemo} from "react";
 import Flag from "../common/Flag.jsx";
 import {colorForSlot} from "../../game/data/constants.js";
 import {overlay, card, menuTitle, iconButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
+import {useRoster} from "../lib/roster.js";
 import {gdpOf, populationOf} from "../../game/engine.js";
 
 // In-game scoreboard. Hold Tab to reveal, release to hide (Esc or ✕ also
@@ -14,11 +14,7 @@ import {gdpOf, populationOf} from "../../game/engine.js";
 // supplies each human's username; AI seats stay labelled AI in both single-
 // and multi-player.
 export default function PlayerListOverlay({world, mySlot, players, onOpenCountry, onClose}) {
-    const usernameOf = useMemo(() => {
-        const m = new Map();
-        for (const p of (players || [])) m.set(p.slot, p.username);
-        return m;
-    }, [players]);
+    const {usernameOf, isHuman} = useRoster(players);
 
     const me = world.nations.find((n) => n.slot === mySlot);
     const roster = world.nations.filter((n) => n.active !== false);
@@ -44,13 +40,13 @@ export default function PlayerListOverlay({world, mySlot, players, onOpenCountry
     };
     const seatOf = (n) => {
         if (n.slot === mySlot) return {label: "You", cls: "text-gold-contrast bg-gold border-gold"};
-        if (n.isAi) return {label: "AI", cls: ""};
-        return {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"};
+        if (isHuman(n.slot)) return {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"};
+        return {label: "AI", cls: ""};
     };
     const commanderOf = (n) => {
         if (n.slot === mySlot) return "You";
-        if (n.isAi) return null;
-        return usernameOf.get(n.slot) || "Commander";
+        if (isHuman(n.slot)) return usernameOf.get(n.slot) || "Commander";
+        return null;
     };
 
     const rowGrid = "grid grid-cols-[36px_minmax(180px,2fr)_minmax(140px,1.2fr)_64px_64px_72px_78px_92px] items-center gap-3 px-[14px] py-[10px] border-b border-hair";

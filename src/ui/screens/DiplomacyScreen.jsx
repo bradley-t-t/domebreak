@@ -1,5 +1,5 @@
 // Diplomacy — full-screen theatre manager. A roster of every power in the world:
-// flag, name, the seat commanding it (You / AI today, human players in multiplayer),
+// flag, name, the seat commanding it (You / a human Player in multiplayer / AI),
 // holdings, fielded forces, GDP, standing toward you, and the war/peace/alliance
 // controls. Presentation only — declareWar/offerPeace/proposeAlliance/breakAlliance
 // go through the api.
@@ -10,9 +10,11 @@ import {colorForSlot, DIPLOMACY} from "../../game/data/constants.js";
 import {miniButton, input} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp} from "../lib/format.js";
+import {useRoster} from "../lib/roster.js";
 
-export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
+export default function DiplomacyScreen({world, api, mySlot, online, players, onClose}) {
     const [q, setQ] = useState("");
+    const {isHuman} = useRoster(players);
     const me = world.nations.find((n) => n.slot === mySlot);
     // Only the ACTIVE (participating) powers are diplomatic actors — the passive neutral
     // world never wars or allies, so it never appears here. In an all-active match this
@@ -30,7 +32,7 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
     // Diplomatic sort priority — the powers that matter to you rise to the top: you,
     // then human players, then everyone you're at war with, then your allies, then
     // the rest. Ties within a bucket fall back to alive-then-holdings.
-    const priority = (n) => n.slot === mySlot ? 0 : (online && n.isAi === false && n.alive) ? 1 : rel(n) === "war" ? 2 : rel(n) === "ally" ? 3 : 4;
+    const priority = (n) => n.slot === mySlot ? 0 : (online && isHuman(n.slot) && n.alive) ? 1 : rel(n) === "war" ? 2 : rel(n) === "ally" ? 3 : 4;
     const nations = [...roster].sort((a, b) =>
         priority(a) - priority(b) || (b.alive - a.alive) || citiesOf(b.slot) - citiesOf(a.slot));
     // Rank is TRUE standings (alive-then-holdings), computed off a separate sort so the
@@ -50,13 +52,13 @@ export default function DiplomacyScreen({world, api, mySlot, online, onClose}) {
         ? nations.filter((n) => n.name.toLowerCase().includes(needle) || n.iso.toLowerCase() === needle)
         : nations;
 
-    const seat = (n) => n.slot === mySlot ? {label: "You", cls: "text-gold-contrast bg-gold border-gold"} : n.isAi ? {label: "AI", cls: ""} : {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"};
+    const seat = (n) => n.slot === mySlot ? {label: "You", cls: "text-gold-contrast bg-gold border-gold"} : isHuman(n.slot) ? {label: "Player", cls: "text-[#5fa8ff] border-[#3f5a80]"} : {label: "AI", cls: ""};
 
     const rowGrid = "grid grid-cols-[52px_minmax(200px,2fr)_96px_76px_76px_88px_116px_190px] items-center gap-3 px-[14px] py-[11px] border-b border-hair";
 
     return (
         <ScreenFrame title="DIPLOMACY" subtitle="Theatre powers & standings" bare onClose={onClose}
-                     foot={<span className="block px-[22px] py-[10px] border-t border-line-soft font-mono text-[10px] tracking-[1px] text-faint text-center">The active powers contesting this match — AI today, human players once multiplayer lands</span>}>
+                     foot={<span className="block px-[22px] py-[10px] border-t border-line-soft font-mono text-[10px] tracking-[1px] text-faint text-center">The active powers contesting this match — human players and AI great powers</span>}>
             <div className="flex flex-col gap-4 h-full px-6 py-5 overflow-hidden">
                 <div className="flex gap-[10px] flex-wrap">
                     <div className="flex-1 min-w-[150px] flex flex-col gap-[3px] px-[14px] py-3 bg-sunk border border-line rounded">

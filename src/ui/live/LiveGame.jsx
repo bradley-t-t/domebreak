@@ -566,7 +566,7 @@ export default function LiveGame({
                                       setSelUnit(null);
                                   }} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "diplomacy" &&
-                <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} onClose={() => setPanel(null)}/>}
+                <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} players={net?.players} onClose={() => setPanel(null)}/>}
             {!w.over && panel === "battle" &&
                 <BattlePlanScreen world={w} mySlot={mySlot} bp={bp} onClose={() => setPanel(null)}/>}
             <AdjustablePanel panel={hud.bottomRight} onChange={(p) => setHud("bottomRight", p)}

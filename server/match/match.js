@@ -56,7 +56,7 @@ export class Match {
         this.graceTimers = new Map();
         this.quit = new Set();      // userIds recorded as quit
         this.reported = false;
-        this.abandonTimer = null;   // reaps the match if no human is ever present
+        this.reapTimer = null;      // reaps the match when it goes undermanned
 
         // Unique, valid nation per player (bad/duplicate picks resolve to a free
         // great power), then build the full world seeded on the first player.
@@ -73,6 +73,10 @@ export class Match {
         const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1, {activeCount: matchRules.activeCount, participantIsos: isos, rules: matchRules});
         const slotOfIso = indexBy(setup.nations, (n) => n.iso, (n) => n.slot);
         this.players = roster.map((r, i) => ({...r, iso: isos[i], slot: slotOfIso.get(isos[i])}));
+        // Real humans in this match (matchmaking is human-only, but guard anyway).
+        // A match that began with >= 2 is PvP: it ends by walkover the moment it
+        // falls to its last connected human — nobody left to fight.
+        this.humanCount = this.players.filter((p) => p.userId != null && !p.isBot).length;
 
         // Hand each player their nation; a human who never readied (force-launched)
         // stays AI until they connect (attach flips isAi=false). Every other nation
@@ -111,31 +115,55 @@ export class Match {
             if (this.world.over) this.finish();
         }, TICK_MS);
         this.snapTimer = setInterval(() => this.broadcastSnapshot(), SNAPSHOT_MS);
-        // A fresh match has no sockets yet: arm the reaper so a client that never
-        // dials in can't strand this slot. attach() disarms it the moment a human
-        // connects; detach() re-arms it when the last human leaves.
-        this.armAbandon();
+        // A fresh match has no sockets yet: evaluate the reaper so a client that
+        // never dials in can't strand this slot. attach()/detach() re-evaluate it
+        // as humans come and go.
+        this.reapCheck();
     }
 
-    // Free this match's capacity slot when no human is connected. A quick-match
-    // always seats at least one human; if they never connect, or every human
-    // drops and none returns within ABANDON_GRACE_S, the match is ticking for
-    // nobody — end it so its MAX_MATCHES slot is released. Headless AI-vs-AI
-    // games that never reach a win condition are exactly what jam the server.
-    armAbandon() {
-        if (this.reported || this.abandonTimer) return;
-        this.abandonTimer = setTimeout(() => {
-            this.abandonTimer = null;
-            if (this.reported || this.sockets.size > 0) return;
-            for (const p of this.players) if (p.userId && !p.isBot) this.quit.add(p.userId);
-            this.finish(); // records humans as quit, closes the lobby, frees the slot
+    // A match is only worth ticking while enough humans are present. It is reaped
+    // — its MAX_MATCHES capacity slot freed — once it goes undermanned past the
+    // grace window: with NO human connected it ends abandoned (every human recorded
+    // a quit, no winner); a PvP match (>= 2 humans) down to its last connected
+    // human ends by walkover (that human wins, everyone who left is a quit). Either
+    // way a headless game that never reaches a win condition can't hold a slot
+    // forever. Re-evaluated on every attach/detach; the timer only fires if the
+    // match is still undermanned when the grace elapses.
+    reapCheck() {
+        if (this.reported) return;
+        const connected = this.sockets.size;
+        const undermanned = connected === 0 || (this.humanCount >= 2 && connected <= 1);
+        if (undermanned) this.armReap(); else this.disarmReap();
+    }
+
+    armReap() {
+        if (this.reported || this.reapTimer) return;
+        this.reapTimer = setTimeout(() => {
+            this.reapTimer = null;
+            if (this.reported) return;
+            const connected = this.sockets.size;
+            if (connected === 0) {
+                // Abandoned — nobody to crown; every human is recorded as a quit.
+                for (const p of this.players) if (p.userId && !p.isBot) this.quit.add(p.userId);
+                this.finish();
+            } else if (this.humanCount >= 2 && connected <= 1) {
+                // Walkover — the lone remaining human wins; everyone who left quits.
+                const winner = [...this.sockets.keys()][0];
+                for (const p of this.players) if (p.userId && !p.isBot && p.slot !== winner) this.quit.add(p.userId);
+                if (!this.world.over) {
+                    this.world.over = true;
+                    this.world.winnerSlot = winner;
+                }
+                this.finish();
+            }
+            // Otherwise enough players returned within the grace — nothing to reap.
         }, ABANDON_GRACE_S * 1000);
     }
 
-    disarmAbandon() {
-        if (this.abandonTimer) {
-            clearTimeout(this.abandonTimer);
-            this.abandonTimer = null;
+    disarmReap() {
+        if (this.reapTimer) {
+            clearTimeout(this.reapTimer);
+            this.reapTimer = null;
         }
     }
 
@@ -161,13 +189,13 @@ export class Match {
         if (nation) nation.isAi = false; // back from AI stewardship on reconnect
         this.quit.delete(userId);
         this.sockets.set(p.slot, ws);
-        this.disarmAbandon(); // a human is present — cancel any pending reap
+        this.reapCheck(); // a human joined — re-evaluate the reaper
         return p;
     }
 
     detach(slot) {
         this.sockets.delete(slot);
-        if (this.sockets.size === 0) this.armAbandon(); // last human gone — arm the reaper
+        this.reapCheck(); // a human left — reap if abandoned or down to the last one
         if (this.world.over) return;
         // grace window, then the AI takes the chair and the drop counts as a quit
         this.graceTimers.set(slot, setTimeout(() => {
@@ -230,7 +258,7 @@ export class Match {
     finish() {
         if (this.reported) return;
         this.reported = true;
-        this.disarmAbandon();
+        this.disarmReap();
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
@@ -255,7 +283,7 @@ export class Match {
     }
 
     dispose() {
-        this.disarmAbandon();
+        this.disarmReap();
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
