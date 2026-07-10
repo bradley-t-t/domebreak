@@ -9,7 +9,7 @@
 </p>
 <p align="center">
   Pick a nation, build an arsenal of silos, interceptors, warships and jets,<br />
-  and out-launch, out-tech, and out-defend the AI — one DomeBreak at a time.
+  and out-launch, out-build, and out-defend the AI — one DomeBreak at a time.
 </p>
 
 <p align="center">
@@ -26,8 +26,8 @@
 
 Most nuke-'em games flatten the planet to an abstract grid. DomeBreak keeps the real one — a MapLibre GL world map with
 actual cities, coastlines, and borders — and turns it into the board. You command a single nation in a real-time
-exchange against AI rivals: place defenses over your cities, mass offensive systems at the front, research your way
-ahead, and manage a war economy while missiles are already in the air. When your DomeBreak holds and theirs doesn't,
+exchange against AI rivals: place defenses over your cities, mass offensive systems at the front, out-produce your
+rivals, and manage a war economy while missiles are already in the air. When your DomeBreak holds and theirs doesn't,
 you win.
 
 <table width="100%">
@@ -38,11 +38,11 @@ you win.
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome shield, missile silos, hypersonics, warships, submarines, and an orbital tier — firing standard, cluster, and thermonuclear warheads.</p>
+      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome shield, missile silos, hypersonics, warships, submarines, and an orbital tier — firing everything from conventional rounds to thermonuclear MIRVs.</p>
     </td>
     <td width="33%" valign="top">
-      <h3 align="center">Out-tech, out-economy</h3>
-      <p align="center">Five research tracks across three eras, a city-vitality war economy with upkeep, live diplomacy, and continuous autosave — all simulated in real time at up to 10× speed.</p>
+      <h3 align="center">Out-build, out-economy</h3>
+      <p align="center">A guided objective ladder from first command bunker to first-strike force, a city-vitality war economy with upkeep, live diplomacy, and continuous autosave — all simulated in real time at up to 10× speed.</p>
     </td>
   </tr>
 </table>
@@ -90,29 +90,29 @@ npm run electron:build:all   # package macOS + Windows
 
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| **Land — defense**  | SAM battery and the Golden Dome shield, plus the tech-gated Patriot, Aegis Ashore, and THAAD batteries                                       |
-| **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the tech-gated hypersonic missile battery — each firing selectable warheads                      |
+| **Land — defense**  | SAM battery and the Golden Dome shield, plus Patriot, Aegis Ashore, and THAAD batteries                                                        |
+| **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the hypersonic missile battery — each firing selectable warheads                                 |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
-| **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus tech-gated SSN / SSBN submarines and amphibious / replenishment ships     |
+| **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus SSN / SSBN submarines and amphibious / replenishment ships                |
 | **Air**             | Multirole, strike, air-superiority, and carrier fighters, close air support, transport, and AEW&C — flown from airstrips and carriers as wings |
 | **Space**           | Behind a Space Command HQ: space-based interceptors, an orbital laser, and an orbital strike platform                                          |
-| **Warheads**        | Standard, cluster (MIRV splash), and thermonuclear — each produced against its own cost and build time                                         |
+| **Warheads**        | Conventional, cluster (MIRV splash), hypersonic glide, thermonuclear city-killer, road-mobile SICBM, and thermonuclear MIRV — each produced against its own cost and build time |
 
-## Research tracks
+## Objectives
 
-Five doctrine tracks each run **twelve tiers** banded into three eras — Cold War, Modern, and Space Age (60 techs in
-all). Advancing a track boosts national multipliers and, at key tiers, unlocks new hardware: Patriot and THAAD, hypersonic
-glide vehicles, submarines, satellites, and eventually a Space Command HQ and its orbital arsenal. Cost and research time
-escalate super-linearly with tier, so the future is slow and expensive to reach.
+You aren't dropped in cold. An ordered ladder of strategic objectives — shown in the in-game Objectives panel — walks
+you from standing up command authority to fielding a first-strike force. Each step completes as you build the structures
+it calls for, so the early game has a clear shape while you learn the map.
 
-| Track                 | Focus                                                       |
+| Objective             | Goal                                                        |
 |:----------------------|:------------------------------------------------------------|
-| **Strategic Command** | Warhead damage, missile range, and reload speed.            |
-| **Missile Shield**    | Interceptor rate, defense range, and interceptor speed.     |
-| **War Economy**       | Income, build cost, and upkeep efficiency.                  |
-| **Early Warning**     | Radar coverage, tracking, and intercept accuracy.           |
-| **Command & Control** | Research speed, relocation cost, and cross-cutting bonuses. |
+| **Establish Command** | Stand up national command authority and forward air power.  |
+| **Early Warning Net** | Blanket your own territory in radar coverage.               |
+| **Industrial Base**   | Grow the war economy that pays for everything else.         |
+| **Point Defense**     | Ring your cities with layered surface-to-air fire.          |
+| **Missile Shield**    | Stand up mid-course and terminal ballistic-missile defense. |
+| **Strike Force**      | Field the offensive missiles to threaten a first strike.    |
 
 ## Stack
 
@@ -120,14 +120,10 @@ escalate super-linearly with tier, so the future is slow and expensive to reach.
   Flags via `flag-icons`.
 - **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with
   `electron-builder`.
-- **Multiplayer backend** — Supabase (Auth, Postgres, and Deno edge functions `db-account`, `db-lobby`, and `db-social`)
-  plus an authoritative Node game server (`server/`) that imports the same engine and runs live matches over WebSockets.
-  Configure the client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
-
-## Design
-
-See [`docs/spec.md`](docs/spec.md) for the design and architecture notes, and [`docs/architecture/`](docs/architecture)
-for the decision records behind accounts, local saves, and the authoritative server.
+- **Multiplayer backend** — Supabase (Auth, Postgres, and the Deno edge functions `db-account`, `db-lobby`, `db-match`,
+  `db-party`, `db-social`, and `db-waitlist`) plus an authoritative Node game server (`server/`) that imports the same
+  engine and runs live matches over WebSockets. Configure the client with `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
 
 ## Attribution
 
