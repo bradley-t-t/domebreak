@@ -140,6 +140,16 @@ function citiesInteriorFirst(cities, ref) {
         .map(([c]) => c);
 }
 
+// Cities ordered nearest-to-front first — forward siting first, deep interior
+// last. Falls back to the input order (value-sorted) when there is no front.
+function citiesFrontFirst(cities, ref) {
+    if (!ref) return cities.slice();
+    return cities
+        .map((c) => [c, haversine(c.lng, c.lat, ref.lng, ref.lat)])
+        .sort((a, b) => a[1] - b[1])
+        .map(([c]) => c);
+}
+
 function nearestCity(cities, ref) {
     if (!ref) return cities[0];
     let best = cities[0], bd = Infinity;
@@ -212,6 +222,17 @@ export function aiPlace(w, n, type, myUnits, cities, front) {
     // every remaining point for an industry slot it can never fill.
     if (role === "industry") {
         for (const anchor of citiesInteriorFirst(cities, front)) {
+            const spot = spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
+            if (spot) return spot;
+        }
+        return null;
+    }
+    // Land offense (silos, launchers, hyper batteries) walks every city too.
+    // Forward-biased placement can push every sample of a nearest-to-front
+    // anchor across the border on a small nation; when it does, we retry from
+    // the next-nearest inland instead of giving up on the whole build.
+    if (role === "offense" && def.domain !== "sea") {
+        for (const anchor of citiesFrontFirst(cities, front)) {
             const spot = spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
             if (spot) return spot;
         }
