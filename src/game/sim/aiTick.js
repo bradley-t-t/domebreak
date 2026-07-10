@@ -422,10 +422,12 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
     const indUsed = industryCountOf(w, n.slot);
     const indCap = industryCapOf(w, n.slot);
     const factories = totalOf(myUnits, n, "factory");
-    if (indUsed < indCap && factories < Math.max(3, Math.ceil(indCap * 0.4)) && canAfford("factory", AI_TUNING.factoryReserve)) {
+    const factoryTarget = Math.min(indCap, Math.max(3, Math.ceil(indCap * 0.4)));
+    const industryReady = factories >= factoryTarget;
+    if (indUsed < indCap && factories < factoryTarget && canAfford("factory", AI_TUNING.factoryReserve)) {
         if (q("factory")) return true;
     }
-    if (!deficit && indUsed < indCap) {
+    if (!deficit && industryReady && indUsed < indCap) {
         const ports = totalOf(myUnits, n, "port");
         if (ports < AI_TUNING.portTarget && canAfford("port", AI_TUNING.portReserve)) {
             if (q("port")) return true;
@@ -449,6 +451,13 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
         const type = affordableDefender(w, n, n.points);
         if (type && q(type)) return true;
     }
+
+    // Industry gate — until the factory floor is up, hold every remaining point
+    // for the next factory. The layered-defense expansion below (up to one
+    // battery per protect-point) would otherwise drain each tick of income into
+    // 150-pt SAMs and leave the AI at 1 factory + a wall of defenders forever.
+    // Deficit nations fall through: their only escape is to keep laddering.
+    if (!industryReady && indUsed < indCap && !deficit) return false;
 
     // 3. Warhead stocks. Standard is always useful (any warhead-capable platform
     //    can fall back to it). Strategic rounds stock lightly in peace and heavier
