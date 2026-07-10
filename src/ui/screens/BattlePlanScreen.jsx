@@ -1,5 +1,5 @@
 import {useMemo} from "react";
-import {armamentOf, atWar, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
+import {armamentOf, atWar, planAttackerTypeOptions, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
 import {BATTLE_PLAN, colorForSlot} from "../../game/data/constants.js";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
@@ -35,12 +35,15 @@ function Toggle({on, onClick, label, hint, accent}) {
 export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
     const {plans, active, activeId, setActiveId} = bp;
 
-    // My live offensive platforms, tallied by type — the attacker options.
+    // My live offensive platforms, tallied by type — the ×N badge per option.
     const typeCounts = useMemo(() => {
         const live = w.units.filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense");
         return Object.fromEntries(countBy(live, (u) => u.type));
     }, [w.units, w.time, mySlot]);
-    const offenseTypes = useMemo(() => Object.keys(typeCounts).sort(), [typeCounts]);
+    // The attacker options — everything the nation could field (owned, on the
+    // production line, or buildable now), not just what it currently owns, so a
+    // plan can be drawn up and armed around platforms still being built.
+    const offenseTypes = useMemo(() => planAttackerTypeOptions(w, mySlot, plans), [w.units, w.time, mySlot, plans]);
     // type -> the plan that currently commands it (attacker types are exclusive).
     const ownerOfType = useMemo(() => {
         const m = new Map();
@@ -148,7 +151,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                                         <span className="text-[13px] text-text">{unitLabel(type)}</span>
                                                         {armamentOf(type) && <span className="text-[10px] text-faint">{armamentOf(type)}</span>}
                                                     </span>
-                                                    <span className="font-mono text-[12px] text-dim flex-none">×{typeCounts[type]}</span>
+                                                    <span className="font-mono text-[12px] text-dim flex-none">×{typeCounts[type] || 0}</span>
                                                     {elsewhere && <span className="text-[9px] px-1.5 py-px rounded-full border border-line flex-none" style={{color: owner.color}}>{owner.name}</span>}
                                                 </button>
                                             );
