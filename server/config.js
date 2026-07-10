@@ -21,12 +21,19 @@ export const ABANDON_GRACE_S = parseInt(process.env.GD_ABANDON_GRACE_S || "120",
 // Most live matches this server will host at once; lobbies beyond it stay
 // 'starting' and get re-swept until a slot frees.
 export const MAX_MATCHES = parseInt(process.env.GD_MAX_MATCHES || "3", 10);
-export const TICK_MS = 100;      // simulation step cadence
-// Full-world broadcast cadence. Lower = more realtime economy/production/spawns
-// (motion is already client-predicted), at a serialize+gzip + bandwidth cost that
-// scales with match count on this single-threaded process. 200ms (5Hz) is safe
-// on the Sunday host even at MAX_MATCHES; env-tunable without a redeploy.
-export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "200", 10);
+// Simulation step cadence. The sim is dt-scaled (see sim/tick.js), so this only
+// sets granularity, not game speed — halving it just makes each step's dt smaller
+// for the same real-time economy/combat rate. 50ms = 20Hz. env-tunable.
+export const TICK_MS = parseInt(process.env.GD_TICK_MS || "50", 10);
+// Full-world broadcast cadence — how fresh every player's view of all activity is.
+// Default 50ms (20Hz) matches TICK_MS so every simulation step is shipped to all
+// players immediately: fully realtime-synced, nothing waits for the next sweep.
+// Keep >= TICK_MS — snapshots finer than the sim step just resend identical state.
+// Cost is serialize+gzip + bandwidth, scaling with players x match count on this
+// single-threaded process; on a well-provisioned host push GD_SNAPSHOT_MS=33 (30Hz).
+// PREDICT_TTL (client, gameClient.js) is sized to this in wall-clock terms — the two
+// are coupled, change them together.
+export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "50", 10);
 // Opening freeze (seconds): an online match holds paused this long at the start
 // so every commander loads in before the war begins, then releases to
 // permanently-locked 1x play (online has no pause/speed control at all).
