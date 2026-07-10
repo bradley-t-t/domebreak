@@ -200,7 +200,7 @@ export {
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
-export {solvePlan, planPreview, planAttackers, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
+export {solvePlan, planPreview, planAttackers, planAttackerTypeOptions, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
 export {step, growCities} from "./sim/tick.js";
 
