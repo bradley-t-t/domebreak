@@ -11,7 +11,7 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nationOf, rand} from "./worldState.js";
-import {atWar, gdpOf, industryCapOf, industryCountOf, netIncomeOf, defenseRange} from "./queries.js";
+import {atWar, gdpOf, industryCapOf, netIncomeOf, defenseRange} from "./queries.js";
 import {randRange, weightedPick} from "../../lib/random.js";
 import {clamp} from "../../lib/math.js";
 import {
@@ -290,17 +290,25 @@ function totalDefenders(myUnits, n) {
     return k;
 }
 
-// Cheapest defender the AI can afford right now that isn't gated off (patriot /
-// aegis / thaad by tech; orbital by spacehq). Returns null when nothing fits.
-function affordableDefender(w, n, points) {
-    const order = ["battery", "patriot", "dome", "aegis", "thaad"];
-    for (const t of order) {
+// Least-built defense type the AI can currently afford. Layered by design —
+// cycles across battery / patriot / dome / aegis / thaad / orbital laser so a
+// nation ends up with actual defense in depth instead of a wall of SAM
+// batteries. Ties break to cheaper hulls first, getting cover on the ground
+// while the flagship layers spool up as points accrue.
+function pickDefender(w, n, myUnits, points) {
+    const types = ["battery", "patriot", "dome", "aegis", "thaad", "orbitallaser"];
+    const options = [];
+    for (const t of types) {
         const def = UNITS[t];
         if (!def) continue;
         if (unitLockReason(w, n.slot, t)) continue;
-        if (points >= def.cost) return t;
+        const reserve = t === "orbitallaser" ? AI_TUNING.spaceHqReserve : 0;
+        if (points < def.cost + reserve) continue;
+        options.push({t, count: totalOf(myUnits, n, t), cost: def.cost});
     }
-    return null;
+    if (!options.length) return null;
+    options.sort((a, b) => a.count - b.count || a.cost - b.cost);
+    return options[0].t;
 }
 
 // Uncovered protect-points — points not inside any live friendly defender.
@@ -414,116 +422,151 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
     const protectN = protects.length;
     const defenseTarget = Math.min(AI_TUNING.defenseMax, Math.max(1, Math.round(protectN * AI_TUNING.defensePerPoint)));
 
-    // 1. Industry first — the AI's opening priority is economy. Factory (allowed
-    //    even in deficit, like the human rule in queueUnit) → port (coastal) →
-    //    refinery → techpark, all bounded by industryCapOf. A nation with a real
-    //    output base ladders through everything downstream far more decisively
-    //    than one that spends its opening 500 points on batteries and radars.
-    const indUsed = industryCountOf(w, n.slot);
+    // 1. Industry first — fill every industrial slot the population supports
+    //    before anything else, biased toward the highest-tier structure the
+    //    nation can build. One factory unlocks refineries and tech parks; every
+    //    other slot goes to a tech park (output 9) before a refinery (6.5), a
+    //    port (4.5), or another factory (3). Factories are exempt from the
+    //    deficit gate (mirroring the human rule in queueUnit) so a broke nation
+    //    can still ladder its way out.
     const indCap = industryCapOf(w, n.slot);
     const factories = totalOf(myUnits, n, "factory");
-    const factoryTarget = Math.min(indCap, Math.max(3, Math.ceil(indCap * 0.4)));
-    const industryReady = factories >= factoryTarget;
-    if (indUsed < indCap && factories < factoryTarget && canAfford("factory", AI_TUNING.factoryReserve)) {
+    const ports = totalOf(myUnits, n, "port");
+    const refineries = totalOf(myUnits, n, "refinery");
+    const techparks = totalOf(myUnits, n, "techpark");
+    const industryTotal = factories + ports + refineries + techparks;
+    if (industryTotal < indCap && factories < 1 && canAfford("factory", AI_TUNING.factoryReserve)) {
         if (q("factory")) return true;
     }
-    if (!deficit && industryReady && indUsed < indCap) {
-        const ports = totalOf(myUnits, n, "port");
+    if (industryTotal < indCap && factories >= 1 && !deficit) {
+        if (canAfford("techpark", AI_TUNING.techparkReserve)) {
+            if (q("techpark")) return true;
+        }
+        if (refineries < AI_TUNING.refineryTarget && canAfford("refinery", AI_TUNING.refineryReserve)) {
+            if (q("refinery")) return true;
+        }
         if (ports < AI_TUNING.portTarget && canAfford("port", AI_TUNING.portReserve)) {
             if (q("port")) return true;
         }
-        const hasFactoryUp = myUnits.some((u) => u.type === "factory" && u.hp > 0);
-        if (hasFactoryUp) {
-            const refineries = totalOf(myUnits, n, "refinery");
-            if (refineries < AI_TUNING.refineryTarget && canAfford("refinery", AI_TUNING.refineryReserve)) {
-                if (q("refinery")) return true;
-            }
-            const techparks = totalOf(myUnits, n, "techpark");
-            if (techparks < AI_TUNING.techparkTarget && canAfford("techpark", AI_TUNING.techparkReserve)) {
-                if (q("techpark")) return true;
-            }
+        // Backfill leftover cap with an extra factory only when the higher tiers
+        // are unaffordable or already saturated. Keeps the mix top-heavy.
+        if (canAfford("factory", AI_TUNING.factoryReserve)) {
+            if (q("factory")) return true;
         }
     }
 
-    // 2. First-line defense over the capital — pick the cheapest defender we can
-    //    field, so a broke nation gets battery cover instead of freezing.
-    if (defenders === 0) {
-        const type = affordableDefender(w, n, n.points);
+    // 2. Wartime safety — never sit at 0 defenders while the shooting is on.
+    //    The one exception to the industry-cap gate below: at war we cannot
+    //    afford a naked capital, so plug in the least-built layer we can field.
+    //    In peace, the gate holds points for the next industry slot instead.
+    if (enemies.length && defenders === 0) {
+        const type = pickDefender(w, n, myUnits, n.points);
         if (type && q(type)) return true;
     }
 
-    // Industry gate — until the factory floor is up, hold every remaining point
-    // for the next factory. The layered-defense expansion below (up to one
-    // battery per protect-point) would otherwise drain each tick of income into
-    // 150-pt SAMs and leave the AI at 1 factory + a wall of defenders forever.
-    // Deficit nations fall through: their only escape is to keep laddering.
-    if (!industryReady && indUsed < indCap && !deficit) return false;
+    // Industry gate — until every industrial slot is filled (live or on the
+    // line), hold every remaining point for the next slot. Downstream steps
+    // (defense expansion, warhead stocks, radar, bunker, air wing, offense,
+    // naval) all wait their turn. Deficit nations fall through: their only
+    // escape is to keep laddering the industry chain.
+    if (industryTotal < indCap && !deficit) return false;
 
-    // 3. Warhead stocks. Standard is always useful (any warhead-capable platform
-    //    can fall back to it). Strategic rounds stock lightly in peace and heavier
-    //    at war so an AI never enters a war with an empty magazine.
-    const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense")
-        || prodCount(n, "unit", "silo") > 0
-        || prodCount(n, "unit", "launcher") > 0
-        || prodCount(n, "unit", "hypersonicbty") > 0
-        || prodCount(n, "unit", "sub-ssbn") > 0;
-    const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
-    if (!deficit && hasOffense && stocked("standard") < AI_TUNING.stdStockTarget && canAfford("standard", 0) && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
-        if (queueAmmo(w, n.slot, "standard").ok) return true;
-    }
-    const thermoTarget = enemies.length ? AI_TUNING.thermoStockTarget : AI_TUNING.peaceThermoStock;
-    if (!deficit && hasOffense && stocked("thermo") < thermoTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
-        if (queueAmmo(w, n.slot, "thermo").ok) return true;
-    }
-    const hasHyper = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("hgv"))
-        || prodCount(n, "unit", "hypersonicbty") > 0;
-    const hgvTarget = enemies.length ? AI_TUNING.hgvStockTarget : AI_TUNING.peaceHgvStock;
-    if (!deficit && hasHyper && stocked("hgv") < hgvTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
-        if (queueAmmo(w, n.slot, "hgv").ok) return true;
-    }
-    const hasTel = myUnits.some((u) => u.hp > 0 && allowedAmmo(u.type).includes("sicbm"))
-        || prodCount(n, "unit", "launcher") > 0;
-    const sicbmTarget = enemies.length ? AI_TUNING.sicbmStockTarget : AI_TUNING.peaceSicbmStock;
-    if (!deficit && hasTel && stocked("sicbm") < sicbmTarget && n.points >= WARHEADS.sicbm.prodCost + AI_TUNING.sicbmReserve && rand(w) < AI_TUNING.sicbmChance) {
-        if (queueAmmo(w, n.slot, "sicbm").ok) return true;
-    }
-
-    // 4. Radar coverage — humans set up early warning before they build out. A
-    //    broke nation still gets radar since it's only 150 pts.
+    // 3. Radar coverage — early warning before anything else. A broke nation
+    //    still gets radar since it's only 150 pts.
     const radars = totalOf(myUnits, n, "radar");
     const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
     if (radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
         if (q("radar")) return true;
     }
 
-    // 5. Leadership bunker — one hardened command node.
+    // 4. Offense platforms — an AI is expected to hold a real strike deterrent,
+    //    not just an air-defense wall. Launcher (cheap TEL) first, then the
+    //    hypersonic battery (if tech is done), then silos. Runs BEFORE the
+    //    layered defense expansion so offense and defense grow in tandem.
+    const launchers = totalOf(myUnits, n, "launcher");
+    if (!deficit && launchers < AI_TUNING.launcherTarget && canAfford("launcher", AI_TUNING.launcherReserve)) {
+        if (q("launcher")) return true;
+    }
+    const hypers = totalOf(myUnits, n, "hypersonicbty");
+    if (!deficit && !unitLockReason(w, n.slot, "hypersonicbty") && hypers < AI_TUNING.hyperTarget && canAfford("hypersonicbty", AI_TUNING.hyperReserve)) {
+        if (q("hypersonicbty")) return true;
+    }
+    const silos = totalOf(myUnits, n, "silo");
+    const wantSilos = enemies.length ? AI_TUNING.siloTarget : Math.max(1, Math.floor(AI_TUNING.siloTarget / 2));
+    if (!deficit && silos < wantSilos && canAfford("silo", AI_TUNING.siloReserve) && net > AI_TUNING.siloMinNet) {
+        if (q("silo")) return true;
+    }
+
+    // 5. Warhead stocks — every warhead-capable platform the AI fields keeps a
+    //    matching magazine topped up. Targets scale with the count of
+    //    platforms that can fire the round, so a bigger arsenal actually gets
+    //    a bigger stockpile. Peace runs a lighter deterrent stock; war doubles
+    //    or triples it so no nation enters a fight with an empty tube.
+    const subSsbnCt = totalOf(myUnits, n, "sub-ssbn");
+    const orbitalStrikeCt = totalOf(myUnits, n, "orbitalstrike");
+    const stdPlatforms = silos + subSsbnCt;                       // silo + boomer fire conventional
+    const strategicPlatforms = silos + subSsbnCt + orbitalStrikeCt; // full-magazine platforms
+    const hgvPlatforms = hypers;
+    const sicbmPlatforms = launchers;
+    const stocked = (t) => (n.ammo[t] || 0) + prodCount(n, "ammo", t);
+    const perPlat = enemies.length ? AI_TUNING.ammoPerPlatformWar : AI_TUNING.ammoPerPlatformPeace;
+    const stockShots = (count, mult = 1) => count > 0 ? Math.max(1, Math.ceil(count * perPlat * mult)) : 0;
+    // Standard is the fallback loadout — kept a little deeper than the others.
+    const stdTarget = stockShots(stdPlatforms, enemies.length ? 1.5 : 2);
+    if (!deficit && stdTarget > 0 && stocked("standard") < stdTarget && n.points >= WARHEADS.standard.prodCost + AI_TUNING.stdReserve) {
+        if (queueAmmo(w, n.slot, "standard").ok) return true;
+    }
+    const thermoTarget = stockShots(strategicPlatforms);
+    if (!deficit && thermoTarget > 0 && stocked("thermo") < thermoTarget && n.points >= WARHEADS.thermo.prodCost + AI_TUNING.thermoReserve && rand(w) < AI_TUNING.thermoChance) {
+        if (queueAmmo(w, n.slot, "thermo").ok) return true;
+    }
+    const clusterTarget = stockShots(strategicPlatforms);
+    if (!deficit && clusterTarget > 0 && stocked("cluster") < clusterTarget && n.points >= WARHEADS.cluster.prodCost + AI_TUNING.clusterReserve) {
+        if (queueAmmo(w, n.slot, "cluster").ok) return true;
+    }
+    // Thermonuclear MIRV is the strategic capstone — war-only, one bus per platform.
+    const thermomirvTarget = enemies.length ? stockShots(strategicPlatforms, 0.5) : 0;
+    if (!deficit && thermomirvTarget > 0 && stocked("thermomirv") < thermomirvTarget && n.points >= WARHEADS.thermomirv.prodCost + AI_TUNING.thermomirvReserve && rand(w) < AI_TUNING.thermoChance) {
+        if (queueAmmo(w, n.slot, "thermomirv").ok) return true;
+    }
+    const hgvTarget = stockShots(hgvPlatforms);
+    if (!deficit && hgvTarget > 0 && stocked("hgv") < hgvTarget && n.points >= WARHEADS.hgv.prodCost + AI_TUNING.hgvReserve && rand(w) < AI_TUNING.hgvChance) {
+        if (queueAmmo(w, n.slot, "hgv").ok) return true;
+    }
+    const sicbmTarget = stockShots(sicbmPlatforms);
+    if (!deficit && sicbmTarget > 0 && stocked("sicbm") < sicbmTarget && n.points >= WARHEADS.sicbm.prodCost + AI_TUNING.sicbmReserve && rand(w) < AI_TUNING.sicbmChance) {
+        if (queueAmmo(w, n.slot, "sicbm").ok) return true;
+    }
+
+    // 6. Leadership bunker — one hardened command node. No longer gated behind
+    //    a live defender; industry is filled by now and the bunker itself is
+    //    hardened enough to sit up while defense expands around it.
     const hasBunker = totalOf(myUnits, n, "bunker") > 0;
-    if (!deficit && !hasBunker && cities.length >= AI_TUNING.bunkerMinCities && defenders > 0 && canAfford("bunker", AI_TUNING.bunkerReserve)) {
+    if (!deficit && !hasBunker && cities.length >= AI_TUNING.bunkerMinCities && canAfford("bunker", AI_TUNING.bunkerReserve)) {
         if (q("bunker")) return true;
     }
 
-    // 5b. Airstrip — the evac field for leadership AND the home of the air wing.
-    //     A bunker without one leaves leaders stranded, so this shadows the bunker.
+    // 6b. Airstrip — the evac field for leadership AND the home of the air wing.
     const hasStrip = totalOf(myUnits, n, "airstrip") > 0;
-    if (!deficit && !hasStrip && defenders > 0 && canAfford("airstrip", AI_TUNING.bunkerReserve)) {
+    if (!deficit && !hasStrip && canAfford("airstrip", AI_TUNING.bunkerReserve)) {
         if (q("airstrip")) return true;
     }
 
-    // 6. Layered defense expansion — fill uncovered protect-points with the
-    //    cheapest defender we can field. Batteries first (150) then dome / aegis
-    //    for the highest-value gaps.
+    // 7. Layered defense expansion — fill uncovered protect-points, cycling
+    //    across every buildable defense tier so the AI ends up with a real mix
+    //    of batteries, Patriots, Golden Domes, Aegis nodes, THAAD, and orbital
+    //    lasers instead of stacking one type.
     if (defenders < defenseTarget) {
         const uncov = uncoveredPoints(w, n.slot, myUnits);
         if (uncov.length) {
-            const type = affordableDefender(w, n, n.points);
+            const type = pickDefender(w, n, myUnits, n.points);
             if (type && q(type)) return true;
         }
     }
 
-    // 6b. Ground army — armybase then a tank/infantry/artillery mix. Artillery
-    //     rounds out the stack (currently ignored by the AI).
+    // 7b. Ground army — armybase then a tank/infantry/artillery mix.
     const hasArmybase = totalOf(myUnits, n, "armybase") > 0;
-    if (!deficit && defenders > 0 && !hasArmybase && canAfford("armybase", AI_TUNING.armyReserve)) {
+    if (!deficit && !hasArmybase && canAfford("armybase", AI_TUNING.armyReserve)) {
         if (q("armybase")) return true;
     }
     const groundForce = myUnits.filter((u) => UNITS[u.type].capture).length
@@ -534,33 +577,15 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
         if (canAfford(type, AI_TUNING.armyReserve) && q(type)) return true;
     }
 
-    // 7. Strategic warning array.
+    // 8. Strategic warning array.
     const oths = totalOf(myUnits, n, "oth");
     if (!deficit && radars > 0 && oths === 0 && canAfford("oth", AI_TUNING.othReserve)) {
         if (q("oth")) return true;
     }
 
-    // 8. Air-wing restock — humans keep hangars full via queueAircraft. Only
+    // 9. Air-wing restock — humans keep hangars full via queueAircraft. Only
     //    runs when solvent because queueAircraft rejects in deficit anyway.
     if (restockHangar(w, n, myUnits)) return true;
-
-    // 9. Offense platforms — humans stand up a deterrent BEFORE the shooting.
-    //    Cheap launcher first, then hypersonic battery (if tech done), then silo.
-    if (!deficit) {
-        const launchers = totalOf(myUnits, n, "launcher");
-        if (launchers < AI_TUNING.launcherTarget && canAfford("launcher", AI_TUNING.launcherReserve)) {
-            if (q("launcher")) return true;
-        }
-        const hypers = totalOf(myUnits, n, "hypersonicbty");
-        if (!unitLockReason(w, n.slot, "hypersonicbty") && hypers < AI_TUNING.hyperTarget && canAfford("hypersonicbty", AI_TUNING.hyperReserve)) {
-            if (q("hypersonicbty")) return true;
-        }
-        const silos = totalOf(myUnits, n, "silo");
-        const wantSilos = enemies.length ? AI_TUNING.siloTarget : Math.max(1, Math.floor(AI_TUNING.siloTarget / 2));
-        if (silos < wantSilos && canAfford("silo", AI_TUNING.siloReserve) && net > AI_TUNING.siloMinNet) {
-            if (q("silo")) return true;
-        }
-    }
 
     // 10. Advanced tech-gated units (space HQ, subs, modern defense layers).
     if (!deficit && aiBuildUnlocked(w, n, myUnits, cities, front)) return true;
