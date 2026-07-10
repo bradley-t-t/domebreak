@@ -450,6 +450,11 @@ export function stepInterceptors(w, dt) {
         const dist = haversine(it.lng, it.lat, tgt.lng, tgt.lat);
         const stepKm = it.speed * dt;
         it.altNorm = (tgt.altNorm ?? 0) * clamp01(1 - dist / (it.launchDist || 1));
+        // The interceptor closes far faster than its target, so lead pursuit carries
+        // it to the merge point ahead of the slower missile. Track the range so we
+        // can tell the terminal phase from the approach.
+        const receding = it.prevDist != null && dist > it.prevDist;
+        it.prevDist = dist;
         if (dist <= Math.max(INTERCEPT_KILL_RADIUS_KM, stepKm)) {
             it._dead = true;
             if (rand(w) < (it.hitProb ?? DEFAULT_HIT_PROB)) {
@@ -474,7 +479,24 @@ export function stepInterceptors(w, dt) {
                     alt: it.altNorm ?? 0
                 });
             }
+        } else if (receding) {
+            // Closest approach has passed without ever reaching the kill radius, so
+            // the pass is a miss. Fuze out here rather than turning the round back
+            // around toward a target that is now behind it.
+            it._dead = true;
+            w.events.push({
+                id: nextId(w, "e"),
+                t: w.time,
+                type: "miss",
+                lng: it.lng,
+                lat: it.lat,
+                alt: it.altNorm ?? 0
+            });
         } else {
+            // Remember the pre-move fix so the sky renderer can face the nose along
+            // the round's real direction of travel instead of a stale aim point.
+            it.pLng = it.lng;
+            it.pLat = it.lat;
             const aimDist = haversine(it.lng, it.lat, aim[0], aim[1]) || 1;
             const f = Math.min(1, stepKm / aimDist);
             it.lng += (aim[0] - it.lng) * f;

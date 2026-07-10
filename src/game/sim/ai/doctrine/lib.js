@@ -4,7 +4,7 @@
 // buy plan (>= BLOCK_URGENCY items hold the treasury until affordable — the
 // bootstrap-industry / naked-at-war gates); reserve is the cushion kept on hand
 // past the price. Doctrines compose these builders and scale their urgencies.
-import {DIPLOMACY, UNITS, WARHEADS} from "../../../data/constants.js";
+import {UNITS, WARHEADS} from "../../../data/constants.js";
 import {prodCount, unitLockReason} from "../../production.js";
 import {WANTS} from "../tuning.js";
 import {clamp} from "../../../../lib/math.js";
@@ -101,11 +101,10 @@ export function defenderCount(frame) {
 
 export function defenseWants(list, defAxis, targetMult = 1) {
     const frame = list.frame, w = frame._w;
-    // The wall is bounded twice: by the protect-point demand and by a share of
-    // the AI unit cap — a 50-city superpower must never spend its whole
-    // fielding allowance on interceptors and have nothing left to shoot back with.
-    const capShare = Math.max(3, Math.floor(DIPLOMACY.aiUnitCap * 0.4));
-    const target = Math.min(WANTS.defenseMax, capShare,
+    // The wall is bounded by the protect-point demand and by WANTS.defenseMax —
+    // a superpower must never spend its whole line on interceptors and have
+    // nothing left to shoot back with.
+    const target = Math.min(WANTS.defenseMax,
         Math.max(1, Math.round(frame.me.protect.length * WANTS.defensePerPoint * targetMult)));
     const defenders = defenderCount(frame);
     if (defenders >= target) return;

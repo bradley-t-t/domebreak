@@ -4,12 +4,14 @@
 // think. Must-have items (urgency >= BLOCK_URGENCY: bootstrap industry, a naked
 // wartime capital) hold the treasury until affordable, which is the old
 // industry-gate behavior expressed as data.
-import {UNITS, WARHEADS} from "../../../data/constants.js";
+import {ECONOMY, UNITS, WARHEADS} from "../../../data/constants.js";
 import {BLOCK_URGENCY} from "../doctrine/lib.js";
 import {BUDGET, THINK} from "../tuning.js";
 
 const itemCost = (it) => it.kind === "ammo" ? (WARHEADS[it.type]?.prodCost || 0) : (UNITS[it.type]?.cost || 0);
-const itemUpkeep = (it) => it.kind === "ammo" ? 0 : (UNITS[it.type]?.upkeep || 0);
+// Budget only ever plans for AI nations, which pay the reduced upkeep rate — so
+// the marginal-upkeep projection that gates the net-income floor uses it too.
+const itemUpkeep = (it) => it.kind === "ammo" ? 0 : (UNITS[it.type]?.upkeep || 0) * ECONOMY.aiUpkeepMult;
 const isIndustry = (it) => it.kind === "unit" && UNITS[it.type]?.kind === "industry";
 
 // wants arrive urgency-sorted from mergedWants. Returns {buys, needScrap}.

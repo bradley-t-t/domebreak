@@ -101,6 +101,7 @@ export const ECONOMY = {
     incomeGdpCoef: 4,
     fallbackBase: 2,
     fallbackPerCity: 0.6,
+    aiUpkeepMult: 0.5,               // AI nations pay half the unit upkeep a human does
 };
 
 // Industry capacity: a nation may sustain `base` structures plus one more per
@@ -183,7 +184,6 @@ export const DIPLOMACY = {
     // idle cadence — bounding heavy AI work to the action actually on the map.
     activeRangeKm: 4200,
     idleThinkMin: 20, idleThinkSpan: 20,
-    aiUnitCap: 22,                   // max live units an AI nation fields (interception-loop bound)
     // Player victory: hold at least this share of surviving world population.
     dominationPopFrac: 0.5,
 };
