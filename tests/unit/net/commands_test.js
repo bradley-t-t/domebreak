@@ -7,15 +7,18 @@ import {describe, expect, it} from "vitest";
 import {COMMANDS} from "../../../server/match/commands.js";
 import {createWorld} from "../../../src/game/engine.js";
 
-// Every command the online client can actually send (its api, minus the LOCAL_ONLY
-// UI controls setSpeed/pause/play/dismissWarPopup, and minus the solo-gated
-// offerPeace/respondPeace). Keep in sync with src/ui/hooks/useEngine.js — a client
-// api that isn't here (or a whitelist entry that's missing) is the bug this guards.
+// Every command the online client can actually send: its api, minus ONLY the
+// LOCAL_ONLY UI controls (setSpeed/pause/play/dismissWarPopup). Everything else in
+// useEngine — diplomacy included — is optimistically applied AND dispatched to the
+// server, so each needs a handler here. Keep in sync with src/ui/hooks/useEngine.js:
+// a client api that isn't listed (or a whitelist entry that's missing) is the bug
+// this guards.
 const CLIENT_COMMANDS = [
     "buyPlace", "commandAttack", "move", "setSail", "stopSail",
     "queueAircraft", "setPatrolSize", "setAwacsPatrol", "declareWar", "scrap",
     "produceAmmo", "cancelProd", "setWarhead", "embark", "disembark", "march",
     "shelterLeadership", "releaseLeadership",
+    "offerPeace", "respondPeace", "proposeAlliance", "respondAlliance", "breakAlliance",
 ];
 
 function w2() {
@@ -69,6 +72,17 @@ describe("command routing — acts only for the sender", () => {
         COMMANDS.declareWar(w, 0, [1]);
         expect(w.nations[0].relations[1]).toBe("war");
         expect(w.nations[1].relations[0]).toBe("war");
+    });
+
+    it("test_diplomacy_commands_route_into_the_engine_for_the_sender", () => {
+        // These existed on the client but were never whitelisted, so online peace and
+        // alliance actions were rejected as "unknown command" — the same regression as
+        // Shelter-Leadership. A proposeAlliance from the sender must reach the engine
+        // and register under the sender's slot.
+        const w = w2();
+        w.nations[1].isAi = false; // proposing to a human → deterministic pending offer
+        COMMANDS.proposeAlliance(w, 0, [1]);
+        expect(w.pendingAlliance.some((o) => o.from === 0 && o.to === 1)).toBe(true);
     });
 });
 
