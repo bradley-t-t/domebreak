@@ -407,14 +407,43 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
     const protectN = protects.length;
     const defenseTarget = Math.min(AI_TUNING.defenseMax, Math.max(1, Math.round(protectN * AI_TUNING.defensePerPoint)));
 
-    // 1. First-line defense over the capital — pick the cheapest defender we can
+    // 1. Industry first — the AI's opening priority is economy. Factory (allowed
+    //    even in deficit, like the human rule in queueUnit) → port (coastal) →
+    //    refinery → techpark, all bounded by industryCapOf. A nation with a real
+    //    output base ladders through everything downstream far more decisively
+    //    than one that spends its opening 500 points on batteries and radars.
+    const indUsed = industryCountOf(w, n.slot);
+    const indCap = industryCapOf(w, n.slot);
+    const factories = totalOf(myUnits, n, "factory");
+    if (indUsed < indCap && factories < Math.max(3, Math.ceil(indCap * 0.4)) && canAfford("factory", AI_TUNING.factoryReserve)) {
+        if (q("factory")) return true;
+    }
+    if (!deficit && indUsed < indCap) {
+        const ports = totalOf(myUnits, n, "port");
+        if (ports < AI_TUNING.portTarget && canAfford("port", AI_TUNING.portReserve)) {
+            if (q("port")) return true;
+        }
+        const hasFactoryUp = myUnits.some((u) => u.type === "factory" && u.hp > 0);
+        if (hasFactoryUp) {
+            const refineries = totalOf(myUnits, n, "refinery");
+            if (refineries < AI_TUNING.refineryTarget && canAfford("refinery", AI_TUNING.refineryReserve)) {
+                if (q("refinery")) return true;
+            }
+            const techparks = totalOf(myUnits, n, "techpark");
+            if (techparks < AI_TUNING.techparkTarget && canAfford("techpark", AI_TUNING.techparkReserve)) {
+                if (q("techpark")) return true;
+            }
+        }
+    }
+
+    // 2. First-line defense over the capital — pick the cheapest defender we can
     //    field, so a broke nation gets battery cover instead of freezing.
     if (defenders === 0) {
         const type = affordableDefender(w, n, n.points);
         if (type && q(type)) return true;
     }
 
-    // 2. Warhead stocks. Standard is always useful (any warhead-capable platform
+    // 3. Warhead stocks. Standard is always useful (any warhead-capable platform
     //    can fall back to it). Strategic rounds stock lightly in peace and heavier
     //    at war so an AI never enters a war with an empty magazine.
     const hasOffense = myUnits.some((u) => UNITS[u.type].kind === "offense")
@@ -443,39 +472,12 @@ function aiBuildDoctrine(w, n, myUnits, cities, front, enemies) {
         if (queueAmmo(w, n.slot, "sicbm").ok) return true;
     }
 
-    // 3. Radar coverage — humans set up early warning before they build out. A
+    // 4. Radar coverage — humans set up early warning before they build out. A
     //    broke nation still gets radar since it's only 150 pts.
     const radars = totalOf(myUnits, n, "radar");
     const radarTarget = Math.min(AI_TUNING.radarMax, Math.max(1, Math.round(cities.length * AI_TUNING.radarPerCity)));
     if (radars < radarTarget && n.points >= UNITS.radar.cost + AI_TUNING.radarReserve) {
         if (q("radar")) return true;
-    }
-
-    // 4. Industry ladder — factory → port (coastal) → refinery → techpark, all
-    //    bounded by industryCapOf. In a deficit only factory is allowed (mirrors
-    //    the human deficit rule in queueUnit).
-    const indUsed = industryCountOf(w, n.slot);
-    const indCap = industryCapOf(w, n.slot);
-    const factories = totalOf(myUnits, n, "factory");
-    if (indUsed < indCap && factories < Math.max(3, Math.ceil(indCap * 0.4)) && canAfford("factory", AI_TUNING.factoryReserve)) {
-        if (q("factory")) return true;
-    }
-    if (!deficit && indUsed < indCap) {
-        const ports = totalOf(myUnits, n, "port");
-        if (ports < AI_TUNING.portTarget && canAfford("port", AI_TUNING.portReserve)) {
-            if (q("port")) return true;
-        }
-        const hasFactoryUp = myUnits.some((u) => u.type === "factory" && u.hp > 0);
-        if (hasFactoryUp) {
-            const refineries = totalOf(myUnits, n, "refinery");
-            if (refineries < AI_TUNING.refineryTarget && canAfford("refinery", AI_TUNING.refineryReserve)) {
-                if (q("refinery")) return true;
-            }
-            const techparks = totalOf(myUnits, n, "techpark");
-            if (techparks < AI_TUNING.techparkTarget && canAfford("techpark", AI_TUNING.techparkReserve)) {
-                if (q("techpark")) return true;
-            }
-        }
     }
 
     // 5. Leadership bunker — one hardened command node.
