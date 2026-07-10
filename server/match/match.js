@@ -193,17 +193,20 @@ export class Match {
         if (recent.length >= CHAT_BURST) return;
         recent.push(now);
         this.chatStamps.set(slot, recent);
-        const payload = JSON.stringify({t: "chat", slot, username: p.username, text: clean, ts: now});
+        this.broadcast({t: "chat", slot, username: p.username, text: clean, ts: now});
+    }
+
+    // Fan a JSON message out to every connected player — the shared spine of
+    // every server->client push (snapshots, chat, the final result).
+    broadcast(msg) {
+        const payload = JSON.stringify(msg);
         for (const ws of this.sockets.values()) {
             if (ws.readyState === ws.OPEN) ws.send(payload);
         }
     }
 
     broadcastSnapshot() {
-        const payload = JSON.stringify({t: "snap", world: this.world});
-        for (const ws of this.sockets.values()) {
-            if (ws.readyState === ws.OPEN) ws.send(payload);
-        }
+        this.broadcast({t: "snap", world: this.world});
     }
 
     initPayload(slot) {
@@ -223,10 +226,7 @@ export class Match {
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
-        const payload = JSON.stringify({t: "over", winnerSlot: this.world.winnerSlot, world: this.world});
-        for (const ws of this.sockets.values()) {
-            if (ws.readyState === ws.OPEN) ws.send(payload);
-        }
+        this.broadcast({t: "over", winnerSlot: this.world.winnerSlot, world: this.world});
         this.onFinished?.(this);
     }
 
