@@ -3,7 +3,9 @@
 // forms once at least MIN_PLAYERS are queued (admitting up to MAX_PLAYERS); a
 // lone waiter keeps waiting. It then auto-launches by flipping `lobbies.status`
 // to `'starting'`, which the server entry's `claimLobby` picks up. Each player
-// claims their own nation inside the full living world (server/match).
+// claims their own nation inside a bounded neutral-world war (server/match),
+// exactly as in single player: activeCount belligerents, the rest of the map
+// passive neutral, unclaimed belligerent slots filled by AI.
 //
 // Drive is a periodic sweep (which fires window-expiry when there's no new queue
 // event) plus a best-effort Realtime subscription to react faster to a new

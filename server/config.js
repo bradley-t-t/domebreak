@@ -35,8 +35,9 @@ export const MATCH_START_PAUSE_S = parseInt(process.env.GD_MATCH_START_PAUSE_S |
 // ---- matchmaker -------------------------------------------------------------
 // Human-only matchmaking: no bots. A match forms once at least MIN_PLAYERS real
 // players are queued, admitting up to MAX_PLAYERS, and each player claims their
-// own nation inside the full living world (every other country is world AI). A
-// lone waiter keeps waiting — a match never starts below MIN_PLAYERS.
+// own nation inside a bounded neutral-world war (activeCount belligerents, the
+// rest of them AI, every other country a passive neutral — exactly as in single
+// player). A lone waiter keeps waiting — a match never starts below MIN_PLAYERS.
 export const MIN_PLAYERS = parseInt(process.env.GD_MIN_PLAYERS || "2", 10);
 export const MAX_PLAYERS = parseInt(process.env.GD_MAX_PLAYERS || "6", 10);
 // Human-gather window (ms) measured from the anchor (oldest waiter)'s
