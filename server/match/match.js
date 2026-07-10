@@ -40,10 +40,12 @@ function resolveIsos(picks) {
 
 export class Match {
     // roster: [{userId, username, iso, ready}] — REAL PLAYERS ONLY (no bots). The
-    // match is the FULL living world (every country is world AI, as in single
-    // player); each player claims their own nation within it. A player's slot is
-    // that nation's slot in the full world (by GDP order), NOT the roster index —
-    // so two players can be arbitrarily far apart on the map.
+    // match is a bounded neutral-world war exactly like singleplayer: matchRules
+    // .activeCount nations are the belligerents (the human players plus AI great
+    // powers filling any unclaimed belligerent slots), and every other country is
+    // a passive, capturable neutral. A player's slot is that nation's slot in the
+    // full world (by GDP order), NOT the roster index — so two players can be
+    // arbitrarily far apart on the map.
     constructor({lobbyId, roster, rules, onFinished}) {
         this.id = randomUUID();
         this.lobbyId = lobbyId;
@@ -62,7 +64,13 @@ export class Match {
         // Rules the lobby authored (SP-only knobs like startSpeed are ignored
         // downstream — online is locked at 1x regardless).
         const matchRules = normalizeRules(rules ?? {});
-        const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1, {rules: matchRules});
+        // Same bounded neutral-world model as singleplayer: exactly
+        // matchRules.activeCount nations are the belligerents and every other
+        // country stays on the map as a passive, capturable neutral. Passing the
+        // human isos as participants guarantees each player is active; any active
+        // slots the humans don't fill are seeded with scattered great powers that
+        // run as AI — so a half-full lobby still fights a full-sized war.
+        const setup = buildSetup(gameData(), isos[0], null, (Math.random() * 1e9) | 0 || 1, {activeCount: matchRules.activeCount, participantIsos: isos, rules: matchRules});
         const slotOfIso = indexBy(setup.nations, (n) => n.iso, (n) => n.slot);
         this.players = roster.map((r, i) => ({...r, iso: isos[i], slot: slotOfIso.get(isos[i])}));
 
@@ -238,7 +246,7 @@ export class Match {
             started_at: this.startedAt,
             result: this.quit.has(p.userId) ? "quit" : this.world.winnerSlot === p.slot ? "win" : "loss",
             nation_iso: p.iso,
-            opponents: this.players.length - 1, // real-player opponents (the rest of the world is AI)
+            opponents: this.players.length - 1, // real-player opponents (other belligerents are AI)
             duration_s: Math.round(this.world.time),
             mode: "online",
             match_id: this.id,
