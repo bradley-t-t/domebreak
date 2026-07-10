@@ -36,7 +36,7 @@ export const START_CAM = {
 // while attract/lobby keep a permissive floor so their pulled-back framing still
 // renders. LiveGame passes `min`; other surfaces use WorldMap's `menuMin` default.
 export const WORLD_ZOOM = {
-    min: 3.8,       // gameplay zoom-out floor
+    min: 3.54,      // gameplay zoom-out floor
     menuMin: 1.1,   // permissive floor for attract/lobby so their wide framing isn't clamped
     max: 7,         // closest zoom-in allowed
 };
