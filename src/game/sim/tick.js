@@ -8,6 +8,7 @@ import {aiTick} from "./ai/index.js";
 import {decapitationTick, warTick} from "./warResolution.js";
 import {
     growCities,
+    healCities,
     stepCombat,
     stepEconomy,
     stepEventPrune,
@@ -18,7 +19,7 @@ import {
     stepVictory,
 } from "./tickPhases.js";
 
-export {growCities};
+export {growCities, healCities};
 
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
@@ -70,8 +71,11 @@ export function step(w, dt, predict = false) {
     // captured) surrenders every war and is eliminated. Runs after warTick so it
     // reads settled relations, and before the win check so the elimination counts.
     decapitationTick(w);
-    // Grow city populations for this tick before the tally reads them, so income,
-    // industry cap, and the domination check all see the updated figures.
+    // Rebuild damaged cities whose owner is still standing, then grow city
+    // populations — heal first so growth reads this tick's restored vitality, and
+    // both before the tally so income, industry cap, and the domination check all
+    // see the updated figures.
+    healCities(w, dt);
     growCities(w, dt);
     // Ease each nation's stability toward its live target. Runs after
     // growth/leadership/diplomacy so it reads this tick's population, wars,

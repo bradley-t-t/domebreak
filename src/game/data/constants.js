@@ -115,11 +115,24 @@ export const INDUSTRY = {
 
 // Population growth. Each living city's people grow every tick, scaled by its
 // vitality (hp/maxHp) so healthy cities repopulate and battered ones barely
-// recover, capped at a multiple of starting population. Deterministic — a function
-// of stored pop, hp, and dt. Feeds populationOf → industry cap / domination.
+// recover, and by national prosperity — the owner's effective GDP over its
+// baseline GDP, clamped to [gdpGrowthFloor, gdpGrowthCap] — so a wrecked economy
+// slows repopulation and built industry quickens it. Capped at a multiple of
+// starting population. Deterministic — a function of stored pop, hp, nation GDP,
+// and dt. Feeds populationOf → industry cap / domination.
 export const POPULATION = {
     growthPerSec: 0.00015,   // fractional pop growth per game-second at full vitality
     growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
+    gdpGrowthFloor: 0.25,    // prosperity multiplier floor — even a dead economy trickles
+    gdpGrowthCap: 1.5,       // prosperity ceiling as industry lifts GDP past its baseline
+};
+
+// City reconstruction. A damaged-but-living city rebuilds hpFracPerSec of its max
+// health every game-second while its owner is still standing — alive, and not
+// inside the post-surrender window a lost war opens (see hasSurrendered in
+// sim/queries.js). A destroyed city (0 hp — its people are gone) never rebuilds.
+export const CITY_REGEN = {
+    hpFracPerSec: 0.0015,    // fraction of maxHp restored per game-second
 };
 
 // Opponent-AI tuning lives in sim/ai/tuning.js, organized by pipeline stage.

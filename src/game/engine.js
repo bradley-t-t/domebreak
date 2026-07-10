@@ -126,6 +126,7 @@ export {countryGidAt} from "./geo/countryOwner.js";
 export {
     airborne,
     atWar,
+    hasSurrendered,
     vitalityOf,
     falloutIntensity,
     falloutProximity,
@@ -198,7 +199,7 @@ export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {solvePlan, planPreview, planTargets, targetCategoryOf, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
-export {step, growCities} from "./sim/tick.js";
+export {step, growCities, healCities} from "./sim/tick.js";
 
 export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";
 
