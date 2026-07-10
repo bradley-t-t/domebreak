@@ -138,6 +138,21 @@ export function industryCountOf(w, slot) {
     return n;
 }
 
+// Industry structures currently on the production line — queued or under
+// construction — for slot. These consume industrial capacity the same as
+// standing structures (see queueUnit) so the UI can show a truthful count.
+export function industryPendingOf(w, slot) {
+    const n = nationOf(w, slot);
+    if (!n?.prod) return 0;
+    let q = 0;
+    for (const it of n.prod.queue) {
+        if (it.kind === "unit" && UNITS[it.type]?.kind === "industry") q++;
+    }
+    const cur = n.prod.current?.item;
+    if (cur?.kind === "unit" && UNITS[cur.type]?.kind === "industry") q++;
+    return q;
+}
+
 // Max industry structures a nation may sustain, scaled by its living population.
 // Losing cities lowers the ceiling; surplus structures above it are grandfathered.
 export function industryCapOf(w, slot) {
