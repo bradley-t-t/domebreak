@@ -480,10 +480,9 @@ export function stepInterceptors(w, dt) {
                 });
             }
         } else if (receding) {
-            // Closest approach is already behind us and it never entered the kill
-            // radius: the pass is spent. Fuze out as a clean miss here instead of
-            // whipping the round back around toward a target that is now behind it
-            // (the visible "interceptor turns around before it explodes").
+            // Closest approach has passed without ever reaching the kill radius, so
+            // the pass is a miss. Fuze out here rather than turning the round back
+            // around toward a target that is now behind it.
             it._dead = true;
             w.events.push({
                 id: nextId(w, "e"),
