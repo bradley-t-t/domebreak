@@ -50,7 +50,12 @@ export function absorb(target, snapshot, mySlot) {
 // (buy/scrap) re-charge their point cost against every snapshot, so the client's
 // predicted balance bleeds down until it can no longer afford anything and unit
 // placement dies a few minutes in.
-export const PREDICT_TTL = 6; // snapshots (~1.2s at 200ms) a prediction may go unconfirmed
+// Coupled to the server's SNAPSHOT_MS (config.js): a prediction may go unconfirmed
+// for this many snapshots before it ages out, sized to a ~1.2s wall-clock window.
+// At 20Hz (50ms) snapshots that is 24. If SNAPSHOT_MS changes, rescale this so the
+// window stays ~1.2s — too short rubber-bands live actions, too long lets a dropped
+// command's optimistic apply linger.
+export const PREDICT_TTL = 24; // snapshots (~1.2s at 50ms SNAPSHOT_MS) a prediction may go unconfirmed
 
 export function reconcile(client, ack) {
     client._pending = client._pending.filter((c) => (ack == null || c.seq > ack) && --c.ttl > 0);
