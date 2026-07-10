@@ -14,6 +14,7 @@ import {
     incomeOf,
     industryCapOf,
     industryCountOf,
+    industryPendingOf,
     launchersForAmmo,
     UNIT_ICON,
     unitLabel,
@@ -53,6 +54,8 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
     const points = me?.points ?? 0;
     const income = incomeOf(world, mySlot), upkeep = upkeepOf(world, mySlot), net = income - upkeep;
     const industryCount = industryCountOf(world, mySlot), industryCap = industryCapOf(world, mySlot);
+    const industryPending = industryPendingOf(world, mySlot);
+    const industryUsed = industryCount + industryPending;
     const ammo = me?.ammo || {};
     const cur = me?.prod?.current || null;
     const queue = me?.prod?.queue || [];
@@ -265,8 +268,8 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Income</span><b className="pos font-mono text-[13px] text-[#46d38a]">+{income.toFixed(1)}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Upkeep</span><b className="neg font-mono text-[13px] text-red">−{upkeep.toFixed(1)}</b></div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">GDP</span><b className="font-mono text-[13px]">{fmtGdp(gdpOf(world, mySlot))}</b></div>
-                        <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm" title="Industry structures / population-supported cap">
-                            <span className="text-[8.5px] tracking-[1px] uppercase text-faint">Industry</span><b className={cn("font-mono text-[13px]", industryCount >= industryCap && "neg text-red")}>{industryCount}/{industryCap}</b>
+                        <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm" title={`${industryCount} standing${industryPending ? ` + ${industryPending} in production` : ""} / ${industryCap} population-supported cap`}>
+                            <span className="text-[8.5px] tracking-[1px] uppercase text-faint">Industry</span><b className={cn("font-mono text-[13px]", industryUsed >= industryCap && "neg text-red")}>{industryUsed}/{industryCap}</b>
                         </div>
                         <div className="flex flex-col gap-0.5 py-2 px-2.5 bg-sunk border border-line rounded-sm"><span className="text-[8.5px] tracking-[1px] uppercase text-faint">Fielded</span><b className="font-mono text-[13px]">{mine.length}</b></div>
                     </div>
