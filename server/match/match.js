@@ -52,6 +52,7 @@ export class Match {
         this.onFinished = onFinished;
         this.startedAt = new Date().toISOString();
         this.sockets = new Map();   // slot -> ws
+        this.acks = {};             // slot -> last command seq applied (for client prediction reconciliation)
         this.chatStamps = new Map(); // slot -> recent chat send times (flood limit)
         this.graceTimers = new Map();
         this.quit = new Set();      // userIds recorded as quit
@@ -217,6 +218,15 @@ export class Match {
         }
     }
 
+    // Record a command as applied to the world so the next snapshot tells this slot's
+    // client the effect is now authoritative and it can stop replaying its prediction.
+    // Bumped for accepted AND rejected commands (a nack still resolves the prediction),
+    // and only ever advances — the transport is ordered, so seqs arrive monotonically.
+    recordAck(slot, seq) {
+        if (seq == null) return;
+        if (this.acks[slot] == null || seq > this.acks[slot]) this.acks[slot] = seq;
+    }
+
     // Relay a chat line to every connected player. Deliberately not gated on
     // world.over — sockets linger after the war ends so the outcome screen can
     // still talk. Floods and junk are dropped silently (nothing to nack).
@@ -242,7 +252,7 @@ export class Match {
     }
 
     broadcastSnapshot() {
-        this.broadcast({t: "snap", world: this.world});
+        this.broadcast({t: "snap", world: this.world, acks: this.acks});
     }
 
     initPayload(slot) {
@@ -251,6 +261,7 @@ export class Match {
             matchId: this.id,
             slot,
             world: this.world,
+            acks: this.acks,
             players: this.players.map((p) => ({slot: p.slot, username: p.username, iso: p.iso, isBot: !!p.isBot})),
         });
     }
@@ -262,7 +273,7 @@ export class Match {
         clearInterval(this.tickTimer);
         clearInterval(this.snapTimer);
         for (const t of this.graceTimers.values()) clearTimeout(t);
-        this.broadcast({t: "over", winnerSlot: this.world.winnerSlot, world: this.world});
+        this.broadcast({t: "over", winnerSlot: this.world.winnerSlot, world: this.world, acks: this.acks});
         this.onFinished?.(this);
     }
 

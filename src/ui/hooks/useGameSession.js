@@ -23,6 +23,23 @@ export function useGameSession(world, client) {
         };
     }, [client, force]);
 
+    // Replay still-in-flight commands over each fresh snapshot: the net client hands
+    // us back its pending buffer and we re-apply each one through the RAW local engine
+    // (never the net wrapper below — no re-send), so an optimistic action holds until
+    // the server's snapshot actually reflects it instead of blinking back for a frame.
+    useEffect(() => {
+        if (!client) return;
+        client._reapply = () => {
+            for (const c of client._pending) {
+                const fn = localApi[c.name];
+                if (fn) try { fn(...c.args); } catch { /* prediction only — server is authoritative */ }
+            }
+        };
+        return () => {
+            if (client._reapply) client._reapply = null;
+        };
+    }, [client, localApi]);
+
     const api = useMemo(() => {
         if (!client) return localApi;
         const net = {};

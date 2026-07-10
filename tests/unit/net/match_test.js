@@ -82,6 +82,29 @@ describe("Match.command gating", () => {
     });
 });
 
+describe("recordAck — prediction reconciliation acks", () => {
+    it("test_snapshot_carries_the_last_acked_seq_per_slot", () => {
+        const m = mk();
+        const ws = fakeWs();
+        m.attach("u0", ws);
+        const slot = m.players[0].slot;
+        m.recordAck(slot, 7);
+        ws.sent.length = 0;
+        m.broadcastSnapshot();
+        const snap = JSON.parse(ws.sent.at(-1));
+        expect(snap.t).toBe("snap");
+        expect(snap.acks[slot]).toBe(7);
+    });
+
+    it("test_ack_only_advances_and_ignores_null", () => {
+        const m = mk();
+        m.recordAck(0, 3);
+        m.recordAck(0, 2); // stale/out-of-order — must not regress
+        m.recordAck(0, null);
+        expect(m.acks[0]).toBe(3);
+    });
+});
+
 describe("attach / detach — reconnect grace and AI stewardship", () => {
     it("test_attach_takes_the_nation_back_from_the_ai", () => {
         const m = mk();
