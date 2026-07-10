@@ -48,11 +48,15 @@ function canEngage(u, tgt) {
 // platforms the engine can be given a standing strike order. Sorted by id so the
 // solve is deterministic regardless of unit order. A plan selects attacker unit TYPES
 // (not individual units), so this is every live, owned offensive unit whose type the
-// plan includes.
+// plan includes. `plan.excludeIds` (optional, a Set) drops specific units from the
+// roster — the AI's staged multi-plan solve uses it to keep an attacker already
+// claimed by a higher-priority plan from phantom-saturating this one's targets.
+// Player-authored plans never set it.
 export function planAttackers(w, plan, mySlot) {
     const types = new Set(plan.attackerTypes || []);
     return w.units
-        .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type))
+        .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type)
+            && !(plan.excludeIds?.has(u.id)))
         .sort(cmpStr((u) => u.id));
 }
 

@@ -10,6 +10,9 @@ import {nationOf, nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
 import {formAlliance, makePeace} from "./production.js";
 import {countBy} from "../../lib/iter.js";
+import {evaluatePeaceOffer} from "./ai/diplomacy/peace.js";
+import {evaluateAllianceOffer} from "./ai/diplomacy/alliance.js";
+import {recordAllianceFormed, recordPeaceDeclined, recordWarEnd} from "./ai/diplomacy/ledger.js";
 
 // A city's original owner (fallback to current slot for legacy saves predating owner0).
 const origin = (c) => c.owner0 ?? c.slot;
@@ -38,16 +41,6 @@ function startCounts(w) {
     w._startOwner = m;
     return m;
 }
-
-// Living cities a slot holds right now.
-function aliveCount(w, slot) {
-    let k = 0;
-    for (const c of w.cities) if (c.alive && c.slot === slot) k++;
-    return k;
-}
-
-// Surviving-city fraction: living holdings over the match-start holding count.
-const survivingFrac = (w, slot) => aliveCount(w, slot) / (startCounts(w)[slot] || 1);
 
 // Move every city contested BETWEEN a and b: winner != null → to the winner (Victory —
 // the winner keeps all it occupied and the loser cedes); winner == null → back to its
@@ -108,6 +101,7 @@ function dropOffers(w, a, b) {
 export function endWar(w, a, b, winner = null, opts = {}) {
     ensureWar(w);
     if (!atWar(w, a, b)) return {error: "Not at war."};
+    recordWarEnd(w, a, b, winner);         // both sides' diplomatic ledgers remember this war
     makePeace(w, a, b);                    // clear the war relation + _warStart (no event)
     dropOffers(w, a, b);
     settleTerritory(w, a, b, winner);
@@ -123,13 +117,10 @@ export function endWar(w, a, b, winner = null, opts = {}) {
     return {ok: true};
 }
 
-// Would this AI accept a white peace with `foe` right now? Yes once the war is old,
-// or whenever it isn't clearly winning (its surviving fraction ≤ the foe's).
-function aiAcceptsPeace(w, ai, foe) {
-    const age = w.time - (nationOf(w, ai)?._warStart?.[foe] ?? 0);
-    if (age > DIPLOMACY.minWarSec) return true;
-    return survivingFrac(w, ai) <= survivingFrac(w, foe);
-}
+// Would this AI accept a white peace with `foe` right now? The decision lives
+// in the AI's diplomacy layer (war-lifecycle state, damage ledger, personality)
+// — see ai/diplomacy/peace.js.
+const aiAcceptsPeace = (w, ai, foe) => evaluatePeaceOffer(w, ai, foe);
 
 // A white-peace offer from `from` to `to`. If `to` is an AI it decides immediately; if
 // `to` is the player, a pending offer is recorded and (when it's the local player) an
@@ -163,6 +154,7 @@ export function respondPeace(w, player, foe, accept) {
         if (idx >= 0 && !accept) {                     // declined — extend the AI's cooldown from now
             const src = nationOf(w, foe);
             if (src?.isAi) src._peaceToPlayerAt = w.time;
+            recordPeaceDeclined(w, foe, player);       // the offerer remembers being refused
         }
         return {ok: true, declined: !accept};
     }
@@ -172,18 +164,10 @@ export function respondPeace(w, player, foe, accept) {
 
 // --- Alliances: proposal / answer flow (mirrors the white-peace one above). ---
 
-// Would this AI accept an alliance proposed by `from`? Yes when it's under its ally
-// ceiling AND either the two share a common enemy (a bloc worth forming) or the
-// proposer is at least as strong by surviving-city fraction (a pact worth having).
-function aiAcceptsAlliance(w, ai, from) {
-    const nAi = nationOf(w, ai), nFrom = nationOf(w, from);
-    if (!nAi || !nFrom) return false;
-    if (allyCount(nAi) >= DIPLOMACY.maxAllies) return false;
-    for (const s in nAi.relations) {                   // shared enemy?
-        if (nAi.relations[s] === "war" && nFrom.relations[s] === "war") return true;
-    }
-    return survivingFrac(w, from) >= survivingFrac(w, ai);
-}
+// Would this AI accept an alliance proposed by `from`? The decision lives in
+// the AI's diplomacy layer (shared enemies, strength, loyalty, the backstab
+// ledger) — see ai/diplomacy/alliance.js.
+const aiAcceptsAlliance = (w, ai, from) => evaluateAllianceOffer(w, ai, from);
 
 // An alliance proposal from `from` to `to`. If `to` is an AI it decides immediately
 // (forming the pact or refusing); if `to` is the player, a pending offer is recorded
@@ -204,7 +188,10 @@ export function proposeAlliance(w, from, to) {
     }
     if (aiAcceptsAlliance(w, to, from)) {
         const r = formAlliance(w, from, to);
-        if (r.ok && from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-formed", foe: to});
+        if (r.ok) {
+            recordAllianceFormed(w, from, to);
+            if (from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-formed", foe: to});
+        }
         return r;
     }
     if (from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-refused", foe: to});
@@ -226,7 +213,9 @@ export function respondAlliance(w, player, from, accept) {
         return {ok: true, declined: !accept};
     }
     if (atWar(w, player, from)) return {ok: true};     // relations changed since the offer
-    return formAlliance(w, from, player);
+    const r = formAlliance(w, from, player);
+    if (r.ok) recordAllianceFormed(w, from, player);
+    return r;
 }
 
 // Auto-surrender pass (every tick): any belligerent — AI or player — whose surviving-

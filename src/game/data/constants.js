@@ -122,98 +122,7 @@ export const POPULATION = {
     growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
 };
 
-// Opponent-AI tuning (consumed by aiTick in sim/tick.js). Reserves are the
-// points cushion the AI keeps on hand before committing to that purchase.
-export const AI_TUNING = {
-    thinkMin: 3, thinkSpan: 3,       // seconds between decisions: min + rand·span
-    queueMax: 4,                     // human-style: keep the production line steadily fed
-    thermoChance: 0.35,
-    hgvChance: 0.4,
-    sicbmChance: 0.4,
-    // Ammo stockpiles scale with the count of platforms that can fire the
-    // round (see aiBuildDoctrine). Reserves are the points cushion held on top
-    // of the buy cost so a stock buy never zeroes the treasury.
-    stdReserve: 40,
-    thermoReserve: 180,
-    clusterReserve: 60,
-    thermomirvReserve: 220,
-    hgvReserve: 120,
-    sicbmReserve: 90,
-    ammoPerPlatformWar: 3,      // rounds per compatible platform kept ready at war
-    ammoPerPlatformPeace: 1,    // baseline peacetime deterrent stock per platform
-    radarReserve: 60, othReserve: 100,
-    // Industry chain — targets scale with industryCapOf(), these are hard ceilings
-    // per structure type so no one industry hogs the whole slate.
-    factoryReserve: 80,
-    portTarget: 2, portReserve: 100,
-    refineryTarget: 2, refineryReserve: 140,
-    techparkTarget: 2, techparkReserve: 180,
-    // Bootstrap floor: the industry gate holds every remaining point for the
-    // next industrial slot only until this many structures are in the mix
-    // (live or on the line). Below the floor, defense/offense/radar/etc.
-    // wait their turn so the AI actually gets an economy going before it
-    // starts military spend. Above it, industry keeps its top-of-ladder
-    // priority — the industry block still runs first every think — but
-    // downstream builds compete for whatever points don't fit a
-    // factory/refinery/techpark. Kept well below indCap (base 12, up to 48)
-    // so a growing population doesn't keep pushing the gate past a nation's
-    // affordable/placeable ceiling and starving the rest of the doctrine.
-    industryBootstrap: 4,
-    // Offensive platform posture — silos/launchers built in PEACE as deterrent.
-    siloReserve: 100, siloMinNet: 1, siloTarget: 4,
-    launcherReserve: 60, launcherTarget: 3,
-    hyperReserve: 120, hyperTarget: 2,
-    // Deep-tree tuning: unlockedBuildChance is the per-decision odds of building a
-    // tech-gated unit; spaceHqReserve is the cushion before the Space Command HQ
-    // prerequisite; subReserve gates the pricier hulls.
-    unlockedBuildChance: 0.65, spaceHqReserve: 500, subReserve: 200,
-    // Strategic placement (aiPlace in sim/tick.js). The AI sites units by role and
-    // spreads them across its cities instead of piling everything onto the capital.
-    spreadKm: 150,
-    // Layered defense. Every protect-point wants at least a battery, and each
-    // "layer" adds a wider-envelope defender if the tech is unlocked.
-    defensePerPoint: 1.0, defenseMax: 14,   // defenses built = clamp(round(protectPts·perPoint),1,max)
-    layerCoverKm: 320,                       // uncovered gap that triggers stacking a mid-tier layer
-    radarPerCity: 0.5, radarMax: 5,
-    bunkerMinCities: 2, bunkerReserve: 100,
-    // Smart offensive targeting — value-weighted over at-war enemy cities.
-    targetDistScaleKm: 6000,
-    targetTopN: 4,
-    // Ground expansion doctrine — the tool for taking and holding territory.
-    armyReserve: 100,
-    groundTarget: 8,           // more battalions so ground campaigns actually apply pressure
-    artilleryShare: 0.25,      // fraction of the ground stack that goes to artillery
-    // Air doctrine — patrols + hangar restock via queueAircraft.
-    patrolSize: 2,
-    hangarInterceptorTarget: 6,
-    hangarAttackTarget: 6,
-    hangarAwacsTarget: 1,
-    hangarTransportTarget: 4,
-    hangarCarrierFighterTarget: 8,
-    hangarStrikeFighterTarget: 4,
-    hangarHeloTarget: 4,
-    hangarTransportHeloTarget: 2,
-    // Naval doctrine — coastal AIs stand up a small screening group.
-    destroyerTarget: 2, destroyerReserve: 120,
-    cruiserTarget: 1, cruiserReserve: 180,
-    battleshipTarget: 1, battleshipReserve: 200,
-    carrierTarget: 1, carrierReserve: 500,
-    amphibTarget: 1, amphibReserve: 180,
-    replenishTarget: 1, replenishReserve: 180,
-    // Scrap doctrine — sell in deficit to escape red, human-style. Never scraps
-    // capital defenders, bunker/spacehq, engaged units, or the last of any role.
-    scrapMinNet: -0.5,               // trigger scrapping when net < this (a small buffer under zero)
-    scrapSafeRadiusKm: 550,          // preserve defenders within this of a protect-point
-    scrapMaxPerThink: 1,             // at most one dismantle per decision
-    // Great-power reach — big economies aren't leashed to a small war radius.
-    warRangeGdpBoostT: 1.5,          // ($T) GDP above which warRangeKm scales up
-    warRangeMaxKm: 14000,            // ceiling for great-power reach (~global)
-    // Bloc-power math for target selection and war declaration.
-    blocGdpWeight: 1.0,              // exponent on gdp ratio (higher = more decisive)
-    blocForceWeight: 0.8,            // exponent on unit-strength ratio
-    blocAdvantageMin: 1.1,           // only declare war when my bloc / their bloc >= this
-    weaknessTopN: 5,                 // weighted pick among the N weakest reachable rivals
-};
+// Opponent-AI tuning lives in sim/ai/tuning.js, organized by pipeline stage.
 
 // Strategic objectives — the guided goals shown in the Objectives menu (see
 // sim/objectives.js). Counts are how many of a structure the goal wants;
@@ -233,11 +142,11 @@ export const OBJECTIVES_TUNING = {
     launchersRequired: 2,
 };
 
-// Living-world AI diplomacy + world-sim bounds. Consumed by diploTick and aiTick
-// in sim/tick.js. These knobs govern how wars start and end, how hard distant
-// peaceful nations are throttled, the fielding cap on global unit count, and the
-// player's domination-victory threshold. Diplomacy rolls use the seeded rand(w),
-// so world history is reproducible from (seed, playerIso).
+// Living-world AI diplomacy + world-sim bounds. Consumed by the AI pipeline in
+// sim/ai/ (its own knobs live in sim/ai/tuning.js). These govern how wars start
+// and end, how hard distant peaceful nations are throttled, the fielding cap on
+// AI unit count, and the player's domination-victory threshold. Diplomacy rolls
+// use the seeded rand(w), so world history is reproducible from (seed, playerIso).
 export const DIPLOMACY = {
     // War/peace rhythm.
     thinkMin: 12, thinkSpan: 10,     // seconds between a nation's diplomacy evaluations
@@ -245,7 +154,6 @@ export const DIPLOMACY = {
     maxWars: 2,                      // simultaneous wars a nation will sustain
     declareChance: 0.35,             // odds per diplo tick an eligible nation opens a war
     playerGraceSec: 45,              // opening window during which no nation may declare war
-    wGdp: 0.6, wWeak: 0.8,           // rival weighting exponents: prefer wealthier / weaker
     wMin: 0.15, wMax: 8,             // clamp on any single rival's selection weight
     surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction
     minWarSec: 90,                   // minimum war duration before a white-peace offer

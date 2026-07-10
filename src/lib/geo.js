@@ -33,7 +33,7 @@ export function cosLatSafe(latDeg, floor = 0.05) {
 
 // Offset `origin` by `(km, angRad)` in the local flight frame: math angle
 // (east = 0, counterclockwise), equirectangular scaling with a pole-clamped
-// cos(lat). This is the polarFrom() primitive used by flight, aiPlace,
+// cos(lat). This is the polarFrom() primitive used by flight, AI placement,
 // combat MIRVs, and placement previews.
 export function offsetKmPolar(origin, km, angRad) {
     const cosLat = cosLatSafe(origin.lat);

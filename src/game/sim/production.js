@@ -19,6 +19,7 @@ import {
 } from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
+import {recordAllianceBroken} from "./ai/diplomacy/ledger.js";
 import {findTarget} from "./combat.js";
 import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
@@ -26,7 +27,7 @@ import {haversine} from "../geo/geo.js";
 
 // Set the war relation between two nations and stamp the war-start time on both
 // sides so diplomacy can age the conflict regardless of which nation opened it
-// (see diploTick in sim/tick.js). Relation-only — events are the caller's job.
+// (see the diplomacy layer in sim/ai/). Relation-only — events are the caller's job.
 function setWar(w, na, nb, a, b) {
     na.relations[b] = "war";
     nb.relations[a] = "war";
@@ -82,11 +83,15 @@ export function formAlliance(w, a, b) {
 }
 
 // Dissolve an alliance — both sides fall back to peace. No-op on either side that
-// isn't actually allied, so a one-sided/legacy state can't be corrupted.
+// isn't actually allied, so a one-sided/legacy state can't be corrupted. Every
+// deliberate break — the player's included — lands on both diplomatic ledgers as
+// a backstab, so future proposals between the pair get harder (see ai/diplomacy).
 export function breakAlliance(w, a, b) {
     const na = nationOf(w, a), nb = nationOf(w, b);
+    const wasAllied = (na && na.relations[b] === "ally") || (nb && nb.relations[a] === "ally");
     if (na && na.relations[b] === "ally") na.relations[b] = "peace";
     if (nb && nb.relations[a] === "ally") nb.relations[a] = "peace";
+    if (wasAllied) recordAllianceBroken(w, a, b);
     w.events.push({id: nextId(w, "e"), t: w.time, type: "breakalliance", a, b});
     return {ok: true};
 }
