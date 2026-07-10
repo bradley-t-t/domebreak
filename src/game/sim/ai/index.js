@@ -62,12 +62,12 @@ function indexUnits(w) {
     return by;
 }
 
-function thinkNation(w, n, caps, diploDue) {
+function thinkNation(w, n, caps, diploDue, lite) {
     ensureProd(n);
     const personality = ensurePersonality(w, n);
     ensureDiplo(n);
     const unitsBySlot = indexUnits(w);
-    const frame = buildFrame(w, n, {unitsBySlot, caps});
+    const frame = buildFrame(w, n, {unitsBySlot, caps, lite});
 
     // Assessment: trends and lifecycle first (war plans read the states).
     updateTrends(frame);
@@ -119,6 +119,8 @@ export function aiTick(w, dt) {
             : randRange(rand(w), DIPLOMACY.idleThinkMin, DIPLOMACY.idleThinkSpan);
         const diploDue = n._diplo <= 0;
         if (diploDue) n._diplo = randRange(rand(w), DIPLOMACY.thinkMin, DIPLOMACY.thinkSpan);
-        thinkNation(w, n, caps, diploDue);
+        // Idle nations think on a lite perception frame — no threat grid, few
+        // profiles — which keeps a 222-nation all-active world affordable.
+        thinkNation(w, n, caps, diploDue, !active);
     }
 }

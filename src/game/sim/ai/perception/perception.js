@@ -113,9 +113,13 @@ export function frontPos(w, n, caps) {
 }
 
 // Build the frame. `shared` carries the per-tick indices the caller owns:
-// {unitsBySlot, caps}.
+// {unitsBySlot, caps, lite}. A LITE frame is the idle-nation economy mode —
+// peacetime nations far from any human skip the threat grid and profile only
+// a couple of neighbours, since nothing is shooting at them and their builds
+// anchor on protect-points anyway. Nations at war or near the player always
+// get the full picture.
 export function buildFrame(w, n, shared) {
-    const {unitsBySlot, caps} = shared;
+    const {unitsBySlot, caps, lite} = shared;
     const myUnits = unitsBySlot.get(n.slot) || [];
     const cities = aiCities(w, n.slot);
     const diplo = ensureDiplo(n);
@@ -137,12 +141,13 @@ export function buildFrame(w, n, shared) {
     // composition-shaping reads (profiles, threat map) only look at the
     // NEAREST handful of rivals — distant ones still matter to diplomacy,
     // which reads the cheap aggregates instead of full profiles.
+    const profileCap = lite ? THREAT.profiledRivalsLite : THREAT.profiledRivals;
     let rivalsNear = rivals;
-    if (rivals.length > THREAT.profiledRivals && myCap) {
+    if (rivals.length > profileCap && myCap) {
         rivalsNear = rivals
             .map((m) => [m, caps[m.slot] ? haversine(myCap.lng, myCap.lat, caps[m.slot].lng, caps[m.slot].lat) : Infinity])
             .sort((a, b) => a[1] - b[1])
-            .slice(0, THREAT.profiledRivals)
+            .slice(0, profileCap)
             .map(([m]) => m);
     }
 
@@ -155,7 +160,9 @@ export function buildFrame(w, n, shared) {
         profiles[m.slot] = p;
     }
 
-    const threats = buildThreatMap(w, n, {cities, myUnits, enemies, rivals: rivalsNear, unitsBySlot});
+    const threats = lite
+        ? {cells: [], grid: null}
+        : buildThreatMap(w, n, {cities, myUnits, enemies, rivals: rivalsNear, unitsBySlot});
 
     // One front per active war: where the foe is, how far, and its age.
     const fronts = enemies.map((e) => {

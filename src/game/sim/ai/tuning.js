@@ -23,6 +23,7 @@ export const THREAT = {
     leaderValue: 6e6,            // protect-value a leadership token adds to a cell
     industryValue: 4e6,          // protect-value an industry structure adds to a cell
     profiledRivals: 12,          // nearest rivals that get full profiles / threat sources per think
+    profiledRivalsLite: 4,       // same cap for an idle nation's lite frame (no threat grid)
 };
 
 // Posture thresholds (assessment/posture.js).
