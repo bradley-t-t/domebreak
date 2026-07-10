@@ -31,9 +31,10 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                 const iso = gl?.iso || nation?.iso;
                 // Neutral: a country outside w.nations, or an inactive (non-participating)
                 // nation. Both are pure scenery — swap the details readout for a plaque.
+                // A nation wiped out in war is inactive too, but gets the defeated plaque.
                 const neutral = !nation || nation.active === false;
                 if (neutral) {
-                    return <NeutralReadout x={hover.x} y={hover.y}
+                    return <NeutralReadout x={hover.x} y={hover.y} wiped={!!nation?.wipedOut}
                                            header={<>{iso ? <Flag iso={iso}/> : null}<span>{name}</span></>}/>;
                 }
                 const cities = w.cities.filter((c) => c.slot === nation.slot && c.alive);
@@ -93,10 +94,11 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
     );
 }
 
-// The map hover plaque for a neutral (non-participating) country. Reuses the shared
-// popover shell and cursor-flip math from HoverReadout but drops the stat grid — a
-// neutral is scenery, so there's nothing to report beyond the name and its status.
-function NeutralReadout({x, y, header}) {
+// The map hover plaque for a neutral (non-participating) country, or a nation wiped
+// out in war (`wiped`). Reuses the shared popover shell and cursor-flip math from
+// HoverReadout but drops the stat grid — a neutral is scenery, so there's nothing to
+// report beyond the name and its status.
+function NeutralReadout({x, y, header, wiped}) {
     const left = x + 18 > window.innerWidth - 250 ? Math.max(12, x - 248) : x + 18;
     const top = Math.min(Math.max(60, y - 14), window.innerHeight - 170);
     return (
@@ -104,10 +106,12 @@ function NeutralReadout({x, y, header}) {
              style={{left, top}} aria-hidden="true">
             <div className="flex items-center gap-2 font-display font-bold text-[13.5px] tracking-[0.2px]">{header}</div>
             <div className="mt-[10px] inline-flex items-center gap-[6px] px-[8px] py-[3px] rounded-full border border-line-soft text-[10px] tracking-[0.8px] uppercase text-dim">
-                <span>Neutral Territory</span>
+                <span>{wiped ? "Wiped Out" : "Neutral Territory"}</span>
             </div>
             <p className="mt-[9px] text-[11.5px] leading-[1.45] text-dim">
-                Not participating in this game — this country stays neutral throughout the match.
+                {wiped
+                    ? "Beaten below the surrender line and knocked out of the war — its remnant land now lies open."
+                    : "Not participating in this game — this country stays neutral throughout the match."}
             </p>
         </div>
     );

@@ -1,7 +1,5 @@
 // Imperative rAF loop with an optional FPS floor and tab-visibility pause.
 // Returns a `stop()` that cancels the frame and detaches the listener.
-// `useRafLoop` (see hooks/) wraps this for React so map/water.js and
-// component effects share one engine.
 
 export function startPausableRaf(frame, options = {}) {
     const {minDtMs = 0, pauseWhenHidden = true} = options;

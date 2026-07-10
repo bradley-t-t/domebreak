@@ -15,6 +15,8 @@
 //     calm; the soundtrack layers tension (sub-pulse, dissonant shimmer) in
 //     proportion, so the mix breathes with the battle without the UI wiring it.
 
+import {clampSym} from "../../lib/math.js";
+
 let ctx = null;
 let sfxBus = null, musicBus = null, musicDuck = null, master = null, verb = null, verbReturn = null;
 let vols = {music: 0.5, sfx: 0.8};
@@ -107,7 +109,7 @@ function out(node, bus, pan) {
     const p = pan ?? panCtx;
     if (p) {
         const sp = ctx.createStereoPanner();
-        sp.pan.value = Math.max(-1, Math.min(1, p));
+        sp.pan.value = clampSym(p, 1);
         node.connect(sp).connect(bus);
     } else {
         node.connect(bus);
@@ -345,7 +347,7 @@ function padChord(freqs, t0) {
             o.type = "sawtooth";
             o.frequency.value = fr;
             o.detune.value = det;
-            sp.pan.value = Math.max(-1, Math.min(1, pan));
+            sp.pan.value = clampSym(pan, 1);
             o.connect(sp).connect(f);
             o.start(t0);
             o.stop(t0 + life);

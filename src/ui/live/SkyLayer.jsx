@@ -2,6 +2,7 @@ import {useEffect, useLayoutEffect, useMemo, useRef} from "react";
 import {occludedByGlobe} from "../../game/geo/geo.js";
 import {trackPoint, WARHEADS} from "../../game/engine.js";
 import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
+import {clamp} from "../../lib/math.js";
 
 // Renders missiles/interceptors and their contrails in SCREEN space with a
 // ballistic altitude baked into every point, so the trail arcs up off the
@@ -13,10 +14,10 @@ import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
 // frame the map paints, MapLibre's `render` event drives update(), which
 // re-projects each sprite and writes its transform directly, and redraws all
 // contrails on a single <canvas>. That keeps the sprites glued to the terrain
-// during a WASD pan — the old code re-rendered React one rAF *behind* the map's
-// own render loop, so sprites swam a frame behind the ground and reconciling
-// every head div per frame was the lag. A commit-time layout effect covers the
-// other case: the sim advancing a missile while the map itself is still.
+// during a WASD pan — repositioning through React would land one rAF behind the
+// map's own render loop, and reconciling every head div per frame is the lag.
+// A commit-time layout effect covers the other case: the sim advancing a
+// missile while the map itself is still.
 // Peak sprite lift per launch-platform type: how tall the trail's altitude arc
 // reads on screen. Orbital-strike rounds fall out of the sky — their platform is
 // literally in orbit — so they read biggest here.
@@ -138,7 +139,7 @@ function update(map, data, canvas, els) {
         // throw here runs inside a layout effect — it would crash the entire match
         // view (the MATCH ERROR boundary). Sanitize so a degenerate coordinate only
         // mis-places one sprite for a frame instead of taking the match down.
-        const sLat = Math.max(-90, Math.min(90, lat)) || 0;
+        const sLat = clamp(lat, -90, 90) || 0;
         const sLng = Number.isFinite(lng) ? lng : 0;
         const p = map.project([sLng, sLat]);
         return [p.x, p.y];
