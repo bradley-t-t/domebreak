@@ -10,6 +10,7 @@ import {haversine} from "../geo/geo.js";
 import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
 import {atWar} from "./queries.js";
+import {unitLockReason} from "./production.js";
 import {cmpStr} from "../../lib/iter.js";
 
 // The warhead an offense unit will actually fire — its loaded payload, or the
@@ -58,6 +59,30 @@ export function planAttackers(w, plan, mySlot) {
         .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type)
             && !(plan.excludeIds?.has(u.id)))
         .sort(cmpStr((u) => u.id));
+}
+
+// The attacker unit TYPES the Battle Planning screen offers. A plan is intent, not a
+// muster roll, so ownership is not required: the picker lists every offensive type the
+// nation could field — live platforms, platforms on the production line, and types whose
+// build prerequisites are currently met — plus any type an existing plan already selected
+// (so a plan never hides a selection the player can no longer toggle off). Aircraft are
+// the exception: they fight from airbase hangars and only exist as commandable units
+// while airborne, so they surface only when actually in the air.
+export function planAttackerTypeOptions(w, mySlot, plans = []) {
+    const types = new Set();
+    for (const u of w.units) {
+        if (u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense") types.add(u.type);
+    }
+    const n = w.nations.find((x) => x.slot === mySlot);
+    const line = [...(n?.prod?.current ? [n.prod.current.item] : []), ...(n?.prod?.queue || [])];
+    for (const it of line) {
+        if (it.kind === "unit" && !it.forBase && UNITS[it.type]?.kind === "offense") types.add(it.type);
+    }
+    for (const [type, def] of Object.entries(UNITS)) {
+        if (def.kind === "offense" && !def.airSpeed && !unitLockReason(w, mySlot, type)) types.add(type);
+    }
+    for (const p of plans) for (const t of p.attackerTypes || []) if (UNITS[t]?.kind === "offense") types.add(t);
+    return [...types].sort();
 }
 
 // Which target CATEGORY an at-war entity falls into (BATTLE_PLAN.targetCategories): a

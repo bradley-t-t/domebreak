@@ -4,7 +4,7 @@ import {haversine} from "../geo/geo.js";
 import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
-import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, STABILITY, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
 import {clamp, clamp01} from "../../lib/math.js";
 
 // Fallout cloud intensity (0..1) for a given age in sim seconds: ramps up over
@@ -64,6 +64,18 @@ export function isActive(w, slot) {
 // re-implementing `w.nations.find(...)?.name || …` at each call site.
 export function nationName(w, slot) {
     return nationOf(w, slot)?.name || `Nation ${slot}`;
+}
+
+// True while a nation still carries an undecayed Defeat from a lost war — the
+// sim's record of a surrender (warResolution stamps defeatPenalties on every
+// loser, whether it capitulated below the surrender threshold, was decapitated,
+// or was beaten outright). Uses the same decay window as stability's "Recent
+// defeat" penalty, so the "shaken for a year" the Defeat popup describes is also
+// the period the nation counts as surrendered.
+export function hasSurrendered(w, n) {
+    const defeats = n?.defeatPenalties;
+    if (!defeats?.length) return false;
+    return defeats.some((p) => w.time - p.t0 < STABILITY.defeatSec);
 }
 
 // A city's vitality (0..1): the share of its people, economy, and output still
@@ -163,9 +175,8 @@ export function industryCapOf(w, slot) {
 // A point belongs to `slot` only if the NEAREST living city of ANY nation is one
 // of slot's own AND lies within TERRITORY_RADIUS. This makes territories mutually
 // exclusive (a Voronoi partition clipped to the radius) so neighbouring nations'
-// 550 km disks never overlap — an AI (or the player) can no longer site a unit in
-// a spot that sits closer to a rival's city than to its own. Fixes enemy units
-// appearing inside your borders where the two territory disks used to overlap.
+// 550 km disks never overlap — neither an AI nor the player can site a unit in a
+// spot that sits closer to a rival's city than to its own.
 export function inTerritory(w, slot, lng, lat) {
     let nearestSlot = -1, nearest = Infinity;
     for (const c of w.cities) {

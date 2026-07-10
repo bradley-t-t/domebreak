@@ -24,8 +24,10 @@ export function spawnQueuedUnit(w, n, it) {
         return;
     }
     // The reserved spot may have been taken while the unit was on the line — nudge
-    // around it, and refund if nowhere nearby fits.
-    let spot = null;
+    // around it, and refund if nowhere nearby fits. Orbital assets are exempt (as at
+    // queue time): sats deploy above the surface, so ground separation can't block
+    // them — they launch onto exactly the parallel the player picked.
+    let spot = def.orbital ? {lng: it.lng, lat: it.lat} : null;
     for (let k = 0; k < 9 && !spot; k++) {
         const lng = it.lng + (k ? Math.cos(k) * 0.5 * k * 0.35 : 0),
             lat = it.lat + (k ? Math.sin(k) * 0.5 * k * 0.35 : 0);

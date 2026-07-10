@@ -107,6 +107,42 @@ describe("warTick — auto-surrender through the live tick", () => {
         expect(w.warPopups.some((p) => p.kind === "victory" && p.foe === 1)).toBe(true);
     });
 
+    it("test_routed_ai_is_neutralized_and_cannot_re_surrender", () => {
+        const w = fresh();
+        w.paused = false;
+        declareWar(w, 0, 1);
+        w.city("b1").alive = false;
+        w.city("b3").alive = false;      // B down to 1/3 living cities → below the surrender floor, keeps b2
+        step(w, 0.1);
+        expect(atWar(w, 0, 1)).toBe(false);
+        expect(w.nations[1].active).toBe(false);           // knocked out → passive neutral
+        expect(w.nations[1].wipedOut).toBe(true);
+        expect(w.nations[1].alive).toBe(true);             // still on the map — it kept b2
+        // Stray fallout / a new declaration can't drag a neutralized nation back into a
+        // war and re-surrender it: warTick skips inactive nations. Force a fresh war
+        // relation on and confirm no second capitulation fires.
+        const surrenders = () => w.events.filter((e) => e.type === "conquest" && e.loser === 1).length;
+        const before = surrenders();
+        w.nations[0].relations[1] = "war";
+        w.nations[1].relations[0] = "war";
+        step(w, 0.1);
+        expect(surrenders()).toBe(before);
+    });
+
+    it("test_human_collapse_surrenders_but_is_not_neutralized", () => {
+        const w = fresh();
+        w.paused = false;
+        w.mySlot = 1;                    // treat B as the human commander
+        w.nations[1].isAi = false;
+        declareWar(w, 0, 1);
+        w.city("b1").alive = false;
+        w.city("b3").alive = false;      // B → 1/3 alive → below the floor, keeps b2
+        step(w, 0.1);
+        expect(atWar(w, 0, 1)).toBe(false);                // the war still resolves as a defeat
+        expect(w.nations[1].active).not.toBe(false);       // but the human keeps fighting their remnant
+        expect(w.nations[1].wipedOut).toBeFalsy();
+    });
+
     it("test_healthy_belligerents_do_not_surrender", () => {
         const w = fresh();
         w.paused = false;
