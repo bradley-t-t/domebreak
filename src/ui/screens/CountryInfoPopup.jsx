@@ -5,24 +5,20 @@
 // though it's context-triggered. Presentation only — every war / peace /
 // alliance action goes through the same api entry points DiplomacyScreen
 // uses.
-import {useMemo} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
 import {colorForSlot, DIPLOMACY} from "../../game/data/constants.js";
 import {miniButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
+import {useRoster} from "../lib/roster.js";
 import {gdpOf, populationOf} from "../../game/engine.js";
 
 export default function CountryInfoPopup({world, api, mySlot, online, targetSlot, players, onClose}) {
     const me = world.nations.find((n) => n.slot === mySlot);
     const n = world.nations.find((x) => x.slot === targetSlot);
 
-    const usernameOf = useMemo(() => {
-        const m = new Map();
-        for (const p of (players || [])) m.set(p.slot, p.username);
-        return m;
-    }, [players]);
+    const {usernameOf, isHuman} = useRoster(players);
 
     if (!n) {
         return (
@@ -44,12 +40,13 @@ export default function CountryInfoPopup({world, api, mySlot, online, targetSlot
     const pop = populationOf(world, n.slot);
     const gdp = gdpOf(world, n.slot);
 
-    const seatLabel = isMe ? "You" : n.isAi ? "AI" : "Player";
+    const human = isHuman(n.slot);
+    const seatLabel = isMe ? "You" : human ? "Player" : "AI";
     const seatCls = isMe ? "text-gold-contrast bg-gold border-gold"
-        : n.isAi ? "" : "text-[#5fa8ff] border-[#3f5a80]";
+        : human ? "text-[#5fa8ff] border-[#3f5a80]" : "";
     const commander = isMe ? "You"
-        : n.isAi ? null
-            : usernameOf.get(n.slot) || "Commander";
+        : human ? usernameOf.get(n.slot) || "Commander"
+            : null;
 
     const standing = isMe ? {label: "Home", tone: "text-dim"}
         : neutral ? {label: "Neutral", tone: "text-dim"}
