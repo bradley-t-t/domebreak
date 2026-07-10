@@ -108,9 +108,9 @@ export const ECONOMY = {
 // health, so bombing enemy cities lowers their industrial ceiling. Shared across
 // all kind:"industry" types (factory/port/refinery/techpark).
 export const INDUSTRY = {
-    base: 6,
-    popPer: 40e6,
-    max: 24,
+    base: 12,
+    popPer: 20e6,
+    max: 48,
 };
 
 // Population growth. Each living city's people grow every tick, scaled by its
