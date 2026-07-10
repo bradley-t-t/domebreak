@@ -130,12 +130,17 @@ export const AI_TUNING = {
     thermoChance: 0.35,
     hgvChance: 0.4,
     sicbmChance: 0.4,
-    stdStockTarget: 6, stdReserve: 40,
-    thermoStockTarget: 2, thermoReserve: 180,
-    hgvStockTarget: 3, hgvReserve: 120,
-    sicbmStockTarget: 3, sicbmReserve: 90,
-    // Peacetime deterrent stocks — nations rearm BEFORE the shooting starts.
-    peaceThermoStock: 1, peaceHgvStock: 1, peaceSicbmStock: 1,
+    // Ammo stockpiles scale with the count of platforms that can fire the
+    // round (see aiBuildDoctrine). Reserves are the points cushion held on top
+    // of the buy cost so a stock buy never zeroes the treasury.
+    stdReserve: 40,
+    thermoReserve: 180,
+    clusterReserve: 60,
+    thermomirvReserve: 220,
+    hgvReserve: 120,
+    sicbmReserve: 90,
+    ammoPerPlatformWar: 3,      // rounds per compatible platform kept ready at war
+    ammoPerPlatformPeace: 1,    // baseline peacetime deterrent stock per platform
     radarReserve: 60, othReserve: 100,
     // Industry chain — targets scale with industryCapOf(), these are hard ceilings
     // per structure type so no one industry hogs the whole slate.
