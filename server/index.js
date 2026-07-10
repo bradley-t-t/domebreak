@@ -152,6 +152,9 @@ wss.on("connection", (ws) => {
             ws.send(m.initPayload(slot));
         } else if (msg.t === "cmd" && match && slot != null) {
             const r = match.command(slot, msg.name, msg.args);
+            // Ack even on rejection: the client drops its prediction from the pending
+            // buffer either way, and the next snapshot carries the authoritative truth.
+            match.recordAck(slot, msg.seq);
             if (r?.error && msg.seq != null) ws.send(JSON.stringify({t: "nack", seq: msg.seq, error: r.error}));
         } else if (msg.t === "chat" && match && slot != null) {
             match.chat(slot, msg.text);
