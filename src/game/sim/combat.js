@@ -6,7 +6,7 @@ import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../dat
 import {nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
 import {cosLatSafe, unwrapLng} from "../../lib/geo.js";
-import {clamp01} from "../../lib/math.js";
+import {clamp, clamp01} from "../../lib/math.js";
 import {byId} from "../../lib/iter.js";
 import {jitter, randRange} from "../../lib/random.js";
 
@@ -68,7 +68,7 @@ export function trackPoint(p, f) {
     // that can push a sub-warhead past a pole near high latitudes. Clamp so the
     // shared track never yields an impossible latitude — an unclamped value crashes
     // map.project() (Invalid LngLat) and takes the whole match view down.
-    const bowLat = Math.max(-90, Math.min(90, base[1] + ((dx / len) * off) / 111));
+    const bowLat = clamp(base[1] + ((dx / len) * off) / 111, -90, 90);
     return [base[0] + ((-dy / len) * off) / (111 * cos), bowLat];
 }
 

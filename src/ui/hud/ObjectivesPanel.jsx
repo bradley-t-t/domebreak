@@ -16,14 +16,10 @@ const MAX_ACTIVE = 3;
 // size / placement / opacity / hide all come free from the shared HUD layout store,
 // exactly like the other movable panels.
 //
-// Completed objectives leave the active list so the panel always foregrounds what
-// the player should do next; they collapse into a "Completed" log at the bottom that
-// can be expanded to review everything already cleared.
-//
-// Only the next MAX_ACTIVE incomplete objectives are shown at once, so the panel
-// stays a short, focused to-do list. As each visible one is cleared it drops into
-// the completed log and the next queued objective slides up to take its place; a
-// "+N more" hint records how many are still waiting.
+// Completed objectives collapse into an expandable "Completed" log at the bottom;
+// only the next MAX_ACTIVE incomplete ones are foregrounded (a "+N more" hint
+// counts the rest), so the panel always reads as a short to-do list of what to
+// do next.
 //
 // The land-coverage objective runs a full country-grid scan, so evaluation is
 // memoized on the whole-second game clock rather than every animation frame — a

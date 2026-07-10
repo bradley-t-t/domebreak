@@ -22,7 +22,7 @@ import {
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {cosLatSafe, offsetKmPolar, unwrapLng, wrapAnglePi} from "../../lib/geo.js";
-import {clamp01, clampSym} from "../../lib/math.js";
+import {clamp, clamp01, clampSym} from "../../lib/math.js";
 import {nationOf} from "./worldState.js";
 
 // Point at radiusKm/ang from origin o, in the local flight frame: math angle
@@ -92,7 +92,7 @@ export function flyEscort(w, u, def, dt) {
         const fp = polarFrom(lead, LEADERSHIP.escortOffsetKm, ang);
         u.alt = Math.max(0.35, lead.alt || 0);
         const rng = dist(u, fp);
-        const speed = Math.min(sp, Math.max(sp * 0.35, rng * 1.4));
+        const speed = clamp(rng * 1.4, sp * 0.35, sp);
         advance(u, bearingTo(u, fp), speed, tr * 2, dt);
         return;
     }
@@ -245,7 +245,7 @@ export function flyFerry(w, u, def, dt) {
         // Ease speed down and tighten the turn on approach: an airlifter's normal
         // cruise turn radius (v/ω) is far larger than the gaps between a city, the
         // bunker, and the airstrip, so it must slow to capture a near waypoint.
-        const speed = Math.min(sp, Math.max(sp * FLIGHT.FERRY_APPROACH_SPEED_MULT, rng / FLIGHT.FERRY_APPROACH_RANGE_DIV));
+        const speed = clamp(rng / FLIGHT.FERRY_APPROACH_RANGE_DIV, sp * FLIGHT.FERRY_APPROACH_SPEED_MULT, sp);
         advance(u, bearingTo(u, pt), speed, tr * FLIGHT.FERRY_APPROACH_TURN_MULT, dt);
         return false;
     };
@@ -397,7 +397,7 @@ function flyApproachIntercept(u, base, ra, sp, tr, dt) {
     const axx = Math.cos(ra), axy = Math.sin(ra);
     const along = -(px * axx + py * axy);        // km out on the APPROACH side of the threshold
     const cross = -px * axy + py * axx;          // signed cross-track distance from the centerline
-    const LEAD = Math.min(FLIGHT.LEAD_MAX_KM, Math.max(FLIGHT.LEAD_MIN_KM, (sp / tr) * FLIGHT.LEAD_SPEED_TURN_MULT));
+    const LEAD = clamp((sp / tr) * FLIGHT.LEAD_SPEED_TURN_MULT, FLIGHT.LEAD_MIN_KM, FLIGHT.LEAD_MAX_KM);
     if (along > FLIGHT.INTERCEPT_ALONG_KM) {
         const desired = ra + clampSym(-cross / FLIGHT.INTERCEPT_CROSS_DIV, FLIGHT.INTERCEPT_TURN_RAD);
         advance(u, desired, sp, tr, dt);

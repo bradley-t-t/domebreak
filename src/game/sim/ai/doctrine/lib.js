@@ -7,6 +7,7 @@
 import {DIPLOMACY, UNITS, WARHEADS} from "../../../data/constants.js";
 import {prodCount, unitLockReason} from "../../production.js";
 import {WANTS} from "../tuning.js";
+import {clamp} from "../../../../lib/math.js";
 
 // Wants at or above this urgency block lower-urgency spending while
 // unaffordable. ONLY deliberate emergencies (bootstrap industry, a naked
@@ -47,7 +48,7 @@ export function wantList(frame) {
 
 const INDUSTRY_TYPES = ["factory", "port", "refinery", "techpark"];
 
-export function industryTotal(frame) {
+function industryTotal(frame) {
     let k = 0;
     for (const t of INDUSTRY_TYPES) k += have(frame, t);
     return k;
@@ -81,7 +82,7 @@ export function industryWants(list, eco) {
 
 export function radarWants(list, radarAxis) {
     const frame = list.frame;
-    const target = Math.min(WANTS.radarMax, Math.max(1, Math.round(frame.me.cities.length * WANTS.radarPerCity)));
+    const target = clamp(Math.round(frame.me.cities.length * WANTS.radarPerCity), 1, WANTS.radarMax);
     const radars = have(frame, "radar");
     push(list, "unit", "radar", target, (radars === 0 ? 7 : 4) * radarAxis, WANTS.radarReserve);
     if (radars > 0 && have(frame, "oth") === 0) push(list, "unit", "oth", 1, 3 * radarAxis, WANTS.othReserve);

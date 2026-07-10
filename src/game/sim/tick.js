@@ -1,6 +1,4 @@
-// The main simulation step: research/production progress, unit movement and
-// firing, projectile flight and interception, sensor sweeps, and the opponent
-// AI. This is the tick engine's single entry point (step()).
+// The tick engine's single entry point: step() advances the whole simulation.
 // The tick phases live in ./tickPhases.js and the opponent AI (including its
 // diplomacy) lives in ./ai/ — step() below is a thin orchestrator over both.
 import {evacTick} from "./leadership.js";
@@ -25,8 +23,7 @@ export {growCities, healCities};
 
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
-// end-of-tick cleanup (dead unit/projectile pruning, win condition). A thin
-// orchestrator over the phases above.
+// end-of-tick cleanup (dead unit/projectile pruning, win condition).
 //
 // `predict` marks a CLIENT-SIDE prediction tick in an online match. The server is
 // authoritative and ships full-world snapshots ~2×/s; between them the client runs
