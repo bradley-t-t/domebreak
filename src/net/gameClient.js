@@ -45,20 +45,20 @@ export function absorb(target, snapshot, mySlot) {
 // processed it arrives. Exported for tests.
 //
 // A prediction the server never confirms — a command it dropped, or a server too old
-// to send acks at all — ages out after PREDICT_TTL snapshots so the buffer can never
-// grow without bound. Left unbounded it is catastrophic: replayed economy commands
-// (buy/scrap) re-charge their point cost against every snapshot, so the client's
-// predicted balance bleeds down until it can no longer afford anything and unit
-// placement dies a few minutes in.
-// Coupled to the server's SNAPSHOT_MS (config.js): a prediction may go unconfirmed
-// for this many snapshots before it ages out, sized to a ~1.2s wall-clock window.
-// At 20Hz (50ms) snapshots that is 24. If SNAPSHOT_MS changes, rescale this so the
-// window stays ~1.2s — too short rubber-bands live actions, too long lets a dropped
+// to send acks at all — ages out after PREDICT_TTL_MS of wall clock so the buffer can
+// never grow without bound. Left unbounded it is catastrophic: replayed economy
+// commands (buy/scrap) re-charge their point cost against every snapshot, so the
+// client's predicted balance bleeds down until it can no longer afford anything and
+// unit placement dies a few minutes in.
+// Wall clock, deliberately NOT a snapshot count: the server's snapshot rate is
+// env-tunable (server/config.js) and degrades per client under backpressure, so
+// counting snapshots would stretch or crush the window with the rate. Too short
+// rubber-bands live actions before their ack lands; too long lets a dropped
 // command's optimistic apply linger.
-export const PREDICT_TTL = 24; // snapshots (~1.2s at 50ms SNAPSHOT_MS) a prediction may go unconfirmed
+export const PREDICT_TTL_MS = 1200; // wall-clock window a prediction may go unconfirmed
 
-export function reconcile(client, ack) {
-    client._pending = client._pending.filter((c) => (ack == null || c.seq > ack) && --c.ttl > 0);
+export function reconcile(client, ack, now = Date.now()) {
+    client._pending = client._pending.filter((c) => (ack == null || c.seq > ack) && c.exp > now);
     client._reapply?.();
 }
 
@@ -126,7 +126,7 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 // next snapshot cleanly reverts the optimistic local apply.
                 if (this._ws?.readyState === WebSocket.OPEN) {
                     const seq = ++this._seq;
-                    this._pending.push({seq, name, args, ttl: PREDICT_TTL});
+                    this._pending.push({seq, name, args, exp: Date.now() + PREDICT_TTL_MS});
                     this._ws.send(JSON.stringify({t: "cmd", name, args, seq}));
                     return seq;
                 }
