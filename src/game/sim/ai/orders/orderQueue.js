@@ -1,8 +1,8 @@
 // Orders — the ONLY module in the AI pipeline that mutates the world. It
 // consumes the pure stages' outputs (BuyPlan, fire assignments, patrol policy,
 // diplomacy actions) and speaks to the same production/command APIs the human
-// player does, bounded by the production line and the AI unit cap.
-import {allowedAmmo, DIPLOMACY, HANGAR_SPEC, UNITS, initialWarhead} from "../../../data/constants.js";
+// player does, bounded by the production line.
+import {allowedAmmo, HANGAR_SPEC, UNITS, initialWarhead} from "../../../data/constants.js";
 import {haversine} from "../../../geo/geo.js";
 import {rand} from "../../worldState.js";
 import {atWar, netIncomeOf} from "../../queries.js";
@@ -44,16 +44,6 @@ export function executeScrap(w, frame, bias) {
 
 // Queue the BuyPlan through the production line. Every order revalidates in
 // production.js (tech, caps, deficit, territory) — a refusal just skips the item.
-// Standing-unit builds on the line: queued or building units, minus aircraft
-// orders (forBase items deliver into a hangar, not the map).
-function pendingUnits(n) {
-    let k = 0;
-    for (const it of n.prod.queue) if (it.kind === "unit" && !it.forBase) k++;
-    const cur = n.prod.current?.item;
-    if (cur?.kind === "unit" && !cur.forBase) k++;
-    return k;
-}
-
 export function executeBuys(w, frame, buys, place) {
     const n = frame.n;
     for (const buy of buys) {
@@ -62,7 +52,6 @@ export function executeBuys(w, frame, buys, place) {
             queueAmmo(w, n.slot, buy.type);
             continue;
         }
-        if (frame.me.units.length + pendingUnits(n) >= DIPLOMACY.aiUnitCap) continue;
         const p = place(buy.type);
         if (!p) continue;
         queueUnit(w, n.slot, buy.type, p.lng, p.lat, true);

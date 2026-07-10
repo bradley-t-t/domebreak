@@ -53,6 +53,7 @@ export function slotStats(w) {
         s.income = !n ? 0 : n.gdp > 0
             ? (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * s.econ + s.indOut) * mult
             : (ECONOMY.fallbackBase + s.vit * ECONOMY.fallbackPerCity + s.indOut) * mult;
+        if (n?.isAi) s.upkeep *= ECONOMY.aiUpkeepMult;   // mirror queries.upkeepOf: AI pays half
         s.net = s.income - s.upkeep;
         s.frac = s.cities / Math.max(1, s.start);
         s.power = Math.max(0.1, s.gdp) + s.force / 300;

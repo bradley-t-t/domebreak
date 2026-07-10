@@ -128,7 +128,7 @@ export function incomeOf(w, slot) {
 export function upkeepOf(w, slot) {
     let sum = 0;
     for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
-    return sum;
+    return nationOf(w, slot)?.isAi ? sum * ECONOMY.aiUpkeepMult : sum;
 }
 
 export function netIncomeOf(w, slot) {

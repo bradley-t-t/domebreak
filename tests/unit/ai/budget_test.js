@@ -20,6 +20,7 @@ import {
 import {BUDGET, THINK, WANTS} from "../../../src/game/sim/ai/tuning.js";
 import {buildFrame, capPositions} from "../../../src/game/sim/ai/perception/perception.js";
 import {createWorld, UNITS} from "../../../src/game/engine.js";
+import {ECONOMY} from "../../../src/game/data/constants.js";
 
 // buildBuyPlan reads only me.points / me.net from the frame.
 const frameOf = (points, net) => ({me: {points, net, units: []}, n: {}});
@@ -90,8 +91,9 @@ describe("buildBuyPlan — packing order and affordability", () => {
 describe("buildBuyPlan — net-income floor and deficit", () => {
     it("test_net_floor_skips_non_industry_and_tracks_running_net", () => {
         // Net covers exactly two batteries above the floor; the silo would dive
-        // far below it and the third battery lands on the wrong side too.
-        const net = BUDGET.minNet + 2 * UNITS.battery.upkeep;
+        // far below it and the third battery lands on the wrong side too. The AI
+        // pays the reduced upkeep rate, so marginal upkeep is scaled to match.
+        const net = BUDGET.minNet + 2 * UNITS.battery.upkeep * ECONOMY.aiUpkeepMult;
         const {buys} = buildBuyPlan(frameOf(5000, net), [
             want("unit", "silo", 8),
             want("unit", "battery", 7),
@@ -105,7 +107,7 @@ describe("buildBuyPlan — net-income floor and deficit", () => {
     });
 
     it("test_item_min_net_ask_overrides_the_global_floor", () => {
-        const ask = UNITS.silo.upkeep + 1; // projects net exactly 1 after the buy
+        const ask = UNITS.silo.upkeep * ECONOMY.aiUpkeepMult + 1; // projects net exactly 1 after the buy
         // Projected net clears BUDGET.minNet but not the item's own ask -> skip.
         expect(buildBuyPlan(frameOf(5000, ask - 0.1), [want("unit", "silo", 6, {minNet: 1})]).buys).toEqual([]);
         // Exactly meeting the ask buys.
