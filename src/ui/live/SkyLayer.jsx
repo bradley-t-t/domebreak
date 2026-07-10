@@ -23,6 +23,12 @@ import {clamp} from "../../lib/math.js";
 // literally in orbit — so they read biggest here.
 const ALT = {silo: 92, launcher: 48, hypersonicbty: 26, orbitalstrike: 140, "sub-ssbn": 88, "sub-ssn": 60};
 const SAMPLES = 20;
+const INT_SAMPLES = 10;              // interceptor trails are short — fewer points
+// Interceptor contrail tint per firing battery. Same plume treatment as the
+// missiles (see drawTrail), just thinner and in the battery's own colour so a
+// defender's shots read apart from the ICBMs they chase.
+const INT_TRAIL = {thaad: "#a9ecff", "": "#8dffbf"};
+const INT_TRAIL_W = 1.6;
 
 // #rgb / #rrggbb -> "rgba(r,g,b,a)". Trail colors in the warhead registry are
 // all 6-digit hex; the 3-digit branch is just belt-and-suspenders.
@@ -100,20 +106,41 @@ function projGeom(map, p, project) {
     return {pts, head: head || null, deg};
 }
 
-function intGeom(map, it, projById, project) {
+// Trail points + head pose for one interceptor, mirroring projGeom's screen-space
+// treatment. Unlike a ballistic round (which arcs up and back down), the
+// interceptor climbs from its battery on the ground toward the target's altitude,
+// so its contrail lifts monotonically to the nose. Heading comes from the round's
+// own last step (it.pLng/pLat), so the nose faces its true direction of travel and
+// never snaps 180 at the terminal merge the way aiming at a stale lead point did.
+function intGeom(map, it, project) {
     const clng = unwrapLng(it.lng, it.fromLng);
-    if (occludedByGlobe(map, clng, it.lat)) return {head: null, deg: 0};
-    const [xc, yc] = project(clng, it.lat);
-    const head = [xc, yc - (it.altNorm || 0) * 72];
-    // Aim the nose at the live target's on-screen position — its actual direction
-    // of travel this instant (a chord back to the launch site diverges once the
-    // globe projection curves the path).
-    const tgt = projById.get(it.targetId);
-    const tlng = unwrapLng(it.toLng, clng);
-    const [xt, yt] = project(tlng, it.toLat);
-    const tgtLift = tgt ? (ALT[tgt.type] || 60) * (tgt.altNorm || 0) : (it.altNorm || 0) * 72;
-    const dx = xt - head[0], dy = (yt - tgtLift) - head[1];
-    return {head, deg: screenHeadingDeg(dx, dy)};
+    const lift = (it.altNorm || 0) * 72;
+    const screenAt = (f) => {
+        const lng = it.fromLng + (clng - it.fromLng) * f;
+        const lat = it.fromLat + (it.lat - it.fromLat) * f;
+        if (occludedByGlobe(map, lng, lat)) return null; // far side of the globe
+        const [x, y] = project(lng, lat);
+        return [x, y - lift * f];
+    };
+    const pts = [];
+    for (let i = 0; i <= INT_SAMPLES; i++) pts.push(screenAt(i / INT_SAMPLES));
+    const head = pts[pts.length - 1];
+    let deg = 0;
+    if (head) {
+        if (it.pLng != null) {
+            // Face the direction actually flown this tick. Subtracting the same lift
+            // from the back point cancels it, so the nose tracks the ground heading.
+            const plng = unwrapLng(it.pLng, it.fromLng);
+            const [bx, by] = project(plng, it.pLat);
+            deg = screenHeadingDeg(head[0] - bx, head[1] - (by - lift));
+        } else {
+            // Launch instant, before any previous fix: aim at the lead point ahead.
+            const tlng = unwrapLng(it.toLng, it.fromLng);
+            const [tx, ty] = project(tlng, it.toLat);
+            deg = screenHeadingDeg(tx - head[0], (ty - lift) - head[1]);
+        }
+    }
+    return {pts, head: head || null, deg};
 }
 
 function place(el, head, deg, extra) {
@@ -163,9 +190,9 @@ function update(map, data, canvas, els) {
         }
         if (pts.length > 1) trails.push({pts, color: "#dfe4ea", width: 1});
     }
-    const projById = new Map(projectiles.map((p) => [p.id, p]));
     for (const it of interceptors) {
-        const {head, deg} = intGeom(map, it, projById, project);
+        const {pts, head, deg} = intGeom(map, it, project);
+        trails.push({pts, color: INT_TRAIL[it.srcType === "thaad" ? "thaad" : ""], width: INT_TRAIL_W});
         place(els.get("i" + it.id), head, deg, "");
     }
 
