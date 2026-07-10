@@ -4,7 +4,10 @@
 // drop keys the snapshot no longer has, keep the same object identity, and re-stamp
 // mySlot. Deterministic.
 import {describe, expect, it} from "vitest";
-import {absorb, reconcile} from "../../../src/net/gameClient.js";
+import {absorb, reconcile, PREDICT_TTL} from "../../../src/net/gameClient.js";
+
+// send() stamps every pending command with ttl: PREDICT_TTL; mirror that here.
+const pending = (seq, name = "scrap", args = []) => ({seq, name, args, ttl: PREDICT_TTL});
 
 describe("absorb — in-place snapshot overwrite", () => {
     it("test_preserves_object_identity", () => {
@@ -52,7 +55,7 @@ describe("reconcile — client-side prediction replay", () => {
         // must be replayed so its optimistic effect survives the overwrite.
         const replayed = [];
         const client = {
-            _pending: [{seq: 1, name: "scrap", args: ["a"]}, {seq: 2, name: "scrap", args: ["b"]}],
+            _pending: [pending(1, "scrap", ["a"]), pending(2, "scrap", ["b"])],
             _reapply: () => { for (const c of client._pending) replayed.push(c.seq); },
         };
         reconcile(client, 1);
@@ -64,18 +67,21 @@ describe("reconcile — client-side prediction replay", () => {
         // A snapshot generated before the server processed any command (ack behind the
         // pending seqs) must not drop them — this is exactly the stale-snapshot case
         // that made a sold unit blink back before the fix.
-        const client = {
-            _pending: [{seq: 5, name: "scrap", args: ["a"]}],
-            _reapply: () => {},
-        };
+        const client = {_pending: [pending(5, "scrap", ["a"])], _reapply: () => {}};
         reconcile(client, 4);
         expect(client._pending.map((c) => c.seq)).toEqual([5]);
     });
 
-    it("test_no_ack_leaves_pending_intact", () => {
-        const client = {_pending: [{seq: 1, name: "move", args: []}], _reapply: () => {}};
+    it("test_ages_out_predictions_the_server_never_confirms", () => {
+        // The regression that stalled the whole economy: against a server that never
+        // acks (or a dropped command), pending must not grow forever. After PREDICT_TTL
+        // unconfirmed snapshots the prediction is discarded so the authoritative
+        // snapshot wins instead of replayed economy commands bleeding points to zero.
+        const client = {_pending: [pending(1, "buyPlace", ["bunker"])], _reapply: () => {}};
+        for (let i = 0; i < PREDICT_TTL - 1; i++) reconcile(client, undefined);
+        expect(client._pending).toHaveLength(1); // still predicting within the window
         reconcile(client, undefined);
-        expect(client._pending).toHaveLength(1);
+        expect(client._pending).toHaveLength(0); // aged out — buffer stays bounded
     });
 
     it("test_reapply_runs_even_with_empty_pending", () => {

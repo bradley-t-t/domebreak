@@ -38,15 +38,22 @@ export function absorb(target, snapshot, mySlot) {
 
 // Client-side prediction reconciliation. Each command the client sends carries a
 // monotonic seq and lands in client._pending; every server world overwrite carries
-// the last seq the server has applied for our slot. Here we drop the commands the
-// server has now baked into the snapshot, then re-apply the still-in-flight ones on
-// top of the authoritative world (via _reapply) so an optimistic action — selling a
-// unit, moving, buying — never blinks back when a snapshot generated before the
-// server processed it arrives. Exported for tests.
+// the last seq the server has applied for our slot. We drop the commands the server
+// has now baked into the snapshot, then re-apply the still-in-flight ones on top of
+// the authoritative world (via _reapply) so an optimistic action — selling a unit,
+// moving, buying — never blinks back when a snapshot generated before the server
+// processed it arrives. Exported for tests.
+//
+// A prediction the server never confirms — a command it dropped, or a server too old
+// to send acks at all — ages out after PREDICT_TTL snapshots so the buffer can never
+// grow without bound. Left unbounded it is catastrophic: replayed economy commands
+// (buy/scrap) re-charge their point cost against every snapshot, so the client's
+// predicted balance bleeds down until it can no longer afford anything and unit
+// placement dies a few minutes in.
+export const PREDICT_TTL = 6; // snapshots (~1.2s at 200ms) a prediction may go unconfirmed
+
 export function reconcile(client, ack) {
-    if (ack != null) {
-        client._pending = client._pending.filter((c) => c.seq > ack);
-    }
+    client._pending = client._pending.filter((c) => (ack == null || c.seq > ack) && --c.ttl > 0);
     client._reapply?.();
 }
 
@@ -114,7 +121,7 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 // next snapshot cleanly reverts the optimistic local apply.
                 if (this._ws?.readyState === WebSocket.OPEN) {
                     const seq = ++this._seq;
-                    this._pending.push({seq, name, args});
+                    this._pending.push({seq, name, args, ttl: PREDICT_TTL});
                     this._ws.send(JSON.stringify({t: "cmd", name, args, seq}));
                     return seq;
                 }
