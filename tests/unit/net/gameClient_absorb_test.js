@@ -4,10 +4,12 @@
 // drop keys the snapshot no longer has, keep the same object identity, and re-stamp
 // mySlot. Deterministic.
 import {describe, expect, it} from "vitest";
-import {absorb, reconcile, PREDICT_TTL} from "../../../src/net/gameClient.js";
+import {absorb, reconcile, PREDICT_TTL_MS} from "../../../src/net/gameClient.js";
 
-// send() stamps every pending command with ttl: PREDICT_TTL; mirror that here.
-const pending = (seq, name = "scrap", args = []) => ({seq, name, args, ttl: PREDICT_TTL});
+// send() stamps every pending command with exp: Date.now() + PREDICT_TTL_MS;
+// mirror that here against a fixed clock so the tests stay deterministic.
+const NOW = 1_000_000;
+const pending = (seq, name = "scrap", args = []) => ({seq, name, args, exp: NOW + PREDICT_TTL_MS});
 
 describe("absorb — in-place snapshot overwrite", () => {
     it("test_preserves_object_identity", () => {
@@ -58,7 +60,7 @@ describe("reconcile — client-side prediction replay", () => {
             _pending: [pending(1, "scrap", ["a"]), pending(2, "scrap", ["b"])],
             _reapply: () => { for (const c of client._pending) replayed.push(c.seq); },
         };
-        reconcile(client, 1);
+        reconcile(client, 1, NOW);
         expect(client._pending.map((c) => c.seq)).toEqual([2]);
         expect(replayed).toEqual([2]);
     });
@@ -68,19 +70,21 @@ describe("reconcile — client-side prediction replay", () => {
         // pending seqs) must not drop them — this is exactly the stale-snapshot case
         // that made a sold unit blink back before the fix.
         const client = {_pending: [pending(5, "scrap", ["a"])], _reapply: () => {}};
-        reconcile(client, 4);
+        reconcile(client, 4, NOW);
         expect(client._pending.map((c) => c.seq)).toEqual([5]);
     });
 
     it("test_ages_out_predictions_the_server_never_confirms", () => {
         // The regression that stalled the whole economy: against a server that never
-        // acks (or a dropped command), pending must not grow forever. After PREDICT_TTL
-        // unconfirmed snapshots the prediction is discarded so the authoritative
-        // snapshot wins instead of replayed economy commands bleeding points to zero.
+        // acks (or a dropped command), pending must not grow forever. Once a
+        // prediction has gone PREDICT_TTL_MS of wall clock unconfirmed it is
+        // discarded so the authoritative snapshot wins instead of replayed economy
+        // commands bleeding points to zero. Wall clock, not a snapshot count — the
+        // window must hold whatever rate snapshots actually arrive at.
         const client = {_pending: [pending(1, "buyPlace", ["bunker"])], _reapply: () => {}};
-        for (let i = 0; i < PREDICT_TTL - 1; i++) reconcile(client, undefined);
+        reconcile(client, undefined, NOW + PREDICT_TTL_MS - 1);
         expect(client._pending).toHaveLength(1); // still predicting within the window
-        reconcile(client, undefined);
+        reconcile(client, undefined, NOW + PREDICT_TTL_MS);
         expect(client._pending).toHaveLength(0); // aged out — buffer stays bounded
     });
 

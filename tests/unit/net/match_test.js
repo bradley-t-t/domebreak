@@ -19,7 +19,7 @@ const roster = () => ([
     {userId: "u0", username: "P0", iso: "US", ready: true},
     {userId: "u1", username: "P1", iso: "RU", ready: false},
 ]);
-const fakeWs = () => ({readyState: 1, OPEN: 1, sent: [], send(p) { this.sent.push(p); }, close() {}});
+const fakeWs = () => ({readyState: 1, OPEN: 1, bufferedAmount: 0, sent: [], send(p) { this.sent.push(p); }, close() {}});
 
 let live = [];
 const mk = (onFinished) => {
@@ -102,6 +102,29 @@ describe("recordAck — prediction reconciliation acks", () => {
         m.recordAck(0, 2); // stale/out-of-order — must not regress
         m.recordAck(0, null);
         expect(m.acks[0]).toBe(3);
+    });
+});
+
+describe("broadcastSnapshot — per-socket backpressure", () => {
+    it("test_a_socket_that_cannot_drain_is_skipped_but_others_still_receive", () => {
+        // A slow link (or deflate outrunning the CPU) must never queue snapshots
+        // without bound — that is the heap OOM that killed live matches. The
+        // congested socket just misses sweeps until it drains; the healthy one
+        // keeps receiving, and chat still reaches everyone (not superseded).
+        const m = mk();
+        const fast = fakeWs(), slow = fakeWs();
+        m.attach("u0", fast);
+        m.attach("u1", slow);
+        slow.bufferedAmount = 64 * 1024 * 1024; // hopelessly backed up
+        fast.sent.length = slow.sent.length = 0;
+        m.broadcastSnapshot();
+        expect(JSON.parse(fast.sent.at(-1)).t).toBe("snap");
+        expect(slow.sent).toHaveLength(0);
+        m.chat(m.players[0].slot, "still with us?");
+        expect(JSON.parse(slow.sent.at(-1)).t).toBe("chat");
+        slow.bufferedAmount = 0; // drained — snapshots resume on the next sweep
+        m.broadcastSnapshot();
+        expect(JSON.parse(slow.sent.at(-1)).t).toBe("snap");
     });
 });
 

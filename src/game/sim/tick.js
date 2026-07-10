@@ -26,9 +26,9 @@ export {growCities, healCities};
 // end-of-tick cleanup (dead unit/projectile pruning, win condition).
 //
 // `predict` marks a CLIENT-SIDE prediction tick in an online match. The server is
-// authoritative and ships full-world snapshots ~2×/s; between them the client runs
-// this to smooth continuous MOTION (units, missiles, interceptors, sensors, fallout)
-// up to 30fps. On a prediction tick it must NOT re-run the discrete, server-owned
+// authoritative and streams full-world snapshots (SNAPSHOT_MS, server/config.js);
+// between them the client runs this to smooth continuous MOTION (units, missiles,
+// interceptors, sensors, fallout) up to 30fps. On a prediction tick it must NOT re-run the discrete, server-owned
 // systems — economy/production/research, opponent AI, diplomacy, leadership evac,
 // occupation, war resolution, growth, stability, and the win check — because
 // predicting those makes the client repeatedly "complete" then revert server state
