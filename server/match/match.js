@@ -21,6 +21,19 @@ const CHAT_MAX_LEN = 240;
 const CHAT_BURST = 5;        // messages allowed per rolling window, per slot
 const CHAT_WINDOW_MS = 5000;
 
+// Snapshot backpressure cap, per socket. A full-world snapshot is large
+// (hundreds of KB of JSON) and ships at SNAPSHOT_MS cadence; a socket that
+// can't drain that fast — a slow link, or permessage-deflate outrunning a
+// small CPU — would otherwise queue every payload in memory and OOM the
+// process within a couple of minutes of match start. Snapshots are superseded
+// by the next one anyway, so once a socket has this many bytes still queued
+// (ws bufferedAmount counts messages awaiting compression too) we skip it for
+// this sweep and let it catch up: the effective snapshot rate degrades per
+// client to whatever its pipe sustains instead of the heap growing without
+// bound. Chat, init, and the final "over" always send — small, rare, and not
+// superseded by anything.
+const SNAP_MAX_BUFFERED = 4 * 1024 * 1024;
+
 // Roster isos must be valid (city data exists) and unique — substitutions come
 // from the great-powers pool so a bad pick never shifts slot assignments.
 function resolveIsos(picks) {
@@ -252,7 +265,10 @@ export class Match {
     }
 
     broadcastSnapshot() {
-        this.broadcast({t: "snap", world: this.world, acks: this.acks});
+        const payload = JSON.stringify({t: "snap", world: this.world, acks: this.acks});
+        for (const ws of this.sockets.values()) {
+            if (ws.readyState === ws.OPEN && ws.bufferedAmount <= SNAP_MAX_BUFFERED) ws.send(payload);
+        }
     }
 
     initPayload(slot) {

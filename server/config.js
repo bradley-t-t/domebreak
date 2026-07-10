@@ -29,10 +29,15 @@ export const TICK_MS = parseInt(process.env.GD_TICK_MS || "50", 10);
 // Default 50ms (20Hz) matches TICK_MS so every simulation step is shipped to all
 // players immediately: fully realtime-synced, nothing waits for the next sweep.
 // Keep >= TICK_MS — snapshots finer than the sim step just resend identical state.
-// Cost is serialize+gzip + bandwidth, scaling with players x match count on this
-// single-threaded process; on a well-provisioned host push GD_SNAPSHOT_MS=33 (30Hz).
-// PREDICT_TTL (client, gameClient.js) is sized to this in wall-clock terms — the two
-// are coupled, change them together.
+// Cost is serialize+deflate + bandwidth, scaling with players x match count on this
+// single-threaded process: a snapshot runs to hundreds of KB of JSON, so 20Hz is
+// ~16MB/s of serialization per client and far more compression than a small vCPU
+// can sustain. Size this to the host — a well-provisioned box can push
+// GD_SNAPSHOT_MS=33 (30Hz); a 1-vCPU box belongs at 200 (5Hz). Sockets that can't
+// drain the rate are skipped per sweep (SNAP_MAX_BUFFERED, match.js) so overload
+// degrades freshness instead of OOMing the process. The client's prediction window
+// (PREDICT_TTL_MS, gameClient.js) is wall-clock, so no client change is needed
+// when tuning this.
 export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "50", 10);
 // Opening freeze (seconds): an online match holds paused this long at the start
 // so every commander loads in before the war begins, then releases to
