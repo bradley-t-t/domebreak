@@ -28,7 +28,9 @@ function allyCount(n) {
     return k;
 }
 
-// Cities each slot owned at match start (by owner0) — static over a match, so cached.
+// Cities each slot counts as its baseline (by owner0). Cached until the next war
+// settlement — endWar invalidates on Victory so ceded cities move to the new owner's
+// baseline instead of leaving the loser's denominator permanently inflated.
 function startCounts(w) {
     if (w._startOwner) return w._startOwner;
     const m = {};
@@ -51,7 +53,9 @@ const survivingFrac = (w, slot) => aliveCount(w, slot) / (startCounts(w)[slot] |
 // the winner keeps all it occupied and the loser cedes); winner == null → back to its
 // origin owner (White Peace — both give back what they took from each other). Only
 // occupied cities whose {origin, holder} pair is exactly {a, b} are touched — homeland
-// and third-party occupations are left alone.
+// and third-party occupations are left alone. On Victory the ceded city's owner0 is
+// rewritten to the winner so it counts toward the winner's post-war baseline (and no
+// longer against the loser's), keeping surrender math honest across future wars.
 function settleTerritory(w, a, b, winner) {
     for (const c of w.cities) {
         if (!c.alive) continue;
@@ -60,6 +64,7 @@ function settleTerritory(w, a, b, winner) {
         const pair = (o === a && c.slot === b) || (o === b && c.slot === a);
         if (!pair) continue;
         c.slot = winner == null ? o : winner;
+        if (winner != null) c.owner0 = winner;                         // spoils rebaseline to the new owner
         c.capture = null;                                              // cancel any in-progress capture
     }
 }
@@ -107,6 +112,7 @@ export function endWar(w, a, b, winner = null, opts = {}) {
     dropOffers(w, a, b);
     settleTerritory(w, a, b, winner);
     if (winner != null) {
+        w._startOwner = null;              // owner0 changed on ceded cities — rebuild the baseline cache
         const loser = winner === a ? b : a;
         applyDefeat(w, loser);
         w.events.push({id: nextId(w, "e"), t: w.time, type: "conquest", winner, loser});
