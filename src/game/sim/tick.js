@@ -1,6 +1,4 @@
-// The main simulation step: research/production progress, unit movement and
-// firing, projectile flight and interception, sensor sweeps, and the opponent
-// AI. This is the tick engine's single entry point (step()).
+// The tick engine's single entry point: step() advances the whole simulation.
 // The tick phases live in ./tickPhases.js and the opponent AI (including its
 // diplomacy) lives in ./ai/ — step() below is a thin orchestrator over both.
 import {evacTick} from "./leadership.js";
@@ -10,6 +8,7 @@ import {aiTick} from "./ai/index.js";
 import {decapitationTick, warTick} from "./warResolution.js";
 import {
     growCities,
+    healCities,
     stepCombat,
     stepEconomy,
     stepEventPrune,
@@ -20,12 +19,11 @@ import {
     stepVictory,
 } from "./tickPhases.js";
 
-export {growCities};
+export {growCities, healCities};
 
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
-// end-of-tick cleanup (dead unit/projectile pruning, win condition). A thin
-// orchestrator over the phases above.
+// end-of-tick cleanup (dead unit/projectile pruning, win condition).
 //
 // `predict` marks a CLIENT-SIDE prediction tick in an online match. The server is
 // authoritative and ships full-world snapshots ~2×/s; between them the client runs
@@ -73,8 +71,11 @@ export function step(w, dt, predict = false) {
     // captured) surrenders every war and is eliminated. Runs after warTick so it
     // reads settled relations, and before the win check so the elimination counts.
     decapitationTick(w);
-    // Grow city populations for this tick before the tally reads them, so income,
-    // industry cap, and the domination check all see the updated figures.
+    // Rebuild damaged cities whose owner is still standing, then grow city
+    // populations — heal first so growth reads this tick's restored vitality, and
+    // both before the tally so income, industry cap, and the domination check all
+    // see the updated figures.
+    healCities(w, dt);
     growCities(w, dt);
     // Ease each nation's stability toward its live target. Runs after
     // growth/leadership/diplomacy so it reads this tick's population, wars,

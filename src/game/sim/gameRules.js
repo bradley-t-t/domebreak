@@ -18,7 +18,7 @@ export const DEFAULT_RULES = Object.freeze({
 // GameRulesForm renders one control per entry here. `sp/mp` gate which flow a
 // rule shows in — MP still ignores knobs that don't apply online.
 // `type` selects the control: "range" (default) or "toggle".
-export const RULES_META = [
+const RULES_META = [
     {
         key: "activeCount",
         label: "Active Nations",
@@ -74,7 +74,7 @@ export const RULES_META = [
 
 // Pretty-print a grace duration: seconds under a minute, m:ss under an hour,
 // "1h" at the top of the range.
-export function formatGrace(sec) {
+function formatGrace(sec) {
     const s = Math.max(0, Math.round(sec));
     if (s < 60) return `${s}s`;
     if (s >= 3600) return "1h";

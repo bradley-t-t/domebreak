@@ -9,6 +9,7 @@ import NewsTicker from "../hud/NewsTicker.jsx";
 import LeadershipAlert from "../hud/LeadershipAlert.jsx";
 import WarOutcomeModal from "../hud/WarOutcomeModal.jsx";
 import GraceIndicator from "../hud/GraceIndicator.jsx";
+import ChatBox from "../hud/ChatBox.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import CountryLabels from "./CountryLabels.jsx";
 import ContextMenu from "../hud/ContextMenu.jsx";
@@ -251,13 +252,24 @@ export default function LiveGame({
     // Countries layer visibility, per-country border/tint recolor, the
     // unit-fade-with-zoom CSS var, and the GID_0 -> label lookup — see
     // useMapVisualEffects (same effects, same dependency arrays, moved out verbatim).
-    // The active powers' GID_0 set — every other country is neutral scenery, colored
-    // uniformly (see useMapVisualEffects). Stable across a match (active set is fixed).
-    const activeGids = useMemo(
-        () => new Set(w.nations.filter((n) => n.active !== false).map((n) => toGid3(n.iso)).filter(Boolean)),
-        [w.nations]
-    );
-    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids});
+    // Two GID_0 sets driving the political tint (see useMapVisualEffects): active
+    // powers wear their flag color; nations wiped out in war (surrendered or
+    // decapitated) drop to a darker wipeout grey-green; every other country is neutral
+    // scenery. Recomputed whenever a nation's active/wiped state flips — a routed
+    // belligerent is neutralized mid-match, so the set is no longer fixed.
+    const nationSig = w.nations.reduce((s, n) => `${s}${n.active === false ? 0 : 1}${n.wipedOut ? 1 : 0}`, "");
+    const {activeGids, wipedGids} = useMemo(() => {
+        const active = new Set(), wiped = new Set();
+        for (const n of w.nations) {
+            const gid = toGid3(n.iso);
+            if (!gid) continue;
+            if (n.wipedOut) wiped.add(gid);
+            else if (n.active !== false) active.add(gid);
+        }
+        return {activeGids: active, wipedGids: wiped};
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nationSig]);
+    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids, wipedGids});
 
     // Memoized map-layer FeatureCollections (backdrop/live cities, fog-of-war
     // visibility, radar/defense/pop overlays, selection+placement rings, and
@@ -606,6 +618,9 @@ export default function LiveGame({
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {!w.over && <GraceIndicator world={w}/>}
+            {/* Player chat — online matches only. Stays up after the war ends so the
+                outcome screen can still talk. */}
+            {net && <ChatBox net={net} mySlot={mySlot} overlayOpen={overlayOpen}/>}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
             {w.over && (
                 <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">

@@ -12,8 +12,8 @@ import maplibregl from "maplibre-gl";
 import {Protocol} from "pmtiles";
 import Map from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import {startWater} from "./water.js";
-import {COUNTRY_FILL_OPACITY} from "./mapPaint.js";
+import {startWater} from "./lib/water.js";
+import {COUNTRY_FILL_OPACITY} from "./lib/mapPaint.js";
 import {WORLD_ZOOM} from "../game/data/constants.js";
 
 let pmtilesRegistered = false;

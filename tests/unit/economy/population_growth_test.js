@@ -1,9 +1,10 @@
 // Population growth: each living city's people grow per tick, scaled by vitality
-// (hp/maxHp) and capped at pop0 * growthCapMult. Deterministic, no RNG, no I/O.
+// (hp/maxHp) and national prosperity (effective GDP over baseline GDP), capped at
+// pop0 * growthCapMult. Deterministic, no RNG, no I/O.
 // Spec: design/quick-specs/population-growth-2026-07-06.md.
 import {describe, expect, it} from "vitest";
 import {growCities} from "../../../src/game/engine.js";
-import {POPULATION} from "../../../src/game/data/constants.js";
+import {POPULATION, UNITS} from "../../../src/game/data/constants.js";
 
 const {growthPerSec: R, growthCapMult: CAP} = POPULATION;
 
@@ -72,6 +73,55 @@ describe("growCities — cap", () => {
         for (let i = 0; i < 100000; i++) growCities(world([c]), 1);
         expect(c.pop).toBeLessThanOrEqual(1e6 * CAP);
         expect(c.pop).toBeCloseTo(1e6 * CAP, 0);
+    });
+});
+
+describe("growCities — GDP prosperity scaling", () => {
+    const nation = (over = {}) => ({slot: 0, alive: true, gdp: 2, ...over});
+
+    it("test_full_economy_grows_at_base_rate", () => {
+        // The city carries the nation's whole economy at full health → prosperity 1.
+        const c = city({pop: 1e6, econ: 1});
+        growCities({cities: [c], nations: [nation()]}, 1);
+        expect(c.pop).toBeCloseTo(1e6 * (1 + R), 3);
+    });
+
+    it("test_half_economy_halves_growth", () => {
+        // Only half the nation's economy still stands → prosperity 0.5.
+        const c = city({pop: 1e6, econ: 0.5});
+        growCities({cities: [c], nations: [nation()]}, 1);
+        expect(c.pop).toBeCloseTo(1e6 * (1 + R * 0.5), 3);
+    });
+
+    it("test_wrecked_economy_is_floored", () => {
+        const c = city({pop: 1e6, econ: 0});
+        growCities({cities: [c], nations: [nation()]}, 1);
+        expect(c.pop).toBeCloseTo(1e6 * (1 + R * POPULATION.gdpGrowthFloor), 3);
+    });
+
+    it("test_conquest_prosperity_is_capped", () => {
+        // Captured cities bring their econ shares along; Σ econ = 2 → clamped at the cap.
+        const a = city({id: "a", econ: 1});
+        const b = city({id: "b", econ: 1, lng: 10});
+        growCities({cities: [a, b], nations: [nation()]}, 1);
+        expect(a.pop).toBeCloseTo(1e6 * (1 + R * POPULATION.gdpGrowthCap), 3);
+    });
+
+    it("test_built_industry_lifts_growth", () => {
+        // A techpark's gdpAdd stacks on the city's half-share economy.
+        const gdp = 2;
+        const c = city({pop: 1e6, econ: 0.5});
+        const units = [{slot: 0, hp: 1, type: "techpark"}];
+        growCities({cities: [c], nations: [nation({gdp})], units}, 1);
+        const prosperity = 0.5 + UNITS.techpark.gdpAdd / gdp;
+        expect(c.pop).toBeCloseTo(1e6 * (1 + R * prosperity), 3);
+    });
+
+    it("test_world_without_nations_grows_at_neutral_rate", () => {
+        // Legacy saves / bare test worlds: no nation roster → prosperity 1.
+        const c = city({pop: 1e6, econ: 0});
+        growCities(world([c]), 1);
+        expect(c.pop).toBeCloseTo(1e6 * (1 + R), 3);
     });
 });
 

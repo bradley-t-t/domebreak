@@ -98,8 +98,6 @@ export {
     TERRITORY_RADIUS,
     MOVE_COST_FRAC,
     MIN_SEP,
-    CITY_HP,
-    CAPITAL_HP,
     INTERCEPT_CAP,
     SCRAP_REFUND_FRAC,
     COAST_KM,
@@ -128,6 +126,7 @@ export {countryGidAt} from "./geo/countryOwner.js";
 export {
     airborne,
     atWar,
+    hasSurrendered,
     vitalityOf,
     falloutIntensity,
     falloutProximity,
@@ -194,15 +193,13 @@ export {
     releaseLeadership,
     leadershipStatus,
     leadershipPct,
-    commandFactor,
-    bunkerOf,
 } from "./sim/leadership.js";
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
-export {solvePlan, planPreview, planAttackers, planAttackerTypeOptions, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
+export {solvePlan, planPreview, planAttackerTypeOptions, planTargets, targetCategoryOf, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
-export {step, growCities} from "./sim/tick.js";
+export {step, growCities, healCities} from "./sim/tick.js";
 
 export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";
 

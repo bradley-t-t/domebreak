@@ -6,7 +6,7 @@
 // map): it owns a requestAnimationFrame loop that advances the time cursor in
 // local state, and rebuilds the ring geometry from the emitter list each frame.
 // Honors reduced-motion and pauses while the tab is hidden, matching the ocean
-// shimmer (map/water.js).
+// shimmer (map/lib/water.js).
 import {useEffect, useRef, useState} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
 import {circle, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";

@@ -18,6 +18,7 @@ import Explosion from "./Explosion.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import {atWar, createWorld, declareWar, UNIT_ICON, UNITS, vitalityOf} from "../../game/engine.js";
 import {buildSetup} from "../../game/sim/newGame.js";
+import {norm01} from "../../lib/math.js";
 import {MAX_SLOTS} from "../../game/data/constants.js";
 import {useEngine} from "../hooks/useEngine.js";
 import {vitPaint} from "../lib/status.js";
@@ -224,7 +225,7 @@ function AttractWorld({data, onOver, framed, onReady}) {
                     try {
                         m.jumpTo({center: [st.lng, lat], zoom});
                         const [lo, hi] = UNIT_FADE;
-                        const o = Math.max(0, Math.min(1, (zoom - lo) / (hi - lo)));
+                        const o = norm01(zoom, lo, hi);
                         c.style.setProperty("--db-unit-opacity", o.toFixed(3));
                         c.classList.toggle("db-units-faded", o < 0.04);
                     } catch { /* map tearing down */

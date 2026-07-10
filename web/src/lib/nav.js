@@ -25,14 +25,14 @@ export function scrollToId(id) {
 
 // Push the hash router to the Wiki. Kept separate so both the nav and the "u"
 // hotkey use one call site.
-export function openWiki() {
+function openWiki() {
     if (!window.location.hash.startsWith("#/wiki")) {
         window.location.hash = "#/wiki";
     }
     window.scrollTo({top: 0, behavior: "auto"});
 }
 
-export function openDownload() {
+function openDownload() {
     if (!window.location.hash.startsWith("#/download")) {
         window.location.hash = "#/download";
     }

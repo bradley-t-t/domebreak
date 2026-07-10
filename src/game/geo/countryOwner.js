@@ -4,6 +4,7 @@
 // borders — the same boundary the human player is bound to when placing — so the
 // AI can be gated on its own country instead of a Voronoi nearest-city disk.
 import {COUNTRY_H, COUNTRY_RLE_B64, COUNTRY_W, GIDS} from "./countryGrid.js";
+import {clamp} from "../../lib/math.js";
 
 const STEP = 360 / COUNTRY_W;
 
@@ -23,7 +24,7 @@ const owner = (() => {
 })();
 
 const colOf = (lng) => (((Math.floor((lng + 180) / STEP)) % COUNTRY_W) + COUNTRY_W) % COUNTRY_W;
-const rowOf = (lat) => Math.min(COUNTRY_H - 1, Math.max(0, Math.floor((lat + 90) / STEP)));
+const rowOf = (lat) => clamp(Math.floor((lat + 90) / STEP), 0, COUNTRY_H - 1);
 
 // GID_0 (ISO3) of the country under a point, or null if none (ocean / unclaimed).
 export function countryGidAt(lng, lat) {
