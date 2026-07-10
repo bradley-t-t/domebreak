@@ -130,6 +130,16 @@ function farthestCity(cities, ref) {
     return best;
 }
 
+// Cities ordered farthest-from-front first — safe interior first, forward last.
+// Falls back to the input order when there is no front reference.
+function citiesInteriorFirst(cities, ref) {
+    if (!ref) return cities.slice();
+    return cities
+        .map((c) => [c, haversine(c.lng, c.lat, ref.lng, ref.lat)])
+        .sort((a, b) => b[1] - a[1])
+        .map(([c]) => c);
+}
+
 function nearestCity(cities, ref) {
     if (!ref) return cities[0];
     let best = cities[0], bd = Infinity;
@@ -194,6 +204,19 @@ export function aiPlace(w, n, type, myUnits, cities, front) {
     if (!cities.length) return null;
     const role = aiRole(def);
     const forward = role === "sensor" || (role === "offense" && def.range < 12000);
+    const away = role === "industry" || type === "bunker" || type === "spacehq";
+    if (def.coastal) return aiCoastalLandSpot(w, n.slot, cities, myUnits);
+    // Industry walks every city interior-first, so a saturated farthest-anchor
+    // doesn't stall placement — otherwise the AI stops laddering industry once
+    // the spreadKm ring around one city fills, and its build-doctrine gate holds
+    // every remaining point for an industry slot it can never fill.
+    if (role === "industry") {
+        for (const anchor of citiesInteriorFirst(cities, front)) {
+            const spot = spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
+            if (spot) return spot;
+        }
+        return null;
+    }
     let anchor;
     if (role === "defense") {
         const pts = protectPoints(w, n.slot, myUnits);
@@ -204,14 +227,12 @@ export function aiPlace(w, n, type, myUnits, cities, front) {
         anchor = role === "sensor"
             ? (leastRadarCoveredCity(w, myUnits, cities) || nearestCity(cities, front))
             : nearestCity(cities, front);
-    } else if (role === "industry" || def.maxCount) {
-        anchor = farthestCity(cities, front);  // safe interior (also bunker / space HQ)
+    } else if (def.maxCount) {
+        anchor = farthestCity(cities, front);  // safe interior (bunker / space HQ)
     } else {
         anchor = cities[0];
     }
     if (!anchor) return null;
     if (def.domain === "sea") return aiSeaSpot(w, n.slot, anchor);
-    if (def.coastal) return aiCoastalLandSpot(w, n.slot, cities, myUnits);
-    const away = role === "industry" || type === "bunker" || type === "spacehq";
     return spotAround(w, n.slot, anchor, front, role, forward, away, myUnits);
 }
