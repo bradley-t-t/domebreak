@@ -87,8 +87,7 @@ export default function StartMenu({
                         <span title="Total time in command" aria-label={hours != null ? `${hours} hours playtime` : "Playtime — unavailable"}>{hours != null ? `${hours}h Playtime` : "—"}</span>
                     </div>
                 </div>
-                <div className="mt-auto mb-0 max-w-[300px] text-[10px] leading-[1.6] pointer-events-auto text-faint">A TaylorURL game · made solo by Trenton Taylor · icons game-icons.net (CC BY)
-                </div>
+                <div className="mt-auto mb-0 font-mono text-[10px] tracking-[1.5px] uppercase pointer-events-auto text-faint">v{__APP_VERSION__}</div>
             </aside>
         </div>
     );
