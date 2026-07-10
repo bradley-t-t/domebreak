@@ -5,6 +5,7 @@
 // complement (ground forces) — so ships path around land and armies path around
 // oceans with the same machinery.
 import {SEA_B64, SEA_H, SEA_W} from "./seaGrid.js";
+import {clamp} from "../../lib/math.js";
 
 const STEP = 360 / SEA_W;
 const bits = (() => {
@@ -16,7 +17,7 @@ const bits = (() => {
 
 const wrapLng = (lng) => ((lng + 540) % 360) - 180;
 const colOf = (lng) => (((Math.floor((lng + 180) / STEP)) % SEA_W) + SEA_W) % SEA_W;
-const rowOf = (lat) => Math.min(SEA_H - 1, Math.max(0, Math.floor((lat + 90) / STEP)));
+const rowOf = (lat) => clamp(Math.floor((lat + 90) / STEP), 0, SEA_H - 1);
 const seaCell = (r, c) => (bits[(r * SEA_W + c) >> 3] >> ((r * SEA_W + c) & 7)) & 1;
 // Land is everything the water mask doesn't claim (non-navigable inland water
 // reads as terrain — armies may cross it, ships may not).

@@ -98,8 +98,6 @@ export {
     TERRITORY_RADIUS,
     MOVE_COST_FRAC,
     MIN_SEP,
-    CITY_HP,
-    CAPITAL_HP,
     INTERCEPT_CAP,
     SCRAP_REFUND_FRAC,
     COAST_KM,
@@ -194,13 +192,11 @@ export {
     releaseLeadership,
     leadershipStatus,
     leadershipPct,
-    commandFactor,
-    bunkerOf,
 } from "./sim/leadership.js";
 
 export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
-export {solvePlan, planPreview, planAttackers, planTargets, targetCategoryOf, reachKm, shotDamage, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
+export {solvePlan, planPreview, planTargets, targetCategoryOf, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
 export {step, growCities} from "./sim/tick.js";
 

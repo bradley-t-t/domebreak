@@ -1,6 +1,6 @@
 import {useEffect, useLayoutEffect, useRef, useState} from "react";
 import {cn} from "../lib/cn.js";
-import {headline} from "./newsHeadline.js";
+import {headline} from "../lib/newsHeadline.js";
 import {useLatestRef} from "../../lib/hooks/useLatestRef.js";
 
 const CAP = 40;       // rolling headlines retained (the sim only keeps the last ~60 events)

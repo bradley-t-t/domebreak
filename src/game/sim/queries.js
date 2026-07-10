@@ -163,9 +163,8 @@ export function industryCapOf(w, slot) {
 // A point belongs to `slot` only if the NEAREST living city of ANY nation is one
 // of slot's own AND lies within TERRITORY_RADIUS. This makes territories mutually
 // exclusive (a Voronoi partition clipped to the radius) so neighbouring nations'
-// 550 km disks never overlap — an AI (or the player) can no longer site a unit in
-// a spot that sits closer to a rival's city than to its own. Fixes enemy units
-// appearing inside your borders where the two territory disks used to overlap.
+// 550 km disks never overlap — neither an AI nor the player can site a unit in a
+// spot that sits closer to a rival's city than to its own.
 export function inTerritory(w, slot, lng, lat) {
     let nearestSlot = -1, nearest = Infinity;
     for (const c of w.cities) {
