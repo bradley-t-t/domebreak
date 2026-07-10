@@ -10,7 +10,7 @@ import {
     WARHEADS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
-import {rand} from "./worldState.js";
+import {nationOf, rand} from "./worldState.js";
 import {atWar, gdpOf, industryCapOf, industryCountOf, netIncomeOf, defenseRange} from "./queries.js";
 import {randRange, weightedPick} from "../../lib/random.js";
 import {clamp} from "../../lib/math.js";
@@ -205,7 +205,10 @@ function diploProposeAlliance(w, n, caps) {
         if (m.slot === n.slot || !m.alive || m.active === false) continue;
         const rel = n.relations[m.slot];
         if (rel === "war" || rel === "ally") continue;
-        if (!m.isAi && w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
+        if (!m.isAi) {
+            if (w.time < (w.rules?.playerGraceSec ?? DIPLOMACY.playerGraceSec)) continue;
+            if (w.time - (n._allianceToPlayerAt ?? -Infinity) < DIPLOMACY.playerAllianceCooldownSec) continue;
+        }
         const capB = caps[m.slot];
         if (!capB || haversine(capA.lng, capA.lat, capB.lng, capB.lat) > DIPLOMACY.allyRangeKm) continue;
         const weight = (1 + (sharesEnemy(n, m) ? DIPLOMACY.allySharedEnemyW : 0)) * Math.max(0.2, m.gdp || 0.1);
@@ -222,7 +225,11 @@ function diploOfferPeace(w, n) {
         if (n.relations[s] !== "war") continue;
         const foe = +s;
         const age = w.time - (n._warStart?.[foe] ?? 0);
-        if (age > DIPLOMACY.minWarSec && rand(w) < DIPLOMACY.peaceOfferChance) offerPeace(w, n.slot, foe);
+        if (age <= DIPLOMACY.minWarSec) continue;
+        const target = nationOf(w, foe);
+        if (target && !target.isAi &&
+            w.time - (n._peaceToPlayerAt ?? -Infinity) < DIPLOMACY.playerPeaceCooldownSec) continue;
+        if (rand(w) < DIPLOMACY.peaceOfferChance) offerPeace(w, n.slot, foe);
     }
 }
 

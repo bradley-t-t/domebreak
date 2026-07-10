@@ -234,11 +234,13 @@ export const DIPLOMACY = {
     surrenderThreshold: 0.35,        // surrender (Defeat) below this surviving-city fraction
     minWarSec: 90,                   // minimum war duration before a white-peace offer
     peaceOfferChance: 0.06,          // odds per diplo tick an AI offers white peace once past minWarSec
+    playerPeaceCooldownSec: 240,     // after sending a peace offer to a human (or being declined) an AI waits this long before offering again
     // Alliances (mutual-defense pacts).
     maxAllies: 2,                    // simultaneous alliances a nation will hold
     allyRangeKm: 4200,               // max capital-to-capital distance to propose an alliance
     allyProposeChance: 0.05,         // odds per diplo tick an eligible AI proposes an alliance
     allySharedEnemyW: 2,             // extra proposal weight toward a candidate that shares an enemy
+    playerAllianceCooldownSec: 240,  // after proposing alliance to a human (or being declined) an AI waits this long before proposing again
     // Level-of-detail: a nation at war or within activeRangeKm of the player runs its
     // build/attack AI (aiTick) at the normal cadence; everyone else runs on the slow
     // idle cadence — bounding heavy AI work to the action actually on the map.
