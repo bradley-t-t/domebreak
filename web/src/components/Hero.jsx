@@ -7,7 +7,7 @@ import GameIcon from "./GameIcon.jsx";
 import {Eyebrow, Wordmark} from "./Primitives.jsx";
 
 const SPECS = [
-    {icon: "reconsat", label: "195 nations"},
+    {icon: "reconsat", label: "222 nations"},
     {icon: "silo", label: "Defense & offense"},
     {icon: "dome", label: "Real-time strategy"},
 ];
@@ -45,7 +45,7 @@ export default function Hero({onSignIn}) {
                     <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
                     Threat board · Live
                 </div>
-                <div className="mt-1 text-dim/80">195 nations in play</div>
+                <div className="mt-1 text-dim/80">222 nations in play</div>
                 <div className="mt-1">Real-time · globe view</div>
             </motion.div>
 
