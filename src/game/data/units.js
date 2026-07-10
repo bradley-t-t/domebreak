@@ -292,11 +292,11 @@ export const UNITS = {
         requiresTech: "off8",
         cost: 340,
         buildTime: 15,
-        range: 7000,
+        range: 9800,
         damage: 40,
         reload: 18,
         fireCost: 26,
-        speed: 120,       // in-flight projectile base speed; the HGV round's speedMult scales it up further
+        speed: 150,       // in-flight projectile base speed; the HGV round's speedMult scales it up further
         hp: 50,
         upkeep: 3,
         glyph: "➤"
