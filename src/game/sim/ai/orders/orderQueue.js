@@ -2,7 +2,7 @@
 // consumes the pure stages' outputs (BuyPlan, fire assignments, patrol policy,
 // diplomacy actions) and speaks to the same production/command APIs the human
 // player does, bounded by the production line.
-import {allowedAmmo, HANGAR_SPEC, UNITS, initialWarhead} from "../../../data/constants.js";
+import {allowedAmmo, HANGAR_SPEC, UNITS, WARHEADS, initialWarhead} from "../../../data/constants.js";
 import {haversine} from "../../../geo/geo.js";
 import {rand} from "../../worldState.js";
 import {atWar, netIncomeOf} from "../../queries.js";
@@ -92,10 +92,31 @@ export function executePatrols(w, frame, policy) {
     }
 }
 
+// How many OTHER at-war hostiles sit within a cluster bus's splash of the aim
+// point — the same pocket mirvSplit will fan its submunitions across. A lone
+// target returns 0 (the bus's split yield would be wasted); a dense pocket of
+// cities/forces returns high (the fan-out puts far more total damage on the
+// group than a single round on one target).
+function clusterPocket(w, slot, target) {
+    const splash = WARHEADS.cluster?.splash || 240;
+    let near = 0;
+    for (const c of w.cities) {
+        if (!c.alive || c.id === target.ref.id || !atWar(w, slot, c.slot)) continue;
+        if (haversine(target.lng, target.lat, c.lng, c.lat) <= splash) near++;
+    }
+    for (const other of w.units) {
+        if (other.hp <= 0 || other.id === target.ref.id || !atWar(w, slot, other.slot)) continue;
+        if (haversine(target.lng, target.lat, other.lng, other.lat) <= splash) near++;
+    }
+    return near;
+}
+
 // The payload a platform should fly for a NEW fire order, given the war goal.
-// Bunker kills need a thermonuclear-class hit; city strikes upgrade on the
-// signature roll. Rolled once per order — never re-rolled while the order
-// stands, or the odds would ratchet to certainty across thinks.
+// Bunker kills need a thermonuclear-class hit; a target sitting in a dense
+// pocket of hostiles favors the cluster bus (its fan-out saturates the group);
+// otherwise city strikes upgrade on the signature roll. Rolled once per order —
+// never re-rolled while the order stands, or the odds would ratchet to
+// certainty across thinks.
 function rollWarhead(w, n, u, assignment) {
     const def = UNITS[u.type];
     if (!def.warheads) return;
@@ -107,6 +128,20 @@ function rollWarhead(w, n, u, assignment) {
     if (bunkerKill) {
         for (const t of ["thermo", "thermomirv"]) {
             if (allowed.includes(t) && stocked(t)) { u.warhead = t; return; }
+        }
+    }
+    // Area saturation: when the aim point sits in a dense pocket of enemy targets
+    // and the platform is cleared for cluster, prefer the MIRV bus over a single
+    // round. Not for decap — a leadership kill wants massed yield on one point,
+    // not a split payload. The roll steepens with pocket density and is capped
+    // below certainty, so a marginal pocket only sometimes draws cluster and a
+    // lone target never does.
+    if (assignment.goal !== "decap" && target && allowed.includes("cluster") && stocked("cluster")) {
+        const near = clusterPocket(w, n.slot, target);
+        if (near >= FIRES.clusterMinTargets) {
+            const chance = Math.min(FIRES.clusterChanceMax,
+                FIRES.clusterChance + FIRES.clusterDensityStep * (near - FIRES.clusterMinTargets));
+            if (rand(w) < chance) { u.warhead = "cluster"; return; }
         }
     }
     const sig = def.signature;
