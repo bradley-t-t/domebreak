@@ -16,61 +16,62 @@ import {button} from "../lib/variants.js";
 const VERSION = __APP_VERSION__;
 const RELEASE_BASE = "https://download.domebreak.com";
 
-const BUILDS = [
+// One card per OS, one download per architecture. The file names are the stable
+// symlinks the /ship skill repoints at the newest release (build-dist.sh emits
+// exactly these names), so every link always serves the latest build.
+const PLATFORMS = [
     {
         id: "mac",
         os: "macOS",
-        arch: "Apple Silicon",
         icon: "carrier",
-        file: "DomeBreak-mac.dmg",
-        url: `${RELEASE_BASE}/DomeBreak-mac.dmg`,
+        note: "macOS 10.13+",
+        builds: [
+            {arch: "Apple Silicon", sub: "M1 and newer", file: "DomeBreak-mac-arm64.dmg"},
+            {arch: "Intel", sub: "64-bit", file: "DomeBreak-mac-x64.dmg"},
+        ],
     },
     {
         id: "win",
         os: "Windows",
-        arch: "x64 installer",
         icon: "factory",
-        file: "DomeBreak-win.exe",
-        url: `${RELEASE_BASE}/DomeBreak-win.exe`,
+        note: "Windows 10+",
+        builds: [
+            {arch: "x64", sub: "64-bit, most PCs", file: "DomeBreak-win-x64.exe"},
+            {arch: "ARM64", sub: "Windows on ARM", file: "DomeBreak-win-arm64.exe"},
+            {arch: "32-bit", sub: "Legacy x86", file: "DomeBreak-win-ia32.exe"},
+        ],
     },
 ];
 
-function BuildCard({build}) {
+function PlatformCard({platform}) {
     return (
         <article className="group relative flex h-full flex-col rounded border border-line bg-bg-2 p-6 db-tick transition-colors duration-200 hover:border-gold-line">
             <header className="flex items-start gap-4">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded border border-line bg-gold-soft text-gold transition-colors duration-200 group-hover:border-gold-line">
-                    <GameIcon name={build.icon} size={34}/>
+                    <GameIcon name={platform.icon} size={34}/>
                 </span>
                 <div className="min-w-0 flex-1">
                     <h2 className="font-display text-[18px] font-bold uppercase tracking-[0.06em] text-text">
-                        {build.os}
+                        {platform.os}
                     </h2>
                     <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-faint">
-                        {build.arch} · v{VERSION}
+                        {platform.note} · v{VERSION}
                     </p>
                 </div>
             </header>
 
-            <div className="mt-6 flex items-baseline justify-between border-t border-hair pt-4">
-                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-faint">
-                    File
-                </span>
-                <span className="text-right font-mono text-[12px] text-text">{build.file}</span>
+            <div className="mt-6 flex flex-col gap-2 border-t border-hair pt-5">
+                {platform.builds.map((b) => (
+                    <a
+                        key={b.file}
+                        href={`${RELEASE_BASE}/${b.file}`}
+                        className={cn(button({variant: "primary", size: "lg"}), "w-full justify-between gap-3")}
+                    >
+                        <span>{b.arch}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] opacity-70">{b.sub}</span>
+                    </a>
+                ))}
             </div>
-            <div className="flex items-baseline justify-between border-t border-hair py-2">
-                <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-faint">
-                    Channel
-                </span>
-                <span className="font-mono text-[12px] text-text">Latest release</span>
-            </div>
-
-            <a
-                href={build.url}
-                className={cn(button({variant: "primary", size: "lg"}), "mt-6 w-full")}
-            >
-                Download for {build.os}
-            </a>
         </article>
     );
 }
@@ -104,9 +105,9 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
 
                 <div className="mx-auto max-w-[1100px] px-5 pb-24 sm:px-8">
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                        {BUILDS.map((b, i) => (
-                            <Reveal key={b.id} delay={Math.min(i * 0.06, 0.24)}>
-                                <BuildCard build={b}/>
+                        {PLATFORMS.map((p, i) => (
+                            <Reveal key={p.id} delay={Math.min(i * 0.06, 0.24)}>
+                                <PlatformCard platform={p}/>
                             </Reveal>
                         ))}
                     </div>

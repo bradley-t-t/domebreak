@@ -37,8 +37,9 @@ Fixed facts:
 | VPS (server + downloads) | Vultr, `root@144.202.78.170`, key `~/.ssh/domebreak_vps` (fallback root password in CryptoFort: `domebreak-vps-root-password`) |
 | Match server on VPS | `/root/domebreak` (`dist`, `server`, `src`, `public/data`, `package.json`; `.env` is machine-local — NEVER touch it), systemd unit `domebreak.service` |
 | Server health | `https://game.domebreak.com/health` (or `localhost:8790/health` on the VPS) returns `{ok, version, matches, ...}` |
-| Downloads dir on VPS | `/srv/domebreak-downloads` — one dir per release (`v1.4.0/...`) plus stable root symlinks `DomeBreak-mac.dmg` / `DomeBreak-win.exe` that the site links to |
-| Download URLs | `https://download.domebreak.com/DomeBreak-mac.dmg` and `.../DomeBreak-win.exe`; `https://download.domebreak.com/` browses all versions |
+| Downloads dir on VPS | `/srv/domebreak-downloads` — one dir per release (`v1.4.0/...`) plus stable root symlinks that the site links to |
+| Release artifacts (5) | mac: `DomeBreak-mac-arm64.dmg` (Apple Silicon), `DomeBreak-mac-x64.dmg` (Intel). win: `DomeBreak-win-x64.exe`, `DomeBreak-win-arm64.exe`, `DomeBreak-win-ia32.exe`. These exact names are both the build output (`build/` artifactName templates) and the stable download names. |
+| Download URLs | `https://download.domebreak.com/<artifact>` for each of the 5 names above; `https://download.domebreak.com/` browses all versions |
 | Caddy config on VPS | `/etc/caddy/Caddyfile` (both site blocks already provisioned; TLS is automatic) |
 | DNS | Vercel DNS, managed with the local `vercel` CLI (`vercel dns ls domebreak.com`); `game` and `download` A records point at the VPS |
 | Site deploy | GitHub Actions `release.yml` (push to main + `workflow_dispatch`) → Vercel |
@@ -92,25 +93,26 @@ scripts/build-dist.sh          # mac .dmg locally, win .exe natively over SSH
 
 - The Windows box is LAN-only. If unreachable, stop and report — do not ship a
   mac-only release without being asked to.
-- Verify in `~/DomeBreak-dist`: a `.dmg` whose filename contains `$V` and a
-  fresh `DomeBreak-Setup.exe` (mtimes newer than when this ship started).
-- Normalize to the stable names the downloads host serves:
-
-```bash
-cp ~/DomeBreak-dist/DomeBreak-"$V"*.dmg ~/DomeBreak-dist/DomeBreak-mac.dmg
-cp ~/DomeBreak-dist/DomeBreak-Setup.exe ~/DomeBreak-dist/DomeBreak-win.exe
-```
-
+- The five artifacts land in `~/DomeBreak-dist` already named for distribution
+  (`ARTIFACTS` below) — no renaming step. Confirm all five exist and are newer
+  than when this ship started; a missing arch means a build failed (Electron
+  can't fetch that arch, etc.) — stop and fix, don't publish a partial matrix.
+  ```bash
+  ARTIFACTS=(DomeBreak-mac-arm64.dmg DomeBreak-mac-x64.dmg DomeBreak-win-x64.exe DomeBreak-win-arm64.exe DomeBreak-win-ia32.exe)
+  for f in "${ARTIFACTS[@]}"; do ls -lh ~/DomeBreak-dist/"$f"; done
+  ```
 - Side effect to reuse: `scripts/build-dist.sh` ran `vite build`, so `dist/` in
   the build dir is the fresh web client for step 4.
-- Signing sanity (mac): the app is ad-hoc signed by `build/afterPack.cjs`, not
-  Developer-ID signed, so a downloaded copy needs a one-time Gatekeeper
+- Signing sanity (mac): each dmg's app is ad-hoc signed by `build/afterPack.cjs`,
+  not Developer-ID signed, so a downloaded copy needs a one-time Gatekeeper
   approval — but the seal must be VALID or macOS reports it "damaged" and it
-  won't open at all. Verify before publishing:
+  won't open at all. Verify BOTH mac dmgs before publishing:
   ```bash
-  MP=$(hdiutil attach ~/DomeBreak-dist/DomeBreak-mac.dmg -nobrowse -readonly | grep -o '/Volumes/.*' | head -1)
-  codesign --verify --deep --strict "$MP/DomeBreak.app" && echo "seal OK"
-  hdiutil detach "$MP" -quiet
+  for f in DomeBreak-mac-arm64.dmg DomeBreak-mac-x64.dmg; do
+    MP=$(hdiutil attach ~/DomeBreak-dist/"$f" -nobrowse -readonly | grep -o '/Volumes/.*' | head -1)
+    codesign --verify --deep --strict "$MP/DomeBreak.app" && echo "$f seal OK"
+    hdiutil detach "$MP" -quiet
+  done
   ```
   A failure here (`code has no resources...`) means the afterPack hook didn't
   run — stop and fix, do not ship it. Removing the one-time approval entirely
@@ -118,28 +120,30 @@ cp ~/DomeBreak-dist/DomeBreak-Setup.exe ~/DomeBreak-dist/DomeBreak-win.exe
 
 ## 3. Publish the installers to download.domebreak.com
 
-Upload into a versioned dir, then atomically repoint the stable symlinks —
-downloads in flight keep working and the stable names never dangle:
+Upload all five into a versioned dir, then atomically repoint every stable
+symlink — downloads in flight keep working and the stable names never dangle:
 
 ```bash
 VPS="root@144.202.78.170"
 K=(-i ~/.ssh/domebreak_vps)
+ARTIFACTS=(DomeBreak-mac-arm64.dmg DomeBreak-mac-x64.dmg DomeBreak-win-x64.exe DomeBreak-win-arm64.exe DomeBreak-win-ia32.exe)
 ssh "${K[@]}" "$VPS" "mkdir -p /srv/domebreak-downloads/v$V"
-scp "${K[@]}" ~/DomeBreak-dist/DomeBreak-mac.dmg ~/DomeBreak-dist/DomeBreak-win.exe \
-    "$VPS:/srv/domebreak-downloads/v$V/"
+for f in "${ARTIFACTS[@]}"; do scp "${K[@]}" ~/DomeBreak-dist/"$f" "$VPS:/srv/domebreak-downloads/v$V/"; done
 git log "$LAST..v$V" --pretty='- %s' | ssh "${K[@]}" "$VPS" "cat > /srv/domebreak-downloads/v$V/RELEASE_NOTES.txt"
-ssh "${K[@]}" "$VPS" "cd /srv/domebreak-downloads \
-  && ln -sfn v$V/DomeBreak-mac.dmg DomeBreak-mac.dmg \
-  && ln -sfn v$V/DomeBreak-win.exe DomeBreak-win.exe"
+for f in "${ARTIFACTS[@]}"; do ssh "${K[@]}" "$VPS" "ln -sfn v$V/$f /srv/domebreak-downloads/$f"; done
 ```
 
-Verify from the outside — status 200 for both stable names, and Content-Length
-matching the local file size:
+Verify EACH download from the outside — the user asked that every download
+actually work, so check all five: HTTP 200, Content-Length matching the local
+file, and the right magic bytes (`MZ` for the Windows PEs; the mac dmgs were
+seal-checked in step 2). Any miss is a stop-and-fix.
 
 ```bash
-for f in DomeBreak-mac.dmg DomeBreak-win.exe; do
-  curl -sI "https://download.domebreak.com/$f" | grep -E '^HTTP|-(l|L)ength'
-  ls -l ~/DomeBreak-dist/$f
+for f in "${ARTIFACTS[@]}"; do
+  echo "== $f"
+  curl -sI "https://download.domebreak.com/$f" | grep -iE '^HTTP|content-length'
+  echo "local: $(stat -f%z ~/DomeBreak-dist/"$f")"
+  case "$f" in *.exe) [ "$(curl -s -r 0-1 "https://download.domebreak.com/$f" | xxd -p)" = "4d5a" ] && echo "PE magic OK" || echo "BAD PE";; esac
 done
 ```
 
@@ -204,9 +208,8 @@ will be prompted to update.
   re-uses the existing tag, re-uploads into the same `v$V` dir, repoints the
   same symlinks, and redeploys server and site. When a step fails, fix and
   re-run from the top.
-- Rollback of a bad release: repoint the stable symlinks at the previous
-  version dir (`ln -sfn vPREV/DomeBreak-mac.dmg DomeBreak-mac.dmg`, same for
-  win), redeploy the previous tag's `dist`/`server` to the VPS with step 4's
-  commands from a checkout of that tag, and re-run step 5 from a main that
-  carries the previous version. Report what happened first — rollback is a
-  user decision.
+- Rollback of a bad release: repoint all five stable symlinks at the previous
+  version dir (`for f in "${ARTIFACTS[@]}"; do ln -sfn vPREV/$f /srv/domebreak-downloads/$f; done`),
+  redeploy the previous tag's `dist`/`server` to the VPS with step 4's commands
+  from a checkout of that tag, and re-run step 5 from a main that carries the
+  previous version. Report what happened first — rollback is a user decision.
