@@ -65,12 +65,14 @@
       "dist/**",
       "electron/**"
     ],
+    "afterPack": "build/afterPack.cjs",
     "mac": {
       "target": [
         "dmg"
       ],
       "category": "public.app-category.games",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "identity": null
     },
     "win": {
       "target": [

@@ -103,6 +103,18 @@ cp ~/DomeBreak-dist/DomeBreak-Setup.exe ~/DomeBreak-dist/DomeBreak-win.exe
 
 - Side effect to reuse: `scripts/build-dist.sh` ran `vite build`, so `dist/` in
   the build dir is the fresh web client for step 4.
+- Signing sanity (mac): the app is ad-hoc signed by `build/afterPack.cjs`, not
+  Developer-ID signed, so a downloaded copy needs a one-time Gatekeeper
+  approval — but the seal must be VALID or macOS reports it "damaged" and it
+  won't open at all. Verify before publishing:
+  ```bash
+  MP=$(hdiutil attach ~/DomeBreak-dist/DomeBreak-mac.dmg -nobrowse -readonly | grep -o '/Volumes/.*' | head -1)
+  codesign --verify --deep --strict "$MP/DomeBreak.app" && echo "seal OK"
+  hdiutil detach "$MP" -quiet
+  ```
+  A failure here (`code has no resources...`) means the afterPack hook didn't
+  run — stop and fix, do not ship it. Removing the one-time approval entirely
+  needs a paid Apple Developer ID + notarization (not configured).
 
 ## 3. Publish the installers to download.domebreak.com
 
