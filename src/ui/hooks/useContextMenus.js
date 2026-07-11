@@ -10,7 +10,7 @@ import {DIPLOMACY} from "../../game/data/constants.js";
 const AMPHIB_LIFT_KM = 120;
 
 export function useContextMenus({
-                                     w, mySlot, myNation, api, selUnit, online,
+                                     w, mySlot, myNation, api, selUnit,
                                      relation, nationName, labelOf, teamColor, flash,
                                      setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
                                  }) {
@@ -55,14 +55,11 @@ export function useContextMenus({
                     if (r.error) flash(r.error);
                 }
             }); else if (rel === "ally") items.push({
-                // Alliance terms are single-player only (mirrors the war-popup and
-                // Diplomacy-screen gating); online, the item is offered but disabled.
                 label: `Break Alliance with ${nationName(c.slot)}`,
                 danger: true,
-                disabled: online,
                 onClick: () => api.breakAlliance(c.slot)
             }); else {
-                if (!online) items.push({
+                items.push({
                     label: `Propose Alliance to ${nationName(c.slot)}`,
                     onClick: () => {
                         const r = api.proposeAlliance(c.slot);

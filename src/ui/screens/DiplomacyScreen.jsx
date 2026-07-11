@@ -132,15 +132,12 @@ export default function DiplomacyScreen({world, api, mySlot, online, players, on
                                                 : <button className={miniButton()} aria-label={`Offer white peace to ${n.name}`}
                                                           onClick={() => api.offerPeace(n.slot)}>Offer Peace</button>)
                                             : standing === "ally"
-                                                ? (online
-                                                    ? <span className="font-mono text-[10px] text-faint" title="Alliance terms are single-player only for now">Ally: solo only</span>
-                                                    : <button className={miniButton({danger: true})} aria-label={`Break the alliance with ${n.name}`}
-                                                              onClick={() => api.breakAlliance(n.slot)}>Break Alliance</button>)
+                                                ? <button className={miniButton({danger: true})} aria-label={`Break the alliance with ${n.name}`}
+                                                          onClick={() => api.breakAlliance(n.slot)}>Break Alliance</button>
                                                 : (
                                                     <>
-                                                        {!online &&
-                                                            <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
-                                                                    onClick={() => api.proposeAlliance(n.slot)}>Ally</button>}
+                                                        <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
+                                                                onClick={() => api.proposeAlliance(n.slot)}>Ally</button>
                                                         <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
                                                                 disabled={graceActive}
                                                                 title={graceActive ? "Opening grace — no wars can be declared yet." : undefined}

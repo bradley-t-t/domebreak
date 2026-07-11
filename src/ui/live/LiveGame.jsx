@@ -234,7 +234,7 @@ export default function LiveGame({
     // helper they share — see useContextMenus (same items, same ordering,
     // same menu state, moved out verbatim).
     const {menu, setMenu, openCityMenu, openUnitMenu} = useContextMenus({
-        w, mySlot, myNation, api, selUnit, online: !!net,
+        w, mySlot, myNation, api, selUnit,
         relation, nationName, labelOf, teamColor, flash,
         setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
     });
@@ -248,6 +248,12 @@ export default function LiveGame({
     // preserved). Online matches are speed-locked and never pause: the modal is
     // non-blocking there. Keyed on whether the queue is non-empty.
     const hasWarPopup = (w.warPopups?.length ?? 0) > 0;
+    // Online alliance offers ride the broadcast pendingAlliance queue rather than
+    // the per-player warPopups modal queue (the server can't address one seat). Each
+    // client surfaces the front proposal aimed at its own slot as an Accept/Decline
+    // prompt; answering it clears the offer for everyone via respondAlliance.
+    const allyOffer = net ? w.pendingAlliance?.find((o) => o.to === mySlot) : null;
+    const allyOfferPop = allyOffer ? {id: `ally-offer-${allyOffer.from}`, kind: "ally-offer", foe: allyOffer.from} : null;
     const warAutoPaused = useRef(false);
     useEffect(() => {
         if (net) return;                       // online: never pause
@@ -671,6 +677,7 @@ export default function LiveGame({
                 outcome screen can still talk. */}
             {net && <ChatBox net={net} mySlot={mySlot} overlayOpen={overlayOpen}/>}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
+            {!w.over && net && allyOfferPop && <WarOutcomeModal world={w} api={api} pop={allyOfferPop}/>}
             {/* You were knocked out but the war rages on: a blocking notice with the
                 choice to keep watching (spectate) or leave to the menu. Dismissing it
                 (Spectate) drops into the HUD-less spectator view below. */}
