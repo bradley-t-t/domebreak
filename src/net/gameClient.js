@@ -3,6 +3,10 @@
 // whole match — snapshots overwrite it in place so the engine hook (and every
 // React ref into it) never has to re-seat. Auto-reconnects with fresh JWTs.
 const HELLO_TIMEOUT_MS = 4000;
+// Build version sent in the hello; the server requires an exact match
+// (src/net/version.js has the policy). __APP_VERSION__ is a Vite define —
+// absent under vitest's plain-Node runs, where no socket is ever opened.
+const CLIENT_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0";
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 2000;
 // Rolling player-chat log retained on the client (the server keeps none).
@@ -203,10 +207,22 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                 } else if (msg.t === "err") {
                     if (!resolved) {
                         resolved = true;
-                        reject(tagError(
-                            new Error(`server rejected: ${msg.error}`),
-                            formatDetails({phase: "hello", matchId, url: ws.url, serverError: msg.error}),
-                        ));
+                        if (msg.error === "version") {
+                            // Outdated build: reject with a structured error the app
+                            // maps to the update prompt instead of the generic overlay.
+                            const err = tagError(
+                                new Error("update required"),
+                                formatDetails({phase: "hello", matchId, url: ws.url, clientVersion: CLIENT_VERSION, requiredVersion: msg.required}),
+                            );
+                            err.code = "version";
+                            err.required = msg.required;
+                            reject(err);
+                        } else {
+                            reject(tagError(
+                                new Error(`server rejected: ${msg.error}`),
+                                formatDetails({phase: "hello", matchId, url: ws.url, serverError: msg.error}),
+                            ));
+                        }
                     }
                     client._closed = true;
                     try {
@@ -235,7 +251,7 @@ export function connectMatch({urls, matchId, getJwt, onOver, onClose}) {
                     wsCloseReason: lastCloseInfo?.reason || undefined,
                 }));
             };
-            ws.send(JSON.stringify({t: "hello", jwt, matchId}));
+            ws.send(JSON.stringify({t: "hello", jwt, matchId, v: CLIENT_VERSION}));
         };
 
         attach().catch((e) => {

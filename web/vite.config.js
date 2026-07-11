@@ -3,15 +3,31 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import {fileURLToPath} from "node:url";
 import {dirname, resolve} from "node:path";
+import {readFileSync} from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+// The game's package.json version is the single release version: the download
+// page renders it and /version.json publishes it for the game client's update
+// check (src/ui/hooks/useUpdateCheck.js). Never hardcode a version in web/.
+const {version} = JSON.parse(readFileSync(resolve(here, "../package.json"), "utf8"));
 
 // Marketing landing page — separate app from the game (src/). Deploys to Vercel
 // with this `web/` folder as the project root. `@game` resolves to the game's
 // own source so the animated hero globe reuses the real in-game engine/renderer
 // (one source of truth, no copied code).
 export default defineConfig({
-    plugins: [react(), tailwindcss()],
+    plugins: [
+        react(),
+        tailwindcss(),
+        {
+            name: "emit-version-json",
+            generateBundle() {
+                this.emitFile({type: "asset", fileName: "version.json", source: `${JSON.stringify({version})}\n`});
+            },
+        },
+    ],
+    define: {__APP_VERSION__: JSON.stringify(version)},
     resolve: {
         alias: {"@game": resolve(here, "../src")},
         // The game source (imported via @game from ../src) resolves its bare npm
