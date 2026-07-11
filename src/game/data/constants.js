@@ -122,8 +122,8 @@ export const INDUSTRY = {
 // starting population. Deterministic — a function of stored pop, hp, nation GDP,
 // and dt. Feeds populationOf → industry cap / domination.
 export const POPULATION = {
-    growthPerSec: 0.00015,   // fractional pop growth per game-second at full vitality
-    growthCapMult: 1.5,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
+    growthPerSec: 0.0009,    // fractional pop growth per game-second at full vitality
+    growthCapMult: 2.0,      // pop ceiling as a multiple of starting pop (1.0 disables growth)
     gdpGrowthFloor: 0.25,    // prosperity multiplier floor — even a dead economy trickles
     gdpGrowthCap: 1.5,       // prosperity ceiling as industry lifts GDP past its baseline
 };

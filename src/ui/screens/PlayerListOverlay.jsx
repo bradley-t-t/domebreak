@@ -4,7 +4,8 @@ import {overlay, card, menuTitle, iconButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
 import {useRoster} from "../lib/roster.js";
-import {gdpOf, populationOf} from "../../game/engine.js";
+import PopTrend from "../common/PopTrend.jsx";
+import {gdpOf, populationOf, populationTrendOf} from "../../game/engine.js";
 
 // In-game scoreboard. Hold Tab to reveal, release to hide (Esc or ✕ also
 // close). Every active power in the match — including eliminated ones,
@@ -81,6 +82,7 @@ export default function PlayerListOverlay({world, mySlot, players, onOpenCountry
                         const s = seatOf(n);
                         const cmd = commanderOf(n);
                         const open = onOpenCountry ? () => onOpenCountry(n.slot) : undefined;
+                        const pop = n.alive ? populationOf(world, n.slot) : 0;
                         return (
                             <div key={n.slot}
                                  className={cn(rowGrid, !n.alive && "opacity-50", isMe && "bg-[rgba(245,197,49,0.05)]", open && "cursor-pointer hover:bg-[rgba(255,255,255,0.03)]")}
@@ -108,7 +110,8 @@ export default function PlayerListOverlay({world, mySlot, players, onOpenCountry
                                 </span>
                                 <span className="text-right font-mono text-xs" role="cell">{n.alive ? citiesOf(n.slot) : "—"}</span>
                                 <span className="text-right font-mono text-xs" role="cell">{n.alive ? forcesOf(n.slot) : "—"}</span>
-                                <span className="text-right font-mono text-xs" role="cell">{n.alive ? fmtPop(populationOf(world, n.slot)) : "—"}</span>
+                                <span className="text-right font-mono text-xs inline-flex items-center justify-end gap-[3px]" role="cell">{n.alive ? fmtPop(pop) : "—"}
+                                    {n.alive && <PopTrend rate={populationTrendOf(world, n.slot)} base={pop} className="text-[9px]"/>}</span>
                                 <span className="text-right font-mono text-xs" role="cell">{n.alive ? fmtGdp(gdpOf(world, n.slot), 1) : "—"}</span>
                                 <span role="cell">
                                     {isMe ? <span className="font-mono text-[11px] text-dim">Home</span>

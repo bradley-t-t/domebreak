@@ -111,6 +111,35 @@ export function healCities(w, dt) {
     }
 }
 
+// Instantaneous rate of change of a nation's LIVING population (populationOf, in
+// people per game-second), derived from the very model growCities/healCities apply
+// so the HUD signifiers never drift from the sim. Displayed population is
+// Σ pop·vitality, so each living city contributes two positive terms:
+//   • growth   — growCities lifts pop by pop·growthPerSec·v·prosperity; its effect
+//                on pop·v is v× that (only while below the pop cap).
+//   • recovery — healCities lifts hp→vitality by hpFracPerSec/sec; its effect on
+//                pop·v is pop·hpFracPerSec (only while damaged and the owner stands).
+// Returns ≥ 0 (this model never sheds population — that happens through discrete
+// combat, not here); ~0 means every holding is capped, wrecked, or its owner has
+// surrendered. Pure, no mutation. Feeds PopTrend; combat losses are event-driven
+// and deliberately not reflected.
+export function populationTrendOf(w, slot) {
+    const {growthPerSec, growthCapMult} = POPULATION;
+    const healRate = CITY_REGEN.hpFracPerSec;
+    const canGrow = growthPerSec > 0 && growthCapMult > 1;
+    const prosperity = canGrow ? (prosperityBySlot(w).get(slot) ?? 1) : 0;
+    const n = (w.nations ?? []).find((x) => x.slot === slot);
+    const standing = !!n && n.alive && !hasSurrendered(w, n);
+    let rate = 0;
+    for (const c of w.cities) {
+        if (c.slot !== slot || !c.alive) continue;
+        const v = vitalityOf(c);
+        if (canGrow && c.pop < (c.pop0 ?? c.pop) * growthCapMult) rate += v * (c.pop * growthPerSec * v * prosperity);
+        if (standing && healRate > 0 && c.pop > 0 && c.hp < c.maxHp) rate += c.pop * healRate;
+    }
+    return rate;
+}
+
 // --- step() phases -----------------------------------------------------
 
 // Phase 1: economy — leadership command factor, income accrual, then each

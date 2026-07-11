@@ -2,7 +2,7 @@
 // vitality). One source for the green/amber/red band + its thresholds so the DOM
 // readouts and the MapLibre paint expressions can never drift apart.
 
-const VIT_GREEN = "#46d38a", VIT_AMBER = "#ffb020", VIT_RED = "#ff3b3b";
+export const VIT_GREEN = "#46d38a", VIT_AMBER = "#ffb020", VIT_RED = "#ff3b3b";
 
 // A 0..100 percentage → band colour (leadership / stability HUD readouts).
 // Returns undefined for a null/absent value so callers can leave colour unset.
