@@ -96,6 +96,7 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                             </h1>
                             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-dim">
                                 Pick your platform. Installers are served straight from the DomeBreak server.
+                                See First launch below the first time you open the game.
                             </p>
                         </Reveal>
                     </div>
@@ -109,6 +110,36 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                             </Reveal>
                         ))}
                     </div>
+
+                    <Reveal>
+                        <div className="mt-12 rounded border border-line bg-bg-2 p-6">
+                            <h3 className="font-display text-[12px] font-semibold uppercase tracking-[0.22em] text-faint">
+                                First launch
+                            </h3>
+                            <p className="mt-3 text-[13px] leading-relaxed text-dim">
+                                DomeBreak isn't signed with a paid developer certificate yet, so the first time you
+                                open it your OS asks you to confirm. This is a one-time step per install.
+                            </p>
+                            <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+                                <div className="border-t border-hair pt-3">
+                                    <dt className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-text">macOS</dt>
+                                    <dd className="mt-1 text-[13px] leading-relaxed text-dim">
+                                        Drag DomeBreak to Applications and open it. If macOS says it can't verify the
+                                        developer, go to System Settings → Privacy &amp; Security, scroll down, and click
+                                        <span className="text-text"> Open Anyway</span>.
+                                    </dd>
+                                </div>
+                                <div className="border-t border-hair pt-3">
+                                    <dt className="font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-text">Windows</dt>
+                                    <dd className="mt-1 text-[13px] leading-relaxed text-dim">
+                                        Run the installer. If Windows SmartScreen warns about an unknown publisher, click
+                                        <span className="text-text"> More info</span> then
+                                        <span className="text-text"> Run anyway</span>.
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </Reveal>
 
                     <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
                         All versions · <a href="https://download.domebreak.com/" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">download.domebreak.com</a>
