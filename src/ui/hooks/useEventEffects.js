@@ -11,6 +11,21 @@ import {sfx} from "../../game/platform/audio.js";
 import {clampSym} from "../../lib/math.js";
 import {byId} from "../../lib/iter.js";
 
+// Explosion marker lifetime (ms). The fireball CSS animations all finish and
+// hold invisible before this, so unmounting a little late is never visible.
+const EXPLOSION_MS = 850;
+// Per-drain sound budget for the spammable positional event types below: at
+// most this many cues (and their screen-space projections) of one type per
+// tick. Generous enough that normal play never hits it, tight enough that a
+// 200-impact salvo landing on one tick can't fire 200 projections and booms.
+const SFX_PER_TYPE = 4;
+const CAPPED_SFX = new Set(["hit", "destroy", "miss", "fizzle", "launch", "mirv"]);
+
+// Drop expired explosions; returns the same array identity when nothing
+// expired so the setState it feeds bails out without a re-render.
+const pruneExplosions = (list, now) =>
+    (list.some((x) => x.until <= now) ? list.filter((x) => x.until > now) : list);
+
 export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGameEnd}) {
     // Seed with whatever the world already carries (loaded saves keep their last
     // 60 events) so mount doesn't replay a backlog of explosions and sounds.
@@ -81,12 +96,15 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
     };
 
     useEffect(() => {
+        const now = performance.now();
         const fresh = [];
         const cityDeaths = [];
+        // Per-type sound budget for this drain (see CAPPED_SFX above).
+        const sfxCount = {};
         for (const e of w.events) {
             if (seen.current.has(e.id)) continue;
             seen.current.add(e.id);
-            eventSound(e);
+            if (!CAPPED_SFX.has(e.type) || (sfxCount[e.type] = (sfxCount[e.type] || 0) + 1) <= SFX_PER_TYPE) eventSound(e);
             if (e.type === "destroy" && e.kind === "city") {
                 const c = byId(w.cities, e.cityId);
                 if (c) cityDeaths.push({name: c.name, mine: c.slot === mySlot, fallout: !!e.fallout});
@@ -105,27 +123,32 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
                 setErr({msg: "Radioactive fallout over your territory.", kind: "warn"});
                 setTimeout(() => setErr(null), 3000);
             }
+            // Each explosion carries its own expiry stamp; the batched prune
+            // below (not a per-explosion timer) removes it once it's played out.
             if (e.type === "intercept") fresh.push({
                 id: e.id,
                 lng: e.lng,
                 lat: e.lat,
                 kind: "intercept",
-                alt: e.alt || 0
+                alt: e.alt || 0,
+                until: now + EXPLOSION_MS
             });
-            else if (e.type === "miss") fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "miss", alt: e.alt || 0});
+            else if (e.type === "miss") fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "miss", alt: e.alt || 0, until: now + EXPLOSION_MS});
             else if (e.type === "mirv" && (!e.seen || e.seen.includes(mySlot))) fresh.push({
                 id: e.id,
                 lng: e.lng,
                 lat: e.lat,
                 kind: "mirv",
-                alt: e.alt || 0
+                alt: e.alt || 0,
+                until: now + EXPLOSION_MS
             });
             else if (e.type === "hit" || e.type === "destroy") fresh.push({
                 id: e.id,
                 lng: e.lng,
                 lat: e.lat,
                 kind: e.type,
-                alt: 0
+                alt: 0,
+                until: now + EXPLOSION_MS
             });
         }
         // City-death toast, aggregated across this tick so a MIRV that levels
@@ -146,11 +169,18 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
             sfx(w.winnerSlot === mySlot ? "win" : "lose");
             onGameEnd?.({result: w.winnerSlot === mySlot ? "win" : "loss"});
         }
-        if (!fresh.length) return;
-        setExplosions((list) => [...list, ...fresh]);
-        for (const e of fresh) {
-            const id = e.id;
-            setTimeout(() => setExplosions((list) => list.filter((x) => x.id !== id)), 850);
-        }
+        // Batched expiry: prune played-out explosions inside the drain we're
+        // already running each tick — one state update per tick, where a
+        // per-explosion removal timer would land a barrage as hundreds of
+        // staggered timeouts, each forcing a full-tree render. The updater
+        // keeps the list's identity when nothing changed, so the steady state
+        // costs no re-render at all.
+        setExplosions((list) => {
+            const live = pruneExplosions(list, now);
+            return fresh.length ? [...live, ...fresh] : live;
+        });
+        // The drain stalls with the tick (pause, game over), so one coarse
+        // fallback per batch sweeps the stragglers once their animations end.
+        if (fresh.length) setTimeout(() => setExplosions((list) => pruneExplosions(list, performance.now())), EXPLOSION_MS + 100);
     }, [w.time]);
 }

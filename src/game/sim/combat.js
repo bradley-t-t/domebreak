@@ -1,25 +1,60 @@
 // Missile flight tracking, launch/impact resolution, and MIRV bus reentry.
 // Target resolution (findTarget) also lives here since launch/impact/attack
 // orders all need the same city-or-unit lookup.
-import {haversine, interpGC} from "../geo/geo.js";
+import {bearing, geoDest, haversine, interpGC, withinKm} from "../geo/geo.js";
 import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nextId, rand} from "./worldState.js";
 import {atWar, sensedBy} from "./queries.js";
-import {cosLatSafe, unwrapLng} from "../../lib/geo.js";
-import {clamp, clamp01} from "../../lib/math.js";
+import {clamp01} from "../../lib/math.js";
 import {byId} from "../../lib/iter.js";
 import {jitter, randRange} from "../../lib/random.js";
 
+// Id -> entity map over an entity array, cached on the array itself (WeakMap, so
+// nothing leaks into saves or snapshots). Arrays only ever GROW in place (push)
+// or get REPLACED wholesale (the prune's filter, a snapshot apply) — elements are
+// never removed or reordered in place — so (array identity, length) fully
+// determines the id set: a replacement misses the WeakMap and rebuilds, a push is
+// indexed incrementally from the previous length. Entry mutation (hp, position)
+// is irrelevant — the map holds refs.
+const _idIdx = new WeakMap();
+
+export function idMapOf(arr) {
+    let e = _idIdx.get(arr);
+    if (!e) _idIdx.set(arr, e = {len: 0, map: new Map()});
+    for (let i = e.len; i < arr.length; i++) e.map.set(arr[i].id, arr[i]);
+    e.len = arr.length;
+    return e.map;
+}
+
+// Drops the cached id map for an entity array. The two commands that remove a
+// LIVING unit in place (embark, scrapUnit — the only splices of a world array)
+// must call this, or the cache would keep resolving the removed unit.
+export function idMapInvalidate(arr) {
+    _idIdx.delete(arr);
+}
+
+// Id -> entity maps over the world's cities and units for the tick phases'
+// per-projectile/per-unit target lookups, turning findTarget from an
+// O(cities + units) scan into two map hits — the scan was a top hot spot at
+// full-war scale (every projectile, every armed unit, every tick). Backed by the
+// amortized idMapOf cache, so calling this per phase costs only the new tail of
+// each array. One-shot callers (UI, orders) skip the index and take findTarget's
+// linear path.
+export function targetIndexOf(w) {
+    return {cities: idMapOf(w.cities), units: idMapOf(w.units)};
+}
+
 // Resolves an order/attack target id to either a city or a unit, with a uniform
 // {kind, ref, slot, alive, lng, lat} shape. Shared by production orders and combat.
-export function findTarget(w, id) {
-    const c = byId(w.cities, id);
+// Pass a targetIndexOf(w) as `idx` in per-tick loops to skip the linear scans.
+export function findTarget(w, id, idx) {
+    const c = idx ? idx.cities.get(id) : byId(w.cities, id);
     if (c) return {
         kind: "city", ref: c, slot: c.slot, get alive() {
             return c.alive;
         }, lng: c.lng, lat: c.lat
     };
-    const u = byId(w.units, id);
+    const u = idx ? idx.units.get(id) : byId(w.units, id);
     if (u) return {
         kind: "unit", ref: u, slot: u.slot, get alive() {
             return u.hp > 0;
@@ -54,22 +89,21 @@ export function leadInterceptPoint(it, p) {
 // sub) that fans the pattern out after release and converges it back onto the
 // target for the terminal dive. Shared by the engine tick and the sky renderer
 // so the physics and the drawn trail can never disagree.
+//
+// The bow is a true geodesic offset: `off` km perpendicular-left of the track's
+// local bearing, via geoDest. A raw-degree equirectangular nudge breaks on the
+// polar trajectories a full-scale war throws constantly — latitude folds onto
+// the pole cap, lanes scissor where the great circle crosses the pole, and the
+// clamped cos(lat) divisor zigzags the longitude by tens of degrees. geoDest
+// can't produce |lat| > 90 or a discontinuous jump, so no clamp is needed.
 export function trackPoint(p, f) {
     const base = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, f);
     if (!p.spreadKm) return base;
     const ahead = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, Math.min(1, f + 0.02));
-    const dLng = unwrapLng(ahead[0] - base[0], 0);
-    const cos = cosLatSafe(base[1]);
-    const dx = dLng * cos, dy = ahead[1] - base[1];
-    const len = Math.hypot(dx, dy) || 1;
+    const brg = bearing(base[0], base[1], ahead[0], ahead[1]);
     // Perpendicular offset peaking mid-flight, zero at release and at impact.
     const off = p.spreadKm * Math.sin(Math.PI * clamp01(f));
-    // interpGC keeps base within ±90, but this lateral bow is a raw-degree nudge
-    // that can push a sub-warhead past a pole near high latitudes. Clamp so the
-    // shared track never yields an impossible latitude — an unclamped value crashes
-    // map.project() (Invalid LngLat) and takes the whole match view down.
-    const bowLat = clamp(base[1] + ((dx / len) * off) / 111, -90, 90);
-    return [base[0] + ((-dy / len) * off) / (111 * cos), bowLat];
+    return geoDest(base[0], base[1], off, brg - 90);
 }
 
 // Fires one projectile from an offensive unit at a resolved target. Records who
@@ -79,8 +113,14 @@ export function launch(w, unit, target, warhead) {
     const udef = UNITS[unit.type];
     const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
     const seenBy = [unit.slot];
+    // Sensor coverage is entirely unit-derived, so only nations that field a unit
+    // can possibly see the boost phase. One O(units) pass to find those slots
+    // keeps a salvo from paying sensedBy's full-world sensor build for each of
+    // the ~200 unit-less neutrals per shot.
+    const slotsWithUnits = new Set();
+    for (const u of w.units) if (u.hp > 0) slotsWithUnits.add(u.slot);
     for (const nn of w.nations) {
-        if (!nn.alive || nn.slot === unit.slot) continue;
+        if (!nn.alive || nn.slot === unit.slot || !slotsWithUnits.has(nn.slot)) continue;
         if (sensedBy(w, nn.slot, unit.lng, unit.lat)) seenBy.push(nn.slot);
     }
     // An orbital strike is a rod-from-god drop from orbit: the projectile starts
@@ -113,8 +153,6 @@ export function launch(w, unit, target, warhead) {
         toLat: target.lat,
         lng: unit.lng,
         lat: unit.lat,
-        aheadLng: unit.lng,
-        aheadLat: unit.lat,
         targetId: target.ref.id,
         dist,
         travelled: 0,
@@ -189,8 +227,8 @@ function applyBlast(w, p, lng, lat, excludeId) {
         // The bunker is blast-proof — only a direct thermonuclear hit (or capture)
         // can take it down, never a near-miss shockwave.
         if (u.hp <= 0 || u.id === excludeId || u.type === "bunker") continue;
+        if (!withinKm(lng, lat, u.lng, u.lat, bk)) continue;
         const d = haversine(lng, lat, u.lng, u.lat);
-        if (d > bk) continue;
         const dmg = peak * (1 - (1 - BLAST.edgeFrac) * (d / bk));
         if (dmg <= 0) continue;
         u.hp -= dmg;
@@ -207,8 +245,8 @@ function applyBlast(w, p, lng, lat, excludeId) {
 // Projectile arrival: applies damage to the target city/unit, kills it at 0 hp
 // (cities permanently — alive=false), spreads a ground-zero blast to nearby units,
 // and emits the hit/destroy/fizzle event.
-export function resolveHit(w, p) {
-    const target = findTarget(w, p.targetId);
+export function resolveHit(w, p, idx) {
+    const target = findTarget(w, p.targetId, idx);
     // Ground zero: the live target's spot, or the aim point if nothing survived to
     // absorb the hit. Fallout and blast are both sited here, before the fizzle
     // bail-out — a warhead detonates on the ground whether or not a target remains.
@@ -267,19 +305,19 @@ export function spawnFallout(w, lng, lat, slot) {
 // hostile targets within the warhead's spread radius (or pile onto the primary
 // when nothing else is close). Each MIRV carries damage/4 — a lone target still
 // eats the bus's full yield, with the fan-out as a bonus against clusters.
-export function mirvSplit(w, p) {
+export function mirvSplit(w, p, idx) {
     const cwh = WARHEADS[p.warhead];
-    const primary = findTarget(w, p.targetId);
+    const primary = findTarget(w, p.targetId, idx);
     if (!primary || !primary.alive) return;
     const count = cwh.subCount || 8, radius = cwh.splash || 240;
     const nearby = [];
     for (const c of w.cities) {
         if (!c.alive || c.id === primary.ref.id || !atWar(w, p.slot, c.slot)) continue;
-        if (haversine(primary.lng, primary.lat, c.lng, c.lat) <= radius) nearby.push(c);
+        if (withinKm(primary.lng, primary.lat, c.lng, c.lat, radius)) nearby.push(c);
     }
     for (const u of w.units) {
         if (u.hp <= 0 || u.id === primary.ref.id || !atWar(w, p.slot, u.slot)) continue;
-        if (haversine(primary.lng, primary.lat, u.lng, u.lat) <= radius) nearby.push(u);
+        if (withinKm(primary.lng, primary.lat, u.lng, u.lat, radius)) nearby.push(u);
     }
     const subs = [];
     for (let i = 0; i < count; i++) {
@@ -300,7 +338,7 @@ export function mirvSplit(w, p) {
             damage: p.damage * (cwh.subDmgFrac ?? 0.25), speed: p.speed ?? MISSILE_SPEED, tried: [],
             altStart: p.altNorm ?? 0.8, altNorm: p.altNorm ?? 0.8,
             fromLng: p.lng, fromLat: p.lat, toLng: tgt.lng + jLng, toLat: tgt.lat + jLat,
-            lng: p.lng, lat: p.lat, aheadLng: p.lng, aheadLat: p.lat,
+            lng: p.lng, lat: p.lat,
             targetId: tgt.id, dist, travelled: 0, progress: 0,
         });
     }

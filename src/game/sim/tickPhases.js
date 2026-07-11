@@ -19,10 +19,10 @@ import {
     WARHEADS,
     isAttacker,
 } from "../data/constants.js";
-import {haversine} from "../geo/geo.js";
+import {haversine, withinKm} from "../geo/geo.js";
 import {nationOf, nextId, rand} from "./worldState.js";
 import {clamp, clamp01} from "../../lib/math.js";
-import {offsetKmPolar} from "../../lib/geo.js";
+import {offsetKmPolar, unwrapLng} from "../../lib/geo.js";
 import {
     airborne,
     atWar,
@@ -31,13 +31,14 @@ import {
     falloutIntensity,
     falloutProximity,
     hasSurrendered,
-    netIncomeOf,
+    netIncomeFromAgg,
     sensorsCover,
     sensorsOf,
+    slotEconomyAggregates,
     vitalityOf,
     replenishmentBuff,
 } from "./queries.js";
-import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, trackPoint} from "./combat.js";
+import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
 import {flyAircraft, runAirbase, steamShip} from "./aircraft.js";
 import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
@@ -117,9 +118,13 @@ export function healCities(w, dt) {
 // (No tech tree — everything is unlocked at world creation.)
 export function stepEconomy(w, dt) {
     // Refresh each nation's leadership command factor before the economy reads it
-    // (incomeOf below scales by n.commandMult).
+    // (the income formula scales by n.commandMult).
     updateCommand(w);
-    for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeOf(w, n.slot) * dt);
+    // One batched pass over cities+units for every nation's income figures —
+    // netIncomeOf per nation re-scans the whole world per nation, which at
+    // full-world scale (~222 nations, neutrals included) dominated the tick.
+    const agg = slotEconomyAggregates(w);
+    for (const n of w.nations) if (n.alive) n.points = Math.max(0, n.points + netIncomeFromAgg(n, agg.get(n.slot)) * dt);
 
     for (const n of w.nations) {
         if (!n.alive) continue;
@@ -151,6 +156,20 @@ export function stepEconomy(w, dt) {
 // (sub-stepped for turn-rate stability), and ground/warhead-platform firing
 // against a locked target once in range and off cooldown.
 export function stepMovement(w, dt) {
+    // Per-tick lookups shared by every unit below: id -> entity for target and
+    // airbase resolution (kills the O(cities + units) scan per armed unit), and
+    // baseId -> based aircraft for the airbase controllers (each wing base was
+    // re-filtering the whole unit list several times per tick). Aircraft launched
+    // mid-tick aren't in these; their base's controller already ran this tick and
+    // every consumer re-checks hp at use, so nothing reads stale.
+    const idx = targetIndexOf(w);
+    const basedAircraft = new Map();
+    for (const u of w.units) {
+        if (!u.baseId) continue;
+        let arr = basedAircraft.get(u.baseId);
+        if (!arr) basedAircraft.set(u.baseId, arr = []);
+        arr.push(u);
+    }
     for (const u of w.units) {
         if (u.hp <= 0) continue;
         u.cooldown = Math.max(0, u.cooldown - dt);
@@ -168,24 +187,29 @@ export function stepMovement(w, dt) {
             else if (lng < -180) lng += 360;
             u.lng = lng;
         }
-        if (def.wing) runAirbase(w, u, dt);
+        if (def.wing) runAirbase(w, u, dt, basedAircraft.get(u.id));
         if ((def.navalSpeed || def.landSpeed) && u.dest) steamShip(u, def, dt);
         else if (def.airSpeed && u.baseId) {
             // Sub-step the flight physics: at 4×–10× game speed a whole tick can
             // be a full second — one turn-rate-limited update per tick makes the
             // heading saw-tooth around the path. Integrating in ≤80 ms slices
-            // keeps the nose on the velocity vector at any speed.
+            // keeps the nose on the velocity vector at any speed. The home base is
+            // resolved once for the whole tick — it cannot change between slices
+            // (only this unit advances during them), and finding it per slice was
+            // an O(units) scan multiplied by up to ~12 slices per aircraft.
+            const home = idx.units.get(u.baseId);
+            const base = home && home.hp > 0 ? home : null;
             let rem = dt;
             while (rem > 1e-6 && u.hp > 0) {
                 const h = Math.min(0.08, rem);
-                flyAircraft(w, u, def, h);
+                flyAircraft(w, u, def, h, base);
                 rem -= h;
             }
         }
         // Shoot-and-scoot: a road-mobile warhead platform (the TEL) holds fire while
         // it has a march destination — it must halt to launch.
         if (isAttacker(def) && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
-            const t = findTarget(w, u.targetId);
+            const t = findTarget(w, u.targetId, idx);
             if (!t || !t.alive || !atWar(w, u.slot, t.slot)) {
                 u.targetId = null;
                 continue;
@@ -245,6 +269,13 @@ export function stepCombat(w, dt) {
         if (!arr) defBySlot.set(d.slot, arr = []);
         arr.push(d);
     }
+    // Per-tick memo of each defender's engagement reach and replenishment buff.
+    // Both are invariant for a defender within a tick but were recomputed per
+    // projectile — and each defenseRange() call hides an O(units) radar-link scan,
+    // which multiplied out to the single hottest path of a saturation attack.
+    const idx = targetIndexOf(w);
+    const reachOf = new Map();   // defender id -> outer engagement radius
+    const replenOf = new Map();  // defender id -> replenishment reload multiplier
 
     for (const p of w.projectiles) {
         p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
@@ -252,20 +283,17 @@ export function stepCombat(w, dt) {
         const pos = trackPoint(p, p.progress);
         p.lng = pos[0];
         p.lat = pos[1];
-        const ah = trackPoint(p, Math.min(1, p.progress + 0.03));
-        p.aheadLng = ah[0];
-        p.aheadLat = ah[1];
         // MIRVs descend from their release altitude; whole missiles fly the sine arc.
         p.altNorm = p.altStart != null ? p.altStart * (1 - p.progress) : Math.sin(p.progress * Math.PI);
         if (WARHEADS[p.warhead]?.mirv && !p.sub && !p._dead && p.progress >= MIRV_SPLIT_AT) {
-            mirvSplit(w, p);
+            mirvSplit(w, p, idx);
             p._dead = true;
             continue;
         }
         // Defenses fire interceptors (gated by reload + points). Only ordnance
         // actually inbound on the defender's own nation is engaged — missiles
         // transiting past a third party are not their problem.
-        const inboundSlot = findTarget(w, p.targetId)?.slot;
+        const inboundSlot = findTarget(w, p.targetId, idx)?.slot;
         const defenders = inboundSlot == null ? null : defBySlot.get(inboundSlot);
         if (defenders) for (const d of defenders) {
             const ddef = UNITS[d.type];
@@ -282,12 +310,17 @@ export function stepCombat(w, dt) {
             // Engage only within the battery's annulus: inside defenseRange (outer
             // reach) but outside defenseMinRange (the keep-out gap for area ABMs
             // like THAAD, which can't kill a target that's already dived in close).
+            let reach = reachOf.get(d.id);
+            if (reach === undefined) reachOf.set(d.id, reach = defenseRange(w, d));
             const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
-            if (dToTarget <= defenseRange(w, d) && dToTarget >= defenseMinRange(w, d)) {
+            if (dToTarget <= reach && dToTarget >= defenseMinRange(w, d)) {
                 p.tried.push(d.id);
                 // Sea-based defenses (cruiser/destroyer/Aegis afloat) reload faster
                 // while replenished by a nearby oiler.
-                const dReplen = ddef.domain === "sea" && replenishmentBuff(w, d) ? REPLENISH_RELOAD_MULT : 1;
+                let dReplen = replenOf.get(d.id);
+                if (dReplen === undefined) {
+                    replenOf.set(d.id, dReplen = ddef.domain === "sea" && replenishmentBuff(w, d) ? REPLENISH_RELOAD_MULT : 1);
+                }
                 d.cooldown = (ddef.reload || DEFAULT_RELOAD) * dReplen;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
@@ -348,7 +381,7 @@ export function stepCombat(w, dt) {
             }
         }
         if (!p._dead && p.progress >= 1) {
-            resolveHit(w, p);
+            resolveHit(w, p, idx);
             p._dead = true;
         }
     }
@@ -378,6 +411,9 @@ export function stepFallout(w, dt) {
             const rate = FALLOUT.dmgPerSec * intensity * dt;
             for (const c of w.cities) {
                 if (!c.alive) continue;
+                // Cheap reject before the trig: the whole world is scanned per cloud,
+                // and almost everything is nowhere near it.
+                if (!withinKm(fx.lng, fx.lat, c.lng, c.lat, fx.radiusKm)) continue;
                 const prox = falloutProximity(haversine(fx.lng, fx.lat, c.lng, c.lat), fx.radiusKm);
                 if (prox <= 0) continue;
                 c.hp -= rate * prox;
@@ -394,6 +430,7 @@ export function stepFallout(w, dt) {
                 // The bunker is sealed against fallout too — a direct thermonuclear
                 // hit or ground capture are the only ways to breach it.
                 if (u.hp <= 0 || u.type === "bunker") continue;
+                if (!withinKm(fx.lng, fx.lat, u.lng, u.lat, fx.radiusKm)) continue;
                 const prox = falloutProximity(haversine(fx.lng, fx.lat, u.lng, u.lat), fx.radiusKm);
                 if (prox > 0) u.hp -= rate * prox;
             }
@@ -418,10 +455,11 @@ export function stepSensors(w, dt) {
         for (const u of w.units) if (u.hp > 0) slotsWithUnits.add(u.slot);
         const sensors = {};
         for (const n of w.nations) if (n.alive && slotsWithUnits.has(n.slot)) sensors[n.slot] = sensorsOf(w, n.slot);
+        const idx = targetIndexOf(w);
         for (const p of w.projectiles) {
             if (p._dead) continue;
             if (!p.seenBy) p.seenBy = []; // saves from before fog of war
-            const tgtSlot = findTarget(w, p.targetId)?.slot;
+            const tgtSlot = findTarget(w, p.targetId, idx)?.slot;
             for (const n of w.nations) {
                 if (!n.alive || p.seenBy.includes(n.slot) || !sensors[n.slot]?.length) continue;
                 if (!sensorsCover(sensors[n.slot], p.lng, p.lat)) continue;
@@ -438,8 +476,14 @@ export function stepSensors(w, dt) {
 // steers toward a lead-pursuit aim point and, once within kill radius, rolls
 // its hit probability against the tracked projectile.
 export function stepInterceptors(w, dt) {
+    // Id -> projectile once per tick: resolving each interceptor's target with a
+    // linear find was O(interceptors x projectiles) — the pairing that blows up in
+    // exactly the saturation engagements interceptors exist for.
+    const projById = new Map();
+    for (const p of w.projectiles) projById.set(p.id, p);
     for (const it of w.interceptors) {
-        const tgt = w.projectiles.find((p) => p.id === it.targetId && !p._dead); // byId with predicate — keep inline
+        const live = projById.get(it.targetId);
+        const tgt = live && !live._dead ? live : null;
         if (!tgt) {
             it._dead = true;
             continue;
@@ -500,10 +544,21 @@ export function stepInterceptors(w, dt) {
             // the round's real direction of travel instead of a stale aim point.
             it.pLng = it.lng;
             it.pLat = it.lat;
-            const aimDist = haversine(it.lng, it.lat, aim[0], aim[1]) || 1;
+            // Unwrap the aim longitude to the interceptor's side of the antimeridian
+            // before stepping. Raw interpolation toward a normalized aim (aim +179,
+            // round at -179 → delta 358°) lurched the round the LONG way around the
+            // planet — while aimDist (haversine, periodic) stayed small, so f was
+            // large and the round teleported tens of degrees in one tick. The classic
+            // "interceptors go crazy near the dateline / over the pole" bug.
+            const aimLng = unwrapLng(aim[0], it.lng);
+            const aimDist = haversine(it.lng, it.lat, aimLng, aim[1]) || 1;
             const f = Math.min(1, stepKm / aimDist);
-            it.lng += (aim[0] - it.lng) * f;
+            it.lng += (aimLng - it.lng) * f;
             it.lat += (aim[1] - it.lat) * f;
+            // Keep the stored longitude canonical for saves/snapshots and the
+            // renderer's own unwrap chains.
+            if (it.lng > 180) it.lng -= 360;
+            else if (it.lng < -180) it.lng += 360;
         }
     }
 }
@@ -515,9 +570,12 @@ export function stepEventPrune(w) {
     // while a downed ferry (hp 0) still carries its cargo to be accounted for.
     reconcileLeadership(w);
 
-    w.interceptors = w.interceptors.filter((it) => !it._dead);
-    w.projectiles = w.projectiles.filter((p) => !p._dead);
-    w.units = w.units.filter((u) => u.hp > 0);
+    // Rebuild each array only when something in it actually died — the
+    // unconditional filters re-allocated all three every tick, pure GC churn on
+    // the overwhelmingly common no-deaths tick.
+    if (w.interceptors.some((it) => it._dead)) w.interceptors = w.interceptors.filter((it) => !it._dead);
+    if (w.projectiles.some((p) => p._dead)) w.projectiles = w.projectiles.filter((p) => !p._dead);
+    if (w.units.some((u) => u.hp <= 0)) w.units = w.units.filter((u) => u.hp > 0);
     if (w.events.length > 60) w.events.splice(0, w.events.length - 60);
 }
 

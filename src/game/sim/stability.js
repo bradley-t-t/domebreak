@@ -7,7 +7,7 @@
 // deterministic — no RNG, no history.
 import {STABILITY} from "../data/constants.js";
 import {nationOf} from "./worldState.js";
-import {netIncomeOf, populationOf} from "./queries.js";
+import {netIncomeFromAgg, netIncomeOf, populationOf, slotEconomyAggregates} from "./queries.js";
 import {clamp, clamp01} from "../../lib/math.js";
 
 // Wars a nation is currently fighting.
@@ -29,13 +29,15 @@ function basePopOf(w, slot) {
 // Every active stability penalty for a nation, itemized — the reasoning behind the
 // target. One entry per pressure that is currently dragging stability down (nothing
 // is listed when a factor is inactive). Pure; stabilityTarget just sums these, so
-// the HUD breakdown and the simulated target can never diverge.
-function stabilityFactors(w, n) {
+// the HUD breakdown and the simulated target can never diverge. `eco` is an
+// optional {basePop, pop, netIncome} precomputed by the tick's batched aggregate —
+// one-shot HUD callers omit it and take the live per-slot scans.
+function stabilityFactors(w, n, eco) {
     const f = [];
     // Population loss (captures depopulation AND cities/territory lost to war).
-    const base = basePopOf(w, n.slot);
+    const base = eco ? eco.basePop : basePopOf(w, n.slot);
     if (base > 0) {
-        const lostFrac = clamp01(1 - populationOf(w, n.slot) / base);
+        const lostFrac = clamp01(1 - (eco ? eco.pop : populationOf(w, n.slot)) / base);
         if (lostFrac > 0) f.push({
             key: "pop", label: "Population lost", penalty: lostFrac * STABILITY.wPopLoss,
             detail: `${Math.round(lostFrac * 100)}% of citizens gone`,
@@ -60,7 +62,7 @@ function stabilityFactors(w, n) {
         });
     }
     // Running a points deficit.
-    if (netIncomeOf(w, n.slot) < 0) f.push({
+    if ((eco ? eco.netIncome : netIncomeOf(w, n.slot)) < 0) f.push({
         key: "deficit", label: "Points deficit", penalty: STABILITY.wDeficit,
         detail: "spending outpaces income",
     });
@@ -83,9 +85,9 @@ function stabilityFactors(w, n) {
 
 // The stability a nation is trending toward right now: 100 minus every active
 // penalty. Pure function of current state — no RNG, no history.
-export function stabilityTarget(w, n) {
+export function stabilityTarget(w, n, eco) {
     let penalty = 0;
-    for (const f of stabilityFactors(w, n)) penalty += f.penalty;
+    for (const f of stabilityFactors(w, n, eco)) penalty += f.penalty;
     return clamp(100 - penalty, 0, 100);
 }
 
@@ -112,10 +114,14 @@ export function stabilityBreakdown(w, slot) {
     };
 }
 
-// Per-tick: ease every living nation's stability toward its target.
+// Per-tick: ease every living nation's stability toward its target. The world
+// figures every nation's target reads (population, base population, net income)
+// come from one batched pass — computing them per nation re-scanned the whole
+// world per nation, the second-largest fixed tick cost at full-world scale.
 export function updateStability(w, dt) {
     if (dt <= 0) return;
     const k = Math.min(1, STABILITY.easePerSec * dt);
+    const agg = slotEconomyAggregates(w);
     for (const n of w.nations) {
         if (!n.alive) continue;
         if (n.stability == null) n.stability = 100;
@@ -123,7 +129,9 @@ export function updateStability(w, dt) {
         if (n.defeatPenalties?.length) {
             n.defeatPenalties = n.defeatPenalties.filter((p) => w.time - p.t0 < STABILITY.defeatSec);
         }
-        const target = stabilityTarget(w, n);
+        const a = agg.get(n.slot);
+        const eco = {basePop: a?.basePop ?? 0, pop: a?.pop ?? 0, netIncome: netIncomeFromAgg(n, a)};
+        const target = stabilityTarget(w, n, eco);
         n.stability = clamp(n.stability + (target - n.stability) * k, 0, 100);
     }
 }
