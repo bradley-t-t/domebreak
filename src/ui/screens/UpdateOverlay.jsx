@@ -9,7 +9,10 @@ import {cn} from "../lib/cn.js";
 // The CTA depends on how this build runs: the desktop app (preload exposes
 // window.dbLocal) must download a new installer, while a browser client is
 // served fresh code on reload.
-const DOWNLOAD_URL = "https://domebreak.com/download";
+// Hash route — the marketing site is a hash-routed SPA (web/src/hooks/
+// useHashRoute.js). The site also 308s the bare /download path here for the
+// installers that shipped linking it.
+const DOWNLOAD_URL = "https://domebreak.com/#/download";
 
 export default function UpdateOverlay({currentVersion, latestVersion, onDismiss}) {
     const inDesktopApp = typeof window !== "undefined" && !!window.dbLocal;
