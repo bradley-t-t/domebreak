@@ -63,8 +63,12 @@ export default function ChatBox({net, mySlot, overlayOpen}) {
         requestAnimationFrame(() => inputRef.current?.focus());
     });
 
-    const send = (e) => {
-        e.preventDefault();
+    // Enter sends. Wired explicitly on the input (below) rather than leaning on
+    // the form's implicit submission: with a single input and no submit button
+    // that native path is the only trigger, and a fragile one — handling the key
+    // directly guarantees the line actually goes out instead of sticking in the
+    // box. The form's onSubmit stays as a belt-and-braces fallback.
+    const send = () => {
         const text = draft.trim();
         setDraft("");
         if (text) net.sendChat(text);
@@ -104,10 +108,16 @@ export default function ChatBox({net, mySlot, overlayOpen}) {
                             </div>
                         ))}
                     </div>
-                    <form onSubmit={send} className="flex border-t border-line">
+                    <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex border-t border-line">
                         <input ref={inputRef} value={draft} maxLength={MAX_LEN}
                                onChange={(e) => setDraft(e.target.value)}
                                onKeyDown={(e) => {
+                                   if (e.key === "Enter" && !e.shiftKey) {
+                                       e.preventDefault();  // send here; don't defer to the form's implicit submit
+                                       e.stopPropagation();
+                                       send();
+                                       return;
+                                   }
                                    if (e.key !== "Escape") return;
                                    e.stopPropagation(); // keep the global Escape cascade (pause menu) out of it
                                    e.currentTarget.blur();
