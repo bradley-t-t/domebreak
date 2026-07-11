@@ -60,8 +60,11 @@ function content(kind, foe) {
     }
 }
 
-export default function WarOutcomeModal({world, api}) {
-    const pop = world.warPopups?.[0];
+// `pop` overrides the queue: online matches have no per-player warPopups (the
+// server can't address one seat), so LiveGame synthesizes the front alliance
+// offer from the broadcast pendingAlliance queue and passes it in directly.
+export default function WarOutcomeModal({world, api, pop: popOverride}) {
+    const pop = popOverride ?? world.warPopups?.[0];
     const isOffer = pop?.kind === "offer";
     const isAllyOffer = pop?.kind === "ally-offer";
     const onClose = () => {
