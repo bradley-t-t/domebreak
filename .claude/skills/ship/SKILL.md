@@ -42,7 +42,7 @@ Fixed facts:
 | Caddy config on VPS | `/etc/caddy/Caddyfile` (both site blocks already provisioned; TLS is automatic) |
 | DNS | Vercel DNS, managed with the local `vercel` CLI (`vercel dns ls domebreak.com`); `game` and `download` A records point at the VPS |
 | Site deploy | GitHub Actions `release.yml` (push to main + `workflow_dispatch`) → Vercel |
-| Site URLs to verify | `https://domebreak.com/version.json`, `https://domebreak.com/download` |
+| Site URLs to verify | `https://domebreak.com/version.json`, `https://domebreak.com/#/download` (hash-routed SPA; bare `/download` 308s to the hash route) |
 
 ## 0. Preflight
 
@@ -171,9 +171,11 @@ gh run watch <id> --exit-status
 
 Then verify production:
 
-- `curl -s https://domebreak.com/version.json` → `{"version":"$V"}`
-- `https://domebreak.com/download` renders `v$V` and links to
-  `download.domebreak.com`.
+- `curl -s https://domebreak.com/version.json` → `{"version":"$V"}` — must be a
+  direct 200 with `access-control-allow-origin: *` (the apex is the primary
+  domain; a redirect here would break the game's cross-origin update check).
+- `https://domebreak.com/#/download` renders `v$V` and links to
+  `download.domebreak.com`; bare `/download` 308s to the hash route.
 
 ## 6. Report
 

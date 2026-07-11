@@ -4,6 +4,9 @@
   "buildCommand": "vite build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "redirects": [
+    {"source": "/download", "destination": "/#/download", "permanent": false}
+  ],
   "headers": [
     {
       "source": "/version.json",
