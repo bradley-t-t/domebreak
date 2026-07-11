@@ -85,6 +85,8 @@ npm run electron:build:all   # package macOS + Windows
   health, so bombing a rival's cities strangles their war machine while unit upkeep drains your own points.
 - A **server-authoritative multiplayer backend** ships in the repo — an authoritative Node game server imports the same
   engine, claims Supabase lobbies, and streams full-world snapshots over WebSockets so every client agrees on the match.
+  Releases are version-locked: the server only admits clients on its exact build version (`src/net/version.js`), and
+  outdated clients are prompted in-game to update.
 
 ## Arsenal
 

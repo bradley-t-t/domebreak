@@ -4,9 +4,11 @@ import {GREAT_POWERS} from "../../game/sim/newGame.js";
 import {button, card, chip, input, label, row} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 
-// Nation select: claim the ONE country you command. Every other country on the map
-// (all ~222) is a live AI nation, so there is no opponent roster to pick — the great
-// powers are just quick-claim shortcuts, and search lets you claim any nation.
+// Nation select: claim the ONE country you command. Rival powers (up to 8, chosen
+// on the rules step) are seeded as live AI nations elsewhere on the map, and every
+// remaining country is a passive, capturable neutral — so there is no opponent
+// roster to pick. The great powers are just quick-claim shortcuts, and search lets
+// you claim any nation.
 export default function NewGame({data, onStart, onBack, settings}) {
     const [q, setQ] = useState("");
     const [iso, setIso] = useState("US");
@@ -31,7 +33,7 @@ export default function NewGame({data, onStart, onBack, settings}) {
                 <div className="text-[26px] tracking-[3px] mb-4 font-bold uppercase m-0 text-dim">New Game</div>
                 {!data && <p className="text-dim m-0 mb-5 text-sm leading-[1.5]">Loading world data…</p>}
                 <div id="db-newgame-nation-label" className={cn(label(), "flex flex-wrap items-center gap-x-2 gap-y-1.5")}>
-                    <span>Choose Your Nation — Every Other Country Is a Live AI</span>
+                    <span>Choose Your Nation — Every Rival Power Is a Live AI</span>
                     {sel && <span className={cn(chip({subtle: true}), "max-w-full inline-flex items-center gap-1.5 normal-case tracking-normal")}>
                         <Flag iso={sel.iso}/>
                         <span className="truncate">{sel.name}</span>
@@ -80,7 +82,7 @@ export default function NewGame({data, onStart, onBack, settings}) {
                 )}
                 {sel && (
                     <p className="mt-3.5 font-mono text-[11px] text-dim tracking-[0.02em]">
-                        Every other country is a live AI · {settings?.speed ?? 1}&times; · {(settings?.globe ?? true) ? "Globe" : "Flat"} view
+                        Every rival power is a live AI · {settings?.speed ?? 1}&times; · {(settings?.globe ?? true) ? "Globe" : "Flat"} view
                     </p>
                 )}
                 <div className={row()} style={{marginTop: 14}}>

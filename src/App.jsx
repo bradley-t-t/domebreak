@@ -26,8 +26,10 @@ import TitleBarDrag from "./ui/common/TitleBarDrag.jsx";
 import SearchingScreen from "./ui/screens/SearchingScreen.jsx";
 import LobbyScreen from "./ui/screens/LobbyScreen.jsx";
 import NetErrorOverlay from "./ui/screens/NetErrorOverlay.jsx";
+import UpdateOverlay from "./ui/screens/UpdateOverlay.jsx";
 import {usePresence} from "./ui/hooks/usePresence.js";
 import {useParty} from "./ui/hooks/useParty.js";
+import useUpdateCheck from "./ui/hooks/useUpdateCheck.js";
 
 // DEV-ONLY login-gate bypass for automated local UI testing (single-player). Hard
 // gated on import.meta.env.DEV so `vite build` (Electron/production) dead-code
@@ -70,6 +72,21 @@ export default function App() {
     // The lobby the last join attempt targeted — held so the failure overlay's
     // Retry button can re-invoke joinMatch with the same match_id + server_url.
     const retryLobbyRef = useRef(null);
+    // Release currency: the site's published version vs this build. An outdated
+    // build gets prompted once when detected, is re-prompted on any Multiplayer
+    // Play attempt, and the server itself rejects its hello (the hard gate) —
+    // single player is never blocked.
+    const {updateAvailable, latestVersion, currentVersion} = useUpdateCheck();
+    const [updatePrompt, setUpdatePrompt] = useState(false);
+    // Version the server demanded when it refused our hello — the prompt's
+    // fallback when version.json hasn't been fetched (offline-ish clients).
+    const [requiredVersion, setRequiredVersion] = useState(null);
+    const updatePromptedRef = useRef(false);
+    useEffect(() => {
+        if (!updateAvailable || updatePromptedRef.current) return;
+        updatePromptedRef.current = true;
+        setUpdatePrompt(true);
+    }, [updateAvailable]);
     // Honor both the OS motion preference and the in-game toggle.
     const reduceMotion = settings.reduceMotion ||
         (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -282,7 +299,9 @@ export default function App() {
             playerName: profile.name,
             playerIso: profile.iso,
             gtime: Math.round(world.time),
-            nations: world.nations.filter((n) => n.alive).length,
+            // "Powers" in the save list means active participants, not the 222-country
+            // map roster — passive neutrals don't count.
+            nations: world.nations.filter((n) => n.alive && n.active !== false).length,
             belligerents
         });
     }, [world, profile, belligerents]);
@@ -384,6 +403,19 @@ export default function App() {
             setScreen("playing");
             setOverlay(null);
         } catch (e) {
+            if (e?.code === "version") {
+                // Outdated build: the update prompt is the actionable surface,
+                // not the technical failure overlay. Drop every match handle so
+                // the menu is clean behind it.
+                setRequiredVersion(e.required || null);
+                setNetStatus(null);
+                setNetError(null);
+                retryLobbyRef.current = null;
+                setLobbyId(null);
+                setUpdatePrompt(true);
+                setScreen("menu");
+                return;
+            }
             console.warn("match connect failed", e);
             const detail = [
                 e?.details,
@@ -466,7 +498,7 @@ export default function App() {
                 <MeBadge profile={accountProfile} stats={accountStats} onSignOut={signOut} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}
             {screen === "menu" &&
                 <StartMenu canContinue={hasContinue()} onNew={() => setScreen("newgame")} onContinue={onContinue}
-                           onPlay={() => setScreen("searching")}
+                           onPlay={() => updateAvailable ? setUpdatePrompt(true) : setScreen("searching")}
                            onLoad={() => {
                                setSaveMode("load");
                                setOverlay("saveload");
@@ -522,6 +554,9 @@ export default function App() {
                     message="Your link to the war server dropped. The war goes on without you."
                     details={netError}
                     onDismiss={quitToMenu}/>}
+            {updatePrompt &&
+                <UpdateOverlay currentVersion={currentVersion} latestVersion={latestVersion || requiredVersion}
+                               onDismiss={() => setUpdatePrompt(false)}/>}
 
             {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => {
                 setSaveMode("save");

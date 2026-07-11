@@ -10,4 +10,6 @@ release
 .vscode/
 *.iml
 *.sql
-/.claude/
+# Local Claude state (worktrees, settings) stays out; the project's skills ship.
+/.claude/*
+!/.claude/skills/

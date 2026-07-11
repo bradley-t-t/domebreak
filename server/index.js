@@ -14,7 +14,8 @@ import {readFileSync, statSync} from "fs";
 import {extname, join, normalize} from "path";
 import {WebSocketServer} from "ws";
 import {createClient} from "@supabase/supabase-js";
-import {MAX_MATCHES, PORT, SERVICE_ROLE_KEY, SUPABASE_URL, WS_URLS} from "./config.js";
+import {APP_VERSION, MAX_MATCHES, PORT, SERVICE_ROLE_KEY, SUPABASE_URL, WS_URLS} from "./config.js";
+import {clientAllowed} from "../src/net/version.js";
 import {Match} from "./match/match.js";
 import {startMatchmaker} from "./matchmaker/matchmaker.js";
 
@@ -105,7 +106,7 @@ const server = http.createServer((req, res) => {
     const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
     if (urlPath === "/health") {
         res.writeHead(200, {"Content-Type": "application/json"});
-        return res.end(JSON.stringify({ok: true, matches: liveMatches(), max: MAX_MATCHES, ws: WS_URLS}));
+        return res.end(JSON.stringify({ok: true, version: APP_VERSION, matches: liveMatches(), max: MAX_MATCHES, ws: WS_URLS}));
     }
     let filePath = normalize(join(DIST, urlPath === "/" ? "index.html" : urlPath));
     if (!filePath.startsWith(DIST)) {
@@ -141,6 +142,13 @@ wss.on("connection", (ws) => {
             return;
         }
         if (msg.t === "hello") {
+            // Version gate before anything else: an outdated client must never
+            // enter a match — the sim it predicts with wouldn't be the sim the
+            // server runs. "version" errs carry the required version so the
+            // client can render an update prompt instead of a generic failure.
+            if (APP_VERSION && !clientAllowed(msg.v, APP_VERSION)) {
+                return ws.send(JSON.stringify({t: "err", error: "version", required: APP_VERSION, got: msg.v ?? null}));
+            }
             const m = matches.get(msg.matchId);
             if (!m) return ws.send(JSON.stringify({t: "err", error: "no such match"}));
             const {data: {user} = {user: null}} = await db.auth.getUser(typeof msg.jwt === "string" ? msg.jwt : "");
@@ -168,4 +176,7 @@ wss.on("connection", (ws) => {
 watchLobbies();
 pollStarting();
 startMatchmaker(db, log);
-server.listen(PORT, "0.0.0.0", () => log(`domebreak server on :${PORT}, advertising ${WS_URLS.join(", ")}`));
+server.listen(PORT, "0.0.0.0", () => log(
+    `domebreak server v${APP_VERSION ?? "?"} on :${PORT}, advertising ${WS_URLS.join(", ")}`
+    + (APP_VERSION ? ` (clients must match v${APP_VERSION})` : " (no version in package.json — client version gate OFF)"),
+));
