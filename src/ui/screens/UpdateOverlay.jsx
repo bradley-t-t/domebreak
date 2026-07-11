@@ -87,7 +87,7 @@ export default function UpdateOverlay({currentVersion, latestVersion, onDismiss}
                 <div className="flex gap-2 justify-center flex-wrap mt-2">
                     {inDesktopApp && updater ? (
                         <button className={cn(menuButton({variant: "primary"}))} disabled={busy} onClick={startUpdate}>
-                            {busy ? (BUSY_LABEL[phase] || (() => "Updating…"))(percent) : phase === "error" ? "Try Again" : "Update Now"}
+                            {busy ? BUSY_LABEL[phase](percent) : phase === "error" ? "Try Again" : "Update Now"}
                         </button>
                     ) : inDesktopApp ? (
                         <a className={cn(menuButton({variant: "primary"}), "text-center no-underline")}
