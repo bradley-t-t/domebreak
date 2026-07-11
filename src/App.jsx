@@ -536,7 +536,7 @@ export default function App() {
                 <ErrorBoundary onReset={quitToMenu}>
                     <LiveGame key={session} world={world} net={netClient} globe={globe} keys={keys}
                               onToggleGlobe={() => setGlobe((g) => !g)}
-                              onPause={pause} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
+                              onPause={pause} onLeave={quitToMenu} backdrop={backdrop} overlayOpen={overlay !== null} labels={countryLabels}
                               onGameEnd={onGameEnd}
                               meBadge={<MeBadge profile={accountProfile} stats={accountStats} inGame
                                                 players={netClient?.players} onSetAvatar={changeAvatar} presence={presence} partyCtl={partyHook}/>}/>

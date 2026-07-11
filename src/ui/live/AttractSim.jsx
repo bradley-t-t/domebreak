@@ -15,6 +15,7 @@ import {Layer, Marker, Source} from "react-map-gl/maplibre";
 import WorldMap from "../../map/WorldMap.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import Explosion from "./Explosion.jsx";
+import KillMark from "./KillMark.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import {atWar, createWorld, declareWar, UNIT_ICON, UNITS, vitalityOf} from "../../game/engine.js";
 import {buildSetup} from "../../game/sim/newGame.js";
@@ -134,6 +135,8 @@ function AttractWorld({data, onOver, framed, onReady}) {
                 fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "intercept"});
             } else if (e.type === "hit" || e.type === "destroy" || e.type === "mirv" || e.type === "miss") {
                 fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type});
+                // Confirmed unit kill: the "target eliminated" reticle over the fireball.
+                if (e.type === "destroy" && e.kind === "unit") fresh.push({id: `${e.id}-kill`, lng: e.lng, lat: e.lat, kind: "kill"});
             }
         }
         if (seen.current.size > 500) seen.current = new Set(w.events.map((e) => e.id));
@@ -359,7 +362,7 @@ function AttractWorld({data, onOver, framed, onReady}) {
 
                 {explosions.map((e) => (
                     <Marker key={e.id} longitude={e.lng} latitude={e.lat} anchor="center" opacityWhenCovered="0">
-                        <Explosion kind={e.kind}/>
+                        {e.kind === "kill" ? <KillMark/> : <Explosion kind={e.kind}/>}
                     </Marker>
                 ))}
             </WorldMap>

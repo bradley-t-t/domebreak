@@ -74,6 +74,7 @@ export default function LiveGame({
                                      keys,
                                      onToggleGlobe,
                                      onPause,
+                                     onLeave,
                                      backdrop,
                                      overlayOpen,
                                      labels,
@@ -131,7 +132,31 @@ export default function LiveGame({
     // already framed on their capital. Failsafe timer lifts it regardless — see
     // useMapBoot (same mount-scoped effect, same fitBounds/idle-reveal race).
     const [booting, setBooting] = useState(true);
+    // Once eliminated, the player may choose to stay and watch the war play out.
+    // Spectating drops every command surface but keeps the map, chat, and scoreboard.
+    const [spectating, setSpectating] = useState(false);
     const handleMap = useMapBoot({w, mySlot, mapRef, setMapReady, setBooting});
+
+    // The local player's OWN elimination in an online match: their nation lost its
+    // last city (server flips nation.alive — see sim/tickPhases.stepVictory) while
+    // the war rages on for everyone else. Solo defeat is terminal (w.over) and never
+    // reaches this. `hudHidden` collapses the whole command HUD both when the local
+    // player is out (eliminated) and when the match itself has ended (w.over).
+    const eliminated = !!net && !w.over && !!myNation && myNation.alive === false;
+    const hudHidden = w.over || eliminated;
+
+    // On elimination, tear down every in-flight command interaction so no ghost
+    // ring, move prompt, or open panel outlives the nation it belonged to.
+    useEffect(() => {
+        if (!eliminated) return;
+        setPanel(null);
+        setPlacing(null);
+        setMoving(null);
+        setSelUnit(null);
+        setSelCity(null);
+        setDisembarkId(null);
+        setAttackMode(false);
+    }, [eliminated]);
 
     // Player-adjustable HUD layout — per-panel drag/resize/opacity/hide, persisted
     // machine-local (see useHudLayout / hudLayout.js). Presentation only; never
@@ -555,16 +580,16 @@ export default function LiveGame({
                                  className="relative w-full" contentClass="w-full flex flex-col items-center gap-[6px]"
                                  tabAlign="center">
                     <LiveHud world={w} api={api} myNation={myNation} panel={panel} keys={K} online={!!net}
-                             onPanel={(id) => setPanel((p) => (p === id ? null : id))}
+                             onPanel={hudHidden ? null : (id) => setPanel((p) => (p === id ? null : id))}
                              globe={globe} onGlobe={onToggleGlobe} onHelp={() => setHelpOpen(true)}
                              onMenu={onPause} meBadge={meBadge}/>
                     <NewsTicker world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
                 {/* Flowed in the stack (not absolutely pinned) so it always sits below the
                     HUD + ticker instead of overlapping them. */}
-                {!w.over && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
+                {!hudHidden && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             </div>
-            {!w.over && (
+            {!hudHidden && (
                 <AdjustablePanel panel={hud.sidebar} onChange={(p) => setHud("sidebar", p)}
                                  onReset={() => resetHudPanel("sidebar")} label="Nation panel"
                                  origin="top left" resizeDir={{x: 1, y: 1}}
@@ -573,7 +598,7 @@ export default function LiveGame({
                     <NationPanel world={w} mySlot={mySlot} myNation={myNation} onFocus={goPin}/>
                 </AdjustablePanel>
             )}
-            {!w.over && (
+            {!hudHidden && (
                 <AdjustablePanel panel={hud.objectives} onChange={(p) => setHud("objectives", p)}
                                  onReset={() => resetHudPanel("objectives")} label="Objectives"
                                  origin="top right" resizeDir={{x: -1, y: 1}}
@@ -582,16 +607,16 @@ export default function LiveGame({
                     <ObjectivesPanel world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
             )}
-            {!w.over && panel === "production" &&
+            {!hudHidden && panel === "production" &&
                 <ProductionScreen world={w} api={api} mySlot={mySlot} placing={placing}
                                   setPlacing={(t) => {
                                       setPlacing(t);
                                       setMoving(null);
                                       setSelUnit(null);
                                   }} onClose={() => setPanel(null)}/>}
-            {!w.over && panel === "diplomacy" &&
+            {!hudHidden && panel === "diplomacy" &&
                 <DiplomacyScreen world={w} api={api} mySlot={mySlot} online={!!net} players={net?.players} onClose={() => setPanel(null)}/>}
-            {!w.over && panel === "battle" &&
+            {!hudHidden && panel === "battle" &&
                 <BattlePlanScreen world={w} mySlot={mySlot} bp={bp} onClose={() => setPanel(null)}/>}
             <AdjustablePanel panel={hud.bottomRight} onChange={(p) => setHud("bottomRight", p)}
                              onReset={() => resetHudPanel("bottomRight")} label="Map and war bar"
@@ -599,11 +624,11 @@ export default function LiveGame({
                              className="absolute bottom-4 right-4 z-5"
                              tabAlign="right">
                 <div className="flex flex-col items-end gap-2 pointer-events-none [&>*]:pointer-events-auto">
-                    {!w.over && <WarBar world={w} mySlot={mySlot} onOpenCountry={setCountryPopupSlot}/>}
+                    {!hudHidden && <WarBar world={w} mySlot={mySlot} onOpenCountry={setCountryPopupSlot}/>}
                     <LayerBar layers={layers} onToggle={toggleLayer}/>
                 </div>
             </AdjustablePanel>
-            {!w.over && Boolean(myNation?.prod?.current || myNation?.prod?.queue?.length) && (
+            {!hudHidden && Boolean(myNation?.prod?.current || myNation?.prod?.queue?.length) && (
                 <AdjustablePanel panel={hud.prodQueue} onChange={(p) => setHud("prodQueue", p)}
                                  onReset={() => resetHudPanel("prodQueue")} label="Production queue"
                                  origin="bottom center" resizeDir={{x: 0, y: -1}} clickThrough
@@ -623,7 +648,7 @@ export default function LiveGame({
                 <button className={miniButton()} onClick={() => setDisembarkId(null)}>Cancel</button>
             </div>}
 
-            {selectedUnit && !w.over && (
+            {selectedUnit && !hudHidden && (
                 <SelectionPanel selectedUnit={selectedUnit} w={w} myNation={myNation} mySlot={mySlot} api={api}
                                 labelOf={labelOf} teamColor={teamColor} unitStats={unitStats} moving={moving}
                                 setMoving={setMoving} setPlacing={setPlacing} attackMode={attackMode}
@@ -641,11 +666,34 @@ export default function LiveGame({
                 err.kind === "warn" && "bg-[rgba(140,255,58,0.12)] border-[rgba(140,255,58,0.55)] text-[#d6ff9e]"
             )} role="alert"
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
-            {!w.over && <GraceIndicator world={w}/>}
+            {!hudHidden && <GraceIndicator world={w}/>}
             {/* Player chat — online matches only. Stays up after the war ends so the
                 outcome screen can still talk. */}
             {net && <ChatBox net={net} mySlot={mySlot} overlayOpen={overlayOpen}/>}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
+            {/* You were knocked out but the war rages on: a blocking notice with the
+                choice to keep watching (spectate) or leave to the menu. Dismissing it
+                (Spectate) drops into the HUD-less spectator view below. */}
+            {eliminated && !spectating && (
+                <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-eliminated-title">
+                    <div className={cn(card({size: "wide"}), "motion-safe:animate-[dbPop_240ms_var(--ease-out)]")}>
+                        <div id="db-eliminated-title"
+                             className="font-display text-[40px] font-bold tracking-[4px] uppercase text-center mb-3 text-danger [text-shadow:0_0_24px_rgba(255,91,110,0.5)]">Eliminated</div>
+                        <p className={sub()}>{myNation?.name || "Your nation"} has fallen. The war goes on without you.</p>
+                        <div className="flex gap-2">
+                            <button className={cn(button(), "flex-1")} onClick={() => setSpectating(true)}>Spectate</button>
+                            <button className={cn(button({variant: "primary"}), "flex-1")} onClick={onLeave}>Leave</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Spectator ribbon — the only chrome left once you opt to keep watching. */}
+            {eliminated && spectating && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-6 flex items-center gap-3 bg-panel border border-line-soft text-text py-[7px] px-[14px] rounded text-[12.5px] tracking-[0.3px] backdrop-blur-[8px] shadow-sm motion-safe:animate-[dbPop_200ms_var(--ease-out)]" role="status" aria-live="polite">
+                    <span className="font-mono uppercase tracking-[1px] text-dim">Spectating</span>
+                    <button className={miniButton()} onClick={onLeave}>Leave</button>
+                </div>
+            )}
             {w.over && (
                 <div className={overlay({placement: "center"})} role="dialog" aria-modal="true" aria-labelledby="db-outcome-title">
                     <div className={cn(card({size: "wide"}), "motion-safe:animate-[dbPop_240ms_var(--ease-out)]")}>

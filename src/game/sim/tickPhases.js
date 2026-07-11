@@ -609,37 +609,69 @@ export function stepEventPrune(w) {
 }
 
 // Phase 8: win/loss check — tallies which slots still hold a living city and
-// the surviving world population, then resolves elimination (player) and
-// victory (last nation standing, or population domination).
+// the surviving world population, flips newly-eliminated nations, then resolves
+// the end state. Online (server-authoritative, no single "me") runs to the last
+// active nation or a population dominator; solo ends the moment the player is
+// eliminated (defeat) or wins by last-standing/domination.
 export function stepVictory(w) {
-    // One pass over cities: which slots still hold a living city, and the population
-    // tally for the domination check. O(cities), not O(nations × cities) — the naive
-    // per-nation `cities.some(...)` was 222 × ~2565 every tick at full-world scale.
+    // One pass over cities: which slots still hold a living city, plus the population
+    // tally (total and per-slot) for the domination check. O(cities), not
+    // O(nations × cities) — the naive per-nation `cities.some(...)` was 222 × ~2565
+    // every tick at full-world scale.
     const slotsAlive = new Set();
-    let myPop = 0, totPop = 0;
+    const popBySlot = new Map();
+    let totPop = 0;
     for (const c of w.cities) {
         if (!c.alive) continue;
         slotsAlive.add(c.slot);
         const p = c.pop || 0;
         totPop += p;
-        if (c.slot === w.mySlot) myPop += p;
+        if (p) popBySlot.set(c.slot, (popBySlot.get(c.slot) || 0) + p);
     }
+    // A nation with no living city is eliminated — flip it once here so both the
+    // tally below and every client snapshot see it as out of the war. A player
+    // learns of their OWN elimination from this flag (LiveGame's spectate flow).
     for (const n of w.nations) if (n.alive && !slotsAlive.has(n.slot)) n.alive = false;
+
+    // Victory: last ACTIVE nation standing, or a commanding share of surviving world
+    // population. Only participating (active) nations count toward last-standing —
+    // passive neutrals on the map never block a win. The domination denominator is
+    // the whole world's population, so capturing neutrals counts toward the win.
+    const aliveActive = w.nations.filter((n) => n.alive && n.active !== false);
+    const dominationFrac = w.rules?.dominationPopFrac ?? DIPLOMACY.dominationPopFrac;
+
+    if (w.meta?.mode === "online") {
+        // Online has no single "me": the server world is authoritative for every
+        // slot, so one player's elimination must NOT end the match. It runs until a
+        // last active nation stands or one seizes the domination share — and THAT
+        // nation is crowned (any human or AI), never a hardcoded slot.
+        let over = false, winnerSlot = null;
+        if (aliveActive.length <= 1) {
+            over = true;
+            winnerSlot = aliveActive[0]?.slot ?? null;
+        } else if (totPop > 0) {
+            const dom = aliveActive.find((n) => (popBySlot.get(n.slot) || 0) / totPop >= dominationFrac);
+            if (dom) { over = true; winnerSlot = dom.slot; }
+        }
+        if (over) {
+            w.over = true;
+            w.winnerSlot = winnerSlot;
+            w.paused = true;
+        }
+        return;
+    }
+
+    // Solo: the player's own elimination is an immediate defeat, regardless of the
+    // surviving world; victory is the player being last active standing or reaching
+    // the domination share. Identical to the pre-online behavior.
     const me = nationOf(w, w.mySlot);
     if (!me || !me.alive) {
-        // Player eliminated — immediate defeat, regardless of the surviving world.
         w.over = true;
         w.winnerSlot = null;
         w.paused = true;
         return;
     }
-    // Victory: last ACTIVE nation standing, or a commanding share of surviving world
-    // population. Only participating (active) nations count toward last-standing —
-    // passive neutrals on the map never block a win. The domination denominator is
-    // the whole world's population, so capturing neutrals counts toward the win. In
-    // an all-active match this is identical to the old "last nation standing" rule.
-    const aliveActive = w.nations.filter((n) => n.alive && n.active !== false);
-    const dominationFrac = w.rules?.dominationPopFrac ?? DIPLOMACY.dominationPopFrac;
+    const myPop = popBySlot.get(w.mySlot) || 0;
     const dominant = totPop > 0 && myPop / totPop >= dominationFrac;
     if (aliveActive.length <= 1 || dominant) {
         w.over = true;

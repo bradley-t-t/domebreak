@@ -299,19 +299,25 @@ export class Match {
     }
 
     // Rows for the matches table — the server is the authority on results.
-    // Bots (userId === null) never get a matches row; only humans do.
+    // Bots (userId === null) never get a matches row; only humans do. A player
+    // whose nation was wiped out is a loss even if they then disconnected: being
+    // eliminated is a defeat, not a rage-quit, and outranks the quit flag.
     resultRows() {
-        return this.players.filter((p) => p.userId != null).map((p) => ({
-            user_id: p.userId,
-            started_at: this.startedAt,
-            result: this.quit.has(p.userId) ? "quit" : this.world.winnerSlot === p.slot ? "win" : "loss",
-            nation_iso: p.iso,
-            opponents: this.players.length - 1, // real-player opponents (other belligerents are AI)
-            duration_s: Math.round(this.world.time),
-            mode: "online",
-            match_id: this.id,
-            stats: {},
-        }));
+        return this.players.filter((p) => p.userId != null).map((p) => {
+            const nation = this.world.nations.find((n) => n.slot === p.slot);
+            const eliminated = nation != null && nation.alive === false;
+            return {
+                user_id: p.userId,
+                started_at: this.startedAt,
+                result: this.world.winnerSlot === p.slot ? "win" : eliminated ? "loss" : this.quit.has(p.userId) ? "quit" : "loss",
+                nation_iso: p.iso,
+                opponents: this.players.length - 1, // real-player opponents (other belligerents are AI)
+                duration_s: Math.round(this.world.time),
+                mode: "online",
+                match_id: this.id,
+                stats: {},
+            };
+        });
     }
 
     dispose() {

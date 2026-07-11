@@ -389,9 +389,15 @@ export const FLIGHT = {
 export const REAL_POP = {
     US: 335e6, RU: 144e6, CN: 1411e6, IN: 1429e6, GB: 68e6, FR: 68e6, DE: 84e6, JP: 124e6,
     BR: 216e6, KR: 52e6, IR: 89e6, TR: 85e6, SA: 37e6, PK: 240e6, CA: 40e6, AU: 27e6,
+    // Remaining members of the 30-nation great-power pool (see POWER_POOL).
+    ID: 277e6, MX: 129e6, IT: 59e6, ES: 48e6, NL: 18e6, PL: 37e6, EG: 111e6, UA: 38e6,
+    ZA: 60e6, TW: 23e6, SE: 10.5e6, AE: 9.9e6, IL: 9.8e6, NG: 223e6,
 };
 // Nominal GDP in $T (2024) — drives income weight between nations.
 export const GDP_T = {
     US: 27.7, CN: 17.8, DE: 4.5, JP: 4.2, IN: 3.6, GB: 3.4, FR: 3.1, BR: 2.2,
     CA: 2.1, RU: 2.0, KR: 1.7, AU: 1.7, TR: 1.1, SA: 1.1, IR: 0.4, PK: 0.34,
+    // Remaining members of the 30-nation great-power pool (see POWER_POOL).
+    ID: 1.4, MX: 1.8, IT: 2.3, ES: 1.6, NL: 1.1, PL: 0.84, EG: 0.35, UA: 0.18,
+    ZA: 0.38, TW: 0.79, SE: 0.6, AE: 0.55, IL: 0.55, NG: 0.25,
 };
