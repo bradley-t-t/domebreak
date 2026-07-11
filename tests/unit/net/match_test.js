@@ -225,4 +225,15 @@ describe("result rows — the server is the authority on outcomes", () => {
         expect(byUser.u0).toBe("win");
         expect(byUser.u1).toBe("loss");
     });
+
+    it("test_an_eliminated_player_who_left_is_a_loss_not_a_quit", () => {
+        // Being wiped out is a defeat; leaving afterward must not launder it into a
+        // quit. u1's nation is dead and u1 is in the quit set — the row is a loss.
+        const m = mk();
+        m.quit.add("u1");
+        m.world.nations.find((n) => n.slot === m.players[1].slot).alive = false;
+        const byUser = Object.fromEntries(m.resultRows().map((r) => [r.user_id, r.result]));
+        expect(byUser.u1).toBe("loss"); // eliminated outranks the quit flag
+        expect(byUser.u0).toBe("loss"); // still alive, not the winner, never quit
+    });
 });
