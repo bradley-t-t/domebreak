@@ -37,12 +37,13 @@ log "macOS installer copied to $OUT"
 # ---- 2. Refresh Windows PC with current source ----------------------------
 log "Syncing current source to Windows ($WIN_HOST)"
 TAR="$(mktemp -t gddist).tgz"
-tar czf "$TAR" src electron public/icons public/brand public/data \
+# scripts/ must ship too: npm's postinstall runs scripts/dev-brand-electron.cjs.
+tar czf "$TAR" src electron scripts public/icons public/brand public/data \
     index.html package.json package-lock.json vite.config.js eslint.config.js
 "${SCP[@]}" "$TAR" "$WIN_HOST:_dist_src.tgz"
 rm -f "$TAR"
 # Replace code dirs (honors deletions); keep node_modules, public/assets, .env*.
-"${SSH[@]}" "$WIN_HOST" 'powershell -NoProfile -Command "cd '"$WIN_REPO"'; Remove-Item -Recurse -Force src,electron,public\icons,public\brand,public\data -ErrorAction SilentlyContinue; tar -xzf $env:USERPROFILE\_dist_src.tgz; Remove-Item $env:USERPROFILE\_dist_src.tgz"'
+"${SSH[@]}" "$WIN_HOST" 'powershell -NoProfile -Command "cd '"$WIN_REPO"'; Remove-Item -Recurse -Force src,electron,scripts,public\icons,public\brand,public\data -ErrorAction SilentlyContinue; tar -xzf $env:USERPROFILE\_dist_src.tgz; Remove-Item $env:USERPROFILE\_dist_src.tgz"'
 
 # ---- 3. Windows build (native) --------------------------------------------
 log "Building Windows installer (.exe) on the PC (native, no Wine)"

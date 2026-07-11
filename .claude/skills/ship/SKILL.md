@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Release DomeBreak after /merge lands on main - resolve and tag the release version, build the mac/win installers, publish them to bradley-t-t/domebreak-dist, deploy the game server to the Pi, redeploy the website, and verify everything end to end. Use whenever the user runs /ship or asks to "ship the game", "release the game", "cut a release", "publish the new version", or "push the update to players".
+description: Release DomeBreak after /merge lands on main - resolve and tag the release version, build the mac/win installers, publish them to download.domebreak.com, deploy the match server to the VPS, redeploy the website, and verify everything end to end. Use whenever the user runs /ship or asks to "ship the game", "release the game", "cut a release", "publish the new version", or "push the update to players".
 argument-hint: [patch|minor|major|X.Y.Z]
 ---
 
@@ -8,14 +8,20 @@ argument-hint: [patch|minor|major|X.Y.Z]
 
 Full release pipeline, run AFTER /merge has promoted develop to main. One version
 number — the repo-root `package.json` `version` — drives everything: the git tag,
-the installer release, the match server's client gate, the website's download
+the published installers, the match server's client gate, the website's download
 page, and the `version.json` the game's update check polls.
+
+Everything self-hosts on one Vultr VPS: Caddy terminates TLS for both
+`game.domebreak.com` (reverse proxy to the match server on :8790) and
+`download.domebreak.com` (file server over `/srv/domebreak-downloads`). There
+is no GitHub release step. The Raspberry Pi is RETIRED as a game host — never
+deploy there.
 
 The ORDER below is deliberate and must not be reshuffled:
 
-1. Installers publish FIRST, so the site's `releases/latest/download` links and
-   the update prompt never point at assets that do not exist.
-2. The game server deploys SECOND — from the moment it restarts, outdated
+1. Installers publish FIRST, so the site's download links and the update
+   prompt never point at files that do not exist.
+2. The match server deploys SECOND — from the moment it restarts, outdated
    clients are refused at the hello with an update prompt, and the download
    they are sent to is already the new build.
 3. The website deploys LAST, flipping `version.json` to the new version only
@@ -27,13 +33,14 @@ Fixed facts:
 |---|---|
 | Primary checkout (build dir) | `/Users/trentontaylor/WebstormProjects/domebreak` |
 | Installer output | `~/DomeBreak-dist` (from `scripts/build-dist.sh`) |
-| Windows build box | `trent@192.168.1.85`, key `~/.ssh/sunday_win` (LAN only) |
-| Installer host repo | `bradley-t-t/domebreak-dist` (public, assets only — exempt from the develop/main branching workflow) |
-| Stable asset names | `DomeBreak-mac.dmg`, `DomeBreak-win.exe` |
-| Game server host | The Pi (use the /ssh skill: probe `sunday-pi`, then `sunday`) |
-| Server dir on Pi | `/home/sunday/goldendome` (`dist`, `server`, `src`, `public/data`, `package.json`; `.env` is machine-local — NEVER touch it) |
-| Server service | `goldendome.service` (systemd, `sunday` has passwordless sudo) |
-| Server port / health | `:8790`, `GET /health` returns `{ok, version, matches, ...}` |
+| Windows build box | `trent@192.168.1.85`, key `~/.ssh/sunday_win`, repo at `C:\Users\trent\domebreak` (LAN only) |
+| VPS (server + downloads) | Vultr, `root@144.202.78.170`, key `~/.ssh/domebreak_vps` (fallback root password in CryptoFort: `domebreak-vps-root-password`) |
+| Match server on VPS | `/root/domebreak` (`dist`, `server`, `src`, `public/data`, `package.json`; `.env` is machine-local — NEVER touch it), systemd unit `domebreak.service` |
+| Server health | `https://game.domebreak.com/health` (or `localhost:8790/health` on the VPS) returns `{ok, version, matches, ...}` |
+| Downloads dir on VPS | `/srv/domebreak-downloads` — one dir per release (`v1.4.0/...`) plus stable root symlinks `DomeBreak-mac.dmg` / `DomeBreak-win.exe` that the site links to |
+| Download URLs | `https://download.domebreak.com/DomeBreak-mac.dmg` and `.../DomeBreak-win.exe`; `https://download.domebreak.com/` browses all versions |
+| Caddy config on VPS | `/etc/caddy/Caddyfile` (both site blocks already provisioned; TLS is automatic) |
+| DNS | Vercel DNS, managed with the local `vercel` CLI (`vercel dns ls domebreak.com`); `game` and `download` A records point at the VPS |
 | Site deploy | GitHub Actions `release.yml` (push to main + `workflow_dispatch`) → Vercel |
 | Site URLs to verify | `https://domebreak.com/version.json`, `https://domebreak.com/download` |
 
@@ -87,7 +94,7 @@ scripts/build-dist.sh          # mac .dmg locally, win .exe natively over SSH
   mac-only release without being asked to.
 - Verify in `~/DomeBreak-dist`: a `.dmg` whose filename contains `$V` and a
   fresh `DomeBreak-Setup.exe` (mtimes newer than when this ship started).
-- Normalize to the stable asset names the website links to:
+- Normalize to the stable names the downloads host serves:
 
 ```bash
 cp ~/DomeBreak-dist/DomeBreak-"$V"*.dmg ~/DomeBreak-dist/DomeBreak-mac.dmg
@@ -97,46 +104,59 @@ cp ~/DomeBreak-dist/DomeBreak-Setup.exe ~/DomeBreak-dist/DomeBreak-win.exe
 - Side effect to reuse: `scripts/build-dist.sh` ran `vite build`, so `dist/` in
   the build dir is the fresh web client for step 4.
 
-## 3. Publish the release on domebreak-dist
+## 3. Publish the installers to download.domebreak.com
+
+Upload into a versioned dir, then atomically repoint the stable symlinks —
+downloads in flight keep working and the stable names never dangle:
 
 ```bash
-gh repo view bradley-t-t/domebreak-dist >/dev/null 2>&1 \
-  || gh repo create bradley-t-t/domebreak-dist --public --description "DomeBreak release installers"
-git log "$LAST..v$V" --pretty='- %s' > /tmp/relnotes.md   # omit if no prior tag
-gh release create "v$V" -R bradley-t-t/domebreak-dist \
-  --title "DomeBreak v$V" --notes-file /tmp/relnotes.md \
-  ~/DomeBreak-dist/DomeBreak-mac.dmg ~/DomeBreak-dist/DomeBreak-win.exe
+VPS="root@144.202.78.170"
+K=(-i ~/.ssh/domebreak_vps)
+ssh "${K[@]}" "$VPS" "mkdir -p /srv/domebreak-downloads/v$V"
+scp "${K[@]}" ~/DomeBreak-dist/DomeBreak-mac.dmg ~/DomeBreak-dist/DomeBreak-win.exe \
+    "$VPS:/srv/domebreak-downloads/v$V/"
+git log "$LAST..v$V" --pretty='- %s' | ssh "${K[@]}" "$VPS" "cat > /srv/domebreak-downloads/v$V/RELEASE_NOTES.txt"
+ssh "${K[@]}" "$VPS" "cd /srv/domebreak-downloads \
+  && ln -sfn v$V/DomeBreak-mac.dmg DomeBreak-mac.dmg \
+  && ln -sfn v$V/DomeBreak-win.exe DomeBreak-win.exe"
 ```
 
-- Re-shipping the same version: `gh release upload "v$V" --clobber ...` instead.
-- Verify the stable links resolve to this release:
-  `curl -sIL -o /dev/null -w '%{http_code} %{url_effective}\n' https://github.com/bradley-t-t/domebreak-dist/releases/latest/download/DomeBreak-mac.dmg`
-  must be `200` with `v$V` in the final URL (same for `DomeBreak-win.exe`).
+Verify from the outside — status 200 for both stable names, and Content-Length
+matching the local file size:
 
-## 4. Deploy the game server to the Pi
+```bash
+for f in DomeBreak-mac.dmg DomeBreak-win.exe; do
+  curl -sI "https://download.domebreak.com/$f" | grep -E '^HTTP|-(l|L)ength'
+  ls -l ~/DomeBreak-dist/$f
+done
+```
 
-Use the /ssh skill to get a working alias (LAN `sunday-pi` first, Tailscale
-`sunday` as fallback). Then:
+Disk hygiene: keep the last three release dirs, delete older ones
+(`ls -d /srv/domebreak-downloads/v* | sort -V | head -n -3 | xargs rm -rf`).
 
-1. Live-match check: `curl -s localhost:8790/health` on the Pi. If `matches`
+## 4. Deploy the match server to the VPS
+
+1. Live-match check: `curl -s https://game.domebreak.com/health`. If `matches`
    > 0, tell the user how many wars are live and get an explicit go-ahead
    before restarting — a restart kills in-flight matches.
-2. Backup: on the Pi,
-   `tar czf ~/goldendome-predeploy-$(date +%s).tgz -C ~ --exclude=goldendome/server/node_modules --exclude=goldendome/dist goldendome`.
+2. Backup on the VPS:
+   `ssh -i ~/.ssh/domebreak_vps root@144.202.78.170 "tar czf /root/domebreak-predeploy-\$(date +%s).tgz -C /root --exclude=domebreak/node_modules --exclude=domebreak/server/node_modules --exclude=domebreak/dist domebreak"`.
 3. Pack and push from the build dir (never include local node_modules):
    ```bash
    tar czf /tmp/gd-ship.tgz --exclude=server/node_modules dist server src public/data package.json
-   scp /tmp/gd-ship.tgz <pi>:/home/sunday/gd-ship.tgz
+   scp -i ~/.ssh/domebreak_vps /tmp/gd-ship.tgz root@144.202.78.170:/root/gd-ship.tgz
    ```
-4. Swap in place on the Pi (`.env` lives at `goldendome/.env` and is preserved):
+4. Swap in place on the VPS (`.env` lives at `/root/domebreak/.env` and is
+   preserved; its `GD_TICK_MS`/`GD_SNAPSHOT_MS` are tuned down for the small
+   vCPU — never overwrite it):
    ```bash
-   cd ~/goldendome && rm -rf dist server src public/data package.json
-   tar xzf ~/gd-ship.tgz -C ~/goldendome && rm ~/gd-ship.tgz
-   cd ~/goldendome/server && npm install --omit=dev --no-audit --no-fund
-   sudo systemctl enable goldendome && sudo systemctl restart goldendome
+   cd /root/domebreak && rm -rf dist server src public/data package.json
+   tar xzf /root/gd-ship.tgz -C /root/domebreak && rm /root/gd-ship.tgz
+   cd /root/domebreak/server && npm install --omit=dev --no-audit --no-fund
+   systemctl restart domebreak
    ```
-5. Verify: `curl -s localhost:8790/health` returns `ok: true` and
-   `version == $V`, and `journalctl -u goldendome -n 5` shows the boot line
+5. Verify: `curl -s https://game.domebreak.com/health` returns `ok: true` and
+   `version == $V`, and `journalctl -u domebreak -n 5` shows the boot line
    `domebreak server v$V ... (clients must match v$V)`. If the version is null,
    the shipped `package.json` is missing its version — fix before moving on,
    because a null version disables the client gate.
@@ -152,25 +172,27 @@ gh run watch <id> --exit-status
 Then verify production:
 
 - `curl -s https://domebreak.com/version.json` → `{"version":"$V"}`
-- `https://domebreak.com/download` renders `v$V`.
+- `https://domebreak.com/download` renders `v$V` and links to
+  `download.domebreak.com`.
 
 ## 6. Report
 
-Summarize in one block: version and tag, the domebreak-dist release URL, Pi
-health JSON (version + match capacity), the site's version.json, and the
-workflow run URL. Mention explicitly that outdated clients are now locked out
-of multiplayer and will be prompted to update.
+Summarize in one block: version and tag, the download URLs, VPS health JSON
+(version + match capacity), the site's version.json, and the workflow run URL.
+Mention explicitly that outdated clients are now locked out of multiplayer and
+will be prompted to update.
 
 ## Failure handling
 
 - Any verification miss is a stop-and-report, not a shrug: a half-shipped
   release (tag without installers, site ahead of server) is worse than no ship.
 - Safe re-entry: every step is idempotent — re-running /ship for the same `$V`
-  re-uses the existing tag, `--clobber`s the release assets, and redeploys
-  server and site. When a step fails, fix and re-run from the top.
-- Rollback of a bad release: `gh release delete` the new release on
-  domebreak-dist (the `latest` links fall back to the previous release), then
-  re-deploy the previous tag's `dist`/`server` to the Pi with steps 4's
+  re-uses the existing tag, re-uploads into the same `v$V` dir, repoints the
+  same symlinks, and redeploys server and site. When a step fails, fix and
+  re-run from the top.
+- Rollback of a bad release: repoint the stable symlinks at the previous
+  version dir (`ln -sfn vPREV/DomeBreak-mac.dmg DomeBreak-mac.dmg`, same for
+  win), redeploy the previous tag's `dist`/`server` to the VPS with step 4's
   commands from a checkout of that tag, and re-run step 5 from a main that
   carries the previous version. Report what happened first — rollback is a
   user decision.

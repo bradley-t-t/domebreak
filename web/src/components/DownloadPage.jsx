@@ -8,11 +8,13 @@ import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 
 // Version comes from the game's package.json at build time (web/vite.config.js)
-// — the same number the installers and match server ship with. The links use
-// GitHub's stable latest-release redirect with fixed asset names, so they always
-// serve the newest published installers and never dead-end mid-release.
+// — the same number the installers and match server ship with. Installers are
+// self-hosted on the DomeBreak VPS: the stable root names are symlinks the
+// /ship skill repoints at the newest release, so these links always serve the
+// latest installers and never dead-end mid-release. Past versions live under
+// /vX.Y.Z/ on the same host.
 const VERSION = __APP_VERSION__;
-const RELEASE_BASE = "https://github.com/bradley-t-t/domebreak-dist/releases/latest/download";
+const RELEASE_BASE = "https://download.domebreak.com";
 
 const BUILDS = [
     {
@@ -93,7 +95,7 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                                 Get <span className="text-dim">DomeBreak</span> v{VERSION}
                             </h1>
                             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-dim">
-                                Pick your platform. Installers are hosted on GitHub Releases.
+                                Pick your platform. Installers are served straight from the DomeBreak server.
                             </p>
                         </Reveal>
                     </div>
@@ -109,7 +111,7 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                     </div>
 
                     <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
-                        All releases · <a href="https://github.com/bradley-t-t/domebreak-dist/releases" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">github.com/bradley-t-t/domebreak-dist/releases</a>
+                        All versions · <a href="https://download.domebreak.com/" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">download.domebreak.com</a>
                     </p>
                 </div>
             </main>
