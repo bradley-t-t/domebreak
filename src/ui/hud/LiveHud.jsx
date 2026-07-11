@@ -1,11 +1,12 @@
 import {useLayoutEffect, useRef, useState} from "react";
-import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, stabilityBreakdown, stabilityStatus} from "../../game/engine.js";
+import {gdpOf, industryOutputOf, leadershipStatus, netIncomeOf, populationOf, populationTrendOf, stabilityBreakdown, stabilityStatus} from "../../game/engine.js";
 import {GAME_SPEEDS} from "../../game/data/constants.js";
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import {cn} from "../lib/cn.js";
 import {clamp} from "../../lib/math.js";
 import AmmoBar from "./AmmoBar.jsx";
+import PopTrend from "../common/PopTrend.jsx";
 import {iconButton, popoverCard} from "../lib/variants.js";
 import {vitColor} from "../lib/status.js";
 
@@ -47,6 +48,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
     const K = resolveKeys(keys);
     const net = myNation ? netIncomeOf(world, myNation.slot) : 0;
     const pop = myNation ? populationOf(world, myNation.slot) : 0;
+    const popRate = myNation ? populationTrendOf(world, myNation.slot) : 0;
     const gdp = myNation ? gdpOf(world, myNation.slot) : 0;
     const ind = myNation ? industryOutputOf(world, myNation.slot) : 0;
     const lead = myNation ? leadershipStatus(world, myNation.slot) : null;
@@ -114,8 +116,10 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                     <div className="w-px self-stretch bg-line-soft"/>
                     <div className="flex flex-col items-end leading-[1.15]"><span
                         className="text-[9px] tracking-[1px] uppercase text-faint">Population</span><span
-                        className="text-sm font-bold font-mono">{fmtPop(pop)}</span><span
-                        className="text-[10px] text-dim">Living citizens</span>
+                        className="text-sm font-bold font-mono">{fmtPop(pop)}</span>
+                        {popRate > 0 && pop > 0
+                            ? <PopTrend rate={popRate} base={pop} label className="text-[10px]"/>
+                            : <span className="text-[10px] text-dim">Living citizens</span>}
                     </div>
                     <div className="w-px self-stretch bg-line-soft"/>
                     <div className="flex flex-col items-end leading-[1.15]"><span

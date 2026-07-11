@@ -1,17 +1,20 @@
 import {useMemo, useState} from "react";
 import {
     gdpOf,
+    hasSurrendered,
     industryCapOf,
     industryCountOf,
     industryOutputOf,
     industryPendingOf,
     netIncomeOf,
     populationOf,
+    populationTrendOf,
     vitalityOf,
 } from "../../game/engine.js";
 import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
+import PopTrend from "../common/PopTrend.jsx";
 import {cn} from "../lib/cn.js";
 
 // A territory's readiness band from its city vitality (hp share). Drives the
@@ -41,11 +44,15 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
             if (a.alive !== b.alive) return a.alive ? -1 : 1;
             return (b.pop || 0) * vitalityOf(b) - (a.pop || 0) * vitalityOf(a);
         });
+        // Owner standing gates the per-city "rebuilding" caret, matching healCities.
+        const me = world.nations.find((n) => n.slot === mySlot);
         return {
             rows,
             heldCount: living.length,
             totalCount: mine.length,
+            standing: !!me && me.alive && !hasSurrendered(world, me),
             pop: populationOf(world, mySlot),
+            popRate: populationTrendOf(world, mySlot),
             gdp: gdpOf(world, mySlot),
             net: netIncomeOf(world, mySlot),
             indCount: industryCountOf(world, mySlot),
@@ -90,7 +97,10 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                 <div className="grid grid-cols-2 gap-px bg-hair border-b border-hair">
                     <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
                         <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">Population</span>
-                        <span className="font-display text-[15px] font-semibold text-text">{fmtPop(view.pop)}</span>
+                        <span className="font-display text-[15px] font-semibold text-text inline-flex items-center gap-[4px]">
+                            {fmtPop(view.pop)}
+                            <PopTrend rate={view.popRate} base={view.pop} className="text-[11px]"/>
+                        </span>
                     </div>
                     <div className="flex flex-col gap-0.5 px-3 py-[9px] bg-panel">
                         <span className="text-[9.5px] tracking-[0.8px] uppercase text-faint">GDP</span>
@@ -138,7 +148,10 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                                 </span>
                                 <span className="flex flex-col items-end gap-[3px] flex-none">
                                     <span
-                                        className="font-display text-[11.5px] text-dim">{c.alive ? fmtPop((c.pop || 0) * v) : "—"}</span>
+                                        className="font-display text-[11.5px] text-dim inline-flex items-center gap-[3px]">{c.alive ? fmtPop((c.pop || 0) * v) : "—"}
+                                        {c.alive && view.standing && (c.pop || 0) > 0 && c.hp < c.maxHp &&
+                                            <PopTrend up title="Rebuilding — population recovering as the city heals" className="text-[9px]"/>}
+                                    </span>
                                     <span
                                         className={cn("text-[9px] tracking-[0.4px] uppercase px-[6px] py-px rounded-full border border-line text-dim", pillClass[st.key])}>{st.label}</span>
                                 </span>

@@ -200,7 +200,7 @@ export {trackPoint, leadInterceptPoint} from "./sim/combat.js";
 
 export {solvePlan, planPreview, planAttackerTypeOptions, planTargets, targetCategoryOf, loadedWarhead, readBattlePlans, writeBattlePlans} from "./sim/battlePlan.js";
 
-export {step, growCities, healCities} from "./sim/tick.js";
+export {step, growCities, healCities, populationTrendOf} from "./sim/tick.js";
 
 export {updateStability, stabilityStatus, stabilityBreakdown, stabilityTarget} from "./sim/stability.js";
 

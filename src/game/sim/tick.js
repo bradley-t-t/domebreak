@@ -9,6 +9,7 @@ import {decapitationTick, warTick} from "./warResolution.js";
 import {
     growCities,
     healCities,
+    populationTrendOf,
     stepCombat,
     stepEconomy,
     stepEventPrune,
@@ -19,7 +20,7 @@ import {
     stepVictory,
 } from "./tickPhases.js";
 
-export {growCities, healCities};
+export {growCities, healCities, populationTrendOf};
 
 // Advances the world by dt seconds: research/production, unit AI and firing,
 // projectile flight and interception, sensor sweeps, opponent AI, and the
