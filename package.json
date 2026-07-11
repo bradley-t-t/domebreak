@@ -2,7 +2,7 @@
   "name": "domebreak",
   "productName": "DomeBreak",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "description": "DomeBreak - online multiplayer missile defense/offense game.",
   "main": "electron/main.cjs",
@@ -68,8 +68,15 @@
     "afterPack": "build/afterPack.cjs",
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
+      "artifactName": "DomeBreak-mac-${arch}.${ext}",
       "category": "public.app-category.games",
       "icon": "build/icon.png",
       "identity": null
@@ -78,6 +85,7 @@
       "target": [
         "nsis"
       ],
+      "artifactName": "DomeBreak-win-${arch}.${ext}",
       "icon": "build/icon.png"
     },
     "linux": {
