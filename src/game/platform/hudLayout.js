@@ -14,6 +14,10 @@ export const HUD_PANELS = [
     {id: "objectives", label: "Objectives"},
     {id: "bottomRight", label: "Map & War Bar"},
     {id: "prodQueue", label: "Production Queue"},
+    // Online-only: the match chat. Present in the layout store for everyone so a
+    // saved arrangement is stable, but the layout menu only lists it in multiplayer
+    // (see HudLayoutMenu's `panels` prop) since it doesn't render in solo play.
+    {id: "comms", label: "Comms", online: true},
 ];
 
 // Resize/opacity travel limits — deliberately bounded ("resizable to an extent")

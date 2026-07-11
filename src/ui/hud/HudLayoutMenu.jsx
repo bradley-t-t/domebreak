@@ -7,9 +7,13 @@ import {useDisclosure} from "../../lib/hooks/useDisclosure.js";
 // back for anything the player has hidden or dragged astray: toggle each panel's
 // visibility and reset the whole layout — reachable even when every adjustable
 // panel is hidden. Complements the per-panel drag toolbars.
-export default function HudLayoutMenu({layout, onToggle, onResetAll}) {
+//
+// `panels` defaults to the full set; the caller narrows it (e.g. dropping the
+// online-only Comms panel in solo play) so the menu only lists panels that
+// actually render.
+export default function HudLayoutMenu({layout, onToggle, onResetAll, panels = HUD_PANELS}) {
     const {open, toggle} = useDisclosure(false);
-    const hiddenCount = HUD_PANELS.filter((p) => layout[p.id]?.hidden).length;
+    const hiddenCount = panels.filter((p) => layout[p.id]?.hidden).length;
 
     return (
         <div className="absolute bottom-4 left-4 z-6 pointer-events-auto">
@@ -17,7 +21,7 @@ export default function HudLayoutMenu({layout, onToggle, onResetAll}) {
                 <div className="absolute bottom-full left-0 mb-2 w-[224px] bg-panel-2 border border-line rounded-lg shadow backdrop-blur-[14px] p-2 motion-safe:animate-[dbPop_120ms_var(--ease-out)]"
                      role="menu" aria-label="HUD layout">
                     <div className="px-1.5 py-1 text-[9.5px] tracking-[1.2px] uppercase text-faint">HUD Panels</div>
-                    {HUD_PANELS.map((p) => {
+                    {panels.map((p) => {
                         const hidden = !!layout[p.id]?.hidden;
                         return (
                             <button key={p.id} type="button" role="menuitemcheckbox" aria-checked={!hidden}
