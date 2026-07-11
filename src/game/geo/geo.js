@@ -22,7 +22,7 @@ const TWO_PI = 2 * Math.PI;
 // THAAD battery whose interceptors can't engage inside a minimum range. The hole
 // is a second polygon ring, so fill layers leave it empty and line layers outline
 // it as an inner boundary.
-export function circle(lng, lat, km, steps = 56, innerKm = 0) {
+export function circle(lng, lat, km, steps = 56, innerKm = 0, maxSteps = 360) {
     const rad = Math.PI / 180, deg = 180 / Math.PI;
     const cosLat = Math.max(0.05, Math.cos(lat * rad));   // clamp near the poles
     const x0 = lng / 360 + 0.5;
@@ -30,8 +30,11 @@ export function circle(lng, lat, km, steps = 56, innerKm = 0) {
     const ring = (radiusKm) => {
         const rho = (radiusKm / R_EARTH_KM) / (TWO_PI * cosLat);   // normalized Mercator radius
         // Vertex count scales with on-screen size so big rings stay smooth; small
-        // rings keep the caller's count.
-        const n = clamp(Math.ceil(rho * 800), steps, 360);
+        // rings keep the caller's count. Callers that regenerate rings every
+        // frame (the radar ping, the placement ghost) pass a lower maxSteps —
+        // per-frame tessellation cost scales with vertex count and a decorative
+        // ring doesn't need 360 of them.
+        const n = clamp(Math.ceil(rho * 800), steps, maxSteps);
         const coords = [];
         for (let i = 0; i <= n; i++) {
             const a = (TWO_PI * i) / n;
@@ -60,8 +63,10 @@ const RAD = Math.PI / 180, DEG = 180 / Math.PI;
 export const GEODESIC_MAX_KM = 6000;
 
 // Destination [lng,lat] (deg) a great-circle distance `km` from (lng,lat) on
-// compass bearing `brngDeg` (0 = due north, increasing clockwise).
-function geoDest(lng, lat, km, brngDeg) {
+// compass bearing `brngDeg` (0 = due north, increasing clockwise). Pole-safe:
+// the spherical formulas never yield |lat| > 90 or a discontinuous jump, which
+// is why trackPoint's MIRV lane offset routes through here.
+export function geoDest(lng, lat, km, brngDeg) {
     const la1 = lat * RAD, dr = km / R_EARTH_KM, brng = brngDeg * RAD;
     const sinLa1 = Math.sin(la1), cosLa1 = Math.cos(la1), sinDr = Math.sin(dr), cosDr = Math.cos(dr);
     const sinLa2 = sinLa1 * cosDr + cosLa1 * sinDr * Math.cos(brng);
@@ -71,10 +76,10 @@ function geoDest(lng, lat, km, brngDeg) {
 }
 
 // True geodesic range ring — the globe-view counterpart of circle(); same Feature
-// shape and innerKm annulus.
-export function geoCircle(lng, lat, km, steps = 56, innerKm = 0) {
+// shape and innerKm annulus. maxSteps as in circle().
+export function geoCircle(lng, lat, km, steps = 56, innerKm = 0, maxSteps = 480) {
     const ring = (radiusKm) => {
-        const n = clamp(Math.ceil(radiusKm / 40), steps, 480);
+        const n = clamp(Math.ceil(radiusKm / 40), steps, maxSteps);
         const coords = [];
         let prev = lng;
         for (let i = 0; i <= n; i++) {
@@ -149,4 +154,18 @@ export function haversine(aLng, aLat, bLng, bLat) {
     const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
     const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
     return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+// One degree of latitude along a meridian, in km (2*pi*R/360).
+const KM_PER_LAT_DEG = 111.19;
+
+// Radius test with a cheap latitude reject before the trig. The meridian arc
+// |dLat| is a strict lower bound on great-circle distance everywhere on the
+// sphere (no pole or antimeridian caveats), so the reject can never discard a
+// true hit — it just spares the sin/cos/asin for the vast majority of pairs in
+// the tick's proximity scans, which compare against radii far smaller than the
+// map. Exact same verdict as haversine(...) <= km.
+export function withinKm(aLng, aLat, bLng, bLat, km) {
+    if (Math.abs(bLat - aLat) * KM_PER_LAT_DEG > km) return false;
+    return haversine(aLng, aLat, bLng, bLat) <= km;
 }

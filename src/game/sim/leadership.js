@@ -178,12 +178,24 @@ export function updateCommand(w) {
 export function evacTick(w) {
     for (const n of w.nations) {
         if (!n.alive || !n.lead) continue;
+        // Passive neutrals never war, never build airstrips, and never shelter —
+        // skip them before the per-nation work below (at full-world scale they are
+        // ~95% of the roster).
+        if (n.active === false) continue;
         // AI leadership doctrine: shelter leaders while at war with exposed leaders
         // (dodge the heavy leadership-loss stability hit), and bring them home in
         // peacetime (shed the bunkered-leadership stability penalty). Player evac
         // stays fully manual.
         if (n.isAi) {
-            const atWarNow = w.nations.some((m) => m.alive && atWar(w, n.slot, m.slot));
+            // A nation's war list is its own relations map — checking every other
+            // nation's liveness via atWar() made this O(nations) per nation.
+            let atWarNow = false;
+            for (const s in n.relations) {
+                if (n.relations[s] === "war" && nationOf(w, +s)?.alive) {
+                    atWarNow = true;
+                    break;
+                }
+            }
             if (atWarNow) {
                 if (n._evac !== "shelter" && citiesWithLeaders(w, n.slot).length) n._evac = "shelter";
             } else if (n._evac !== "release" && (n.lead.sheltered || 0) > 0) {

@@ -21,7 +21,7 @@ import {
 import {nationOf, nextId} from "./worldState.js";
 import {atWar, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
 import {recordAllianceBroken} from "./ai/diplomacy/ledger.js";
-import {findTarget} from "./combat.js";
+import {findTarget, idMapInvalidate} from "./combat.js";
 import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
 import {haversine} from "../geo/geo.js";
@@ -233,6 +233,7 @@ export function embark(w, slot, transportId, groundUnitId) {
     // Store the whole unit so it can be restored intact on disembark; drop route.
     const i = w.units.indexOf(g);
     w.units.splice(i, 1);
+    idMapInvalidate(w.units); // in-place removal of a living unit — see idMapOf
     g.route = null;
     g.dest = null;
     t.cargo.push(g);
@@ -351,6 +352,7 @@ export function scrapUnit(w, slot, unitId) {
     const n = nationOf(w, slot);
     if (n) n.points += Math.floor((UNITS[u.type].cost || 0) * SCRAP_REFUND_FRAC);
     w.units.splice(i, 1);
+    idMapInvalidate(w.units); // in-place removal of a living unit — see idMapOf
     return {ok: true};
 }
 
