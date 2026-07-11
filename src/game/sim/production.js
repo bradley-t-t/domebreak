@@ -16,6 +16,7 @@ import {
     TECHS,
     UNITS,
     WARHEADS,
+    isAttacker,
 } from "../data/constants.js";
 import {nationOf, nextId} from "./worldState.js";
 import {atWar, inTerritory, industryCapOf, industryCountOf, netIncomeOf, placementBlocked} from "./queries.js";
@@ -356,7 +357,7 @@ export function scrapUnit(w, slot, unitId) {
 export function commandAttack(w, unitId, targetId) {
     const u = w.units.find((x) => x.id === unitId);
     if (!u) return {error: "Target is gone."};
-    if (UNITS[u.type].kind !== "offense") return {error: "Not an offensive unit."};
+    if (!isAttacker(UNITS[u.type])) return {error: "Not an offensive unit."};
     if (targetId == null) {
         u.targetId = null;
         return {ok: true};

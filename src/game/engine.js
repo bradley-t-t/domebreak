@@ -113,6 +113,7 @@ export {
     launchersForAmmo,
     unitLabel,
     armamentOf,
+    isAttacker,
     TECHS,
     HANGAR_SPEC,
     PATROL_FIGHTER,

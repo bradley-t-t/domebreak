@@ -368,6 +368,14 @@ export const UNITS = {
         // on aircraft or in-atmosphere threats.
         boostPhaseOnly: true,
         directedEnergy: true,   // speed-of-light — no interceptor projectile, instant kill roll on the target
+        // Dual-use: primarily a boost-phase interceptor (see intercept/boostPhaseOnly
+        // in the stepCombat defense path), but canAttack lets it also be tasked on a
+        // Battle Plan against surface targets. Its offensive shot is directed-energy —
+        // instant, non-interceptable damage (the directFire path), not a lofted round.
+        // Attacking and intercepting time-share the one reload timer, so a laser busy
+        // striking is briefly unavailable to defend, and vice versa.
+        canAttack: true,
+        damage: 20,
         requiresTech: "def10",
         requiresUnit: "spacehq",
         cost: 1200,
@@ -788,4 +796,14 @@ export function unitLabel(type) {
 
 export function armamentOf(type) {
     return type === "silo" ? "ICBM" : type === "launcher" ? "SICBM" : null;
+}
+
+// Whether a unit type may be tasked with an offensive strike order — the single
+// gate the Battle Planning solver, the commandAttack order, and the fire phase all
+// share. Every `kind:"offense"` platform qualifies; a `kind:"defense"` platform can
+// opt in with `canAttack` (the Orbital Laser — a directed-energy satellite that both
+// intercepts boost-phase ordnance AND can be aimed at surface targets). Takes a unit
+// def (UNITS[type]); tolerates an unknown type.
+export function isAttacker(def) {
+    return !!def && (def.kind === "offense" || def.canAttack === true);
 }

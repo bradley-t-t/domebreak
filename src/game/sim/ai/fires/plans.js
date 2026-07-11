@@ -3,7 +3,7 @@
 // them. The war plan's goal picks the target categories; decap wars run with
 // overkill on (saturate the bunker, waste be damned); a war we are actively
 // suing out of holds fire so no shots land while the offer is pending.
-import {UNITS} from "../../../data/constants.js";
+import {UNITS, isAttacker} from "../../../data/constants.js";
 import {PEACE, FIRES} from "../tuning.js";
 
 // Goal priority when several wars compete for the same launcher.
@@ -16,7 +16,7 @@ function attackerTypes(frame) {
     const types = new Set();
     for (const u of frame.me.units) {
         const def = UNITS[u.type];
-        if (def.kind === "offense" && def.targets !== "land") types.add(u.type);
+        if (isAttacker(def) && def.targets !== "land") types.add(u.type);
     }
     return [...types];
 }

@@ -6,6 +6,11 @@ import GameIcon from "./GameIcon.jsx";
 
 const ICON_STRIP = ["dome", "radar", "interceptor", "thaad", "silo", "reconsat", "carrier", "factory"];
 
+// Single release version, injected from the game's package.json at build time
+// (web/vite.config.js) — the same number the download page and installers ship.
+// Never hardcode a version here; it drifts the moment a release goes out.
+const VERSION = __APP_VERSION__;
+
 function Col({title, children}) {
     return (
         <div className="flex flex-col gap-3">
@@ -94,7 +99,7 @@ export default function Footer({onShowShortcuts}) {
                         © {year} TaylorURL · Made solo by Trenton Taylor
                     </p>
                     <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
-                        macOS + Windows · v1.3.0
+                        macOS + Windows · v{VERSION}
                     </p>
                 </div>
             </div>
