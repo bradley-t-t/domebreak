@@ -55,8 +55,16 @@ export function step(w, dt, predict = false) {
 
     aiTick(w, dt);
     // Dispatch/relaunch leadership evac ferries for nations actively sheltering
-    // (player pressed Shelter, or an AI that has entered a war).
-    evacTick(w);
+    // (player pressed Shelter, or an AI that has entered a war). Assignment runs
+    // on a ~4 Hz sweep like the sensor pass: it only decides WHICH ferries to
+    // launch (the aircraft themselves fly every tick), launches are already
+    // spaced by LEADERSHIP.launchGapSec, and each sweep re-scans every active
+    // nation's cities and units — per-tick was pure waste.
+    w._evacT = (w._evacT || 0) + dt;
+    if (w._evacT >= 0.25) {
+        w._evacT = 0;
+        evacTick(w);
+    }
     // Advance ground occupation: capture-flagged units holding cleared enemy cities
     // flip their state to the occupier. Runs before growth/tally so a captured city
     // is counted for its new owner's income and domination share this same tick.

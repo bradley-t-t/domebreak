@@ -9,7 +9,7 @@ import {normalizeRules} from "../../src/game/sim/gameRules.js";
 import {gameData} from "../data.js";
 import {COMMANDS} from "./commands.js";
 import {openingFreeze} from "./openingFreeze.js";
-import {ABANDON_GRACE_S, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "../config.js";
+import {ABANDON_GRACE_S, HARD_MAX_PLAYERS, MATCH_START_PAUSE_S, RECONNECT_GRACE_S, SNAPSHOT_MS, TICK_MS} from "../config.js";
 import {indexBy} from "../../src/lib/iter.js";
 
 // Player chat is relayed, never simulated: the sender is the authenticated
@@ -72,6 +72,11 @@ export class Match {
         this.reported = false;
         this.reapTimer = null;      // reaps the match when it goes undermanned
 
+        // Every human claims an active belligerent slot, so a roster past the
+        // sim's active-nation cap would break the bounded-match model. No normal
+        // path produces one (matchmaker and parties respect MAX_PLAYERS), so
+        // truncation only fires on a hand-crafted lobby row.
+        if (roster.length > HARD_MAX_PLAYERS) roster = roster.slice(0, HARD_MAX_PLAYERS);
         // Unique, valid nation per player (bad/duplicate picks resolve to a free
         // great power), then build the full world seeded on the first player.
         const isos = resolveIsos(roster.map((r) => r.iso));

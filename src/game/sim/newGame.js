@@ -1,8 +1,8 @@
 // Builds a match setup from the bundled state-level city data. Player is slot 0.
-// With an `activeCount` (singleplayer), only that many nations participate — the
-// player plus scattered great powers — and every other country stays on the map as
-// a passive, capturable NEUTRAL. Without one (multiplayer / attract sim), every
-// country is a live participant.
+// Every full-world match is bounded: `activeCount` nations participate (the
+// player(s) plus scattered great powers, capped at NEUTRAL.maxActive) and every
+// other country stays on the map as a passive, capturable NEUTRAL. Only a curated
+// `aiIsos` cast (the menu attract sim's handful of great powers) runs all-active.
 import {GDP_FALLBACK_T, GDP_T, NEUTRAL, REAL_POP} from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {clamp} from "../../lib/math.js";
@@ -79,16 +79,19 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
         const others = aiIsos.filter((i) => i !== playerIso && data.cities[i]?.length);
         chosen = [playerIso, ...others].filter((iso) => data.cities[iso]?.length);
     }
-    // Active set: the participating nations (human + AI). When an `activeCount` is
-    // given (singleplayer's bounded neutral-world model), start from the participants
-    // and scatter-fill from the seed pool to that count; every other country in
-    // `chosen` stays on the map as a passive NEUTRAL. With no `activeCount`
-    // (multiplayer / attract sim), `activeSet` stays null and EVERY nation is active.
+    // Active set: the participating nations (human + AI). Every full-world roster
+    // (aiIsos == null) is a bounded neutral-world match: start from the
+    // participants and scatter-fill from the seed pool up to `activeCount`
+    // (defaulted and clamped to the NEUTRAL bounds); every other country in
+    // `chosen` stays on the map as a passive NEUTRAL. There is deliberately no
+    // all-active full-world path — ~222 simultaneously warring nations is far past
+    // what the sim and renderer are sized for. A curated `aiIsos` cast (attract
+    // sim) is already small, so it stays fully active.
     let activeSet = null;
-    if (aiIsos == null && opts.activeCount) {
+    if (aiIsos == null) {
         const participants = (opts.participantIsos?.length ? opts.participantIsos : [playerIso])
             .filter((iso) => data.cities[iso]?.length);
-        const count = clamp(opts.activeCount, NEUTRAL.minActive, NEUTRAL.maxActive);
+        const count = clamp(opts.activeCount || NEUTRAL.defaultActive, NEUTRAL.minActive, NEUTRAL.maxActive);
         activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || GREAT_POWERS, count));
     }
     const nations = [], cities = [];

@@ -1,6 +1,8 @@
 // The two on-map hover readouts — the zoomed-out whole-country tooltip and the
 // zoomed-in city/unit tooltip — fed by LiveGame's hover probe (onMove) and
-// its pre-filtered hoverEnt lookup.
+// its pre-filtered hoverEnt lookup. `pos` is LiveGame's mutated cursor-position
+// ref value ({x, y}) — read fresh on every render rather than carried in hover
+// state, so cursor motion alone never re-renders the tree.
 import Flag from "../common/Flag.jsx";
 import Meter from "../common/Meter.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
@@ -21,7 +23,7 @@ import {
     vitalityOf
 } from "../../game/engine.js";
 
-export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, relation, nationName, labelOf, armOf, teamColor}) {
+export default function HoverPopups({hover, hoverEnt, pos, countryByGid, w, mySlot, relation, nationName, labelOf, armOf, teamColor}) {
     return (
         <>
             {hover?.kind === "country" && (() => {
@@ -34,7 +36,7 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                 // A nation wiped out in war is inactive too, but gets the defeated plaque.
                 const neutral = !nation || nation.active === false;
                 if (neutral) {
-                    return <NeutralReadout x={hover.x} y={hover.y} wiped={!!nation?.wipedOut}
+                    return <NeutralReadout x={pos.x} y={pos.y} wiped={!!nation?.wipedOut}
                                            header={<>{iso ? <Flag iso={iso}/> : null}<span>{name}</span></>}/>;
                 }
                 const cities = w.cities.filter((c) => c.slot === nation.slot && c.alive);
@@ -47,7 +49,7 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                     ["States", cities.length],
                 ];
                 return (
-                    <HoverReadout x={hover.x} y={hover.y} clampBottom={190} rows={rows}
+                    <HoverReadout x={pos.x} y={pos.y} clampBottom={190} rows={rows}
                                   header={<>{iso ? <Flag iso={iso}/> : null}<span>{name}</span></>}/>
                 );
             })()}
@@ -88,7 +90,7 @@ export default function HoverPopups({hover, hoverEnt, countryByGid, w, mySlot, r
                     header = <><span className="w-2.5 h-2.5 rounded-full flex-none" style={{background: teamColor(hoverEnt.slot)}}/><span>{hoverEnt.name}{hoverEnt.cap ? " ★" : ""}</span></>;
                     footer = <Meter frac={vitalityOf(hoverEnt)} fillClass={vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good"} className="mt-2"/>;
                 }
-                return <HoverReadout x={hover.x} y={hover.y} clampBottom={200} header={header} rows={rows} footer={footer}/>;
+                return <HoverReadout x={pos.x} y={pos.y} clampBottom={200} header={header} rows={rows} footer={footer}/>;
             })()}
         </>
     );

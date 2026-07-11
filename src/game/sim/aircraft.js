@@ -144,13 +144,19 @@ export function launchEscort(w, base, ferryId, idx) {
 
 // Per-tick base controller: keep the requested patrol pattern airborne — launch
 // from stock when short (stock rotation covers refueling), recall extras.
-export function runAirbase(w, base, dt) {
+// `basedHere` is the tick's prebuilt list of aircraft with baseId === base.id
+// (stepMovement builds one map for all bases instead of each base re-filtering
+// the world's whole unit list); it may hold units that died earlier this tick,
+// so everything below still checks hp. Omitted (tests, one-shot callers), the
+// list is derived from the world.
+export function runAirbase(w, base, dt, basedHere) {
     ensureHangar(w, base);
     if (base.op && !w.units.some((x) => x.id === base.op && x.hp > 0)) base.op = null;
     base.launchT = Math.max(0, (base.launchT || 0) - dt);
     const ftype = PATROL_FIGHTER[base.type];
-    const fighters = w.units.filter((u) => u.baseId === base.id && u.hp > 0 && u.type === ftype);
-    const awacses = w.units.filter((u) => u.baseId === base.id && u.hp > 0 && u.type === "awacs");
+    const based = basedHere ?? w.units.filter((u) => u.baseId === base.id);
+    const fighters = based.filter((u) => u.hp > 0 && u.type === ftype);
+    const awacses = based.filter((u) => u.hp > 0 && u.type === "awacs");
     const wantF = base.patrolSize || 0;
     const wantA = base.awacsPatrol ? 1 : 0;
     fighters.forEach((u, i) => {
@@ -159,7 +165,7 @@ export function runAirbase(w, base, dt) {
     awacses.forEach((u, i) => {
         u.recall = i >= wantA;
     });
-    const shortFinal = w.units.some((x) => x.baseId === base.id && x.hp > 0 && x.phase === "landing" && x._land === "final" && (x._alongD ?? 999) < 60);
+    const shortFinal = based.some((x) => x.hp > 0 && x.phase === "landing" && x._land === "final" && (x._alongD ?? 999) < 60);
     if (base.launchT <= 0 && base.op == null && !shortFinal) {
         if (fighters.length < wantF && (base.hangar[ftype] || 0) > 0) launchOne(w, base, ftype);
         else if (awacses.length < wantA && (base.hangar.awacs || 0) > 0) launchOne(w, base, "awacs");
@@ -172,12 +178,15 @@ function runwayAxis(base) {
     return base.runwayA ?? AIRSTRIP_RUNWAY;
 }
 
-export function flyAircraft(w, u, def, dt) {
+// `homeBase` is the caller's already-resolved live home base (or null when it is
+// gone) — stepMovement resolves it once per aircraft per tick instead of paying
+// this O(units) find inside every flight sub-step. Omitted, it is derived here.
+export function flyAircraft(w, u, def, dt, homeBase) {
     // Leadership ferries + their escorts fly their own profiles, not the patrol
     // pattern — handled entirely before the airbase/runway machinery below.
     if (u.mission?.role === "leadershipFerry") return flyFerry(w, u, def, dt);
     if (u.mission?.role === "leadershipEscort") return flyEscort(w, u, def, dt);
-    const base = w.units.find((b) => b.id === u.baseId && b.hp > 0);
+    const base = homeBase !== undefined ? homeBase : (w.units.find((b) => b.id === u.baseId && b.hp > 0) ?? null);
     if (!base) {
         u.hp = 0;
         u.face = null;

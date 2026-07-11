@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import WorldMap from "../../map/WorldMap.jsx";
 import LiveHud from "../hud/LiveHud.jsx";
 import LayerBar from "../hud/LayerBar.jsx";
@@ -109,7 +109,13 @@ export default function LiveGame({
     const [explosions, setExplosions] = useState([]);
     // Amphibious landing: the transport id whose cargo the next map click lands.
     const [disembarkId, setDisembarkId] = useState(null);
+    // Hover CONTENT (what the cursor is over) lives in state; the cursor's x/y
+    // lives in this mutated ref. Splitting them means moving the mouse across a
+    // country (every drag-pan does) no longer re-renders the whole LiveGame tree
+    // per pointer frame — the readout repositions from the ref on the ~30fps sim
+    // renders it gets for free.
     const [hover, setHover] = useState(null);
+    const hoverPosRef = useRef({x: 0, y: 0});
     const [pins, setPins] = useState([]);
     // In-game controls reference (toggled with ? / F1, or the corner button).
     const [helpOpen, setHelpOpen] = useState(false);
@@ -139,26 +145,31 @@ export default function LiveGame({
     const bp = useBattlePlans(w);
     useBattlePlanReconciler({world: w, api, mySlot, plans: bp.plans, onFired: (id, n) => flash(n ? `Strike launched — ${n} on the way.` : "No units in range to fire.", n ? "info" : undefined)});
 
-    const relation = (slot) => {
+    // These helpers are threaded into memoized consumers (the MapMarkers children
+    // and useLiveLayers' checksum-gated FeatureCollections), so they're wrapped in
+    // useCallback to keep a stable identity. The world and nation objects they
+    // close over are mutated in place by the engine (their identities never
+    // change), so every call still reads the live relations/names at call time.
+    const relation = useCallback((slot) => {
         const r = myNation?.relations[slot];
         return r === "war" ? "war" : r === "ally" ? "ally" : "peace";
-    };
+    }, [myNation]);
     // Tactical allegiance color for anything drawn on the map: you = white,
     // hostile (at war) = red, allied = blue, everyone else = neutral grey.
-    const teamColor = (slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : relation(slot) === "ally" ? "#5fa8ff" : "#8b94a1");
+    const teamColor = useCallback((slot) => (slot === mySlot ? "#f0f3f7" : relation(slot) === "war" ? "#f0556a" : relation(slot) === "ally" ? "#5fa8ff" : "#8b94a1"), [mySlot, relation]);
     // Your leadership airlift stands out from your white forces: a transport
     // ferry reads BLUE while it's carrying leaders and YELLOW when flying empty
     // (outbound to a pickup or back home), so a glance tells you which planes are
     // actually moving command. Its fighter escorts read green — a distinct guard.
-    const unitColor = (u) => {
+    const unitColor = useCallback((u) => {
         if (u.slot !== mySlot) return teamColor(u.slot);
         if (u.mission?.role === "leadershipFerry") return u.mission.cargo > 0 ? "#3d9bff" : "#f4c02a";
         if (u.mission?.role === "leadershipEscort") return "#46d38a";
         return teamColor(u.slot);
-    };
-    const nationName = (slot) => w.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`;
-    const labelOf = (type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso);
-    const armOf = (type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso);
+    }, [mySlot, teamColor]);
+    const nationName = useCallback((slot) => w.nations.find((n) => n.slot === slot)?.name || `Nation ${slot}`, [w]);
+    const labelOf = useCallback((type, slot) => unitLabel(type, w.nations.find((n) => n.slot === slot)?.iso), [w]);
+    const armOf = useCallback((type, slot) => armamentOf(type, w.nations.find((n) => n.slot === slot)?.iso), [w]);
     // Selection-panel stat sheet — see useUnitStats (same rows, same formulas).
     const unitStats = useUnitStats({w, mySlot, armOf});
     // Screen-space unit heading for map-marker rotation — see useUnitHeading
@@ -333,15 +344,20 @@ export default function LiveGame({
         if (gid !== hoveredGid) setHoveredGid(gid);
         // Localized hover probe: zoomed out → whole-country readout; zoomed in → the
         // city under the cursor. (Units carry their own hover via their markers.)
+        // Every setHover below preserves identity when the CONTENT is unchanged, so
+        // sweeping the cursor across one country costs zero re-renders.
         if (!placing && !moving) {
-            const ex = e.originalEvent.clientX, ey = e.originalEvent.clientY;
+            hoverPosRef.current.x = e.originalEvent.clientX;
+            hoverPosRef.current.y = e.originalEvent.clientY;
             if (m.getZoom() < COUNTRY_ZOOM) {
-                if (gid) setHover({kind: "country", gid, x: ex, y: ey});
+                if (gid) setHover((h) => (h && h.kind === "country" && h.gid === gid ? h : {kind: "country", gid}));
                 else setHover((h) => (h && h.kind === "country" ? null : h));
             } else {
-                const cf = m.queryRenderedFeatures(e.point, {layers: ["live-cities"]})[0];
-                if (cf) setHover({kind: "city", id: cf.properties.id, x: ex, y: ey});
-                else setHover((h) => (h && (h.kind === "city" || h.kind === "country") ? null : h));
+                const cf = m.queryRenderedFeatures(e.point, {layers: CITY_LAYERS})[0];
+                if (cf) {
+                    const id = cf.properties.id;
+                    setHover((h) => (h && h.kind === "city" && h.id === id ? h : {kind: "city", id}));
+                } else setHover((h) => (h && (h.kind === "city" || h.kind === "country") ? null : h));
             }
         }
     };
@@ -406,13 +422,20 @@ export default function LiveGame({
             if (!e.originalEvent?.shiftKey) setPlacing(null); // close after one unless Shift is held to place more
             return;
         }
-        const feat = e.features?.find((f) => f.layer.id === "live-cities");
+        const feat = cityFeatAt(e);
         if (feat) return onCityClick(feat.properties.id);
         setSelUnit(null);
         setSelCity(null);
         setAttackMode(false);
         setMenu(null);
     };
+    // One-shot city hit-test for click/context handlers. Doing this here instead
+    // of via the Map's interactiveLayerIds matters: interactive layers make the
+    // react-map-gl proxy run a queryRenderedFeatures hover test on EVERY raw
+    // pointer event (un-coalesced — above frame rate on 120Hz inputs), stacked on
+    // top of processMove's own rAF-gated queries, for the entire drag of every
+    // camera pan. Clicks are rare; pointer moves are not.
+    const cityFeatAt = (e) => mapRef.current?.queryRenderedFeatures?.(e.point, {layers: CITY_LAYERS})?.[0];
     const onCityClick = (id) => {
         const c = w.cities.find((x) => x.id === id);
         if (!c) return;
@@ -445,7 +468,7 @@ export default function LiveGame({
             setAttackMode(false);
             return;
         }
-        const feat = e.features?.find((f) => f.layer.id === "live-cities");
+        const feat = cityFeatAt(e);
         if (feat) return openCityMenu(feat.properties.id, e.originalEvent);
         // Zoomed out enough that the whole-country plaque is up: right-clicking
         // the country opens its dossier (declare war / manage alliance / etc.).
@@ -491,7 +514,7 @@ export default function LiveGame({
 
     return (
         <>
-            <WorldMap globe={globe} onMap={handleMap} interactiveLayerIds={CITY_LAYERS} minZoom={WORLD_ZOOM.min}
+            <WorldMap globe={globe} onMap={handleMap} minZoom={WORLD_ZOOM.min}
                       onMapClick={onMapClick} onContextMenu={onCtx} onMouseMove={onMove}
                       cursor={placing || moving || attackMode || disembarkId ? "crosshair" : "grab"}>
                 <MapLayers layers={layers} hoveredGid={hoveredGid} ownership={ownership} diplomacy={diplomacy}
@@ -505,7 +528,8 @@ export default function LiveGame({
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
                             visUnits={visUnits} unitHeading={unitHeading} unitColor={unitColor} labelOf={labelOf}
                             nationName={nationName} selUnit={selUnit} onUnitClick={onUnitClick}
-                            openUnitMenu={openUnitMenu} setHover={setHover} placing={placing} moving={moving}
+                            openUnitMenu={openUnitMenu} setHover={setHover} hoverPos={hoverPosRef.current}
+                            placing={placing} moving={moving}
                             explosions={explosions}/>
             </WorldMap>
             <SkyLayer map={mapRef.current}
@@ -607,7 +631,7 @@ export default function LiveGame({
             )}
             {menu && <ContextMenu {...menu} onClose={() => setMenu(null)}/>}
             {helpOpen && <ControlsOverlay keys={keys} onClose={() => setHelpOpen(false)}/>}
-            <HoverPopups hover={hover} hoverEnt={hoverEnt} countryByGid={countryByGid} w={w} mySlot={mySlot}
+            <HoverPopups hover={hover} hoverEnt={hoverEnt} pos={hoverPosRef.current} countryByGid={countryByGid} w={w} mySlot={mySlot}
                          relation={relation} nationName={nationName} labelOf={labelOf} armOf={armOf}
                          teamColor={teamColor}/>
 

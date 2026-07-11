@@ -3,7 +3,7 @@
 // partition of living cities (see inTerritory in queries.js), so flipping a city's
 // slot transfers its surrounding territory for free. Pure/deterministic: capture
 // is a function of positions, ownership, war state, and dt.
-import {haversine} from "../geo/geo.js";
+import {haversine, withinKm} from "../geo/geo.js";
 import {CAPTURE, UNITS} from "../data/constants.js";
 import {nextId} from "./worldState.js";
 import {atWar} from "./queries.js";
@@ -13,6 +13,33 @@ import {captureCityLeaders, decapitateNation} from "./leadership.js";
 // or tank per its UNITS entry).
 function isCaptor(u) {
     return u.hp > 0 && UNITS[u.type]?.capture;
+}
+
+// The nearest living captor to (lng, lat) that is at war with `slot` and inside
+// the hold radius — the unit that owns the capture attempt on that spot.
+function nearestCaptor(w, captors, slot, lng, lat) {
+    let captor = null, best = Infinity;
+    for (const u of captors) {
+        if (u.hp <= 0 || u.slot === slot || !atWar(w, u.slot, slot)) continue;
+        if (!withinKm(u.lng, u.lat, lng, lat, CAPTURE.holdKm)) continue;
+        const d = haversine(u.lng, u.lat, lng, lat);
+        if (d < best) {
+            best = d;
+            captor = u;
+        }
+    }
+    return captor;
+}
+
+// True when any unit hostile to `captorSlot` (other than `selfId`) still stands
+// within the contest radius of (lng, lat) — the garrison check that freezes a
+// capture attempt.
+function contestedAt(w, captorSlot, lng, lat, selfId) {
+    for (const u of w.units) {
+        if (u.hp <= 0 || u.id === selfId || !atWar(w, captorSlot, u.slot)) continue;
+        if (withinKm(u.lng, u.lat, lng, lat, CAPTURE.contestKm)) return true;
+    }
+    return false;
 }
 
 // Flip every living city sharing the captured city's current owner AND state name
@@ -42,6 +69,12 @@ function flipState(w, city, toSlot) {
 // fires (news headline + sfx).
 export function captureTick(w, dt) {
     if (dt <= 0) return;
+    // The world's capture-capable ground units, gathered once. Every proximity
+    // test below runs against this handful instead of the whole unit list — the
+    // old per-city inner loop over ALL units was an O(cities x units) fixed tax
+    // every tick, war or no war. With no captors fielded anywhere the pass
+    // reduces to the progress-decay sweep.
+    const captors = w.units.filter(isCaptor);
     for (const c of w.cities) {
         if (!c.alive) {
             c.capture = null;
@@ -49,15 +82,7 @@ export function captureTick(w, dt) {
         }
         // Nearest eligible captor to this city that is at war with its owner and
         // inside the hold radius. The nearest holder owns the capture attempt.
-        let captor = null, best = Infinity;
-        for (const u of w.units) {
-            if (!isCaptor(u) || u.slot === c.slot || !atWar(w, u.slot, c.slot)) continue;
-            const d = haversine(u.lng, u.lat, c.lng, c.lat);
-            if (d <= CAPTURE.holdKm && d < best) {
-                best = d;
-                captor = u;
-            }
-        }
+        const captor = captors.length ? nearestCaptor(w, captors, c.slot, c.lng, c.lat) : null;
         // Decay + drop the tracker when nobody is holding this city.
         if (!captor) {
             if (c.capture) {
@@ -71,10 +96,7 @@ export function captureTick(w, dt) {
         if (!c.capture || c.capture.slot !== captor.slot) c.capture = {slot: captor.slot, progress: 0};
         // Contest gate: any unit hostile to the captor within contestKm freezes
         // and bleeds progress — you must clear the garrison before you can hold.
-        const contested = w.units.some(
-            (u) => u.hp > 0 && atWar(w, captor.slot, u.slot) && haversine(u.lng, u.lat, c.lng, c.lat) <= CAPTURE.contestKm
-        );
-        if (contested) {
+        if (contestedAt(w, captor.slot, c.lng, c.lat, null)) {
             c.capture.progress = Math.max(0, c.capture.progress - CAPTURE.decayPerSec * dt);
             continue;
         }
@@ -99,7 +121,7 @@ export function captureTick(w, dt) {
             flipState(w, c, toSlot); // clears c.capture (and the rest of the state's)
         }
     }
-    captureBunkers(w, dt);
+    captureBunkers(w, dt, captors);
 }
 
 // Ground capture of the Leadership Bunker. Unlike a warhead (which needs a direct
@@ -109,18 +131,10 @@ export function captureTick(w, dt) {
 // (warResolution.decapitationTick). Mirrors the city-capture loop above (same hold/
 // contest/assault tuning) but tracks progress on the bunker unit's own `capture`
 // field. Pure/deterministic — a function of positions, ownership, and dt.
-function captureBunkers(w, dt) {
+function captureBunkers(w, dt, captors) {
     for (const b of w.units) {
         if (b.type !== "bunker" || b.hp <= 0) continue;
-        let captor = null, best = Infinity;
-        for (const u of w.units) {
-            if (!isCaptor(u) || u.slot === b.slot || !atWar(w, u.slot, b.slot)) continue;
-            const d = haversine(u.lng, u.lat, b.lng, b.lat);
-            if (d <= CAPTURE.holdKm && d < best) {
-                best = d;
-                captor = u;
-            }
-        }
+        const captor = captors.length ? nearestCaptor(w, captors, b.slot, b.lng, b.lat) : null;
         if (!captor) {
             if (b.capture) {
                 b.capture.progress -= CAPTURE.decayPerSec * dt;
@@ -131,10 +145,7 @@ function captureBunkers(w, dt) {
         if (!b.capture || b.capture.slot !== captor.slot) b.capture = {slot: captor.slot, progress: 0};
         // Garrison contest — the bunker itself doesn't count (it can't defend its own
         // capture), only OTHER hostile units still standing near it.
-        const contested = w.units.some(
-            (u) => u.id !== b.id && u.hp > 0 && atWar(w, captor.slot, u.slot) && haversine(u.lng, u.lat, b.lng, b.lat) <= CAPTURE.contestKm
-        );
-        if (contested) {
+        if (contestedAt(w, captor.slot, b.lng, b.lat, b.id)) {
             b.capture.progress = Math.max(0, b.capture.progress - CAPTURE.decayPerSec * dt);
             continue;
         }

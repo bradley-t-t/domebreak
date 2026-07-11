@@ -1,6 +1,6 @@
 // Read-only world accessors: economy (gdp/income/upkeep), territory, sensor
 // coverage, and defense-range queries. No mutation of world state.
-import {haversine} from "../geo/geo.js";
+import {haversine, withinKm} from "../geo/geo.js";
 import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
@@ -106,6 +106,20 @@ export function gdpOf(w, slot) {
     return n.gdp * econ + add;
 }
 
+// Income formula over pre-summed city/unit figures: econVit is the nation's
+// surviving economy share (Σ econ × vitality), cityVit its surviving city count
+// weighted by vitality, indOut its flat industry output. Single source for the
+// formula — the per-slot readers below and the tick's batched aggregate both
+// route through here so they can never diverge.
+function incomeFrom(n, econVit, cityVit, indOut) {
+    if (n.gdp > 0) return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econVit + indOut) * (n.commandMult ?? 1);
+    return (ECONOMY.fallbackBase + cityVit * ECONOMY.fallbackPerCity + indOut) * (n.commandMult ?? 1);
+}
+
+function upkeepFrom(n, upkeepSum) {
+    return n?.isAi ? upkeepSum * ECONOMY.aiUpkeepMult : upkeepSum;
+}
+
 // Income is driven by the nation's real GDP weight and the share of its economy
 // still standing — each state contributes its economy % of the country. Losing
 // your richest states hits income the hardest. Built industry adds flat output
@@ -115,24 +129,61 @@ export function incomeOf(w, slot) {
     const n = nationOf(w, slot);
     if (!n) return 0;
     const ind = industryOutputOf(w, slot);
-    if (n.gdp > 0) {
-        let econ = 0;
-        for (const c of w.cities) if (c.slot === slot && c.alive) econ += (c.econ || 0) * vitalityOf(c);
-        return (ECONOMY.incomeBase + ECONOMY.incomeGdpCoef * Math.sqrt(n.gdp) * econ + ind) * (n.commandMult ?? 1);
+    let econ = 0, vit = 0;
+    for (const c of w.cities) {
+        if (c.slot !== slot || !c.alive) continue;
+        const v = vitalityOf(c);
+        econ += (c.econ || 0) * v;
+        vit += v;
     }
-    let vit = 0;
-    for (const c of w.cities) if (c.slot === slot && c.alive) vit += vitalityOf(c);
-    return (ECONOMY.fallbackBase + vit * ECONOMY.fallbackPerCity + ind) * (n.commandMult ?? 1);
+    return incomeFrom(n, econ, vit, ind);
 }
 
 export function upkeepOf(w, slot) {
     let sum = 0;
     for (const u of w.units) if (u.slot === slot && u.hp > 0) sum += UNITS[u.type].upkeep ?? 0;
-    return nationOf(w, slot)?.isAi ? sum * ECONOMY.aiUpkeepMult : sum;
+    return upkeepFrom(nationOf(w, slot), sum);
 }
 
 export function netIncomeOf(w, slot) {
     return incomeOf(w, slot) - upkeepOf(w, slot);
+}
+
+// Every per-slot figure the per-tick economy/stability passes need, summed in ONE
+// walk over cities and one over units. The naive path — netIncomeOf / populationOf
+// per nation — re-scans the whole world per nation, which at full-world scale
+// (~222 nations x ~2565 cities) is a million-plus iterations per tick before a
+// single shot is fired. Slots absent from the map simply have no cities/units.
+export function slotEconomyAggregates(w) {
+    const agg = new Map();
+    const of = (slot) => {
+        let a = agg.get(slot);
+        if (!a) agg.set(slot, a = {econVit: 0, cityVit: 0, pop: 0, basePop: 0, indOut: 0, upkeep: 0});
+        return a;
+    };
+    for (const c of w.cities) {
+        const a = of(c.slot);
+        a.basePop += (c.pop0 ?? c.pop ?? 0);
+        if (!c.alive) continue;
+        const v = vitalityOf(c);
+        a.econVit += (c.econ || 0) * v;
+        a.cityVit += v;
+        a.pop += (c.pop || 0) * v;
+    }
+    for (const u of w.units) {
+        if (u.hp <= 0) continue;
+        const def = UNITS[u.type], a = of(u.slot);
+        a.indOut += def.output || 0;
+        a.upkeep += def.upkeep ?? 0;
+    }
+    return agg;
+}
+
+// netIncomeOf computed from a slotEconomyAggregates() entry — identical formula,
+// no world scan. `a` may be undefined for a slot with no cities or units.
+export function netIncomeFromAgg(n, a) {
+    if (!a) return incomeFrom(n, 0, 0, 0);
+    return incomeFrom(n, a.econVit, a.cityVit, a.indOut) - upkeepFrom(n, a.upkeep);
 }
 
 // Living population: each city's people scaled by its vitality, so damage bleeds
@@ -181,6 +232,11 @@ export function inTerritory(w, slot, lng, lat) {
     let nearestSlot = -1, nearest = Infinity;
     for (const c of w.cities) {
         if (!c.alive) continue;
+        // Meridian-arc reject: a city further away in latitude alone than the
+        // best-so-far can't be the nearest — skips the trig for almost the whole
+        // roster once any nearby city is seen. This runs per placement-probe
+        // mousemove (and in AI siting loops), so the full-city scan must be cheap.
+        if (Math.abs(c.lat - lat) * 111.19 >= nearest) continue;
         const d = haversine(c.lng, c.lat, lng, lat);
         if (d < nearest) {
             nearest = d;
@@ -349,7 +405,9 @@ export function defenseMinRange(_w, d) {
 // Returns the human-readable reason a structure can't be sited here, or null
 // if the spot is clear (minimum separation from cities and living units).
 export function placementBlocked(w, lng, lat, ignoreUnitId) {
-    if (w.cities.some((c) => haversine(c.lng, c.lat, lng, lat) < MIN_SEP)) return "Too close to a city.";
-    if (w.units.some((u) => u.id !== ignoreUnitId && u.hp > 0 && haversine(u.lng, u.lat, lng, lat) < MIN_SEP)) return "Too close to another unit.";
+    // withinKm's latitude reject keeps this cheap — it runs on every placement
+    // mousemove over the full city and unit lists.
+    if (w.cities.some((c) => withinKm(c.lng, c.lat, lng, lat, MIN_SEP))) return "Too close to a city.";
+    if (w.units.some((u) => u.id !== ignoreUnitId && u.hp > 0 && withinKm(u.lng, u.lat, lng, lat, MIN_SEP))) return "Too close to another unit.";
     return null;
 }

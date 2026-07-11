@@ -24,6 +24,7 @@ import {haversine} from "../geo/geo.js";
 import {cosLatSafe, offsetKmPolar, unwrapLng, wrapAnglePi} from "../../lib/geo.js";
 import {clamp, clamp01, clampSym} from "../../lib/math.js";
 import {nationOf} from "./worldState.js";
+import {idMapOf} from "./combat.js";
 
 // Point at radiusKm/ang from origin o, in the local flight frame: math angle
 // (east = 0, counterclockwise), equirectangular offset with cos(lat) clamped
@@ -82,8 +83,13 @@ export function flyEscort(w, u, def, dt) {
     const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
     u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
     if ((u.alt || 0) > 0.02) recordTrail(u, dt);
-    const lead = w.units.find((x) => x.id === m.leadId && x.hp > 0 && x.mission?.role === "leadershipFerry");
-    const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
+    // Id lookups via the amortized id map — these run once per flight sub-step
+    // (up to ~12 per aircraft per tick), where a linear scan multiplied badly.
+    const units = idMapOf(w.units);
+    const leadRef = units.get(m.leadId);
+    const lead = leadRef && leadRef.hp > 0 && leadRef.mission?.role === "leadershipFerry" ? leadRef : null;
+    const homeRef = units.get(m.homeId);
+    const home = homeRef && homeRef.hp > 0 ? homeRef : null;
     if (lead) {
         // Fan the escorts around the ferry by index so a flight spreads out, and
         // match the ferry's altitude so they climb/descend with it on the pads.
@@ -211,9 +217,13 @@ export function flyFerry(w, u, def, dt) {
     const sp = def.airSpeed, tr = def.turnRate;
     const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
     const n = nationOf(w, u.slot);
-    const city = w.cities.find((c) => c.id === m.capId);
-    const bunker = w.units.find((x) => x.id === m.bunkerId && x.hp > 0);
-    const home = w.units.find((x) => x.id === m.homeId && x.hp > 0);
+    // Id lookups via the amortized id map — one per waypoint per sub-step.
+    const units = idMapOf(w.units);
+    const city = idMapOf(w.cities).get(m.capId);
+    const bunkerRef = units.get(m.bunkerId);
+    const bunker = bunkerRef && bunkerRef.hp > 0 ? bunkerRef : null;
+    const homeRef = units.get(m.homeId);
+    const home = homeRef && homeRef.hp > 0 ? homeRef : null;
     const pickup = release ? bunker : city;   // where we load
     const drop = release ? city : bunker;     // where we deliver
     u.vis = Math.min(1, (u.vis || 0) + dt / FLIGHT.FERRY_VIS_RAMP_T);
