@@ -42,13 +42,15 @@ log "macOS installers copied to $OUT"
 # ---- 2. Refresh Windows PC with current source ----------------------------
 log "Syncing current source to Windows ($WIN_HOST)"
 TAR="$(mktemp -t gddist).tgz"
-# scripts/ must ship too: npm's postinstall runs scripts/dev-brand-electron.cjs.
-tar czf "$TAR" src electron scripts public/icons public/brand public/data \
+# scripts/ runs npm's postinstall (dev-brand-electron.cjs); build/ holds the
+# electron-builder resources — icons AND the afterPack signing hook, which
+# electron-builder loads on every platform (it early-returns off darwin).
+tar czf "$TAR" src electron scripts build public/icons public/brand public/data \
     index.html package.json package-lock.json vite.config.js eslint.config.js
 "${SCP[@]}" "$TAR" "$WIN_HOST:_dist_src.tgz"
 rm -f "$TAR"
 # Replace code dirs (honors deletions); keep node_modules, public/assets, .env*.
-"${SSH[@]}" "$WIN_HOST" 'powershell -NoProfile -Command "cd '"$WIN_REPO"'; Remove-Item -Recurse -Force src,electron,scripts,public\icons,public\brand,public\data -ErrorAction SilentlyContinue; tar -xzf $env:USERPROFILE\_dist_src.tgz; Remove-Item $env:USERPROFILE\_dist_src.tgz"'
+"${SSH[@]}" "$WIN_HOST" 'powershell -NoProfile -Command "cd '"$WIN_REPO"'; Remove-Item -Recurse -Force src,electron,scripts,build,public\icons,public\brand,public\data -ErrorAction SilentlyContinue; tar -xzf $env:USERPROFILE\_dist_src.tgz; Remove-Item $env:USERPROFILE\_dist_src.tgz"'
 
 # ---- 3. Windows builds (native, one installer per arch) --------------------
 # vite build once, then package each arch separately — a single multi-arch NSIS
