@@ -155,7 +155,10 @@ export function ammoWants(list, whAxis, depthMult = 1) {
         push(list, "ammo", type, target, (atWarNow ? 4.2 : 2.5) * whAxis, reserve);
     };
     stock("standard", silos + boomers, atWarNow ? 1.5 : 2, WANTS.stdReserve);
-    stock("cluster", strategic, 1, WANTS.clusterReserve);
+    // Cluster is situational (area saturation), so keep only a light seed magazine
+    // on hand — enough that the fires layer can load it when a dense pocket appears.
+    // Actual use feeds back through wanted.cluster and deepens the buy from there.
+    stock("cluster", strategic, 0.5, WANTS.clusterReserve);
     stock("thermo", strategic, 1, WANTS.thermoReserve);
     if (atWarNow) stock("thermomirv", strategic, 0.5, WANTS.thermomirvReserve);
     stock("hgv", have(frame, "hypersonicbty"), 1, WANTS.hgvReserve);
