@@ -86,7 +86,8 @@ npm run electron:build:all   # package macOS + Windows
 - A **server-authoritative multiplayer backend** ships in the repo — an authoritative Node game server imports the same
   engine, claims Supabase lobbies, and streams full-world snapshots over WebSockets so every client agrees on the match.
   Releases are version-locked: the server only admits clients on its exact build version (`src/net/version.js`), and
-  outdated clients are prompted in-game to update.
+  outdated clients are prompted in-game to update — the desktop app downloads the new installer and reinstalls itself
+  in place (`electron/updater.cjs`), with the website download as a manual fallback.
 
 ## Arsenal
 

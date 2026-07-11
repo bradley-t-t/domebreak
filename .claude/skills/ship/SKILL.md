@@ -17,13 +17,21 @@ Everything self-hosts on one Vultr VPS: Caddy terminates TLS for both
 is no GitHub release step. The Raspberry Pi is RETIRED as a game host — never
 deploy there.
 
+Installed desktop clients update THEMSELVES: the game's in-app updater
+(`electron/updater.cjs`) downloads its own platform's stable artifact from
+download.domebreak.com and reinstalls in place, so repointing the stable
+symlinks in step 3 IS the rollout to players. NEVER install or update the game
+by hand on any device — not this Mac, not the Windows box (a build machine
+only), not any player machine. The website download page exists for first
+installs and as the update prompt's manual fallback, nothing more.
+
 The ORDER below is deliberate and must not be reshuffled:
 
 1. Installers publish FIRST, so the site's download links and the update
    prompt never point at files that do not exist.
 2. The match server deploys SECOND — from the moment it restarts, outdated
-   clients are refused at the hello with an update prompt, and the download
-   they are sent to is already the new build.
+   clients are refused at the hello with an update prompt, and the build
+   their in-app updater then downloads is already the new one.
 3. The website deploys LAST, flipping `version.json` to the new version only
    once the release is fully real.
 
@@ -198,7 +206,8 @@ Then verify production:
 Summarize in one block: version and tag, the download URLs, VPS health JSON
 (version + match capacity), the site's version.json, and the workflow run URL.
 Mention explicitly that outdated clients are now locked out of multiplayer and
-will be prompted to update.
+will be prompted to update in place via the in-app updater — no device needs a
+hands-on reinstall, so do not do one.
 
 ## Failure handling
 
