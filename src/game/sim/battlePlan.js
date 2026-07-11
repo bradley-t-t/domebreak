@@ -7,7 +7,7 @@
 // so the tick stays reproducible and the solver is unit-testable. All tuning is
 // data-driven (BATTLE_PLAN / UNITS / WARHEADS).
 import {haversine} from "../geo/geo.js";
-import {BATTLE_PLAN, UNITS, WARHEADS} from "../data/constants.js";
+import {BATTLE_PLAN, UNITS, WARHEADS, isAttacker} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
 import {atWar} from "./queries.js";
 import {unitLockReason} from "./production.js";
@@ -56,7 +56,7 @@ function canEngage(u, tgt) {
 export function planAttackers(w, plan, mySlot) {
     const types = new Set(plan.attackerTypes || []);
     return w.units
-        .filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense" && types.has(u.type)
+        .filter((u) => u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type]) && types.has(u.type)
             && !(plan.excludeIds?.has(u.id)))
         .sort(cmpStr((u) => u.id));
 }
@@ -71,17 +71,17 @@ export function planAttackers(w, plan, mySlot) {
 export function planAttackerTypeOptions(w, mySlot, plans = []) {
     const types = new Set();
     for (const u of w.units) {
-        if (u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense") types.add(u.type);
+        if (u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type])) types.add(u.type);
     }
     const n = w.nations.find((x) => x.slot === mySlot);
     const line = [...(n?.prod?.current ? [n.prod.current.item] : []), ...(n?.prod?.queue || [])];
     for (const it of line) {
-        if (it.kind === "unit" && !it.forBase && UNITS[it.type]?.kind === "offense") types.add(it.type);
+        if (it.kind === "unit" && !it.forBase && isAttacker(UNITS[it.type])) types.add(it.type);
     }
     for (const [type, def] of Object.entries(UNITS)) {
-        if (def.kind === "offense" && !def.airSpeed && !unitLockReason(w, mySlot, type)) types.add(type);
+        if (isAttacker(def) && !def.airSpeed && !unitLockReason(w, mySlot, type)) types.add(type);
     }
-    for (const p of plans) for (const t of p.attackerTypes || []) if (UNITS[t]?.kind === "offense") types.add(t);
+    for (const p of plans) for (const t of p.attackerTypes || []) if (isAttacker(UNITS[t])) types.add(t);
     return [...types].sort();
 }
 

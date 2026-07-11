@@ -1,5 +1,5 @@
 import {useMemo} from "react";
-import {armamentOf, atWar, planAttackerTypeOptions, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
+import {armamentOf, atWar, isAttacker, planAttackerTypeOptions, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
 import {BATTLE_PLAN, colorForSlot} from "../../game/data/constants.js";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
@@ -37,7 +37,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
     // My live offensive platforms, tallied by type — the ×N badge per option.
     const typeCounts = useMemo(() => {
-        const live = w.units.filter((u) => u.slot === mySlot && u.hp > 0 && UNITS[u.type]?.kind === "offense");
+        const live = w.units.filter((u) => u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type]));
         return Object.fromEntries(countBy(live, (u) => u.type));
     }, [w.units, w.time, mySlot]);
     // The attacker options — everything the nation could field (owned, on the
