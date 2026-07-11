@@ -3,6 +3,10 @@ import {menuButton} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {fmtMonthYear, fmtPlaytimeHours, winRatePct} from "../lib/format.js";
 
+// The marketing site. In the desktop app, target="_blank" is handed off to the
+// system browser by main.cjs's setWindowOpenHandler (shell.openExternal).
+const WEBSITE_URL = "https://domebreak.com";
+
 export default function StartMenu({
                                       onNew,
                                       onContinue,
@@ -13,7 +17,10 @@ export default function StartMenu({
                                       profile,
                                       stats,
                                       onSignOut,
-                                      onlineCount
+                                      onlineCount,
+                                      updateAvailable,
+                                      latestVersion,
+                                      onUpdate
                                   }) {
     // Menu is a small two-level tree: the root offers the three top-level modes;
     // Single Player and Multiplayer each open a sub-panel. Settings opens its
@@ -42,6 +49,14 @@ export default function StartMenu({
                     <p className="text-dim tracking-[3px] uppercase text-[13px] mt-3 mb-0">Global Missile Command</p>
                 </div>
                 <nav className="flex flex-col gap-[9px] w-full mx-0 mb-[22px] pointer-events-auto">
+                    {updateAvailable && (
+                        <button className={cn(menuButton({variant: "primary"}), "text-left flex items-center gap-2")}
+                                onClick={onUpdate}
+                                aria-label={latestVersion ? `Update available — install DomeBreak v${latestVersion}` : "Update available — install the latest DomeBreak"}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current shadow-[0_0_7px_currentColor] animate-[dbBlink_2.4s_var(--ease-in-out)_infinite] motion-reduce:animate-none"/>
+                            {latestVersion ? `Update to v${latestVersion}` : "Update Available"}
+                        </button>
+                    )}
                     {section === null && (
                         <>
                             <button className={cn(menuButton({variant: "primary"}), "text-left")} onClick={() => setSection("multi")}>Multiplayer</button>
@@ -87,7 +102,12 @@ export default function StartMenu({
                         <span title="Total time in command" aria-label={hours != null ? `${hours} hours playtime` : "Playtime — unavailable"}>{hours != null ? `${hours}h Playtime` : "—"}</span>
                     </div>
                 </div>
-                <div className="mt-auto mb-0 font-mono text-[10px] tracking-[1.5px] uppercase pointer-events-auto text-faint">v{__APP_VERSION__}</div>
+                <div className="mt-auto mb-0 flex items-center gap-3 font-mono text-[10px] tracking-[1.5px] uppercase pointer-events-auto text-faint">
+                    <span>v{__APP_VERSION__}</span>
+                    <a href={WEBSITE_URL} target="_blank" rel="noreferrer"
+                       className="text-faint underline underline-offset-2 transition-colors hover:text-text"
+                       aria-label="Open the DomeBreak website">domebreak.com</a>
+                </div>
             </aside>
         </div>
     );
