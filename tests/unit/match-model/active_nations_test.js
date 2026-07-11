@@ -68,6 +68,50 @@ describe("victory resolves against the active set", () => {
     });
 });
 
+describe("online victory has no single 'me' — one player's death never ends the war", () => {
+    // The server world is authoritative for every slot; mySlot points at the
+    // first player (buildSetup uses isos[0]) but must NOT decide the outcome.
+    const online = (nations, cities) => ({mySlot: 0, time: 0, over: false, paused: false, winnerSlot: undefined, nations, cities, meta: {mode: "online"}});
+
+    it("test_an_eliminated_player_does_not_end_the_match_for_the_survivors", () => {
+        // Slot 0 (the "me" the setup happened to pick) is wiped out, but two active
+        // nations fight on — the war must continue, not end in a false Annihilation.
+        // A populous neutral (slot 3) keeps either survivor's share below domination.
+        const nations = [nat(0, true), nat(1, true), nat(2, true), nat(3, false)];
+        const w = online(nations, [city(1, 100), city(2, 100), city(3, 300)]); // slot 0 holds nothing
+        stepVictory(w);
+        expect(w.over).toBe(false);
+        expect(nations[0].alive).toBe(false); // flagged out of the war for its client
+        expect(nations[1].alive).toBe(true);
+    });
+
+    it("test_last_active_standing_crowns_the_real_survivor_not_slot_zero", () => {
+        // Slot 0 is dead; slot 2 is the lone survivor and must be the winner, even
+        // though mySlot is 0. The old code crowned mySlot (or a null Annihilation).
+        const nations = [nat(0, true), nat(1, true), nat(2, true)];
+        const w = online(nations, [city(2, 100)]);
+        stepVictory(w);
+        expect(w.over).toBe(true);
+        expect(w.winnerSlot).toBe(2);
+    });
+
+    it("test_population_domination_crowns_the_dominator", () => {
+        const nations = [nat(0, true), nat(1, true), nat(2, false)];
+        const w = online(nations, [city(1, 600), city(0, 100), city(2, 300)]); // slot 1: 600/1000 ≥ 0.5
+        stepVictory(w);
+        expect(w.over).toBe(true);
+        expect(w.winnerSlot).toBe(1);
+    });
+
+    it("test_mutual_annihilation_ends_with_no_winner", () => {
+        const nations = [nat(0, true), nat(1, true)];
+        const w = online(nations, []); // every city gone
+        stepVictory(w);
+        expect(w.over).toBe(true);
+        expect(w.winnerSlot).toBe(null);
+    });
+});
+
 describe("active-nation seeding is scattered", () => {
     // A: origin. B: ~111 km from A (nearest). C: far north. D: antipodal-ish (farthest).
     const data = {

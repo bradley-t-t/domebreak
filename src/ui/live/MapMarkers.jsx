@@ -15,6 +15,7 @@ import {memo, useMemo, useRef} from "react";
 import {Marker} from "react-map-gl/maplibre";
 import UnitIcon from "../common/UnitIcon.jsx";
 import Explosion from "./Explosion.jsx";
+import KillMark from "./KillMark.jsx";
 import FalloutCloud from "./FalloutCloud.jsx";
 import {cn} from "../lib/cn.js";
 import {falloutIntensity, UNIT_ICON, UNITS} from "../../game/engine.js";
@@ -143,7 +144,7 @@ const FalloutMarker = memo(function FalloutMarker({lng, lat, intensity}) {
 // life, so after mount the memo holds outright and the ~15-node fireball never
 // re-reconciles — a MIRV salvo pays for its DOM once, at mount.
 const ExplosionMarker = memo(function ExplosionMarker({lng, lat, alt, kind}) {
-    const children = useMemo(() => <Explosion kind={kind}/>, [kind]);
+    const children = useMemo(() => (kind === "kill" ? <KillMark/> : <Explosion kind={kind}/>), [kind]);
     const offset = useMemo(() => [0, -alt * 70], [alt]);
     return (
         <Marker longitude={lng} latitude={lat} anchor="center" opacityWhenCovered="0" offset={offset}>

@@ -25,6 +25,41 @@ export async function loadGameData() {
 // Default AI opponent roster offered on the New Game screen, in display order.
 export const GREAT_POWERS = ["US", "RU", "CN", "IN", "GB", "FR", "DE", "JP", "BR", "KR", "IR", "TR", "SA", "PK", "CA", "AU"];
 
+// The 30 most powerful nations AI belligerents are drawn from when filling the
+// active-nation slots players don't claim. A per-match seed randomly samples this
+// pool (see pickActiveIsos) so each game fields a different cast instead of the
+// same great powers every time. Every ISO here has GDP_T / REAL_POP entries in
+// constants.js so a randomly-picked opponent is economically sized like a real
+// power, not a fallback minnow.
+export const POWER_POOL = [
+    "US", "CN", "RU", "DE", "IN", "GB", "FR", "JP", "KR", "IT",
+    "BR", "CA", "AU", "ES", "TR", "SA", "IR", "IL", "PK", "ID",
+    "MX", "NL", "PL", "EG", "UA", "ZA", "TW", "SE", "AE", "NG",
+];
+
+// Small self-contained mulberry32 PRNG (the same stream the sim's worldState.rand
+// uses) so active-nation selection is randomized yet fully reproducible: a given
+// match seed always yields the same cast, which keeps saves and replays stable.
+function seededRng(seed) {
+    let a = (seed >>> 0) || 1;
+    return () => {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Seeded Fisher-Yates shuffle (returns a new array; input untouched).
+function shuffled(arr, rng) {
+    const out = arr.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+}
+
 // Capital coordinates for an ISO (its flagged capital, else its first city) — used
 // to space active nations apart when seeding a match.
 function capitalOf(data, iso) {
@@ -35,28 +70,51 @@ function capitalOf(data, iso) {
 }
 
 // Choose the active nations for a match: start from the participants (the human
-// player, plus any other humans), then greedily add the pool nation whose capital
-// is FARTHEST from every already-chosen capital, until `count` is reached.
-// Deterministic (no rng) — the same participants + pool + count always yield the
-// same scattered cast, so seeding is reproducible for saves and replays. Exported
-// for tests.
-export function pickActiveIsos(data, participants, pool, count) {
+// player, plus any other humans), then fill up to `count` from `pool` with a
+// RANDOM-but-scattered cast. `seed` seeds a local PRNG that shuffles the pool, so
+// the same participants + pool + count + seed always yield the same roster (saves
+// and replays stay reproducible) while different seeds field different opponents.
+//
+// Fill order: walk the shuffled pool and take the first candidate whose capital is
+// at least NEUTRAL.scatterMinKm from every already-chosen capital — the shuffle
+// picks WHO, the spacing gate keeps the map spread. If no remaining candidate
+// clears the gate but slots are still open, fall back to the farthest-available
+// nation so the roster always reaches `count`. Exported for tests.
+export function pickActiveIsos(data, participants, pool, count, seed = 1) {
     const active = participants.filter((iso) => data.cities[iso]?.length);
     const caps = active.map((iso) => capitalOf(data, iso)).filter(Boolean);
-    const cand = pool.filter((iso) => data.cities[iso]?.length && !active.includes(iso));
-    while (active.length < count && cand.length) {
-        let bestI = -1, bestD = -1;
-        for (let i = 0; i < cand.length; i++) {
-            const cap = capitalOf(data, cand[i]);
-            if (!cap) continue;
-            let minD = caps.length ? Infinity : 0;
-            for (const cc of caps) minD = Math.min(minD, haversine(cap.lng, cap.lat, cc.lng, cc.lat));
-            if (minD > bestD) { bestD = minD; bestI = i; }
-        }
-        if (bestI < 0) break;
-        const iso = cand.splice(bestI, 1)[0];
+    const rng = seededRng(seed);
+    const cand = shuffled(pool.filter((iso) => data.cities[iso]?.length && !active.includes(iso)), rng);
+    const minGapKm = NEUTRAL.scatterMinKm;
+    const minDistOf = (cap) => {
+        if (!caps.length) return Infinity;
+        let m = Infinity;
+        for (const cc of caps) m = Math.min(m, haversine(cap.lng, cap.lat, cc.lng, cc.lat));
+        return m;
+    };
+    const take = (i) => {
+        const iso = cand.splice(i, 1)[0];
         active.push(iso);
         caps.push(capitalOf(data, iso));
+    };
+    while (active.length < count && cand.length) {
+        // First choice that clears the spacing gate (shuffled order → random pick).
+        let picked = cand.findIndex((iso) => {
+            const cap = capitalOf(data, iso);
+            return cap && minDistOf(cap) >= minGapKm;
+        });
+        // Crowded: nobody clears the gate — take the farthest remaining instead.
+        if (picked < 0) {
+            let bestD = -1;
+            for (let i = 0; i < cand.length; i++) {
+                const cap = capitalOf(data, cand[i]);
+                if (!cap) continue;
+                const d = minDistOf(cap);
+                if (d > bestD) { bestD = d; picked = i; }
+            }
+        }
+        if (picked < 0) break;
+        take(picked);
     }
     return active;
 }
@@ -92,7 +150,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
         const participants = (opts.participantIsos?.length ? opts.participantIsos : [playerIso])
             .filter((iso) => data.cities[iso]?.length);
         const count = clamp(opts.activeCount || NEUTRAL.defaultActive, NEUTRAL.minActive, NEUTRAL.maxActive);
-        activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || GREAT_POWERS, count));
+        activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || POWER_POOL, count, seed || 1));
     }
     const nations = [], cities = [];
     chosen.forEach((iso, slot) => {

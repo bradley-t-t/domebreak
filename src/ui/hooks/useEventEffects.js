@@ -142,14 +142,15 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
                 alt: e.alt || 0,
                 until: now + EXPLOSION_MS
             });
-            else if (e.type === "hit" || e.type === "destroy") fresh.push({
-                id: e.id,
-                lng: e.lng,
-                lat: e.lat,
-                kind: e.type,
-                alt: 0,
-                until: now + EXPLOSION_MS
-            });
+            else if (e.type === "hit" || e.type === "destroy") {
+                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type, alt: 0, until: now + EXPLOSION_MS});
+                // A destroyed unit (hp to 0) gets the "target eliminated" reticle
+                // layered over its fireball — a confirmed kill reads apart from a
+                // survivable hit. Cities already have their own death toast.
+                if (e.type === "destroy" && e.kind === "unit") fresh.push({
+                    id: `${e.id}-kill`, lng: e.lng, lat: e.lat, kind: "kill", alt: 0, until: now + EXPLOSION_MS
+                });
+            }
         }
         // City-death toast, aggregated across this tick so a MIRV that levels
         // several cities raises one notice, not a stack. My losses (red) take
