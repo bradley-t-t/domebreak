@@ -282,7 +282,9 @@ export default function App() {
             playerName: profile.name,
             playerIso: profile.iso,
             gtime: Math.round(world.time),
-            nations: world.nations.filter((n) => n.alive).length,
+            // "Powers" in the save list means active participants, not the 222-country
+            // map roster — passive neutrals don't count.
+            nations: world.nations.filter((n) => n.alive && n.active !== false).length,
             belligerents
         });
     }, [world, profile, belligerents]);

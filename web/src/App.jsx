@@ -39,8 +39,8 @@ function Landing({onSignIn, onShowShortcuts}) {
                         "Zoom from the whole globe down to a single city",
                         "Overlays: diplomacy, radar, defense range, population",
                     ]}
-                    image="/shots/diplomacy.jpg"
-                    imageAlt="DomeBreak globe with the diplomacy overlay active"
+                    image="/shots/command-map.jpg"
+                    imageAlt="DomeBreak command map of North America on the 3D globe"
                 />
 
                 <div className="db-paper border-y border-line">
@@ -87,8 +87,8 @@ function Landing({onSignIn, onShowShortcuts}) {
                         "Real-time clock — pause, or run from 0.5× to 10×",
                         "Diplomacy with every rival nation",
                     ]}
-                    image="/shots/defense-range.jpg"
-                    imageAlt="DomeBreak console with the national economy panel and territory list"
+                    image="/shots/wartime-command.jpg"
+                    imageAlt="DomeBreak console at war — missiles in flight while the economy panel tracks the strain"
                 />
 
                 <div className="db-paper border-y border-line">
