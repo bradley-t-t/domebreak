@@ -17,6 +17,7 @@ import {
     POPULATION,
     UNITS,
     WARHEADS,
+    isAttacker,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nationOf, nextId, rand} from "./worldState.js";
@@ -183,7 +184,7 @@ export function stepMovement(w, dt) {
         }
         // Shoot-and-scoot: a road-mobile warhead platform (the TEL) holds fire while
         // it has a march destination — it must halt to launch.
-        if (def.kind === "offense" && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
+        if (isAttacker(def) && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
             const t = findTarget(w, u.targetId);
             if (!t || !t.alive || !atWar(w, u.slot, t.slot)) {
                 u.targetId = null;
@@ -192,11 +193,13 @@ export function stepMovement(w, dt) {
             const n = nationOf(w, u.slot);
             if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range) {
                 ensureProd(n);
-                if (def.targets === "land") {
-                    // Ground forces (infantry/tank/artillery) fight like ground
-                    // forces: damage lands straight on the target — no interceptable
-                    // projectile, no SAM/THAAD engagement. Distinct from the missile
-                    // and warhead platforms that loft the interceptable arsenal.
+                if (def.targets === "land" || def.directedEnergy) {
+                    // Damage lands straight on the target — no interceptable projectile,
+                    // no SAM/THAAD engagement. Two kinds of shooter take this path:
+                    // ground forces (infantry/tank/artillery, targets:"land"), and
+                    // directed-energy weapons (the orbital laser's speed-of-light beam,
+                    // which can't be shot down). Distinct from the missile and warhead
+                    // platforms that loft the interceptable arsenal.
                     //
                     // One exception: a capture-flagged unit (infantry/tank) firing
                     // on an enemy CITY it could take doesn't raze it — the assault

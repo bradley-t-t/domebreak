@@ -2,7 +2,7 @@
 // "Command Attack", hangar-order, embark/disembark and dismantle item builders — plus the
 // shared pin-add helper and the menu state itself.
 import {useState} from "react";
-import {hangarCapOf, hangarCount, haversine, isActive, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
+import {hangarCapOf, hangarCount, haversine, isActive, isAttacker, SCRAP_REFUND_FRAC, UNITS} from "../../game/engine.js";
 import {DIPLOMACY} from "../../game/data/constants.js";
 
 // Client-side amphibious lift radius — mirrors AMPHIB_LIFT_KM in production.js so
@@ -49,7 +49,7 @@ export function useContextMenus({
         if (!mine) {
             if (rel === "war") items.push({
                 label: "Target with Selected",
-                disabled: !(sel && UNITS[sel.type].kind === "offense"),
+                disabled: !(sel && isAttacker(UNITS[sel.type])),
                 onClick: () => {
                     const r = api.commandAttack(selUnit, c.id);
                     if (r.error) flash(r.error);
@@ -88,7 +88,7 @@ export function useContextMenus({
     const openUnitMenu = (u, ev) => {
         ev.preventDefault();
         const mine = u.slot === mySlot;
-        const off = UNITS[u.type].kind === "offense";
+        const off = isAttacker(UNITS[u.type]);
         const items = [];
         if (mine && off) items.push(u.targetId ? {
             label: "Hold Fire",
