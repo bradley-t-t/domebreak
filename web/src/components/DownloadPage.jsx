@@ -7,8 +7,12 @@ import {Eyebrow} from "./Primitives.jsx";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 
-const VERSION = "1.3.0";
-const RELEASE_BASE = "https://github.com/bradley-t-t/domebreak-dist/releases/download/v1.3.0";
+// Version comes from the game's package.json at build time (web/vite.config.js)
+// — the same number the installers and match server ship with. The links use
+// GitHub's stable latest-release redirect with fixed asset names, so they always
+// serve the newest published installers and never dead-end mid-release.
+const VERSION = __APP_VERSION__;
+const RELEASE_BASE = "https://github.com/bradley-t-t/domebreak-dist/releases/latest/download";
 
 const BUILDS = [
     {
@@ -17,7 +21,6 @@ const BUILDS = [
         arch: "Apple Silicon",
         icon: "carrier",
         file: "DomeBreak-mac.dmg",
-        size: "134 MB",
         url: `${RELEASE_BASE}/DomeBreak-mac.dmg`,
     },
     {
@@ -26,7 +29,6 @@ const BUILDS = [
         arch: "x64 installer",
         icon: "factory",
         file: "DomeBreak-win.exe",
-        size: "108 MB",
         url: `${RELEASE_BASE}/DomeBreak-win.exe`,
     },
 ];
@@ -56,9 +58,9 @@ function BuildCard({build}) {
             </div>
             <div className="flex items-baseline justify-between border-t border-hair py-2">
                 <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-faint">
-                    Size
+                    Channel
                 </span>
-                <span className="font-mono text-[12px] text-text tabular-nums">{build.size}</span>
+                <span className="font-mono text-[12px] text-text">Latest release</span>
             </div>
 
             <a

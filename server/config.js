@@ -1,9 +1,24 @@
 // Server configuration from environment (.env is loaded by the systemd unit).
+import {readFileSync} from "node:fs";
+
 const need = (k) => {
     const v = process.env[k];
     if (!v) throw new Error(`missing required env ${k}`);
     return v;
 };
+
+// Build version from the repo-root package.json (the deploy ships it alongside
+// server/ — see the /ship skill). It gates client hellos: a client whose
+// version differs is rejected as outdated (src/net/version.js has the policy).
+// Null (package.json missing or versionless) disables the gate rather than
+// bricking multiplayer — index.js logs which mode it booted in.
+export const APP_VERSION = (() => {
+    try {
+        return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || null;
+    } catch {
+        return null;
+    }
+})();
 
 export const SUPABASE_URL = need("SUPABASE_URL");
 export const SERVICE_ROLE_KEY = need("SUPABASE_SERVICE_ROLE_KEY");
