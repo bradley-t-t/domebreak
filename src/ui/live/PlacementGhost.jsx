@@ -102,7 +102,8 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, g
             const rad = t?.coastal ? COAST_KM
                 : t?.detect ? radarRangeOf(type)
                     : t?.orbital ? t.range
-                        : (t && t.kind !== "offense" && t.range <= 4000) ? t.range : 160;
+                        : t?.kind === "offense" ? t.range   // strike reach — show where a silo/TEL/hypersonic can hit
+                            : (t && t.range <= 4000) ? t.range : 160;
             const c = coverageRing(globe, cur.lng, cur.lat, rad, 56, (t && t.kind === "defense") ? (t.minRange || 0) : 0);
             c.properties = {
                 color: cur.valid ? "#46d38a" : "#ff5d5d",

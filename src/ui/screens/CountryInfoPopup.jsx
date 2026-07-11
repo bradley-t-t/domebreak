@@ -112,19 +112,13 @@ export default function CountryInfoPopup({world, api, mySlot, online, targetSlot
                         </div>
                     ) : rel === "ally" ? (
                         <div className="flex flex-wrap gap-[8px]">
-                            {online ? (
-                                <span className="font-mono text-[11px] text-faint">Alliance terms are single-player only for now.</span>
-                            ) : (
-                                <button className={miniButton({danger: true})} aria-label={`Break the alliance with ${n.name}`}
-                                        onClick={() => call(() => api.breakAlliance(n.slot))}>Break Alliance</button>
-                            )}
+                            <button className={miniButton({danger: true})} aria-label={`Break the alliance with ${n.name}`}
+                                    onClick={() => call(() => api.breakAlliance(n.slot))}>Break Alliance</button>
                         </div>
                     ) : (
                         <div className="flex flex-wrap gap-[8px]">
-                            {!online && (
-                                <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
-                                        onClick={() => call(() => api.proposeAlliance(n.slot))}>Propose Alliance</button>
-                            )}
+                            <button className={miniButton()} aria-label={`Propose an alliance to ${n.name}`}
+                                    onClick={() => call(() => api.proposeAlliance(n.slot))}>Propose Alliance</button>
                             <button className={miniButton({danger: true})} aria-label={`Declare war on ${n.name}`}
                                     disabled={graceActive}
                                     title={graceActive ? "Opening grace — no wars can be declared yet." : undefined}

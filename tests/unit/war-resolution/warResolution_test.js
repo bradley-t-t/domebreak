@@ -3,7 +3,7 @@
 // offer/response flow. Deterministic — territory moves are a pure function of ownership;
 // diplomacy RNG lives in tick.js. Spec: design/gdd/war-resolution.md.
 import {describe, expect, it} from "vitest";
-import {atWar, createWorld, declareWar, endWar, offerPeace, respondPeace, stabilityBreakdown} from "../../../src/game/engine.js";
+import {atWar, createWorld, declareWar, endWar, offerPeace, proposeAlliance, respondAlliance, respondPeace, stabilityBreakdown} from "../../../src/game/engine.js";
 import {step} from "../../../src/game/sim/tick.js";
 import {DIPLOMACY, STABILITY} from "../../../src/game/data/constants.js";
 
@@ -214,5 +214,55 @@ describe("White-peace offer / response", () => {
         respondPeace(w, 0, 1, false);
         expect(atWar(w, 0, 1)).toBe(true);
         expect(w.warPopups.some((p) => p.kind === "offer")).toBe(false);
+    });
+});
+
+// Alliance proposal / response, and the solo-vs-online split of the offer popup.
+// A proposal to a human is a pending offer that only resolves when the recipient
+// answers — the same shape as the white-peace flow above. In both cases the
+// recipient here is the local player (slot 0 = mySlot); the only difference is
+// online suppresses the seat-addressed modal popup (the server can't address one
+// seat — mySlot is a shared placeholder), so clients drive their own prompt off
+// the broadcast pendingAlliance queue instead.
+describe("Alliance offer / response", () => {
+    // slot 1 flipped off AI so both ends of the pact are human seats.
+    function humans(online) {
+        const w = fresh();
+        w.nations.find((n) => n.slot === 1).isAi = false;
+        if (online) w.meta = {mode: "online"};
+        return w;
+    }
+
+    it("test_solo_proposal_to_the_local_player_pends_and_pops", () => {
+        const w = humans(false);            // 1 → 0, and 0 is mySlot (the local seat)
+        expect(proposeAlliance(w, 1, 0).ok).toBe(true);
+        expect(w.pendingAlliance.some((o) => o.from === 1 && o.to === 0)).toBe(true);
+        expect(w.warPopups.some((p) => p.kind === "ally-offer" && p.foe === 1)).toBe(true);
+    });
+
+    it("test_online_proposal_pends_without_a_popup", () => {
+        const w = humans(true);             // same 1 → 0 (to === mySlot), but online
+        expect(proposeAlliance(w, 1, 0).ok).toBe(true);
+        // The pending offer still broadcasts — that is what the recipient's client
+        // renders its prompt from — but no seat-addressed modal popup is enqueued.
+        expect(w.pendingAlliance.some((o) => o.from === 1 && o.to === 0)).toBe(true);
+        expect(w.warPopups.some((p) => p.kind === "ally-offer")).toBe(false);
+    });
+
+    it("test_accept_forms_the_pact_and_clears_the_offer", () => {
+        const w = humans(true);
+        proposeAlliance(w, 1, 0);
+        respondAlliance(w, 0, 1, true);     // player (0) answers the offer from 1
+        expect(w.nations.find((n) => n.slot === 0).relations[1]).toBe("ally");
+        expect(w.nations.find((n) => n.slot === 1).relations[0]).toBe("ally");
+        expect(w.pendingAlliance.some((o) => o.from === 1 && o.to === 0)).toBe(false);
+    });
+
+    it("test_decline_drops_the_offer_and_forms_nothing", () => {
+        const w = humans(true);
+        proposeAlliance(w, 1, 0);
+        respondAlliance(w, 0, 1, false);
+        expect(w.nations.find((n) => n.slot === 0).relations[1]).not.toBe("ally");
+        expect(w.pendingAlliance.some((o) => o.from === 1 && o.to === 0)).toBe(false);
     });
 });
