@@ -91,12 +91,11 @@ export function leadInterceptPoint(it, p) {
 // so the physics and the drawn trail can never disagree.
 //
 // The bow is a true geodesic offset: `off` km perpendicular-left of the track's
-// local bearing, via geoDest. The old raw-degree nudge (dividing by a floored
-// cos(lat)) broke on polar trajectories — latitude folding onto the pole cap,
-// lanes scissoring where the great circle crossed the pole, and tens-of-degree
-// longitude zigzags at the cos floor — exactly the over-the-pole exchanges a
-// full-scale war throws constantly. geoDest can't produce |lat| > 90 or a
-// discontinuous jump, so no clamp is needed.
+// local bearing, via geoDest. A raw-degree equirectangular nudge breaks on the
+// polar trajectories a full-scale war throws constantly — latitude folds onto
+// the pole cap, lanes scissor where the great circle crosses the pole, and the
+// clamped cos(lat) divisor zigzags the longitude by tens of degrees. geoDest
+// can't produce |lat| > 90 or a discontinuous jump, so no clamp is needed.
 export function trackPoint(p, f) {
     const base = interpGC(p.fromLng, p.fromLat, p.toLng, p.toLat, f);
     if (!p.spreadKm) return base;

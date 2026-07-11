@@ -59,7 +59,7 @@ export function step(w, dt, predict = false) {
     // on a ~4 Hz sweep like the sensor pass: it only decides WHICH ferries to
     // launch (the aircraft themselves fly every tick), launches are already
     // spaced by LEADERSHIP.launchGapSec, and each sweep re-scans every active
-    // nation's cities and units — per-tick was pure waste.
+    // nation's cities and units — far too heavy to repeat every tick.
     w._evacT = (w._evacT || 0) + dt;
     if (w._evacT >= 0.25) {
         w._evacT = 0;

@@ -16,8 +16,8 @@ import {byId} from "../../lib/iter.js";
 const EXPLOSION_MS = 850;
 // Per-drain sound budget for the spammable positional event types below: at
 // most this many cues (and their screen-space projections) of one type per
-// tick. Generous enough that normal play is unchanged — but a 200-impact salvo
-// landing on one tick no longer runs 200 projections and 200 stacked booms.
+// tick. Generous enough that normal play never hits it, tight enough that a
+// 200-impact salvo landing on one tick can't fire 200 projections and booms.
 const SFX_PER_TYPE = 4;
 const CAPPED_SFX = new Set(["hit", "destroy", "miss", "fizzle", "launch", "mirv"]);
 
@@ -170,11 +170,11 @@ export function useEventEffects({w, mySlot, mapRef, setErr, setExplosions, onGam
             onGameEnd?.({result: w.winnerSlot === mySlot ? "win" : "loss"});
         }
         // Batched expiry: prune played-out explosions inside the drain we're
-        // already running each tick — one state update per tick instead of one
-        // setTimeout + setExplosions per explosion (a barrage used to schedule
-        // hundreds of staggered timeouts, each forcing a full-tree render).
-        // The updater keeps the list's identity when nothing changed, so the
-        // steady state costs no re-render at all.
+        // already running each tick — one state update per tick, where a
+        // per-explosion removal timer would land a barrage as hundreds of
+        // staggered timeouts, each forcing a full-tree render. The updater
+        // keeps the list's identity when nothing changed, so the steady state
+        // costs no re-render at all.
         setExplosions((list) => {
             const live = pruneExplosions(list, now);
             return fresh.length ? [...live, ...fresh] : live;

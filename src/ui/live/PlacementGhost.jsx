@@ -78,7 +78,6 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, g
             cancelPending();
             setCur(null);
         }
-         
     }), []);
     useEffect(() => () => {
         if (throttleRef.current.timer) clearTimeout(throttleRef.current.timer);
@@ -93,7 +92,6 @@ const PlacementGhost = forwardRef(function PlacementGhost({placing, moving, w, g
             cancelPending();
             setCur(null);
         }
-         
     }, [placing, moving]);
 
     const data = useMemo(() => {

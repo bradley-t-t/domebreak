@@ -111,7 +111,7 @@ export default function LiveGame({
     const [disembarkId, setDisembarkId] = useState(null);
     // Hover CONTENT (what the cursor is over) lives in state; the cursor's x/y
     // lives in this mutated ref. Splitting them means moving the mouse across a
-    // country (every drag-pan does) no longer re-renders the whole LiveGame tree
+    // country (every drag-pan does) never re-renders the whole LiveGame tree
     // per pointer frame — the readout repositions from the ref on the ~30fps sim
     // renders it gets for free.
     const [hover, setHover] = useState(null);

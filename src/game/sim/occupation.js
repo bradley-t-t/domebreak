@@ -70,10 +70,9 @@ function flipState(w, city, toSlot) {
 export function captureTick(w, dt) {
     if (dt <= 0) return;
     // The world's capture-capable ground units, gathered once. Every proximity
-    // test below runs against this handful instead of the whole unit list — the
-    // old per-city inner loop over ALL units was an O(cities x units) fixed tax
-    // every tick, war or no war. With no captors fielded anywhere the pass
-    // reduces to the progress-decay sweep.
+    // test below runs against this handful — a per-city inner loop over ALL
+    // units is an O(cities x units) fixed tax every tick, war or no war. With
+    // no captors fielded anywhere the pass reduces to the progress-decay sweep.
     const captors = w.units.filter(isCaptor);
     for (const c of w.cities) {
         if (!c.alive) {
