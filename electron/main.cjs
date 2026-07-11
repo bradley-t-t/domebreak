@@ -2,6 +2,7 @@ const {app, BrowserWindow, shell, ipcMain} = require("electron");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const {registerUpdater} = require("./updater.cjs");
 
 // Name the app before it's ready so the menu bar / About panel read "DomeBreak"
 // instead of the Electron default in dev. The packaged bundle already carries
@@ -143,6 +144,7 @@ app.whenReady().then(() => {
         }
     }
     registerLocalStore();
+    registerUpdater();
     createWindow();
 });
 app.on("activate", () => {
