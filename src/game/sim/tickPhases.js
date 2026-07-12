@@ -402,7 +402,13 @@ export function stepCombat(w, dt) {
             // laser in orbit would try to burn every inbound cruise missile in
             // atmosphere, which the flavour text explicitly rules out.
             if (ddef.boostPhaseOnly && !UNITS[p.type]?.ballistic) continue;
-            if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || !airborne(d)) continue;
+            // One interceptor per battery type per target: layered defenses fire in
+            // concert (a Golden Dome and an Aegis both engage the same warhead) but
+            // identical batteries don't waste a second interceptor on a track a
+            // sister site already committed to. p.tried (by id) still guards a single
+            // battery from double-firing; triedTypes widens that to the whole type.
+            const triedTypes = p.triedTypes || (p.triedTypes = []);
+            if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || triedTypes.includes(d.type) || !airborne(d)) continue;
             // Engage only within the battery's annulus: inside defenseRange (outer
             // reach) but outside defenseMinRange (the keep-out gap for area ABMs
             // like THAAD, which can't kill a target that's already dived in close).
@@ -411,6 +417,7 @@ export function stepCombat(w, dt) {
             const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
             if (dToTarget <= reach && dToTarget >= defenseMinRange(w, d)) {
                 p.tried.push(d.id);
+                triedTypes.push(d.type);
                 // Sea-based defenses (cruiser/destroyer/Aegis afloat) reload faster
                 // while replenished by a nearby oiler.
                 let dReplen = replenOf.get(d.id);
