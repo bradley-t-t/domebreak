@@ -257,6 +257,29 @@ export const UNITS = {
         hp: 70,
         upkeep: 1.5,
     },
+    // The army's organic air defense: a kind:"defense" ground vehicle. domain:"land"
+    // + landSpeed march it with the ground forces (Army build tab), while kind:"defense"
+    // keeps it in the interceptor pool — it engages incoming raids on the move, wherever
+    // it currently sits. Tech-gated (def4) like the modern batteries below, but grouped
+    // here with its ground-force siblings since it builds, stages, and marches as one.
+    mshorad: {
+        label: "Mobile SHORAD",
+        desc: "Tracked short-range air defense. Marches with the ground forces and fires on the move — shorter reach than a fixed battery, but it never gets left behind.",
+        kind: "defense",
+        domain: "land",
+        requires: "armybase",
+        requiresTech: "def4",
+        landSpeed: 22,
+        cost: 170,
+        buildTime: 9,
+        range: 260,
+        intercept: 0.55,
+        reload: 2.6,
+        fireCost: 10,
+        hp: 46,
+        upkeep: 1.5,
+        glyph: "⊡"
+    },
     // --- Tech-gated modern & space-age units --------------------------------
     // Each carries requiresTech: "<techId>" — buildable only once that tech is done
     // (enforced in sim/production.js queueUnit). The techId must match the `unlocks`
@@ -704,6 +727,7 @@ export const UNIT_ICON = {
     infantry: "infantry",
     artillery: "artillery",
     tank: "tank",
+    mshorad: "mshorad",
     helo: "helo",
     transporthelo: "transport-helo",
     // Tech-gated modern / space / naval units. Basenames are the exact filenames the

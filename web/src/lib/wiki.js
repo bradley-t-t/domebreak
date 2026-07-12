@@ -38,7 +38,7 @@ export const CATEGORIES = [
         id: "air",
         label: "Air Wing",
         blurb: "Fixed-wing and rotary aircraft flown from carriers, airstrips, and army bases.",
-        include: ["interceptor", "strikefighter", "carrierfighter", "attack", "awacs", "transport", "helo", "transporthelo"],
+        include: ["interceptor", "multirole", "strikefighter", "carrierfighter", "attack", "bomber", "awacs", "transport", "helo", "transporthelo"],
     },
     {
         id: "ground",

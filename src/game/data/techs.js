@@ -47,7 +47,7 @@ export const TECHS = {
         {name: "Nike SAM Line"},
         {name: "Anti-Ballistic Missile (Safeguard)"},
         {name: "Layered Interceptors"},
-        {name: "Phased-Array Fire Control"},
+        {name: "Phased-Array Fire Control", unlocks: "mshorad"},
         {name: "Patriot PAC-3", unlocks: "patriot"},
         {name: "Aegis / Standard Missile", unlocks: "aegis"},
         {name: "THAAD", unlocks: "thaad"},
