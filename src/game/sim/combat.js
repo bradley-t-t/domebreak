@@ -89,6 +89,24 @@ export function nearestEnemyTarget(w, u, radiusKm, opts = {}) {
     return best;
 }
 
+// Nearest at-war enemy MOBILE GROUND unit within radiusKm of `u` — the contact a
+// marching ground combatant auto-engages. Restricted to land forces (domain "land"
+// + a march speed: infantry, tank, artillery, SHORAD) so a column fights the enemy
+// troops it runs into, not ships, aircraft, or fixed structures. Pure — mutates
+// nothing. Feeds stepMovement's troops-in-contact halt.
+export function nearestGroundContact(w, u, radiusKm) {
+    let best = null, bestD = radiusKm;
+    for (const e of w.units) {
+        if (e.hp <= 0 || e.slot === u.slot) continue;
+        const ed = UNITS[e.type];
+        if (ed.domain !== "land" || !ed.landSpeed) continue;
+        if (!atWar(w, u.slot, e.slot)) continue;
+        const d = haversine(u.lng, u.lat, e.lng, e.lat);
+        if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+}
+
 // Advance a homing air-to-air round one tick: re-aim at the live target every
 // frame and step toward it along the great circle, detonating on the airframe when
 // it merges. Unlike the ballistic path this tracks a moving jet (which would slip a
