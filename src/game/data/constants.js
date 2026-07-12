@@ -214,7 +214,7 @@ export const DIPLOMACY = {
 // participating ("active") nations; every other country stays on the map as a
 // passive, capturable NEUTRAL that never builds and never wages war.
 export const NEUTRAL = {
-    maxActive: 8,        // hard cap on active (participating) nations in a match
+    maxActive: 12,       // hard cap on active (participating) nations in a match
     minActive: 2,        // floor — you plus at least one rival
     defaultActive: 8,    // singleplayer default active count
     scatterMinKm: 3000,  // seeding target: greedy farthest-point keeps active capitals apart
