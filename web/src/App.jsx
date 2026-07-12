@@ -2,6 +2,7 @@ import {useMemo, useState} from "react";
 import Nav from "./components/Nav.jsx";
 import Hero from "./components/Hero.jsx";
 import Manifesto from "./components/Manifesto.jsx";
+import ClosedBeta from "./components/ClosedBeta.jsx";
 import ShowcaseSection from "./components/ShowcaseSection.jsx";
 import StatBand from "./components/StatBand.jsx";
 import FeatureGrid from "./components/FeatureGrid.jsx";
@@ -11,10 +12,12 @@ import AuthModal from "./components/AuthModal.jsx";
 import ShortcutsOverlay from "./components/ShortcutsOverlay.jsx";
 import WikiPage from "./components/WikiPage.jsx";
 import DownloadPage from "./components/DownloadPage.jsx";
+import DownloadLocked from "./components/DownloadLocked.jsx";
+import AdminPanel from "./components/AdminPanel.jsx";
 import {AccountProvider} from "./components/AccountContext.jsx";
 import {useAccount} from "./lib/accountStore.js";
 import {useHotkeys} from "./hooks/useHotkeys.js";
-import {useHashRoute, isWikiRoute, isDownloadRoute} from "./hooks/useHashRoute.js";
+import {useHashRoute, isWikiRoute, isDownloadRoute, isAdminRoute} from "./hooks/useHashRoute.js";
 import {SHORTCUTS, scrollToId} from "./lib/nav.js";
 
 function Landing({onSignIn, onShowShortcuts}) {
@@ -25,9 +28,12 @@ function Landing({onSignIn, onShowShortcuts}) {
                 {/* Alternating dark / light bands down the page. */}
                 <Hero onSignIn={onSignIn}/>
 
-                <div className="db-paper border-t border-line">
+                <div id="doctrine" className="db-paper scroll-mt-16 border-t border-line">
                     <Manifesto/>
                 </div>
+
+                {/* Featured closed-beta application band. */}
+                <ClosedBeta/>
 
                 <ShowcaseSection
                     index="01" side="left" icon="reconsat"
@@ -103,12 +109,13 @@ function Landing({onSignIn, onShowShortcuts}) {
 }
 
 function Shell() {
-    const {signedIn} = useAccount();
+    const {signedIn, loading} = useAccount();
     const [authOpen, setAuthOpen] = useState(false);
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [hash] = useHashRoute();
     const onWiki = isWikiRoute(hash);
     const onDownload = isDownloadRoute(hash);
+    const onAdmin = isAdminRoute(hash);
 
     const handlers = useMemo(() => {
         const h = {};
@@ -126,9 +133,13 @@ function Shell() {
         <>
             {onWiki
                 ? <WikiPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
-                : onDownload
-                    ? <DownloadPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
-                    : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
+                : onAdmin
+                    ? <AdminPanel onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
+                    : onDownload
+                        ? (signedIn
+                            ? <DownloadPage onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>
+                            : <DownloadLocked onSignIn={openSignIn} onShowShortcuts={openShortcuts} checking={loading}/>)
+                        : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
 
             <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}/>
             <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>

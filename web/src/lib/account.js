@@ -63,5 +63,31 @@ export function touch() {
     return supabase.functions.invoke("db-account", {body: {action: "touch"}}).catch(() => {});
 }
 
+// Admin-only: read the closed-beta applications through the db-beta function.
+// Sends the signed-in user's access token so the function can confirm is_admin;
+// returns a tagged result so the panel can distinguish "not authorized" (403)
+// from a real failure.
+export async function listBeta() {
+    const {data: {session}} = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return {ok: false, status: 401, error: "Sign in required."};
+    try {
+        const res = await fetch(`${URL}/functions/v1/db-beta`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                apikey: ANON,
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({action: "list"}),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return {ok: false, status: res.status, error: data.error || "Failed to load applications."};
+        return {ok: true, applications: data.applications ?? []};
+    } catch {
+        return {ok: false, status: 0, error: "Network error. Try again."};
+    }
+}
+
 // Client-side auth validation rules.
 export const AUTH_RULES = {username: {min: 3, max: 24}, password: {min: 8}};

@@ -33,3 +33,7 @@ export function isWikiRoute(hash = window.location.hash) {
 export function isDownloadRoute(hash = window.location.hash) {
     return hash.startsWith("#/download");
 }
+
+export function isAdminRoute(hash = window.location.hash) {
+    return hash.startsWith("#/admin");
+}
