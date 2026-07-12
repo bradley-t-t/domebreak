@@ -1,5 +1,5 @@
 import {useMemo} from "react";
-import {Check, ChevronDown, Landmark, Target} from "lucide-react";
+import Icon from "../common/Icon.jsx";
 import {evaluateObjectives, leadershipStatus} from "../../game/engine.js";
 import Meter from "../common/Meter.jsx";
 import {cn} from "../lib/cn.js";
@@ -74,14 +74,14 @@ function LeadershipSection({world, api, mySlot, flash}) {
             ? {
                 tone: "calm",
                 title: "The Wars Have Ended",
-                body: "Your leadership is still sheltered in the bunker. Release them back to your cities to restore full national command.",
+                body: "Your leadership is still buttoned up in the bunker. Release them to your cities to restore full command.",
             }
             : null;
 
     return (
         <div className="border-t border-hair">
             <div className="flex items-center gap-2 px-3 pt-[9px] pb-[6px]">
-                <Landmark size={13} className="flex-none" style={{color: danger ? VIT_RED : vitColor(lead.pct)}} aria-hidden="true"/>
+                <Icon name="leadership" size={13} className="flex-none" style={{color: danger ? VIT_RED : vitColor(lead.pct)}}/>
                 <span className="font-display font-semibold text-[11px] tracking-[0.3px] uppercase text-dim">Leadership</span>
                 <span className="ml-auto font-mono text-[11px] font-semibold tabular-nums"
                       style={{color: vitColor(lead.pct)}} aria-label={`Leadership intact ${lead.pct}%`}>{lead.pct}%</span>
@@ -181,7 +181,7 @@ export default function ObjectivesPanel({world, api, mySlot, flash}) {
         <div className="w-[248px] rounded-lg bg-panel-2 border border-line shadow backdrop-blur-[14px] overflow-hidden"
              role="region" aria-label="Objectives">
             <div className="flex items-center gap-2 px-3 py-[9px] border-b border-hair">
-                <Target size={14} className={cn("flex-none", allDone ? "text-good" : "text-gold")} aria-hidden="true"/>
+                <Icon name="target" size={14} className={cn("flex-none", allDone ? "text-good" : "text-gold")}/>
                 <span className="font-display font-bold text-[12px] tracking-[0.4px] uppercase text-text">Objectives</span>
                 <span className={cn("ml-auto font-mono text-[10px] font-semibold tabular-nums", allDone ? "text-good" : "text-dim")}
                       aria-live="polite">{doneCount} / {objectives.length}</span>
@@ -189,7 +189,7 @@ export default function ObjectivesPanel({world, api, mySlot, flash}) {
 
             {allDone ? (
                 <div className="flex items-center gap-2 px-3 py-[11px] text-good">
-                    <Check size={14} className="flex-none" aria-hidden="true"/>
+                    <Icon name="check" size={14} className="flex-none" strokeWidth={2.2}/>
                     <span className="font-display font-semibold text-[12px]">All objectives complete</span>
                 </div>
             ) : (
@@ -209,7 +209,7 @@ export default function ObjectivesPanel({world, api, mySlot, flash}) {
                                                     <span className={cn("flex-none w-[13px] h-[13px] grid place-items-center rounded-[3px] border",
                                                         t.done ? "bg-good/25 border-good/60 text-good" : "border-line text-transparent")}
                                                           aria-hidden="true">
-                                                        <Check size={9}/>
+                                                        <Icon name="check" size={10} strokeWidth={2.6}/>
                                                     </span>
                                                     <span className={cn("flex-1 min-w-0 truncate text-[11.5px]",
                                                         t.done ? "text-dim" : "text-text")}>{t.label}</span>
@@ -244,18 +244,18 @@ export default function ObjectivesPanel({world, api, mySlot, flash}) {
                     <button type="button" onClick={toggleLog}
                             className="w-full flex items-center gap-2 px-3 py-[8px] text-left hover:bg-panel-1/60 transition-colors"
                             aria-expanded={logOpen} aria-controls="objectives-log">
-                        <Check size={12} className="flex-none text-good" aria-hidden="true"/>
+                        <Icon name="check" size={12} className="flex-none text-good" strokeWidth={2.2}/>
                         <span className="font-display font-semibold text-[11px] tracking-[0.3px] uppercase text-dim">Completed</span>
                         <span className="font-mono text-[10px] font-semibold tabular-nums text-good">{doneCount}</span>
-                        <ChevronDown size={13} aria-hidden="true"
-                                     className={cn("ml-auto flex-none text-dim transition-transform", logOpen && "rotate-180")}/>
+                        <Icon name="chevron-down" size={13}
+                              className={cn("ml-auto flex-none text-dim transition-transform", logOpen && "rotate-180")}/>
                     </button>
                     {logOpen && (
                         <ol id="objectives-log" className="flex flex-col pb-[4px]">
                             {completed.map((o) => (
                                 <li key={o.id} className="flex items-start gap-[9px] px-3 py-[6px]">
                                     <span className="flex-none mt-[1px] w-[18px] h-[18px] grid place-items-center rounded-full bg-good/20 border border-good/60 text-good"
-                                          aria-hidden="true"><Check size={12}/></span>
+                                          aria-hidden="true"><Icon name="check" size={12} strokeWidth={2.4}/></span>
                                     <div className="min-w-0 flex-1">
                                         <div className="font-display font-semibold text-[12px] leading-tight text-dim line-through decoration-good/50">{o.title}</div>
                                         <div className="mt-[1px] text-[10px] leading-snug text-faint">{o.blurb}</div>

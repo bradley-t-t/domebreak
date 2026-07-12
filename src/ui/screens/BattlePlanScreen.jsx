@@ -1,8 +1,10 @@
 import {useMemo} from "react";
-import {armamentOf, atWar, isAttacker, planAttackerTypeOptions, solvePlan, UNITS, unitLabel} from "../../game/engine.js";
+import {armamentOf, atWar, isAttacker, planAttackerTypeOptions, solvePlan, UNIT_ICON, UNITS, unitLabel} from "../../game/engine.js";
 import {BATTLE_PLAN, colorForSlot} from "../../game/data/constants.js";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
+import Icon from "../common/Icon.jsx";
+import UnitIcon from "../common/UnitIcon.jsx";
 import {cn} from "../lib/cn.js";
 import {miniButton} from "../lib/variants.js";
 import {cmpStr, countBy} from "../../lib/iter.js";
@@ -83,7 +85,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
         <ScreenFrame title="BATTLE PLANNING" subtitle="Author plans of attack — unit types → target types" wide onClose={onClose}>
             {plans.length === 0 ? (
                 <div className="flex flex-col items-center gap-4 py-16 text-center">
-                    <span className="text-gold text-3xl">✷</span>
+                    <Icon name="battle-plan" size={38} className="text-gold" strokeWidth={1.4}/>
                     <p className="text-dim text-sm max-w-[420px]">Draw up a plan of attack: pick which of your platforms fire, choose what they hit, set the reach, and arm it. No hunting for units on the map.</p>
                     <button className={cn(miniButton(), "px-4 py-2")} onClick={bp.addPlan}>New plan</button>
                 </div>
@@ -122,7 +124,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                     ))}
                                 </div>
                                 <button className={cn(miniButton(), "px-2.5 py-1.5")} onClick={() => bp.duplicatePlan(active.id)} title="Duplicate plan">⧉</button>
-                                <button className={cn(miniButton({danger: true}), "px-2.5 py-1.5")} onClick={() => bp.removePlan(active.id)} title="Delete plan">✕</button>
+                                <button className={cn(miniButton({danger: true}), "px-2.5 py-1.5")} onClick={() => bp.removePlan(active.id)} title="Delete plan" aria-label="Delete plan"><Icon name="close" size={13}/></button>
                             </div>
 
                             {/* Two columns: attacker types → target types */}
@@ -145,8 +147,8 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                                         title={elsewhere ? `In ${owner.name} — moves here` : undefined}
                                                         className={cn("flex items-center gap-2.5 w-full px-2.5 py-2 rounded-sm border text-left transition-[border-color,background] duration-150 ease-out-db",
                                                             mine ? "border-gold-line bg-gold-soft" : "border-line bg-sunk hover:border-line-soft")}>
-                                                    <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center text-[10px]", mine ? "bg-gold border-gold text-gold-contrast" : "border-line text-transparent")}>✓</span>
-                                                    <span className="text-[15px] leading-none flex-none" aria-hidden="true">{UNITS[type].glyph}</span>
+                                                    <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center", mine ? "bg-gold border-gold text-gold-contrast" : "border-line")}>{mine && <Icon name="check" size={11} strokeWidth={2.4}/>}</span>
+                                                    <UnitIcon name={UNIT_ICON[type]} size={16} className="flex-none text-dim"/>
                                                     <span className="flex flex-col leading-[1.15] min-w-0 flex-1">
                                                         <span className="text-[13px] text-text">{unitLabel(type)}</span>
                                                         {armamentOf(type) && <span className="text-[10px] text-faint">{armamentOf(type)}</span>}
@@ -208,7 +210,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                                     <button key={cat.id} onClick={() => bp.toggleTargetType(active.id, cat.id)}
                                                             className={cn("flex items-center gap-2.5 w-full px-2.5 py-2 rounded-sm border text-left transition-[border-color,background] duration-150 ease-out-db",
                                                                 on ? "border-gold-line bg-gold-soft" : "border-line bg-sunk hover:border-line-soft")}>
-                                                        <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center text-[10px]", on ? "bg-gold border-gold text-gold-contrast" : "border-line text-transparent")}>✓</span>
+                                                        <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center", on ? "bg-gold border-gold text-gold-contrast" : "border-line")}>{on && <Icon name="check" size={11} strokeWidth={2.4}/>}</span>
                                                         <span className="text-[13px] text-text flex-1">{cat.label}</span>
                                                     </button>
                                                 );
@@ -253,12 +255,12 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         <button onClick={() => bp.patchPlan(active.id, {armed: !armed})} disabled={!canArm && !armed}
                                                 className={cn("px-5 py-2.5 rounded-sm border font-display text-[13px] font-semibold tracking-[1.2px] uppercase transition-[border-color,background,color,filter] duration-150 ease-out-db disabled:opacity-50 disabled:cursor-not-allowed",
                                                     armed ? "border-[rgba(224,87,79,0.6)] bg-[rgba(224,87,79,0.16)] text-[#ffb3bc] hover:brightness-110" : "border-[rgba(0,0,0,0.25)] bg-gold text-gold-contrast enabled:hover:brightness-105")}>
-                                            {armed ? "◼ Disarm" : "▶ Arm plan"}
+                                            <span className="inline-flex items-center gap-2"><Icon name={armed ? "stop" : "play"} size={13}/>{armed ? "Disarm" : "Arm plan"}</span>
                                         </button>
                                     ) : (
                                         <button onClick={() => bp.executePlan(active.id)} disabled={!canFire}
                                                 className="px-5 py-2.5 rounded-sm border border-[rgba(0,0,0,0.25)] bg-gold text-gold-contrast font-display text-[13px] font-semibold tracking-[1.2px] uppercase enabled:hover:brightness-105 transition-[filter] duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-                                            ⚡ Execute strike
+                                            <span className="inline-flex items-center gap-2"><Icon name="bolt" size={13}/>Execute strike</span>
                                         </button>
                                     )}
                                     </div>

@@ -3,6 +3,7 @@
 // scrollable body, optional footer hint. Esc closes.
 import {useModal} from "../hooks/useModal.js";
 import {iconButton} from "../lib/variants.js";
+import Icon from "../common/Icon.jsx";
 import {cn} from "../lib/cn.js";
 
 export default function ScreenFrame({title, subtitle, onClose, children, foot, wide, bare, head}) {
@@ -17,7 +18,7 @@ export default function ScreenFrame({title, subtitle, onClose, children, foot, w
                 {subtitle && <span className="font-mono text-[11px] tracking-[1px] text-dim">{subtitle}</span>}
                 {head}
                 <button className={cn(iconButton(), "ml-auto self-center")} onClick={onClose} title="Close (Esc)"
-                        aria-label="Close">✕
+                        aria-label="Close"><Icon name="close" size={15}/>
                 </button>
             </div>
             {bare

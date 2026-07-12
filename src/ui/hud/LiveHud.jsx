@@ -6,6 +6,7 @@ import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import {cn} from "../lib/cn.js";
 import {clamp} from "../../lib/math.js";
 import AmmoBar from "./AmmoBar.jsx";
+import Icon from "../common/Icon.jsx";
 import PopTrend from "../common/PopTrend.jsx";
 import {iconButton, popoverCard} from "../lib/variants.js";
 import {vitColor} from "../lib/status.js";
@@ -39,9 +40,9 @@ function stabSub(stab) {
 
 // Top-bar command screens, relocated here from the old left-side console.
 const NAV = [
-    {id: "production", label: "Production", glyph: "▣"},
-    {id: "battle", label: "Battle Plan", glyph: "✷"},
-    {id: "diplomacy", label: "Diplomacy", glyph: "⚑"},
+    {id: "production", label: "Production", icon: "production"},
+    {id: "battle", label: "Battle Plan", icon: "battle-plan"},
+    {id: "diplomacy", label: "Diplomacy", icon: "diplomacy"},
 ];
 
 export default function LiveHud({world, api, myNation, panel, onPanel, keys, online, globe, onGlobe, onHelp, onMenu, meBadge}) {
@@ -145,7 +146,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                                     <div className="mt-[9px] flex flex-col gap-[5px] text-[11.5px]">
                                         {lead.atCities.map((c) => (
                                             <div key={c.name} className="flex items-center justify-between gap-3">
-                                                <span className="text-dim truncate">{c.cap ? "★ " : ""}{c.name}</span>
+                                                <span className="text-dim truncate flex items-center gap-1">{!!c.cap && <Icon name="star" size={9} className="text-gold"/>}{c.name}</span>
                                                 <b className="font-mono text-text flex-none">{c.n}</b>
                                             </div>
                                         ))}
@@ -209,13 +210,13 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                         <button
                             className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", world.paused && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
                             onClick={api.pause}
-                            aria-pressed={world.paused}
-                            title={`Pause (${keyLabel(K.pause)})`}>⏸
+                            aria-pressed={world.paused} aria-label="Pause"
+                            title={`Pause (${keyLabel(K.pause)})`}><Icon name="pause" size={13} className="mx-auto"/>
                         </button>
                         <button
                             className="min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]"
-                            onClick={api.play} aria-pressed={!world.paused}
-                            title={`Resume (${keyLabel(K.pause)})`}>▶</button>
+                            onClick={api.play} aria-pressed={!world.paused} aria-label="Resume"
+                            title={`Resume (${keyLabel(K.pause)})`}><Icon name="play" size={12} className="mx-auto"/></button>
                         {GAME_SPEEDS.map((s, i) => <button key={s}
                                                            className={cn("min-w-[30px] h-7 border border-transparent bg-transparent text-dim rounded text-xs font-mono font-semibold hover:text-text hover:bg-[rgba(160,168,178,0.1)]", !world.paused && world.speed === s && "bg-linear-to-b from-gold-hi to-gold text-gold-contrast border-transparent shadow-[var(--glow-gold)]")}
                                                            aria-pressed={!world.paused && world.speed === s}
@@ -231,7 +232,7 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                                     onClick={() => onPanel(n.id)}
                                     title={K[n.id] ? `${n.label} (${keyLabel(K[n.id])})` : n.label}
                                     aria-label={n.label}>
-                                <span className="text-[13px] leading-none">{n.glyph}</span>
+                                <Icon name={n.icon} size={15}/>
                                 <span>{n.label}</span>
                             </button>
                         ))}
@@ -240,11 +241,11 @@ export default function LiveHud({world, api, myNation, panel, onPanel, keys, onl
                 <div className="flex items-center gap-2 ml-auto">
                     <AmmoBar nation={myNation}/>
                     {onGlobe && <button className={iconButton()} onClick={onGlobe} title="Globe / Flat view"
-                                        aria-label="Toggle globe or flat view">{globe ? "◐" : "▦"}</button>}
+                                        aria-label="Toggle globe or flat view"><Icon name={globe ? "globe" : "grid"} size={16}/></button>}
                     {onHelp && <button className={iconButton()} onClick={onHelp} title="Controls (?)"
-                                       aria-label="Show controls reference">?</button>}
+                                       aria-label="Show controls reference"><Icon name="help" size={16}/></button>}
                     {onMenu && <button className={iconButton()} onClick={onMenu} title="Menu (Esc)"
-                                       aria-label="Open pause menu">☰</button>}
+                                       aria-label="Open pause menu"><Icon name="menu" size={16}/></button>}
                     {meBadge}
                 </div>
             </div>

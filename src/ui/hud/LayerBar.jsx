@@ -1,13 +1,14 @@
 import {cn} from "../lib/cn.js";
+import Icon from "../common/Icon.jsx";
 
 const LAYER_DEFS = [
-    {id: "countries", label: "Countries", glyph: "◔"},
-    {id: "diplomacy", label: "Diplomacy", glyph: "⚖"},
-    {id: "states", label: "State Borders", glyph: "▦"},
-    {id: "defense", label: "Defense Range", glyph: "⬡"},
-    {id: "radar", label: "Radar Coverage", glyph: "❉"},
-    {id: "pop", label: "Population Heat", glyph: "◉"},
-    {id: "backdrop", label: "World Cities", glyph: "∴"},
+    {id: "countries", label: "Countries", icon: "countries"},
+    {id: "diplomacy", label: "Diplomacy", icon: "diplomacy-scale"},
+    {id: "states", label: "State Borders", icon: "borders"},
+    {id: "defense", label: "Defense Range", icon: "defense"},
+    {id: "radar", label: "Radar Coverage", icon: "radar"},
+    {id: "pop", label: "Population Heat", icon: "pop"},
+    {id: "backdrop", label: "World Cities", icon: "cities"},
 ];
 export default function LayerBar({layers, onToggle}) {
     return (
@@ -19,9 +20,8 @@ export default function LayerBar({layers, onToggle}) {
                         aria-pressed={!!layers[l.id]}
                         aria-label={`${l.label} layer, ${layers[l.id] ? "on" : "off"}`}
                         onClick={() => onToggle(l.id)}>
-                    <span
-                        className={cn("text-[15px] leading-none", layers[l.id] && "text-gold [text-shadow:0_0_8px_var(--gold)]")}
-                        aria-hidden="true">{l.glyph}</span><span
+                    <Icon name={l.icon} size={17}
+                          className={cn(layers[l.id] && "text-gold")}/><span
                     className="flex-none text-center leading-[1.2] whitespace-normal [word-break:normal] [overflow-wrap:break-word]">{l.label}</span>
                 </button>
             ))}

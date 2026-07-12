@@ -10,6 +10,10 @@ import {
     UNITS
 } from "../../game/engine.js";
 import {fmtKm as km} from "../lib/format.js";
+import {createElement} from "react";
+import Points from "../common/Points.jsx";
+
+const pts = (n) => createElement(Points, {value: n, size: 10});
 
 export function useUnitStats({w, mySlot, armOf}) {
     return (u) => {
@@ -21,13 +25,13 @@ export function useUnitStats({w, mySlot, armOf}) {
             if (defenseMinRange(w, u) > 0) rows.push(["Min Range", km(defenseMinRange(w, u))]);
             rows.push(["Radar Link", radarLinked(w, u) ? `Linked ×${RADAR_RANGE_MULT}` : "No Link"]);
             rows.push(["Reload", `${def.reload}s`]);
-            rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
+            rows.push(["Shot Cost", pts(def.fireCost)]);
         }
         if (def.kind === "offense") {
             rows.push(["Damage", `${Math.round(def.damage)}`]);
             rows.push(["Strike Range", km(def.range)]);
             rows.push(["Reload", `${def.reload.toFixed(1)}s`]);
-            rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
+            rows.push(["Shot Cost", pts(def.fireCost)]);
             if (def.speed) rows.push(["Missile Spd", `${def.speed} km/s`]);
         }
         if (def.detect) {
