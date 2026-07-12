@@ -77,9 +77,25 @@ export function geoDest(lng, lat, km, brngDeg) {
 
 // True geodesic range ring — the globe-view counterpart of circle(); same Feature
 // shape and innerKm annulus. maxSteps as in circle().
+//
+// A cap that reaches over a pole is the tricky case: its boundary sweeps through
+// every longitude and never closes on itself, so a naive boundary loop spirals
+// (which is why a high-latitude airstrip's reach ring drew wrong on the globe).
+// When the cap swallows a pole, trace the boundary ordered by longitude and close
+// the polygon across the top of the world at that pole — the fill then covers the
+// whole polar cap correctly in every projection.
 export function geoCircle(lng, lat, km, steps = 56, innerKm = 0, maxSteps = 480) {
-    const ring = (radiusKm) => {
-        const n = clamp(Math.ceil(radiusKm / 40), steps, maxSteps);
+    const latRad = lat * RAD;
+    // Meridian distance from the centre to each pole; the cap reaches that pole
+    // once its radius exceeds it.
+    const northKm = R_EARTH_KM * (Math.PI / 2 - latRad);
+    const southKm = R_EARTH_KM * (Math.PI / 2 + latRad);
+    const stepCount = (radiusKm) => clamp(Math.ceil(radiusKm / 40), steps, maxSteps);
+
+    // Cap clear of both poles: a simple closed boundary loop, longitudes unwrapped
+    // so an antimeridian crossing doesn't jump ±360.
+    const loopRing = (radiusKm) => {
+        const n = stepCount(radiusKm);
         const coords = [];
         let prev = lng;
         for (let i = 0; i <= n; i++) {
@@ -90,8 +106,28 @@ export function geoCircle(lng, lat, km, steps = 56, innerKm = 0, maxSteps = 480)
         }
         return coords;
     };
-    const rings = [ring(km)];
-    if (innerKm > 0 && innerKm < km) rings.push(ring(innerKm));
+
+    // Cap reaching over `poleLat` (±90): every meridian crosses the boundary once,
+    // so sort the boundary vertices west→east and cap the polygon off across the
+    // pole so the fill covers the full polar cap.
+    const capRing = (radiusKm, poleLat) => {
+        const n = stepCount(radiusKm);
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const [clng, clat] = geoDest(lng, lat, radiusKm, (360 * i) / n);
+            pts.push([((clng + 540) % 360) - 180, clat]);
+        }
+        pts.sort((a, b) => a[0] - b[0]);
+        return [[-180, poleLat], ...pts, [180, poleLat], [-180, poleLat]];
+    };
+
+    const ringFor = (radiusKm) =>
+        radiusKm >= northKm ? capRing(radiusKm, 90)
+            : radiusKm >= southKm ? capRing(radiusKm, -90)
+                : loopRing(radiusKm);
+
+    const rings = [ringFor(km)];
+    if (innerKm > 0 && innerKm < km) rings.push(ringFor(innerKm));
     return {type: "Feature", properties: {}, geometry: {type: "Polygon", coordinates: rings}};
 }
 
