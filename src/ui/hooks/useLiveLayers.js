@@ -7,7 +7,7 @@
 // pattern is invisible to exhaustive-deps, so it's disabled for this file.
 /* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo, useRef} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, neutralSlotSet, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {airborne, alliedSlots, defenseMinRange, defenseRange, falloutIntensity, isActive, neutralSlotSet, radarRangeOf, sharedSensorsOf, sharedSubSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
 import {CAPTURE, NEUTRAL, RADAR_RING_COLORS} from "../../game/data/constants.js";
 import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM, withinKm} from "../../game/geo/geo.js";
 
@@ -173,19 +173,25 @@ export function useLiveLayers({
     }, [w.cities, w.time, teamColor, globe]);
 
     // Fog of war: enemy assets exist on my map only where my sensor picture
-    // covers them — my own units are always mine to see. unitVisibleTo also
-    // splits out submarines, which only surface under my ASW (sonar) coverage
-    // and vanish back into the fog otherwise. Everything drawn from w.units below
-    // goes through visUnits so hidden forces never leak a pixel.
-    const mySensors = useMemo(() => sensorsOf(w, mySlot), [w.units, w.time, mySlot]);
-    const mySubSensors = useMemo(() => subSensorsOf(w, mySlot), [w.units, w.time, mySlot]);
+    // covers them — my own units are always mine to see. Allies share their radar
+    // net, so the picture is the whole coalition's coverage (sharedSensorsOf), not
+    // just my own emitters. unitVisibleTo also splits out submarines, which only
+    // surface under coalition ASW (sonar) coverage and vanish back into the fog
+    // otherwise. Everything drawn from w.units below goes through visUnits so
+    // hidden forces never leak a pixel.
+    const mySensors = useMemo(() => sharedSensorsOf(w, mySlot), [w.units, w.time, mySlot]);
+    const mySubSensors = useMemo(() => sharedSubSensorsOf(w, mySlot), [w.units, w.time, mySlot]);
+    // Slots I share radar with — my own plus every living ally. Their emitters
+    // ring on my map too, so the coverage I borrow is legible, not invisible.
+    const radarSlots = useMemo(() => new Set([mySlot, ...alliedSlots(w, mySlot)]), [w.nations, w.time, mySlot]);
     // Precomputed sensor lists are threaded into unitVisibleTo so the fog filter
     // is O(units) instead of O(units^2) (it would otherwise rebuild sensorsOf per unit).
     const visUnits = useMemo(() => w.units.filter((u) => unitVisibleTo(w, mySlot, u, mySensors, mySubSensors)),
         [w.units, w.time, mySlot, mySensors, mySubSensors]);
 
-    // Radar coverage is MY detection picture — only my own emitters, never an
-    // enemy's radars that my sensors happen to reveal. The ring FC and the
+    // Radar coverage is the COALITION's detection picture — my own emitters and
+    // my allies' (radarSlots), never an enemy's radars my sensors happen to
+    // reveal. Allied rings make the shared coverage visible. The ring FC and the
     // emitter list for the animated ping share one filter and one rebuild —
     // RadarPulse regenerates the expanding ring itself each animation frame;
     // radarEmitters only feeds it where the emitters are and how far they reach.
@@ -198,7 +204,7 @@ export function useLiveLayers({
     const radarRef = useRef(null);
     const {radarFC, radarEmitters} = useMemo(() => {
         if (!layers.radar) return EMPTY_RADAR;
-        const emitters = visUnits.filter((u) => u.slot === mySlot && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u));
+        const emitters = visUnits.filter((u) => radarSlots.has(u.slot) && u.hp > 0 && radarRangeOf(u.type) > 0 && airborne(u));
         let sig = foldNum(0, globe ? 1 : 2);
         for (const u of emitters) {
             sig = foldStr(sig, u.id);
@@ -225,7 +231,7 @@ export function useLiveLayers({
             }))
         };
         return radarRef.current;
-    }, [layers.radar, w.units, w.time, mySlot, globe]);
+    }, [layers.radar, w.units, w.time, mySlot, radarSlots, globe]);
     // Same checksum gate for the defense bubbles: position, engagement range
     // (the radar link stretches the outer edge, so the live range is folded,
     // not the static one), and allegiance color (relations can flip it).
