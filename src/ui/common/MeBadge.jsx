@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {Pencil} from "lucide-react";
+import Icon from "./Icon.jsx";
 import Flag from "./Flag.jsx";
 import FriendsPanel from "./FriendsPanel.jsx";
 import UnitIcon from "./UnitIcon.jsx";
@@ -67,7 +67,7 @@ function MeBadgePopover({profile, stats, since, total, winRate, hours, initial, 
                             aria-label="Change profile picture" aria-expanded={picking} onClick={() => setPicking((v) => !v)}>
                         <AvatarCircle avatar={avatar} initial={initial} size={42} iconSize={24}/>
                         <span className="absolute -bottom-0.5 -right-0.5 grid place-items-center w-[15px] h-[15px] rounded-full bg-panel-2 border border-line text-dim">
-                            <Pencil size={8}/>
+                            <Icon name="pencil" size={9}/>
                         </span>
                     </button>
                 ) : <AvatarCircle avatar={avatar} initial={initial} size={42} iconSize={24}/>}

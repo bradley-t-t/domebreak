@@ -126,7 +126,7 @@ export function useContextMenus({
             for (const at of [...new Set(UNITS[u.type].wing)]) {
                 const stocked = hangarCount(w, myNation, u.id, at);
                 items.push({
-                    label: `Order ${labelOf(at, mySlot)} · ${stocked}/${hangarCapOf(u.type, at)} (◆ ${UNITS[at].cost})`,
+                    label: `Order ${labelOf(at, mySlot)} · ${stocked}/${hangarCapOf(u.type, at)} (${UNITS[at].cost} pts)`,
                     disabled: stocked >= hangarCapOf(u.type, at),
                     onClick: () => {
                         const r = api.queueAircraft(u.id, at);

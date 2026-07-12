@@ -10,6 +10,12 @@ import {
     UNITS
 } from "../../game/engine.js";
 import {fmtKm as km} from "../lib/format.js";
+import {createElement} from "react";
+import Icon from "../common/Icon.jsx";
+
+// "N points" as an inline points-mark + number, matching the production cards.
+const pts = (n) => createElement("span", {className: "inline-flex items-center gap-1"},
+    createElement(Icon, {name: "points", size: 10}), n);
 
 export function useUnitStats({w, mySlot, armOf}) {
     return (u) => {
@@ -21,13 +27,13 @@ export function useUnitStats({w, mySlot, armOf}) {
             if (defenseMinRange(w, u) > 0) rows.push(["Min Range", km(defenseMinRange(w, u))]);
             rows.push(["Radar Link", radarLinked(w, u) ? `Linked ×${RADAR_RANGE_MULT}` : "No Link"]);
             rows.push(["Reload", `${def.reload}s`]);
-            rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
+            rows.push(["Shot Cost", pts(def.fireCost)]);
         }
         if (def.kind === "offense") {
             rows.push(["Damage", `${Math.round(def.damage)}`]);
             rows.push(["Strike Range", km(def.range)]);
             rows.push(["Reload", `${def.reload.toFixed(1)}s`]);
-            rows.push(["Shot Cost", `◆ ${def.fireCost}`]);
+            rows.push(["Shot Cost", pts(def.fireCost)]);
             if (def.speed) rows.push(["Missile Spd", `${def.speed} km/s`]);
         }
         if (def.detect) {

@@ -98,8 +98,8 @@ export default function CountryInfoPopup({world, api, mySlot, online, targetSlot
                     {!canAct ? (
                         <p className="font-mono text-[11.5px] text-dim">
                             {isMe ? "This is your own power — nothing to negotiate."
-                                : neutral ? "A passive neutral country. It stays out of the war for the whole match."
-                                    : "This power has been eliminated. Its dossier is preserved for the record."}
+                                : neutral ? "A neutral power — it sits out the war, start to finish."
+                                    : "Eliminated. Only the dossier remains."}
                         </p>
                     ) : rel === "war" ? (
                         <div className="flex flex-wrap gap-[8px]">

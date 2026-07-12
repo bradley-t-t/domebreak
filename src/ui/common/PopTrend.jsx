@@ -1,6 +1,7 @@
 import {fmtPop} from "../lib/format.js";
 import {VIT_GREEN} from "../lib/status.js";
 import {cn} from "../lib/cn.js";
+import Icon from "./Icon.jsx";
 
 // Population-growth signifier: a small upward caret shown whenever a population is
 // climbing — repopulation and city rebuilding made visible beside any pop readout.
@@ -25,7 +26,7 @@ export default function PopTrend({rate, base, up, title, label = false, classNam
     return (
         <span className={cn("inline-flex items-center gap-[2px] leading-none", className)}
               style={{color: VIT_GREEN}} title={tip} aria-label={tip}>
-            <span aria-hidden="true">▲</span>
+            <Icon name="trend-up" size={9}/>
             {label && pctMin != null && <span className="font-mono tabular-nums">+{pctMin.toFixed(1)}%/min</span>}
         </span>
     );

@@ -7,6 +7,7 @@
 import {useState} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
+import Icon from "../common/Icon.jsx";
 import {
     armamentOf,
     gdpOf,
@@ -35,18 +36,18 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // their own category regardless of kind; everything else falls to kind/domain.
 const isSpace = (key, u) => key === "spacehq" || u.requiresUnit === "spacehq";
 const catOf = (key, u) => (isSpace(key, u) ? "Space" : u.kind === "industry" ? "Industry" : u.domain === "land" ? "Army" : u.domain === "sea" ? "Naval" : u.kind === "offense" ? "Strike" : u.kind === "defense" ? "Air Defense" : "Support");
-// Category selector: glyph + the order they read down the rail. Munitions is the
+// Category selector: icon + the order they read down the rail. Munitions is the
 // warhead line; "All" shows every section at once.
 const CATS = [
-    {id: "all", name: "All Systems", glyph: "⌗"},
-    {id: "Support", name: "Support", glyph: "✧"},
-    {id: "Air Defense", name: "Air Defense", glyph: "⬡"},
-    {id: "Strike", name: "Strike", glyph: "✷"},
-    {id: "Army", name: "Army", glyph: "▲"},
-    {id: "Naval", name: "Naval", glyph: "⚓"},
-    {id: "Space", name: "Space", glyph: "✦"},
-    {id: "Industry", name: "Industry", glyph: "⚙"},
-    {id: "Munitions", name: "Munitions", glyph: "☢"},
+    {id: "all", name: "All Systems", icon: "systems"},
+    {id: "Support", name: "Support", icon: "support"},
+    {id: "Air Defense", name: "Air Defense", icon: "air-defense"},
+    {id: "Strike", name: "Strike", icon: "strike"},
+    {id: "Army", name: "Army", icon: "army"},
+    {id: "Naval", name: "Naval", icon: "naval"},
+    {id: "Space", name: "Space", icon: "space"},
+    {id: "Industry", name: "Industry", icon: "industry"},
+    {id: "Munitions", name: "Munitions", icon: "munitions"},
 ];
 
 export default function ProductionScreen({world, api, mySlot, placing, setPlacing, onClose}) {
@@ -107,7 +108,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
             rows.push(["Engage Range", km(u.range)]);
             if (u.minRange) rows.push(["Min Range", km(u.minRange)]);
             rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
-            rows.push(["Shot Cost", `◆ ${u.fireCost}`]);
+            rows.push(["Shot Cost", <span className="inline-flex items-center gap-1"><Icon name="points" size={10}/>{u.fireCost}</span>]);
         } else if (u.kind === "offense") {
             rows.push(["Damage", `${Math.round(u.damage)}`]);
             rows.push(["Strike Range", km(u.range)]);
@@ -152,16 +153,16 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                                 : !afford && "poor opacity-50"
                     )}
                     onClick={() => !lock && pick(key)} disabled={!!lock} aria-disabled={!!lock}
-                    aria-label={lock ? `${unitLabel(key, me?.iso)} — locked: ${lock}` : `${unitLabel(key, me?.iso)}, ◆ ${cost}`}
+                    aria-label={lock ? `${unitLabel(key, me?.iso)} — locked: ${lock}` : `${unitLabel(key, me?.iso)}, ${cost} points`}
                     title={lock || u.hint || `${cap(u.kind)} · builds in ${u.buildTime}s`}>
-                {lock && <span className="db-ucard-lock absolute top-2 right-2.5 text-xs leading-none opacity-85 grayscale" aria-hidden="true">🔒</span>}
+                {lock && <Icon name="lock" size={13} className="db-ucard-lock absolute top-2 right-2.5 text-faint opacity-85"/>}
                 <span className="db-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm" data-kind={u.kind} data-domain={u.domain || "land"}>
                     <UnitIcon name={UNIT_ICON[key]} size={30}/>
                 </span>
                 <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
                     <div className="db-ucard-top flex items-baseline gap-2">
                         <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{unitLabel(key, me?.iso)}</b>
-                        <span className="db-ucard-cost font-mono text-xs text-gold">◆ {cost}</span>
+                        <span className="db-ucard-cost inline-flex items-center gap-1 font-mono text-xs text-gold"><Icon name="points" size={11}/>{cost}</span>
                     </div>
                     <span className={cn("db-ucard-line text-[10.5px] leading-[1.3] text-dim", lock && "text-faint")}>{line}</span>
                     {rows.length > 0 && (
@@ -175,7 +176,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                         </dl>
                     )}
                     <div className="db-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
-                        <span>⧗ {u.buildTime}s</span>
+                        <span className="inline-flex items-center gap-1"><Icon name="timer" size={11}/>{u.buildTime}s</span>
                         {u.kind !== "industry" && <span>−{u.upkeep}/s</span>}
                         {qn > 0 && <span className="db-ucard-q text-gold">{qn} queued</span>}
                         {placing === key && <span className="db-ucard-q hot text-gold-hi">Placing…</span>}
@@ -201,13 +202,13 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     onClick={(e) => {
                         for (let i = 0, n = e.shiftKey ? 5 : 1; i < n; i++) if (api.produceAmmo(key)?.error) break;
                     }}
-                    aria-label={`${wh.name}, ◆ ${wh.prodCost}, ${stock} in stock. Shift-click to queue five.`}
+                    aria-label={`${wh.name}, ${wh.prodCost} points, ${stock} in stock. Shift-click to queue five.`}
                     title={`${wh.name} — ${wh.desc}${fallout ? " · Contaminates ground zero with radioactive fallout." : ""}`}>
                 <span className="db-ucard-ico flex-none w-[46px] h-[46px] grid place-items-center bg-white/[0.03] border border-line rounded-sm"><UnitIcon name={WARHEAD_ICON[key]} size={30}/></span>
                 <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
                     <div className="db-ucard-top flex items-baseline gap-2">
                         <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{wh.name}</b>
-                        <span className="db-ucard-cost font-mono text-xs text-gold">◆ {wh.prodCost}</span>
+                        <span className="db-ucard-cost inline-flex items-center gap-1 font-mono text-xs text-gold"><Icon name="points" size={11}/>{wh.prodCost}</span>
                     </div>
                     <span className="db-ucard-line text-[10.5px] leading-[1.3] text-dim">{wh.desc}</span>
                     {users.length > 0 && (
@@ -220,11 +221,11 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                             </span>
                         </div>
                     )}
-                    {fallout && <span className="db-ucard-tag db-contam self-start mt-0.5 font-mono text-[9px] tracking-[0.3px] py-px px-[5px] rounded-[3px] border border-[rgba(140,255,58,0.5)] bg-[rgba(140,255,58,0.1)] text-[#a6ff5c]">☢ Leaves fallout</span>}
+                    {fallout && <span className="db-ucard-tag db-contam self-start mt-0.5 inline-flex items-center gap-1 font-mono text-[9px] tracking-[0.3px] py-px px-[5px] rounded-[3px] border border-[rgba(140,255,58,0.5)] bg-[rgba(140,255,58,0.1)] text-[#a6ff5c]"><Icon name="radiation" size={10}/>Leaves fallout</span>}
                     <div className="db-ucard-foot flex flex-wrap gap-2 font-mono text-[9.5px] tracking-[0.3px] text-faint">
-                        <span>⧗ {wh.prodTime}s</span>
+                        <span className="inline-flex items-center gap-1"><Icon name="timer" size={11}/>{wh.prodTime}s</span>
                         <span className="db-ucard-stock text-dim">{stock} in stock</span>
-                        <span className="db-ucard-shift text-faint border border-line rounded-sm px-1 leading-[1.5]" aria-hidden="true">⇧ ×5</span>
+                        <span className="db-ucard-shift inline-flex items-center gap-0.5 text-faint border border-line rounded-sm px-1 leading-[1.5]" aria-hidden="true"><Icon name="shift" size={9}/>×5</span>
                         {qn > 0 && <span className="db-ucard-q text-gold">{qn} queued</span>}
                     </div>
                 </div>
@@ -261,7 +262,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <aside className="db-prod-rail db-scroll flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
                     <div className="db-prod-bank flex flex-col gap-px py-3 px-3.5 bg-sunk border border-line rounded">
                         <span className="db-prod-bank-l text-[9px] tracking-[1.5px] uppercase text-faint">Treasury</span>
-                        <span className="db-prod-bank-v font-mono text-[22px] font-bold text-gold">◆ {Math.floor(points)}</span>
+                        <span className="db-prod-bank-v inline-flex items-center gap-1.5 font-mono text-[22px] font-bold text-gold"><Icon name="points" size={17}/>{Math.floor(points)}</span>
                         <span className={cn("db-prod-bank-net font-mono text-[11px]", net < 0 ? "neg text-red" : "pos text-[#46d38a]")}>{fmtNet(net, 1)}/s</span>
                     </div>
                     <div className="db-prod-econ grid grid-cols-2 gap-[7px]">
@@ -284,7 +285,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                                     role="tab" aria-selected={cat === c.id}
                                     aria-label={`${c.name}, ${countFor(c.id)} systems`}
                                     onClick={() => setCat(c.id)}>
-                                <span className="db-prod-cat-g w-[18px] text-center text-sm" aria-hidden="true">{c.glyph}</span>
+                                <Icon name={c.icon} size={18} className={cn("db-prod-cat-g", cat === c.id && "text-gold")}/>
                                 <span className="db-prod-cat-n flex-1 font-display font-semibold text-[11.5px] tracking-[0.4px]">{c.name}</span>
                                 <span className="db-prod-cat-c font-mono text-[10px] text-faint">{countFor(c.id)}</span>
                             </button>
@@ -305,8 +306,8 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                     <h3 className="db-queue-h flex items-center gap-2 mb-3 font-display font-semibold text-xs tracking-[2px] uppercase text-dim">Build Queue {(cur ? 1 : 0) + queue.length > 0 &&
                         <span className="font-mono text-[10px] text-faint">{(cur ? 1 : 0) + queue.length}</span>}</h3>
                     <div className="db-queue-list db-scroll flex flex-col gap-1.5 overflow-auto" aria-live="polite" aria-label="National build queue">
-                        {!cur && queue.length === 0 && <div className="db-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line is idle. Pick a system to
-                            build it.</div>}
+                        {!cur && queue.length === 0 && <div className="db-queue-empty text-[10.5px] leading-[1.4] text-faint py-2">The line sits idle. Pick a system to
+                            put it to work.</div>}
                         {cur && (
                             <button className="db-qitem building group relative overflow-hidden flex items-center gap-2 py-[9px] px-2.5 border border-gold-line rounded-sm bg-sunk text-text cursor-pointer text-left transition-[border-color] duration-150 ease-out-db hover:border-red" onClick={() => api.cancelProd(-1)}
                                     title="Building — click to cancel for a refund">
@@ -322,7 +323,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                                 <span className="db-qitem-n w-3.5 font-mono text-[10px] text-faint">{i + 2}</span>
                                 <UnitIcon name={icon(it)} size={16}/>
                                 <span className="db-qitem-name relative flex-1 min-w-0 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{label(it)}</span>
-                                <span className="db-qitem-x relative text-[11px] text-faint group-hover:text-red">✕</span>
+                                <Icon name="close" size={11} className="db-qitem-x relative text-faint group-hover:text-red"/>
                             </button>
                         ))}
                     </div>

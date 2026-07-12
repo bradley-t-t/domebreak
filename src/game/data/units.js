@@ -13,7 +13,6 @@ export const UNITS = {
         fireCost: 12,
         hp: 50,
         upkeep: 1,
-        glyph: "◆"
     },
     radar: {
         label: "Early Warning Radar",
@@ -25,7 +24,6 @@ export const UNITS = {
         detect: true,
         hp: 40,
         upkeep: 1.5,
-        glyph: "❉"
     },
     // Skywave sensor: sees launches far past the horizon, but its tracks are too
     // coarse to cue interceptors — warnOnly keeps it out of radarLinked.
@@ -40,7 +38,6 @@ export const UNITS = {
         warnOnly: true,
         hp: 35,
         upkeep: 2.5,
-        glyph: "≋",
         hint: "Skywave array — detects launches far over the horizon. Warning only; can't guide interceptors."
     },
     // Launch platforms — the missile they fire is armament (see armamentOf), not the
@@ -63,7 +60,6 @@ export const UNITS = {
         landSpeed: 20,    // road-mobile: marches over land like a ground unit (shoot-and-scoot)
         hp: 45,
         upkeep: 2,
-        glyph: "➤"
     },
     silo: {
         label: "Missile Silo",
@@ -82,7 +78,6 @@ export const UNITS = {
         speed: 140,
         hp: 60,
         upkeep: 4,
-        glyph: "▲"
     },
     // Naval — deploy in coastal ocean inside your territory, never on land.
     // Carriers ship with their air wing (strike + multirole fighters).
@@ -104,7 +99,6 @@ export const UNITS = {
         hp: 70,
         upkeep: 3,
         navalSpeed: 78,
-        glyph: "⛴"
     },
     destroyer: {
         label: "Destroyer",
@@ -125,7 +119,6 @@ export const UNITS = {
         hp: 60,
         upkeep: 2,
         navalSpeed: 96,
-        glyph: "⛴"
     },
     battleship: {
         label: "Battleship",
@@ -143,7 +136,6 @@ export const UNITS = {
         hp: 95,
         upkeep: 4,
         navalSpeed: 58,
-        glyph: "⛴"
     },
     carrier: {
         label: "Aircraft Carrier",
@@ -158,7 +150,6 @@ export const UNITS = {
         hp: 130,
         upkeep: 5,
         navalSpeed: 50,
-        glyph: "⛴",
         wing: ["carrierfighter", "strikefighter", "awacs"]
     },
     // Airstrips ship with their air wing (air-superiority + close air support).
@@ -171,7 +162,6 @@ export const UNITS = {
         range: 60,
         hp: 45,
         upkeep: 1,
-        glyph: "▭",
         wing: ["interceptor", "multirole", "attack", "bomber", "transport", "awacs"],
         // A support structure that can still be tasked offensively: given an attack
         // order (Command Attack, a Battle Plan, or a Hostile stance) it launches a
@@ -196,7 +186,6 @@ export const UNITS = {
         range: 60,
         hp: 85,
         upkeep: 1,
-        glyph: "▧",
         wing: ["helo", "transporthelo"]
     },
     // Unique national command structure (maxCount caps builds per nation). Shelters
@@ -211,7 +200,6 @@ export const UNITS = {
         buildTime: 32,
         hp: 220,
         upkeep: 0.5,
-        glyph: "⬢"
     },
     infantry: {
         label: "Infantry",
@@ -231,7 +219,6 @@ export const UNITS = {
         speed: 30,
         hp: 75,
         upkeep: 0.8,
-        glyph: "▪"
     },
     artillery: {
         label: "Artillery",
@@ -250,7 +237,6 @@ export const UNITS = {
         speed: 35,
         hp: 45,
         upkeep: 1.2,
-        glyph: "▴"
     },
     tank: {
         label: "Tank Battalion",
@@ -270,7 +256,6 @@ export const UNITS = {
         speed: 45,
         hp: 70,
         upkeep: 1.5,
-        glyph: "▮"
     },
     // --- Tech-gated modern & space-age units --------------------------------
     // Each carries requiresTech: "<techId>" — buildable only once that tech is done
@@ -294,7 +279,6 @@ export const UNITS = {
         speed: 150,       // in-flight projectile base speed; the HGV round's speedMult scales it up further
         hp: 50,
         upkeep: 3,
-        glyph: "➤"
     },
     patriot: {
         label: "Patriot Battery",
@@ -309,7 +293,6 @@ export const UNITS = {
         fireCost: 16,
         hp: 55,
         upkeep: 2,
-        glyph: "◆"
     },
     aegis: {
         label: "Aegis Ashore",
@@ -324,7 +307,6 @@ export const UNITS = {
         fireCost: 20,
         hp: 70,
         upkeep: 3,
-        glyph: "⬡"
     },
     thaad: {
         label: "THAAD Battery",
@@ -344,7 +326,6 @@ export const UNITS = {
         fireCost: 24,
         hp: 65,
         upkeep: 3.5,
-        glyph: "⬡"
     },
     // Space assets — orbital platforms with global reach on a fixed inclination.
     // Each tick stepOrbits advances their longitude by orbitSpeedDegPerSec while
@@ -362,7 +343,6 @@ export const UNITS = {
         buildTime: 30,
         hp: 240,
         upkeep: 1,
-        glyph: "✦"
     },
     reconsat: {
         label: "Reconnaissance Satellite",
@@ -380,7 +360,6 @@ export const UNITS = {
         radarKm: 3000,
         hp: 40,
         upkeep: 4,
-        glyph: "❉"
     },
     orbitalstrike: {
         label: "Orbital Strike Platform",
@@ -404,7 +383,6 @@ export const UNITS = {
         speed: 160,
         hp: 60,
         upkeep: 6,
-        glyph: "▲"
     },
     // --- Tech-gated naval units — subs + logistics --------------------------
     // Submarines are stealthy: submarine:true hulls are not revealed by ordinary
@@ -429,7 +407,6 @@ export const UNITS = {
         hp: 65,
         upkeep: 4,
         navalSpeed: 64,
-        glyph: "⟓"
     },
     "sub-ssbn": {
         label: "Ballistic Missile Sub (SSBN)",
@@ -453,7 +430,6 @@ export const UNITS = {
         hp: 80,
         upkeep: 5,
         navalSpeed: 52,
-        glyph: "⟓"
     },
     amphib: {
         label: "Amphibious Transport",
@@ -469,7 +445,6 @@ export const UNITS = {
         hp: 75,
         upkeep: 2,
         navalSpeed: 60,
-        glyph: "⛴"
     },
     // Industry — economic structures. Each adds flat income (output pts/s) and grows
     // the nation's effective GDP (gdpAdd, $T). They never fight but can be struck;
@@ -484,7 +459,6 @@ export const UNITS = {
         gdpAdd: 0.2,
         hp: 60,
         upkeep: 0.5,
-        glyph: "⚙",
         hint: "Heavy manufacturing — steady income and GDP growth."
     },
     port: {
@@ -497,7 +471,6 @@ export const UNITS = {
         gdpAdd: 0.35,
         hp: 70,
         upkeep: 0.5,
-        glyph: "⚓",
         hint: "Coastal trade hub — build on land beside the sea."
     },
     refinery: {
@@ -510,7 +483,6 @@ export const UNITS = {
         gdpAdd: 0.5,
         hp: 65,
         upkeep: 1,
-        glyph: "⛭",
         hint: "Petrochemical exports — strong income. Needs a Factory."
     },
     techpark: {
@@ -523,7 +495,6 @@ export const UNITS = {
         gdpAdd: 0.7,
         hp: 55,
         upkeep: 1,
-        glyph: "✦",
         hint: "High-tech sector — top-tier income. Needs a Factory."
     },
     // Aircraft only arrive as part of a carrier or airstrip wing — never bought alone.
@@ -547,7 +518,6 @@ export const UNITS = {
         turnRate: 1.3,
         hp: 40,
         upkeep: 2,
-        glyph: "✈"
     },
     strikefighter: {
         label: "Strike Fighter",
@@ -566,7 +536,6 @@ export const UNITS = {
         turnRate: 1.1,
         hp: 48,
         upkeep: 3,
-        glyph: "✈"
     },
     interceptor: {
         label: "Air Superiority Fighter",
@@ -584,7 +553,6 @@ export const UNITS = {
         turnRate: 1.5,
         hp: 46,
         upkeep: 3,
-        glyph: "✈"
     },
     attack: {
         label: "Close Air Support",
@@ -603,7 +571,6 @@ export const UNITS = {
         turnRate: 0.9,
         hp: 55,
         upkeep: 2,
-        glyph: "✈"
     },
     transport: {
         label: "Transport Aircraft",
@@ -617,7 +584,6 @@ export const UNITS = {
         turnRate: 0.4,
         hp: 50,
         upkeep: 1,
-        glyph: "✈"
     },
     awacs: {
         label: "AEW&C (AWACS)",
@@ -633,7 +599,6 @@ export const UNITS = {
         turnRate: 0.45,
         hp: 35,
         upkeep: 3,
-        glyph: "❉"
     },
     helo: {
         label: "Attack Helicopter",
@@ -653,7 +618,6 @@ export const UNITS = {
         turnRate: 2.0,
         hp: 34,
         upkeep: 1.5,
-        glyph: "✚"
     },
     transporthelo: {
         label: "Transport Helicopter",
@@ -668,7 +632,6 @@ export const UNITS = {
         turnRate: 1.6,
         hp: 40,
         upkeep: 0.8,
-        glyph: "✚"
     },
     carrierfighter: {
         label: "Carrier Fighter",
@@ -688,7 +651,6 @@ export const UNITS = {
         turnRate: 1.1,
         hp: 44,
         upkeep: 2.5,
-        glyph: "✈"
     },
     // Strategic bomber — the airstrip's offensive punch. Launched only on a strike
     // sortie (never on defensive CAP), it flies to a tasked target under fighter
@@ -712,7 +674,6 @@ export const UNITS = {
         turnRate: 0.65,
         hp: 60,
         upkeep: 3,
-        glyph: "✈"
     },
 };
 // Map unit type -> public/icons SVG basename (rendered by ui/common/UnitIcon).

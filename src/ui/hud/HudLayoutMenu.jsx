@@ -1,4 +1,4 @@
-import {Eye, EyeOff, RotateCcw, SlidersHorizontal} from "lucide-react";
+import Icon from "../common/Icon.jsx";
 import {HUD_PANELS} from "../../game/platform/hudLayout.js";
 import {cn} from "../lib/cn.js";
 import {useDisclosure} from "../../lib/hooks/useDisclosure.js";
@@ -30,15 +30,15 @@ export default function HudLayoutMenu({layout, onToggle, onResetAll, panels = HU
                                     title={hidden ? `Show ${p.label}` : `Hide ${p.label}`}>
                                 <span className={cn("truncate", hidden && "text-faint")}>{p.label}</span>
                                 {hidden
-                                    ? <EyeOff size={14} className="flex-none text-faint" aria-hidden="true"/>
-                                    : <Eye size={14} className="flex-none text-gold" aria-hidden="true"/>}
+                                    ? <Icon name="eye-off" size={14} className="flex-none text-faint"/>
+                                    : <Icon name="eye" size={14} className="flex-none text-gold"/>}
                             </button>
                         );
                     })}
                     <button type="button"
                             className="flex items-center gap-2 w-full mt-1 px-2 py-[7px] rounded-sm text-left text-[12px] text-dim border-t border-hair hover:bg-hair hover:text-text transition-colors"
                             onClick={() => onResetAll()} title="Reset all HUD panels to default">
-                        <RotateCcw size={13} className="flex-none" aria-hidden="true"/>
+                        <Icon name="reset" size={13} className="flex-none"/>
                         Reset Layout
                     </button>
                 </div>
@@ -51,7 +51,7 @@ export default function HudLayoutMenu({layout, onToggle, onResetAll, panels = HU
                     onClick={toggle}
                     aria-expanded={open} aria-haspopup="menu"
                     title="Customize HUD layout" aria-label="Customize HUD layout">
-                <SlidersHorizontal size={16} aria-hidden="true"/>
+                <Icon name="sliders" size={16}/>
                 {hiddenCount > 0 && !open && (
                     <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 grid place-items-center rounded-full bg-gold text-gold-contrast font-mono text-[9px] font-bold leading-none"
                           aria-label={`${hiddenCount} hidden`}>{hiddenCount}</span>

@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {ChevronDown, MessageSquare} from "lucide-react";
+import Icon from "../common/Icon.jsx";
 import {cn} from "../lib/cn.js";
 import {colorForSlot} from "../../game/data/constants.js";
 import {isTyping} from "../../game/platform/keybindings.js";
@@ -87,9 +87,9 @@ export default function ChatBox({net, mySlot, overlayOpen}) {
                             className="flex items-center gap-[6px] px-[10px] h-[26px] text-[9.5px] tracking-[1px] uppercase text-faint bg-panel border-b border-line hover:text-text transition-colors"
                             onClick={() => setOpen(false)}
                             title="Collapse chat" aria-expanded="true" aria-controls="db-chat-log">
-                        <MessageSquare size={11} aria-hidden="true"/>
+                        <Icon name="message" size={12}/>
                         Comms
-                        <ChevronDown size={12} className="ml-auto" aria-hidden="true"/>
+                        <Icon name="chevron-down" size={13} className="ml-auto"/>
                     </button>
                     <div ref={listRef} id="db-chat-log"
                          onScroll={() => {
@@ -140,7 +140,7 @@ export default function ChatBox({net, mySlot, overlayOpen}) {
                         )}
                         onClick={() => setOpen(true)}
                         title="Open chat (Enter)" aria-expanded="false" aria-label="Open chat">
-                    <MessageSquare size={14} aria-hidden="true"/>
+                    <Icon name="message" size={14}/>
                     <span className="font-display uppercase tracking-[1.5px] text-[10px] font-semibold">Comms</span>
                     {unread > 0 && (
                         <span className="min-w-[15px] h-[15px] px-1 grid place-items-center rounded-full bg-gold text-gold-contrast font-mono text-[9px] font-bold leading-none"
