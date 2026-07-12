@@ -76,17 +76,71 @@ function clearPath(lng1, lat1, lng2, lat2, ok) {
 
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
+// Coastal-clearance field (lazy, built once). Chebyshev ring-distance from each
+// navigable cell to the nearest land, capped at COAST_PAD; 0 marks land and open
+// water alike (neither is charged). Ships pay a soft extra cost for occupying a
+// cell close to land so a route stands off the coast when open water is there —
+// but the cell is never blocked, so a strait, a port approach, or a start/finish
+// pinned against the shore still routes. This is the "try, don't force" padding.
+const COAST_PAD = 3;
+// Extra km for entering a sea cell this many rings off the coast (index by band;
+// band 0 = land/open water = free). Kept under a cell's ~28 km span so the nudge
+// bends a course seaward when an open lane runs alongside, without provoking a long
+// detour to shave a little clearance — a ship still hugs the shore when that is the
+// short way. The band1→band2 gap is what decides how readily a course stands off.
+const COAST_COST = [0, 18, 7, 2];
+let coastBand = null;
+
+function buildCoastBand() {
+    const band = new Uint8Array(SEA_W * SEA_H); // 0 = land seed or open water
+    let frontier = [];
+    for (let r = 0; r < SEA_H; r++) for (let c = 0; c < SEA_W; c++) {
+        if (landCell(r, c)) frontier.push(r * SEA_W + c);
+    }
+    for (let d = 1; d <= COAST_PAD && frontier.length; d++) {
+        const next = [];
+        for (const cell of frontier) {
+            const r = (cell / SEA_W) | 0, c = cell % SEA_W;
+            for (const [dr, dc] of DIRS) {
+                const nr = r + dr;
+                if (nr < 0 || nr >= SEA_H) continue;
+                const nc = (((c + dc) % SEA_W) + SEA_W) % SEA_W;
+                const ni = nr * SEA_W + nc;
+                if (band[ni] || landCell(nr, nc)) continue; // already banded or land
+                band[ni] = d;
+                next.push(ni);
+            }
+        }
+        frontier = next;
+    }
+    return band;
+}
+
+function coastBandAt(r, c) {
+    if (!coastBand) coastBand = buildCoastBand();
+    return coastBand[r * SEA_W + c];
+}
+
+function coastCostAt(r, c) {
+    return COAST_COST[coastBandAt(r, c)] || 0;
+}
+
 // A* from (aLng,aLat) to (bLng,bLat) over cells passing `ok`. Returns smoothed
 // waypoints [{lng,lat}, ...] ending at the (possibly snapped) destination, or
 // null when either end can't reach walkable terrain or no path connects them.
-function gridRoute(aLng, aLat, bLng, bLat, ok) {
+// `opts.cellCost(r,c)` adds soft extra km for entering a cell (coast/ship berth);
+// `opts.clear(...)` is the smoothing straight-line test (defaults to plain
+// walkability) so a coast-aware caller keeps its clearance through string-pulling.
+function gridRoute(aLng, aLat, bLng, bLat, ok, opts) {
+    const cellCost = opts?.cellCost;
+    const clear = opts?.clear || ((l1, la1, l2, la2) => clearPath(l1, la1, l2, la2, ok));
     const start = snapTo(aLng, aLat, ok), goal = snapTo(bLng, bLat, ok);
     if (start < 0 || goal < 0) return null;
     // Final waypoint: the exact click when it sits on walkable terrain, else the snapped cell.
     const clickOk = ok(rowOf(bLat), colOf(bLng));
     const endLng = clickOk ? bLng : cellLng(goal % SEA_W);
     const endLat = clickOk ? bLat : cellLat((goal / SEA_W) | 0);
-    if (start === goal || clearPath(aLng, aLat, endLng, endLat, ok)) return [{lng: wrapLng(endLng), lat: endLat}];
+    if (start === goal || clear(aLng, aLat, endLng, endLat)) return [{lng: wrapLng(endLng), lat: endLat}];
 
     const gLng = cellLng(goal % SEA_W), gLat = cellLat((goal / SEA_W) | 0);
     // Float64 is load-bearing: with float32 storage a double-precision ng can
@@ -142,7 +196,7 @@ function gridRoute(aLng, aLat, bLng, bLat, ok) {
             // No slipping diagonally between two touching blocked corners.
             if (dr && dc && !ok(r, nc) && !ok(nr, c)) continue;
             const ni = nr * SEA_W + nc;
-            const ng = g[cur] + havKm(lng, lat, cellLng(nc), cellLat(nr));
+            const ng = g[cur] + havKm(lng, lat, cellLng(nc), cellLat(nr)) + (cellCost ? cellCost(nr, nc) : 0);
             if (ng >= g[ni]) continue;
             g[ni] = ng;
             from[ni] = cur;
@@ -165,7 +219,7 @@ function gridRoute(aLng, aLat, bLng, bLat, ok) {
     let curPt = [aLng, aLat], i = 0;
     while (i < pts.length - 1) {
         let j = pts.length - 1;
-        while (j > i + 1 && !clearPath(curPt[0], curPt[1], pts[j][0], pts[j][1], ok)) j--;
+        while (j > i + 1 && !clear(curPt[0], curPt[1], pts[j][0], pts[j][1])) j--;
         curPt = pts[j];
         route.push({lng: wrapLng(curPt[0]), lat: curPt[1]});
         i = j;
@@ -176,9 +230,63 @@ function gridRoute(aLng, aLat, bLng, bLat, ok) {
     return route;
 }
 
-// Naval routing over navigable water — ships path around land.
-export function seaRoute(aLng, aLat, bLng, bLat) {
-    return gridRoute(aLng, aLat, bLng, bLat, seaCell);
+// Soft berth charged for entering another ship's cell / its immediate neighbours,
+// so a route threads around a knot of ships instead of ploughing through it. Like
+// the coast cost it only nudges — nothing is blocked, so a ship can still close on
+// or arrive amid a group when that's where it's headed.
+const SHIP_COST = 22, SHIP_COST_ADJ = 9;
+
+// Build a per-cell berth-cost map from the positions to keep clear of. Overlapping
+// berths take the max rather than stacking, so a dense cluster stays a gentle nudge.
+function berthCosts(avoid) {
+    if (!avoid?.length) return null;
+    const m = new Map();
+    const bump = (r, c, km) => {
+        const i = r * SEA_W + c;
+        if ((m.get(i) || 0) < km) m.set(i, km);
+    };
+    for (const p of avoid) {
+        const r0 = rowOf(p.lat), c0 = colOf(p.lng);
+        bump(r0, c0, SHIP_COST);
+        for (const [dr, dc] of DIRS) {
+            const nr = r0 + dr;
+            if (nr < 0 || nr >= SEA_H) continue;
+            bump(nr, (((c0 + dc) % SEA_W) + SEA_W) % SEA_W, SHIP_COST_ADJ);
+        }
+    }
+    return m;
+}
+
+// The straight-line test the sea router uses for both the direct-shortcut and the
+// smoother: walkable the whole way, never brushing the immediate coast (band 1),
+// and never cutting through a ship berth. That keeps string-pulling (and the initial
+// shortcut) from yanking a hop back against the shore or straight through a cluster
+// that A* deliberately skirted. Where a tight passage or a wall of ships leaves no
+// clear straight line the smoother falls back to stepping cell-by-cell — still as
+// far off the coast, and around the berths, as A* could manage.
+function seaClear(l1, la1, l2, la2, berths) {
+    let dLng = wrapLng(l2 - l1);
+    const dLat = la2 - la1;
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(dLng), Math.abs(dLat)) / (STEP / 2)));
+    for (let i = 0; i <= n; i++) {
+        const lng = wrapLng(l1 + (dLng * i) / n), lat = la1 + (dLat * i) / n;
+        const r = rowOf(lat), c = colOf(lng);
+        if (!seaCell(r, c) || coastBandAt(r, c) === 1) return false;
+        if (berths && berths.has(r * SEA_W + c)) return false;
+    }
+    return true;
+}
+
+// Naval routing over navigable water — ships path around land, prefer to stand off
+// the coast, and give a berth to the ships in `opts.avoid` (a list of {lng,lat} to
+// route around). Both preferences are soft: a course still hugs the shore or passes
+// close aboard other ships when that is the only way through.
+export function seaRoute(aLng, aLat, bLng, bLat, opts) {
+    const berths = berthCosts(opts?.avoid);
+    const cellCost = berths
+        ? (r, c) => coastCostAt(r, c) + (berths.get(r * SEA_W + c) || 0)
+        : coastCostAt;
+    return gridRoute(aLng, aLat, bLng, bLat, seaCell, {cellCost, clear: (l1, la1, l2, la2) => seaClear(l1, la1, l2, la2, berths)});
 }
 
 // Ground routing over land — armies path around oceans (and cross non-navigable
