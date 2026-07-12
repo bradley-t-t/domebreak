@@ -24,6 +24,7 @@ import {useBattlePlanReconciler} from "../hooks/useBattlePlanReconciler.js";
 import Flag from "../common/Flag.jsx";
 import {useGameSession} from "../hooks/useGameSession.js";
 import {useEventEffects} from "../hooks/useEventEffects.js";
+import {useWarAlerts} from "../hooks/useWarAlerts.js";
 import {useKeyboardControls} from "../hooks/useKeyboardControls.js";
 import {usePanControls} from "../hooks/usePanControls.js";
 import {useUnitStats} from "../hooks/useUnitStats.js";
@@ -252,23 +253,29 @@ export default function LiveGame({
     // preserved). Online matches are speed-locked and never pause: the modal is
     // non-blocking there. Keyed on whether the queue is non-empty.
     const hasWarPopup = (w.warPopups?.length ?? 0) > 0;
+    // A war declared on the player (or a call-to-arms that drags them in) raises the
+    // same modal as a heads-up — see useWarAlerts. It counts toward the auto-pause
+    // below, so single-player freezes on a declaration and online just notifies.
+    const {alerts: warAlerts, dismiss: dismissWarAlert} = useWarAlerts({w, mySlot});
+    const warAlert = warAlerts[0];
     // Online alliance offers ride the broadcast pendingAlliance queue rather than
     // the per-player warPopups modal queue (the server can't address one seat). Each
     // client surfaces the front proposal aimed at its own slot as an Accept/Decline
     // prompt; answering it clears the offer for everyone via respondAlliance.
     const allyOffer = net ? w.pendingAlliance?.find((o) => o.to === mySlot) : null;
     const allyOfferPop = allyOffer ? {id: `ally-offer-${allyOffer.from}`, kind: "ally-offer", foe: allyOffer.from} : null;
+    const pauseForPopup = hasWarPopup || warAlerts.length > 0;
     const warAutoPaused = useRef(false);
     useEffect(() => {
         if (net) return;                       // online: never pause
-        if (hasWarPopup && !w.paused) {
+        if (pauseForPopup && !w.paused) {
             warAutoPaused.current = true;
             api.pause();
-        } else if (!hasWarPopup && warAutoPaused.current) {
+        } else if (!pauseForPopup && warAutoPaused.current) {
             warAutoPaused.current = false;
             api.play();
         }
-    }, [hasWarPopup, net]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [pauseForPopup, net]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Escape cascade, command-screen hotkeys, controls-reference toggle, game
     // speed hotkeys and keyboard zoom — see useKeyboardControls (same handlers,
@@ -726,6 +733,9 @@ export default function LiveGame({
             )}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
             {!w.over && net && allyOfferPop && <WarOutcomeModal world={w} api={api} pop={allyOfferPop}/>}
+            {/* War-declaration heads-up, behind any offer/outcome modal so only one shows. */}
+            {!w.over && warAlert && !((!net && hasWarPopup) || (net && allyOfferPop)) &&
+                <WarOutcomeModal world={w} api={api} pop={warAlert} onDismiss={() => dismissWarAlert(warAlert.id)}/>}
             {/* You were knocked out but the war rages on: a blocking notice with the
                 choice to keep watching (spectate) or leave to the menu. Dismissing it
                 (Spectate) drops into the HUD-less spectator view below. */}

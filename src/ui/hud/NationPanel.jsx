@@ -61,7 +61,12 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
             indCap: industryCapOf(world, mySlot),
             indOut: industryOutputOf(world, mySlot),
         };
-    }, [world, mySlot]);
+        // world is mutated in place (stable ref), so key off world.time — it
+        // advances every tick — to keep this recompute live, matching every other
+        // world-derived memo. Omitting it froze the panel at first-mount values,
+        // so population/GDP/roster drifted from the live HUD and player list.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- world read inside; world.time is the tick clock we intend to key on
+    }, [world, world.time, mySlot]);
 
     if (!myNation) return null;
     const indUsed = view.indCount + view.indPending;
