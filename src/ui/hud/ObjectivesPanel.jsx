@@ -58,6 +58,26 @@ function LeadershipSection({world, api, mySlot, flash}) {
         {label: "In transit", value: inTransit, color: VIT_AMBER},
     ];
 
+    // Prompt callout, sitting right above the controls that act on it: the
+    // war-declared "shelter now" alarm pulses; the peacetime "bring them home"
+    // nudge is calm. Both self-arm and self-clear from world state.
+    const where = lead.sites.length
+        ? lead.sites.slice(0, 3).join(", ") + (lead.sites.length > 3 ? `, +${lead.sites.length - 3} more` : "")
+        : "the field";
+    const prompt = danger
+        ? {
+            tone: "danger",
+            title: "Leadership Exposed — War Declared",
+            body: `Your national command is spread across ${where}. Airlift them to the bunker before an enemy strike decapitates you.`,
+        }
+        : !lead.atWar && lead.sheltered > 0 && !releasing
+            ? {
+                tone: "calm",
+                title: "The Wars Have Ended",
+                body: "Your leadership is still sheltered in the bunker. Release them back to your cities to restore full national command.",
+            }
+            : null;
+
     return (
         <div className="border-t border-hair">
             <div className="flex items-center gap-2 px-3 pt-[9px] pb-[6px]">
@@ -68,6 +88,19 @@ function LeadershipSection({world, api, mySlot, flash}) {
             </div>
             <div className={cn("px-3 text-[10.5px] leading-snug", danger ? "text-red" : "text-faint")}
                  role="status" aria-live="polite">{status}</div>
+            {prompt && (
+                <div className={cn(
+                    "mx-3 mt-[8px] rounded-[6px] border px-[9px] py-[7px]",
+                    prompt.tone === "danger"
+                        ? "border-red/60 bg-red/10 animate-[db-lead-pulse_1.8s_ease-in-out_infinite] motion-reduce:animate-none"
+                        : "border-gold/45 bg-gold/10"
+                )} role={prompt.tone === "danger" ? "alert" : "status"}
+                     aria-live={prompt.tone === "danger" ? "assertive" : "polite"}>
+                    <div className={cn("font-display font-semibold text-[11px] tracking-[0.3px] leading-tight",
+                        prompt.tone === "danger" ? "text-red" : "text-gold")}>{prompt.title}</div>
+                    <div className="mt-[2px] text-[10px] leading-snug text-faint">{prompt.body}</div>
+                </div>
+            )}
             {/* Composition bar: where the nation's command currently sits. */}
             <div className="mx-3 mt-[7px] flex h-[5px] overflow-hidden rounded-full bg-sunk" aria-hidden="true">
                 {segs.map((s) => (

@@ -6,7 +6,6 @@ import WarBar from "../hud/WarBar.jsx";
 import ProductionBar from "../hud/ProductionBar.jsx";
 import NationPanel from "../hud/NationPanel.jsx";
 import NewsTicker from "../hud/NewsTicker.jsx";
-import LeadershipAlert from "../hud/LeadershipAlert.jsx";
 import WarOutcomeModal from "../hud/WarOutcomeModal.jsx";
 import GraceIndicator from "../hud/GraceIndicator.jsx";
 import ChatBox from "../hud/ChatBox.jsx";
@@ -615,9 +614,6 @@ export default function LiveGame({
                              onMenu={onPause} meBadge={meBadge}/>
                     <NewsTicker world={w} mySlot={mySlot}/>
                 </AdjustablePanel>
-                {/* Flowed in the stack (not absolutely pinned) so it always sits below the
-                    HUD + ticker instead of overlapping them. */}
-                {!hudHidden && <LeadershipAlert world={w} api={api} mySlot={mySlot}/>}
             </div>
             {!hudHidden && (
                 <AdjustablePanel panel={hud.sidebar} onChange={(p) => setHud("sidebar", p)}
