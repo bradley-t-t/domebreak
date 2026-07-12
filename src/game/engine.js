@@ -47,6 +47,7 @@ export function createWorld(setup) {
         slot: c.slot,
         name: c.name,
         state: c.state || "",
+        region: c.region ?? null, // GID_1 province — capture flips a whole one (see occupation.flipState)
         cap: c.cap ? 1 : 0,
         pop: c.pop || 0,
         pop0: c.pop || 0,   // starting population — growth ceiling baseline (see POPULATION)
