@@ -11,11 +11,9 @@ import {
 } from "../../game/engine.js";
 import {fmtKm as km} from "../lib/format.js";
 import {createElement} from "react";
-import Icon from "../common/Icon.jsx";
+import Points from "../common/Points.jsx";
 
-// "N points" as an inline points-mark + number, matching the production cards.
-const pts = (n) => createElement("span", {className: "inline-flex items-center gap-1"},
-    createElement(Icon, {name: "points", size: 10}), n);
+const pts = (n) => createElement(Points, {value: n, size: 10});
 
 export function useUnitStats({w, mySlot, armOf}) {
     return (u) => {

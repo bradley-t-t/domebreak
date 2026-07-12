@@ -8,6 +8,7 @@ import {useState} from "react";
 import ScreenFrame from "./ScreenFrame.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import Icon from "../common/Icon.jsx";
+import Points from "../common/Points.jsx";
 import {
     armamentOf,
     gdpOf,
@@ -108,7 +109,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
             rows.push(["Engage Range", km(u.range)]);
             if (u.minRange) rows.push(["Min Range", km(u.minRange)]);
             rows.push(["Reload", `${u.reload.toFixed(1)}s`]);
-            rows.push(["Shot Cost", <span className="inline-flex items-center gap-1"><Icon name="points" size={10}/>{u.fireCost}</span>]);
+            rows.push(["Shot Cost", <Points value={u.fireCost} size={10}/>]);
         } else if (u.kind === "offense") {
             rows.push(["Damage", `${Math.round(u.damage)}`]);
             rows.push(["Strike Range", km(u.range)]);
@@ -162,7 +163,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
                     <div className="db-ucard-top flex items-baseline gap-2">
                         <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{unitLabel(key, me?.iso)}</b>
-                        <span className="db-ucard-cost inline-flex items-center gap-1 font-mono text-xs text-gold"><Icon name="points" size={11}/>{cost}</span>
+                        <Points value={cost} className="db-ucard-cost font-mono text-xs text-gold"/>
                     </div>
                     <span className={cn("db-ucard-line text-[10.5px] leading-[1.3] text-dim", lock && "text-faint")}>{line}</span>
                     {rows.length > 0 && (
@@ -208,7 +209,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <div className="db-ucard-body flex-1 min-w-0 flex flex-col gap-1">
                     <div className="db-ucard-top flex items-baseline gap-2">
                         <b className="db-ucard-name flex-1 min-w-0 font-display font-bold text-[12.5px] whitespace-nowrap overflow-hidden text-ellipsis">{wh.name}</b>
-                        <span className="db-ucard-cost inline-flex items-center gap-1 font-mono text-xs text-gold"><Icon name="points" size={11}/>{wh.prodCost}</span>
+                        <Points value={wh.prodCost} className="db-ucard-cost font-mono text-xs text-gold"/>
                     </div>
                     <span className="db-ucard-line text-[10.5px] leading-[1.3] text-dim">{wh.desc}</span>
                     {users.length > 0 && (
@@ -262,7 +263,7 @@ export default function ProductionScreen({world, api, mySlot, placing, setPlacin
                 <aside className="db-prod-rail db-scroll flex flex-col gap-3 p-[18px] overflow-auto bg-panel border-r border-line-soft">
                     <div className="db-prod-bank flex flex-col gap-px py-3 px-3.5 bg-sunk border border-line rounded">
                         <span className="db-prod-bank-l text-[9px] tracking-[1.5px] uppercase text-faint">Treasury</span>
-                        <span className="db-prod-bank-v inline-flex items-center gap-1.5 font-mono text-[22px] font-bold text-gold"><Icon name="points" size={17}/>{Math.floor(points)}</span>
+                        <Points value={Math.floor(points)} size={17} className="db-prod-bank-v font-mono text-[22px] font-bold text-gold"/>
                         <span className={cn("db-prod-bank-net font-mono text-[11px]", net < 0 ? "neg text-red" : "pos text-[#46d38a]")}>{fmtNet(net, 1)}/s</span>
                     </div>
                     <div className="db-prod-econ grid grid-cols-2 gap-[7px]">
