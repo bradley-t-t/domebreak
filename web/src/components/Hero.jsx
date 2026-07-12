@@ -2,7 +2,7 @@ import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
 import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
-import HeroGlobe from "./HeroGlobe.jsx";
+import HeroMap from "./HeroMap.jsx";
 import GameIcon from "./GameIcon.jsx";
 import {Eyebrow, Wordmark} from "./Primitives.jsx";
 
@@ -27,8 +27,8 @@ export default function Hero({onSignIn}) {
 
     return (
         <section ref={ref} className="relative min-h-[100svh] w-full overflow-hidden">
-            {/* Live in-game globe (real engine) over a static poster. */}
-            <HeroGlobe/>
+            {/* Pre-made looping US-defense scene on the game's flat command map. */}
+            <HeroMap/>
 
             {/* Instrument overlays. */}
             <div aria-hidden className="pointer-events-none absolute inset-0 z-0 db-grid"/>
@@ -45,8 +45,8 @@ export default function Hero({onSignIn}) {
                     <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
                     Threat board · Live
                 </div>
-                <div className="mt-1 text-dim/80">222 nations on the map</div>
-                <div className="mt-1">Real-time · globe view</div>
+                <div className="mt-1 text-dim/80">Homeland defense · CONUS</div>
+                <div className="mt-1">Real-time · intercept grid</div>
             </motion.div>
 
             {/* Command rail. */}
