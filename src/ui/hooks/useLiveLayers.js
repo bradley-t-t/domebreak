@@ -249,6 +249,13 @@ export function useLiveLayers({
                 radius = def.range;
                 isStrike = 1;
             }
+            // An airstrip (or other sortie platform) shows how far its bomber sorties
+            // reach — the amber strike ring — rather than its short runway footprint.
+            if (def.sortieKm) {
+                radius = def.sortieKm;
+                isStrike = 1;
+                isRadar = 0;
+            }
             // Draw the ring for any sensor, orbital, or strike platform regardless of
             // size (their reach IS the point), plus any ring small enough not to
             // clutter the surface map. The 4000km cap only ever existed to keep big

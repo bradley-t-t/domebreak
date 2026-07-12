@@ -88,6 +88,30 @@ export const COAST_KM = 60;
 export const AMPHIB_LIFT_KM = 120;
 // Reload multiplier a hull gets while inside a friendly Replenishment Ship's resupplyKm.
 export const REPLENISH_RELOAD_MULT = 0.7;
+// Naval formation station-keeping (see sim/formation.js). A ship with a followId
+// holds a doctrinal station off its guide: escorts screen it, submarines picket
+// ahead, heavies fall into line astern, and the oiler shuttles alongside each
+// hull in turn. Ranges are km from the guide; arcs are degrees relative to the
+// guide's course (0 = dead ahead, +clockwise). holdKm is the on-station deadband
+// (no thrust inside it); replotKm is how far the station may drift before a
+// following ship re-plots its route around land.
+export const FORMATION = {
+    holdKm: 3,
+    replotKm: 8,
+    // ASW/AAW escorts (destroyer, cruiser) — a screen thrown around the guide.
+    screenKm: 40, screenArc: 300,
+    // Cruisers ride a tighter air-defense ring than the destroyer ASW screen.
+    innerKm: 26, innerArc: 260,
+    // Submarines picket well ahead of the formation.
+    vanKm: 78, vanArc: 70,
+    // Battleships / heavies form line astern behind the guide.
+    sternKm: 22, sternStepKm: 16,
+    // High-value hulls (carrier, amphib) tuck in close astern when they follow.
+    hvuKm: 15,
+    // The replenishment oiler pulls this far off a client's beam during UNREP,
+    // dwelling resupplyDwellSec on each supported hull before moving to the next.
+    alongsideKm: 9, resupplyDwellSec: 14,
+};
 // Stat fallbacks for unit types that omit a field (and legacy-save projectiles).
 export const DEFAULT_BUILD_TIME = 10, DEFAULT_RELOAD = 3, DEFAULT_HIT_PROB = 0.8;
 // Effective GDP ($T) assumed for nations missing from the GDP_T table.
@@ -266,6 +290,7 @@ export const BATTLE_PLAN = {
         {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "orbitallaser"]},
         {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat"]},
         {id: "airbases", label: "Airbases", types: ["airstrip", "carrier", "armybase"]},
+        {id: "aircraft", label: "Aircraft", types: ["multirole", "strikefighter", "interceptor", "attack", "awacs", "helo", "transporthelo", "carrierfighter", "transport", "bomber"]},
         {id: "command", label: "Command", types: ["bunker", "spacehq"]},
         {id: "ground", label: "Ground Forces", types: ["infantry", "artillery", "tank"]},
     ],
@@ -305,9 +330,26 @@ export * from "./techs.js";
 // Hangar complement per base type — aircraft live as STOCK (counts), not units,
 // until they launch. Caps double as the max you can restock to via production.
 export const HANGAR_SPEC = {
-    airstrip: {interceptor: 10, attack: 15, transport: 20, awacs: 1},
+    airstrip: {interceptor: 10, multirole: 10, attack: 15, transport: 20, awacs: 1, bomber: 6},
     carrier: {carrierfighter: 20, strikefighter: 10, awacs: 1},
     armybase: {helo: 6, transporthelo: 2},
+};
+
+// Offensive air-strike tuning. Aircraft tasked to attack (via stance auto-engage,
+// a direct Command Attack, a Battle Plan, or an airstrip bomber sortie) fly a
+// strike mission: out to the target, release, then recover to base.
+export const STRIKE = {
+    a2aRangeKm: 170,        // air-to-air missile launch range (target is an aircraft)
+    loiterKm: 14,           // hold radius while making passes on a ground/city target
+    recoverKm: 14,          // arrival distance at which a recovering aircraft stows into stock
+    maxPasses: 3,           // strike passes an aircraft makes before recovering
+    escortsPerSortie: 2,    // fighters launched to escort each bomber sortie
+    bombersPerSortie: 2,    // bombers launched per airstrip sortie
+    sortieCooldownSec: 18,  // min game-seconds between an airstrip's sorties
+    // Auto-engage: how a Hostile aircraft/airbase picks a target when it has none,
+    // and how long a Defensive unit remembers who last hit it before retaliating.
+    reacquireSec: 1.5,      // min gap between auto-acquire scans (cheap throttle)
+    threatMemorySec: 8,     // a Defensive unit retaliates against an attacker seen this recently
 };
 // Which type flies defensive patrols from each base, in real flight sizes.
 export const PATROL_FIGHTER = {airstrip: "interceptor", carrier: "carrierfighter", armybase: "helo"};

@@ -7,7 +7,7 @@
 // so the tick stays reproducible and the solver is unit-testable. All tuning is
 // data-driven (BATTLE_PLAN / UNITS / WARHEADS).
 import {haversine} from "../geo/geo.js";
-import {BATTLE_PLAN, UNITS, WARHEADS, isAttacker} from "../data/constants.js";
+import {BATTLE_PLAN, STRIKE, UNITS, WARHEADS, isAttacker} from "../data/constants.js";
 import {initialWarhead} from "../data/warheads.js";
 import {atWar} from "./queries.js";
 import {unitLockReason} from "./production.js";
@@ -23,6 +23,9 @@ export function loadedWarhead(u) {
 // loaded warhead's yield multiplier.
 export function shotDamage(_w, u) {
     const def = UNITS[u.type];
+    // A sortie platform (airstrip) has no weapon of its own — its "shot" is the
+    // bomber package it launches, so rate it by the package's combined payload.
+    if (def.sortieKm) return (UNITS.bomber.damage || 0) * STRIKE.bombersPerSortie;
     const wh = WARHEADS[loadedWarhead(u)] || WARHEADS.standard;
     return (def.damage || 0) * (wh.dmgMult ?? 1);
 }
@@ -31,7 +34,9 @@ export function shotDamage(_w, u) {
 // plan's engagement-range dial. The dial can only ever SHORTEN the reach — never
 // extend it past what the platform can physically do.
 export function reachKm(_w, u, engagementKm) {
-    const hw = UNITS[u.type].range || 0;
+    // A sortie platform reaches as far as its bombers fly (sortieKm), not its
+    // runway footprint (range); every other platform uses its hardware range.
+    const hw = UNITS[u.type].sortieKm || UNITS[u.type].range || 0;
     const dial = Number.isFinite(engagementKm) ? engagementKm : BATTLE_PLAN.maxEngagementKm;
     return Math.min(hw, dial);
 }

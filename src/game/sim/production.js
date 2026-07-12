@@ -25,6 +25,7 @@ import {findTarget, idMapInvalidate} from "./combat.js";
 import {ensureHangar, hangarCapOf} from "./aircraft.js";
 import {landRoute, seaRoute} from "../geo/seaRoute.js";
 import {haversine} from "../geo/geo.js";
+import {clearFollow} from "./formation.js";
 
 // Set the war relation between two nations and stamp the war-start time on both
 // sides so diplomacy can age the conflict regardless of which nation opened it
@@ -300,6 +301,38 @@ export function setSail(w, slot, unitId, lng, lat) {
     if (!route) return {error: "No sea route to there."};
     u.route = route;
     u.dest = {...route[route.length - 1]};
+    clearFollow(u); // a manual sail order breaks the ship out of formation
+    return {ok: true};
+}
+
+// Order a ship to keep station on another of your ships — it joins that ship's
+// formation and station-keeps every tick (see sim/formation.js) until it's given a
+// manual order or told to break off. Targets must be your own ships; a follow that
+// would close a loop back onto the follower is refused.
+export function setFollow(w, slot, unitId, targetId) {
+    const u = w.units.find((x) => x.id === unitId && x.slot === slot);
+    if (!u) return {error: "Unit not found."};
+    if (!UNITS[u.type].navalSpeed) return {error: "Not a ship."};
+    if (!targetId || targetId === unitId) return {error: "Pick another ship to follow."};
+    const t = w.units.find((x) => x.id === targetId && x.slot === slot);
+    if (!t || t.hp <= 0) return {error: "That ship isn't there."};
+    if (!UNITS[t.type].navalSpeed) return {error: "Ships can only follow other ships."};
+    // Walk the target's follow chain: if it leads back to us, the order would loop.
+    for (let cur = t, hops = 0; cur && hops < 64; hops++) {
+        if (cur.id === unitId) return {error: "That would loop the formation."};
+        cur = cur.followId ? w.units.find((x) => x.id === cur.followId) : null;
+    }
+    u.followId = targetId;
+    u.dest = null;
+    u.route = null;
+    u._fRoute = null;
+    u._fAnchor = null;
+    return {ok: true};
+}
+
+export function stopFollow(w, slot, unitId) {
+    const u = w.units.find((x) => x.id === unitId && x.slot === slot);
+    if (u) clearFollow(u);
     return {ok: true};
 }
 
@@ -313,6 +346,7 @@ export function setMarch(w, slot, unitId, lng, lat) {
     if (!route) return {error: "No land route to there."};
     u.route = route;
     u.dest = {...route[route.length - 1]};
+    clearFollow(u); // a manual march order breaks the ship out of formation
     return {ok: true};
 }
 
@@ -321,6 +355,7 @@ export function stopSail(w, slot, unitId) {
     if (u) {
         u.dest = null;
         u.route = null;
+        clearFollow(u); // All Stop also drops any formation order
     }
     return {ok: true};
 }
@@ -333,6 +368,20 @@ export function setPatrolSize(w, slot, unitId, size) {
     ensureHangar(w, u);
     u.patrolSize = size;
     return {ok: true, patrolSize: size};
+}
+
+// Set an aircraft's or airbase's engagement stance: "hostile" (auto-engage any
+// enemy in range) or "defensive" (hold fire unless attacked, then return fire).
+// Only aircraft and airbases carry a stance — every other platform fires solely on
+// an explicit Command Attack / Battle Plan order.
+export function setStance(w, slot, unitId, stance) {
+    const u = w.units.find((x) => x.id === unitId && x.slot === slot);
+    if (!u) return {error: "Unit not found."};
+    const def = UNITS[u.type];
+    if (!def.airSpeed && !def.wing) return {error: "This unit has no engagement stance."};
+    if (stance !== "hostile" && stance !== "defensive") return {error: "Invalid stance."};
+    u.stance = stance;
+    return {ok: true, stance};
 }
 
 // Toggle the base's AWACS orbit on or off.

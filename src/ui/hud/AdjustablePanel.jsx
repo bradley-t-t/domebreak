@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Contrast, EyeOff, GripVertical, Maximize2, RotateCcw} from "lucide-react";
+import {Check, Contrast, EyeOff, GripVertical, Maximize2, RotateCcw, SlidersHorizontal} from "lucide-react";
 import {HUD_OPACITY_MAX, HUD_OPACITY_MIN, HUD_SCALE_MAX, HUD_SCALE_MIN} from "../../game/platform/hudLayout.js";
 import {cn} from "../lib/cn.js";
 import {clamp} from "../../lib/math.js";
@@ -9,9 +9,6 @@ const RESIZE_SENSITIVITY = 320;
 // Panels always keep this gap from the screen edge — the whole panel stays fully
 // on-screen, and a moved panel snaps flush to whichever edge it lands nearest.
 const EDGE_MARGIN = 8;
-// Grace period before the hover toolbar closes, so crossing the small gap from
-// the panel to the toolbar (or between its buttons) never dismisses it.
-const CLOSE_DELAY = 300;
 
 // Nearest-edge target for a panel rect (in current dx/dy terms): returns the
 // dx/dy that pins the panel flush against the closest screen edge while keeping
@@ -39,13 +36,21 @@ function onScreenDelta(near, size, extent) {
     return 0;
 }
 
-// Wraps an in-game HUD panel and makes it player-adjustable: a hover toolbar of
-// drag handles for repositioning and resizing, plus an opacity slider, a hide
-// button, and a reset. Repositioning keeps the panel fully on-screen and snaps
-// it flush to the nearest edge. Purely presentational — every change is reported
-// through onChange to the machine-local layout store; this component never
-// touches game state. The caller supplies the panel's docked position via
-// `className` and the toolbar's horizontal edge via `tabAlign`.
+// Wraps an in-game HUD panel and makes it player-adjustable: a toolbar of drag
+// handles for repositioning and resizing, plus an opacity slider, a hide button,
+// and a reset. Repositioning keeps the panel fully on-screen and snaps it flush
+// to the nearest edge. Purely presentational — every change is reported through
+// onChange to the machine-local layout store; this component never touches game
+// state. The caller supplies the panel's docked position via `className` and the
+// toolbar's horizontal edge via `tabAlign`.
+//
+// Reachability: the toolbar is opened by CLICKING a small adjust handle that sits
+// at the panel edge (revealed on hover, so it stays out of the way during play).
+// Once open it is PINNED — it stays put no matter where the pointer goes, so the
+// player can travel to the sliders and buttons without it vanishing out from under
+// them. It closes on the Done button, an outside click, or Escape. (The old
+// pure-hover reveal dismissed itself the instant the pointer left the panel to
+// reach the controls, which made the controls effectively unusable.)
 export default function AdjustablePanel({
                                             panel,
                                             onChange,
@@ -67,35 +72,42 @@ export default function AdjustablePanel({
     // flight — keeps the motion smooth and defers the persisted commit (and its
     // localStorage write) to pointer-up.
     const [live, setLive] = useState(null);
-    // Hover-driven toolbar visibility. Tracked in JS (not CSS :hover) so it works
-    // through the click-through top bar and survives the trip from panel to
-    // toolbar via the close delay.
-    const [show, setShow] = useState(false);
-    const closeT = useRef(0);
+    // Whether the adjust toolbar is pinned open. Click the handle to open; it then
+    // stays regardless of pointer position (that's the whole point) until the Done
+    // button, an outside click, or Escape closes it.
+    const [open, setOpen] = useState(false);
+    // Purely cosmetic: reveal the small adjust handle while the pointer is over the
+    // panel, so it doesn't clutter the map during play but is there when wanted.
+    const [hovered, setHovered] = useState(false);
     // Latest onChange without making layout effects depend on its identity.
     const onChangeRef = useLatestRef(onChange);
 
-    const openTab = useCallback(() => {
-        clearTimeout(closeT.current);
+    const openToolbar = useCallback(() => {
         // The toolbar is ~32px tall; if the panel sits nearer the top than that
         // (e.g. snapped flush to the top edge) there's no room above, so flip it
         // underneath. The default docks (top-40) keep it above.
         const r = rootRef.current?.getBoundingClientRect();
-        if (r) setBelow(r.top < 36);
-        setShow(true);
+        if (r) setBelow(r.top < 44);
+        setOpen(true);
     }, []);
-    const scheduleClose = useCallback(() => {
-        clearTimeout(closeT.current);
-        closeT.current = setTimeout(() => setShow(false), CLOSE_DELAY);
-    }, []);
-    // pointerout bubbles up from children; ignore moves that stay within the
-    // panel/toolbar (relatedTarget still inside), close only on a real exit.
-    const onPointerOut = useCallback((e) => {
-        const rt = e.relatedTarget;
-        if (rt instanceof Node && rootRef.current?.contains(rt)) return;
-        scheduleClose();
-    }, [scheduleClose]);
-    useEffect(() => () => clearTimeout(closeT.current), []);
+
+    // A pinned toolbar must always be dismissible, so it never traps the pointer:
+    // any pointerdown outside the panel, or Escape, closes it.
+    useEffect(() => {
+        if (!open) return;
+        const onDown = (e) => {
+            if (!rootRef.current?.contains(e.target)) setOpen(false);
+        };
+        const onKey = (e) => {
+            if (e.key === "Escape") setOpen(false);
+        };
+        window.addEventListener("pointerdown", onDown, true);
+        window.addEventListener("keydown", onKey);
+        return () => {
+            window.removeEventListener("pointerdown", onDown, true);
+            window.removeEventListener("keydown", onKey);
+        };
+    }, [open]);
 
     const commit = useCallback((patch) => {
         setLive(null);
@@ -181,77 +193,95 @@ export default function AdjustablePanel({
     if (panel.hidden) return null;
 
     const eff = live ? {...panel, ...live} : panel;
-    const visible = show || !!live;
+    const visible = open || !!live;
     const gripBtn = "w-6 h-6 grid place-items-center rounded text-dim hover:text-text hover:bg-[rgba(160,168,178,0.12)] transition-colors";
-    // The toolbar lives inside a FULL-WIDTH hover strip that spans the panel and
-    // sits flush against its edge (with a small transparent bridge). That strip —
-    // not just the little pill — is the hover-catch area, so moving the pointer
-    // from anywhere on the panel toward the controls never crosses dead space and
-    // dismisses them. The visible pill is aligned within the strip to a panel edge.
     const alignJustify = tabAlign === "center" ? "justify-center" : tabAlign === "right" ? "justify-end" : "justify-start";
-    // Drop below the panel only when there's no room above; the bridge padding
-    // (pt/pb) overlaps the panel edge so the catch strip is continuous with it.
+    // Drop below the panel only when there's no room above; the small offset (pt/pb)
+    // floats the handle/toolbar just off the panel edge.
     const vertCls = below ? "top-full pt-1.5" : "bottom-full pb-1.5";
 
     return (
         <div
             ref={rootRef}
             className={className}
-            onPointerOver={openTab}
-            onPointerOut={onPointerOut}
-            onFocusCapture={openTab}
-            onBlurCapture={onPointerOut}
+            // pointerover/out (which bubble) rather than enter/leave, so hover is
+            // detected even on click-through wrappers whose root has
+            // pointer-events:none — the event still bubbles up from the interactive
+            // children. A move that stays within the panel (relatedTarget inside)
+            // keeps the handle revealed.
+            onPointerOver={() => setHovered(true)}
+            onPointerOut={(e) => {
+                if (!(e.relatedTarget instanceof Node) || !rootRef.current?.contains(e.relatedTarget)) setHovered(false);
+            }}
+            onFocusCapture={() => setHovered(true)}
+            onBlurCapture={(e) => {
+                if (!(e.relatedTarget instanceof Node) || !rootRef.current?.contains(e.relatedTarget)) setHovered(false);
+            }}
             style={{
                 transform: `translate(${eff.dx}px, ${eff.dy}px) scale(${eff.scale})`,
                 transformOrigin: origin,
                 // Full-width wrappers (the top bar) must not blanket the map with a
-                // click-blocker; the panel content and toolbar re-enable pointer
-                // events on themselves, so only they stay interactive.
+                // click-blocker; the panel content, handle, and toolbar re-enable
+                // pointer events on themselves, so only they stay interactive.
                 ...(clickThrough ? {pointerEvents: "none"} : null),
             }}>
-            {/* Opacity is scoped to the content, never the toolbar, so a faded panel
-                still has fully legible controls when hovered. */}
+            {/* Opacity is scoped to the content, never the controls, so a faded panel
+                still has a fully legible toolbar when adjusting. */}
             <div className={contentClass} style={{opacity: eff.opacity}}>{children}</div>
-            {/* Adjustment toolbar — revealed on hover (or during an interaction), so
-                it stays out of the way during play. The outer strip spans the panel
-                width and bridges flush to its edge so the pointer can reach the pill
-                without crossing dead space; the pill itself carries the controls. */}
-            <div
-                className={cn(
-                    "absolute left-0 right-0 z-30 flex", alignJustify, vertCls,
-                    "transition-opacity duration-150",
-                    visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
-                )}>
-                <div
-                    className="flex items-center gap-1 rounded-md bg-panel-2 border border-line px-1.5 py-1 shadow backdrop-blur-[10px] select-none"
-                    role="toolbar"
-                    aria-label={`${label} layout controls`}>
-                    <button type="button" className={cn(gripBtn, "cursor-grab active:cursor-grabbing touch-none")}
-                            onPointerDown={startMove} title="Drag to move" aria-label={`Move ${label}`}>
-                        <GripVertical size={14} aria-hidden="true"/>
+            {/* Adjust affordance — a strip pinned to the panel edge, aligned to the
+                given side. The strip itself is click-through; only the handle/toolbar
+                inside it capture the pointer, so empty space never blocks the map. */}
+            <div className={cn("absolute left-0 right-0 z-30 flex pointer-events-none", alignJustify, vertCls)}>
+                {visible ? (
+                    <div
+                        className="pointer-events-auto flex items-center gap-1 rounded-md bg-panel-2 border border-line px-1.5 py-1 shadow backdrop-blur-[10px] select-none motion-safe:animate-[dbPop_120ms_var(--ease-out)]"
+                        role="toolbar"
+                        aria-label={`${label} layout controls`}>
+                        <button type="button" className={cn(gripBtn, "cursor-grab active:cursor-grabbing touch-none")}
+                                onPointerDown={startMove} title="Drag to move" aria-label={`Move ${label}`}>
+                            <GripVertical size={14} aria-hidden="true"/>
+                        </button>
+                        <button type="button" className={cn(gripBtn, "cursor-nwse-resize touch-none")}
+                                onPointerDown={startResize} title="Drag to resize" aria-label={`Resize ${label}`}>
+                            <Maximize2 size={13} aria-hidden="true"/>
+                        </button>
+                        <label className="flex items-center gap-1 px-1" title="Opacity"
+                               onPointerDown={(e) => e.stopPropagation()}>
+                            <Contrast size={13} className="text-dim" aria-hidden="true"/>
+                            <input type="range" min={HUD_OPACITY_MIN} max={HUD_OPACITY_MAX} step={0.05}
+                                   value={eff.opacity} className="w-14 accent-gold cursor-pointer"
+                                   aria-label={`${label} opacity`}
+                                   onInput={(e) => setLive({opacity: Number(e.target.value)})}
+                                   onChange={(e) => commit({opacity: Number(e.target.value)})}/>
+                        </label>
+                        <button type="button" className={gripBtn} onClick={() => onReset?.()}
+                                title="Reset this panel" aria-label={`Reset ${label}`}>
+                            <RotateCcw size={13} aria-hidden="true"/>
+                        </button>
+                        <button type="button" className={gripBtn} onClick={() => onChange({hidden: true})}
+                                title="Hide this panel" aria-label={`Hide ${label}`}>
+                            <EyeOff size={13} aria-hidden="true"/>
+                        </button>
+                        <div className="w-px self-stretch bg-line mx-0.5" aria-hidden="true"/>
+                        <button type="button" className={cn(gripBtn, "text-gold hover:text-gold")}
+                                onClick={() => setOpen(false)} title="Done" aria-label={`Done adjusting ${label}`}>
+                            <Check size={14} aria-hidden="true"/>
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        className={cn(
+                            "pointer-events-auto flex items-center gap-1 h-[19px] px-1.5 rounded bg-panel-2/95 border border-line shadow backdrop-blur-[10px] text-dim hover:text-text hover:border-blue transition-[opacity,color,border-color] duration-150",
+                            hovered ? "opacity-100" : "opacity-0 focus-visible:opacity-100",
+                        )}
+                        onClick={openToolbar}
+                        aria-label={`Adjust ${label} — move, resize, fade, or hide`}
+                        title={`Adjust ${label} — move, resize, fade, or hide`}>
+                        <SlidersHorizontal size={12} aria-hidden="true"/>
+                        <span className="font-display text-[8.5px] tracking-[1.2px] uppercase leading-none">Adjust</span>
                     </button>
-                    <button type="button" className={cn(gripBtn, "cursor-nwse-resize touch-none")}
-                            onPointerDown={startResize} title="Drag to resize" aria-label={`Resize ${label}`}>
-                        <Maximize2 size={13} aria-hidden="true"/>
-                    </button>
-                    <label className="flex items-center gap-1 px-1" title="Opacity"
-                           onPointerDown={(e) => e.stopPropagation()}>
-                        <Contrast size={13} className="text-dim" aria-hidden="true"/>
-                        <input type="range" min={HUD_OPACITY_MIN} max={HUD_OPACITY_MAX} step={0.05}
-                               value={eff.opacity} className="w-14 accent-gold cursor-pointer"
-                               aria-label={`${label} opacity`}
-                               onInput={(e) => setLive({opacity: Number(e.target.value)})}
-                               onChange={(e) => commit({opacity: Number(e.target.value)})}/>
-                    </label>
-                    <button type="button" className={gripBtn} onClick={() => onReset?.()}
-                            title="Reset this panel" aria-label={`Reset ${label}`}>
-                        <RotateCcw size={13} aria-hidden="true"/>
-                    </button>
-                    <button type="button" className={gripBtn} onClick={() => onChange({hidden: true})}
-                            title="Hide this panel" aria-label={`Hide ${label}`}>
-                        <EyeOff size={13} aria-hidden="true"/>
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );

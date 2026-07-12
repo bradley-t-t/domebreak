@@ -38,8 +38,10 @@ import {
     vitalityOf,
     replenishmentBuff,
 } from "./queries.js";
-import {directFire, findTarget, launch, leadInterceptPoint, mirvSplit, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
-import {flyAircraft, runAirbase, steamShip} from "./aircraft.js";
+import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
+import {flyAircraft, launchStrikeSortie, runAirbase, steamShip} from "./aircraft.js";
+import {stepFormations} from "./formation.js";
+import {STRIKE} from "../data/constants.js";
 import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
 import {REPLENISH_RELOAD_MULT} from "../data/constants.js";
@@ -181,10 +183,46 @@ export function stepEconomy(w, dt) {
     }
 }
 
+// Standing-order target selection shared by aircraft and airbases. A Hostile unit
+// acquires the nearest enemy it can see within `scanKm`; a Defensive one only locks
+// whoever last attacked it (still alive and at war), so it returns fire but never
+// starts a fight. Throttled by STRIKE.reacquireSec so the scan isn't paid per tick.
+// Mutates `u.targetId`; returns nothing.
+function autoAcquireTarget(w, u, idx, now, scanKm, scanOpts) {
+    if (u.targetId != null || (now - (u._acqT ?? -1e9)) < STRIKE.reacquireSec) return;
+    u._acqT = now;
+    if ((u.stance || "defensive") === "hostile") {
+        const t = nearestEnemyTarget(w, u, scanKm, scanOpts);
+        if (t) u.targetId = t.id;
+    } else if (u._threatBy != null && (now - (u._threatT ?? -1e9)) <= STRIKE.threatMemorySec) {
+        const a = idx.units.get(u._threatBy);
+        if (a && a.hp > 0 && atWar(w, u.slot, a.slot)) u.targetId = a.id;
+        else u._threatBy = null;
+    }
+}
+
+// Airstrip offensive posture: keep or acquire a standing sortie target, then launch
+// a bomber package at it whenever off cooldown and the target is within sortie range.
+// The target order persists (a "standing" strike) so a fresh package flies each time
+// the cooldown clears, until the target dies, leaves the war, or is stood down.
+function airbaseSortie(w, base, def, idx, dt, now) {
+    base.sortieCd = Math.max(0, (base.sortieCd || 0) - dt);
+    // Bombers strike ground and cities — a Hostile strip doesn't scramble a heavy
+    // package to chase enemy jets (its own CAP handles those).
+    autoAcquireTarget(w, base, idx, now, def.sortieKm, {includeAircraft: false});
+    if (base.targetId == null) return;
+    const t = findTarget(w, base.targetId, idx);
+    if (!t || !t.alive || !atWar(w, base.slot, t.slot)) { base.targetId = null; return; }
+    if (base.sortieCd <= 0 && haversine(base.lng, base.lat, t.lng, t.lat) <= def.sortieKm) {
+        launchStrikeSortie(w, base, base.targetId);
+    }
+}
+
 // Phase 2: unit movement and firing — naval/land march, aircraft flight
 // (sub-stepped for turn-rate stability), and ground/warhead-platform firing
 // against a locked target once in range and off cooldown.
 export function stepMovement(w, dt) {
+    const now = w.time;
     // Per-tick lookups shared by every unit below: id -> entity for target and
     // airbase resolution (kills the O(cities + units) scan per armed unit), and
     // baseId -> based aircraft for the airbase controllers (each wing base was
@@ -217,6 +255,15 @@ export function stepMovement(w, dt) {
             u.lng = lng;
         }
         if (def.wing) runAirbase(w, u, dt, basedAircraft.get(u.id));
+        if (def.sortieKm) airbaseSortie(w, u, def, idx, dt, now);
+        // A patrolling offensive aircraft handed a standing target (Command Attack, a
+        // Battle Plan, or Hostile auto-engage) breaks off onto a strike mission; a
+        // Defensive one only does so to retaliate. Runs before the flight dispatch so
+        // flyAircraft picks the mission up this same tick.
+        if (def.airSpeed && u.baseId && isAttacker(def) && !u.mission) {
+            autoAcquireTarget(w, u, idx, now, Math.max(def.radarKm || 0, STRIKE.a2aRangeKm));
+            if (u.targetId != null) u.mission = {role: "strike", targetId: u.targetId, homeId: u.baseId, phase: "outbound", passes: 0};
+        }
         if ((def.navalSpeed || def.landSpeed) && u.dest) steamShip(u, def, dt);
         else if (def.airSpeed && u.baseId) {
             // Sub-step the flight physics: at 4×–10× game speed a whole tick can
@@ -237,14 +284,20 @@ export function stepMovement(w, dt) {
         }
         // Shoot-and-scoot: a road-mobile warhead platform (the TEL) holds fire while
         // it has a march destination — it must halt to launch.
-        if (isAttacker(def) && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
+        if (isAttacker(def) && !def.wing && u.targetId && u.cooldown <= 0 && airborne(u) && !(def.warheads && def.landSpeed && u.dest)) {
             const t = findTarget(w, u.targetId, idx);
             if (!t || !t.alive || !atWar(w, u.slot, t.slot)) {
                 u.targetId = null;
                 continue;
             }
             const n = nationOf(w, u.slot);
-            if (haversine(u.lng, u.lat, t.lng, t.lat) <= def.range) {
+            // Aircraft close on the target and release at short range — a ground/city
+            // strike from a tight overhead standoff, an air target with a longer-reach
+            // air-to-air missile. Every other platform fires out to its full hardware
+            // range. The munition tag drives the sky sprite and (a2a) homing flight.
+            const tgtAir = t.kind === "unit" && !!UNITS[t.ref.type]?.airSpeed;
+            const reach = def.airSpeed ? (tgtAir ? STRIKE.a2aRangeKm : Math.max(def.range, STRIKE.loiterKm)) : def.range;
+            if (haversine(u.lng, u.lat, t.lng, t.lat) <= reach) {
                 ensureProd(n);
                 if (def.targets === "land" || def.directedEnergy) {
                     // Damage lands straight on the target — no interceptable projectile,
@@ -268,15 +321,22 @@ export function stepMovement(w, dt) {
                     const _wh = def.warheads ? (u.warhead || initialWarhead(u.type)) : "standard";
                     if (!def.warheads || (n.ammo[_wh] || 0) > 0) {
                         if (def.warheads) n.ammo[_wh] -= 1;
-                        launch(w, u, t, _wh);
+                        const muni = def.airSpeed ? (tgtAir ? "a2a" : "bomb") : null;
+                        launch(w, u, t, _wh, muni ? {muni, homing: muni === "a2a"} : undefined);
                         // Ships rearming under a Replenishment Ship recycle faster.
                         const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
                         u.cooldown = def.reload * replen;
+                        // A strike aircraft counts its passes so it breaks off and
+                        // recovers after STRIKE.maxPasses (see flyStrike).
+                        if (u.mission?.role === "strike") u.mission.passes = (u.mission.passes || 0) + 1;
                     }
                 }
             }
         }
     }
+    // Station-keeping runs last: the guides above have already advanced this tick,
+    // so following hulls steam to a station off the guide's fresh position.
+    stepFormations(w, dt, idx);
 }
 
 // Phase 3: projectile flight and interception — advances every in-flight
@@ -307,6 +367,13 @@ export function stepCombat(w, dt) {
     const replenOf = new Map();  // defender id -> replenishment reload multiplier
 
     for (const p of w.projectiles) {
+        // Homing air-to-air rounds chase a moving jet and resolve on their own — no
+        // ballistic arc, no MIRV split, and (being a short-range dogfight missile)
+        // no interceptor engagement.
+        if (p.homing) {
+            advanceHoming(w, p, dt, idx);
+            continue;
+        }
         p.travelled += (p.speed ?? MISSILE_SPEED) * dt;
         p.progress = Math.min(1, p.travelled / (p.dist || 1));
         const pos = trackPoint(p, p.progress);

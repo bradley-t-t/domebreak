@@ -81,12 +81,41 @@ export default function App() {
     // Version the server demanded when it refused our hello — the prompt's
     // fallback when version.json hasn't been fetched (offline-ish clients).
     const [requiredVersion, setRequiredVersion] = useState(null);
+    // The packaged desktop build can install updates itself; the browser/dev
+    // shell can't. This is what makes a launch-time update mandatory rather
+    // than a suggestion.
+    const canSelfUpdate = typeof window !== "undefined" && !!window.dbUpdater;
+    // Set once the player backs out of a forced update — only reachable after
+    // the self-update itself failed — so a broken updater doesn't re-trap them
+    // every time they touch the menu this session.
+    const [updateBailed, setUpdateBailed] = useState(false);
     const updatePromptedRef = useRef(false);
+    // Soft prompt: shells that can't self-update (browser) get nagged once when
+    // an update is first seen. Self-updating desktop builds skip this — the
+    // forced flow below handles them.
     useEffect(() => {
-        if (!updateAvailable || updatePromptedRef.current) return;
+        if (!updateAvailable || canSelfUpdate || updatePromptedRef.current) return;
         updatePromptedRef.current = true;
         setUpdatePrompt(true);
-    }, [updateAvailable]);
+    }, [updateAvailable, canSelfUpdate]);
+    // A self-updating desktop build forces the update the moment one is
+    // available and the player is at the menu — launch-time updates are
+    // mandatory, not optional. Mid-game (screen !== "menu") we hold off so no
+    // active match is yanked; it kicks in the next time they hit the menu.
+    const forceUpdate = updateAvailable && canSelfUpdate && screen === "menu" && !updateBailed;
+    // Back out of the update overlay. In the forced case this is only wired up
+    // after a failed self-update, and latching updateBailed stops the re-force.
+    const dismissUpdate = () => {
+        setUpdatePrompt(false);
+        setUpdateBailed(true);
+    };
+    // Re-open the update surface from the menu button: clear the bail latch so a
+    // desktop build re-forces (and retries) the install, and raise the prompt so
+    // the browser shell shows it too.
+    const openUpdate = () => {
+        setUpdateBailed(false);
+        setUpdatePrompt(true);
+    };
     // Honor both the OS motion preference and the in-game toggle.
     const reduceMotion = settings.reduceMotion ||
         (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -503,7 +532,8 @@ export default function App() {
                                setSaveMode("load");
                                setOverlay("saveload");
                            }} onSettings={() => setOverlay("settings")} profile={accountProfile}
-                           stats={accountStats} onSignOut={signOut} onlineCount={onlineCount}/>}
+                           stats={accountStats} onSignOut={signOut} onlineCount={onlineCount}
+                           updateAvailable={updateAvailable} latestVersion={latestVersion} onUpdate={openUpdate}/>}
             {screen === "newgame" &&
                 <NewGame data={data} settings={settings}
                          onStart={(iso) => { setNewGameIso(iso); setScreen("newgame-rules"); }}
@@ -554,9 +584,9 @@ export default function App() {
                     message="Your link to the war server dropped. The war goes on without you."
                     details={netError}
                     onDismiss={quitToMenu}/>}
-            {updatePrompt &&
+            {(updatePrompt || forceUpdate) &&
                 <UpdateOverlay currentVersion={currentVersion} latestVersion={latestVersion || requiredVersion}
-                               onDismiss={() => setUpdatePrompt(false)}/>}
+                               forced={forceUpdate} onDismiss={dismissUpdate}/>}
 
             {overlay === "pause" && <PauseMenu over={world?.over} onResume={resume} onSave={() => {
                 setSaveMode("save");
