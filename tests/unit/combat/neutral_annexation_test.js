@@ -69,6 +69,33 @@ describe("neutral annexation", () => {
         expect(w.cities[1].capture).toBeNull(); // no attempt ever started
     });
 
+    it("test_capture_flips_the_whole_gid1_province_the_map_recolors", () => {
+        // Two neutral cities in the SAME GID_1 province but with DIFFERENT state
+        // strings — exactly the split (Greece/Nepal etc.) that used to leave land
+        // owned in the sim still painted neutral on the map. Flipping by province
+        // (region) must take both, so the sim's ownership and the map's GID_1
+        // recolor can't diverge.
+        const w = theatre();
+        w.cities.push({id: "neu2", slot: 1, lng: 0.31, lat: 0.01, alive: true, state: "OtherState", region: "XX.1_1", hp: 100, capture: null});
+        w.cities[1].region = "XX.1_1"; // the annex target shares the province
+        captureTick(w, NEUTRAL.annexSec);
+        expect(w.cities[1].slot).toBe(0);                    // the held city
+        expect(w.cities.find((c) => c.id === "neu2").slot).toBe(0); // its province-mate, other state
+    });
+
+    it("test_region_flip_leaves_a_neutral_city_in_a_different_province_untouched", () => {
+        // A neutral city in a DIFFERENT GID_1 must NOT flip when a neighbouring
+        // province is annexed — conquest still spreads province by province. Placed
+        // far from the captor so it can't be independently annexed, isolating the
+        // province-grouping: only the held province (XX.1_1) changes hands.
+        const w = theatre();
+        w.cities[1].region = "XX.1_1";
+        w.cities.push({id: "far", slot: 1, lng: 40, lat: 0, alive: true, state: "Frontier", region: "XX.2_1", hp: 100, capture: null});
+        captureTick(w, NEUTRAL.annexSec);
+        expect(w.cities[1].slot).toBe(0);
+        expect(w.cities.find((c) => c.id === "far").slot).toBe(1); // other province stays neutral
+    });
+
     it("test_a_rival_captor_freezes_the_annexation", () => {
         const w = theatre();
         // slot 2 is another active nation; its infantry contests within contestKm.
