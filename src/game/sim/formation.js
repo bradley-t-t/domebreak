@@ -115,7 +115,9 @@ function plotStationRoute(u, station) {
 }
 
 // Advance along the cached station route this tick — the steamShip waypoint walk,
-// minus the dest/route bookkeeping (a follower carries no sail order).
+// minus the dest/route bookkeeping (a follower carries no sail order). Facing is
+// left to the caller: a follower points along the guide's course, not toward its
+// own station, so the whole group steers a common heading as it moves.
 function advanceAlong(u, def, dt) {
     let stepKm = def.navalSpeed * dt;
     const route = u._fRoute;
@@ -123,7 +125,6 @@ function advanceAlong(u, def, dt) {
         const wp = route[0];
         const dx = ((wp.lng - u.lng + 540) % 360) - 180, dy = wp.lat - u.lat;
         const d = haversine(u.lng, u.lat, wp.lng, wp.lat);
-        u.face = {lng: u.lng + dx, lat: wp.lat};
         if (d <= stepKm || d < 1) {
             u.lng = wp.lng;
             u.lat = wp.lat;
@@ -144,22 +145,24 @@ function advanceAlong(u, def, dt) {
 
 function steamToStation(u, def, dt, station, guideHeading) {
     if (haversine(u.lng, u.lat, station.lng, station.lat) <= FORMATION.holdKm) {
-        // On station: cut thrust and swing round to match the guide's course so the
-        // whole disposition points the same way.
+        // On station: cut thrust.
         u._fRoute = null;
         u._fAnchor = null;
-        const [flng, flat] = geoDest(u.lng, u.lat, Math.max(6, def.navalSpeed), guideHeading);
-        u.face = {lng: flng, lat: flat};
-        return;
+    } else {
+        // Re-plot when the cache is empty or the station has drifted past the tolerance
+        // (the guide moved) — otherwise ride the existing route so we don't run A* every tick.
+        if (!u._fRoute?.length || !u._fAnchor
+            || haversine(u._fAnchor.lng, u._fAnchor.lat, station.lng, station.lat) > FORMATION.replotKm) {
+            u._fRoute = plotStationRoute(u, station);
+            u._fAnchor = {lng: station.lng, lat: station.lat};
+        }
+        advanceAlong(u, def, dt);
     }
-    // Re-plot when the cache is empty or the station has drifted past the tolerance
-    // (the guide moved) — otherwise ride the existing route so we don't run A* every tick.
-    if (!u._fRoute?.length || !u._fAnchor
-        || haversine(u._fAnchor.lng, u._fAnchor.lat, station.lng, station.lat) > FORMATION.replotKm) {
-        u._fRoute = plotStationRoute(u, station);
-        u._fAnchor = {lng: station.lng, lat: station.lat};
-    }
-    advanceAlong(u, def, dt);
+    // Swing round to match the guide's course — whether steaming to station or holding
+    // on it — so the whole disposition points the same way as it moves, not toward each
+    // hull's own next mark.
+    const [flng, flat] = geoDest(u.lng, u.lat, Math.max(6, def.navalSpeed), guideHeading);
+    u.face = {lng: flng, lat: flat};
 }
 
 // Sever a follow order and drop its route cache — used on a dangling/dead guide and

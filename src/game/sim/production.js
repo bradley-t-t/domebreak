@@ -297,7 +297,11 @@ export function setSail(w, slot, unitId, lng, lat) {
     const u = w.units.find((x) => x.id === unitId && x.slot === slot);
     if (!u) return {error: "Unit not found."};
     if (!UNITS[u.type].navalSpeed) return {error: "Not a ship."};
-    const route = seaRoute(u.lng, u.lat, lng, lat);
+    // Route around your own other ships so a sail order threads past a group rather
+    // than straight through it (a soft nudge — it still closes on them if that's the
+    // destination).
+    const avoid = w.units.filter((x) => x.slot === slot && x.id !== unitId && x.hp > 0 && UNITS[x.type]?.navalSpeed);
+    const route = seaRoute(u.lng, u.lat, lng, lat, {avoid});
     if (!route) return {error: "No sea route to there."};
     u.route = route;
     u.dest = {...route[route.length - 1]};

@@ -1,6 +1,7 @@
 import Flag from "../common/Flag.jsx";
 import {colorForSlot} from "../../game/data/constants.js";
 import {overlay, card, menuTitle, iconButton} from "../lib/variants.js";
+import Icon from "../common/Icon.jsx";
 import {cn} from "../lib/cn.js";
 import {fmtGdp, fmtPop} from "../lib/format.js";
 import {useRoster} from "../lib/roster.js";
@@ -62,7 +63,7 @@ export default function PlayerListOverlay({world, mySlot, players, onOpenCountry
                         <div className={menuTitle({sm: true})} id="db-players-title">Players</div>
                         <div className="font-mono text-[11px] tracking-[0.02em] text-dim mt-1">Every active power in this match — release Tab to close</div>
                     </div>
-                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close player list">✕
+                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close player list"><Icon name="close" size={15}/>
                     </button>
                 </div>
                 <div className="mt-3" role="table" aria-label="Players in this match">

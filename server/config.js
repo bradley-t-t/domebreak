@@ -68,10 +68,10 @@ export const MATCH_START_PAUSE_S = parseInt(process.env.GD_MATCH_START_PAUSE_S |
 export const MIN_PLAYERS = parseInt(process.env.GD_MIN_PLAYERS || "2", 10);
 // Hard ceiling on humans per match. Mirrors NEUTRAL.maxActive (the sim's cap on
 // active nations, src/game/data/constants.js): every human must claim an active
-// belligerent slot, so admitting more than 8 would force the world past the
+// belligerent slot, so admitting more than 12 would force the world past the
 // bounded-match model the sim is sized for. env can lower this, never raise it.
-export const HARD_MAX_PLAYERS = 8;
-export const MAX_PLAYERS = Math.min(HARD_MAX_PLAYERS, parseInt(process.env.GD_MAX_PLAYERS || "8", 10));
+export const HARD_MAX_PLAYERS = 12;
+export const MAX_PLAYERS = Math.min(HARD_MAX_PLAYERS, parseInt(process.env.GD_MAX_PLAYERS || "12", 10));
 // Human-gather window (ms) measured from the anchor (oldest waiter)'s
 // enqueued_at: once MIN_PLAYERS are present the group waits this long for more
 // before forming (it closes early if it fills to MAX_PLAYERS first).

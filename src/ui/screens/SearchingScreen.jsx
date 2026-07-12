@@ -117,7 +117,7 @@ export default function SearchingScreen({onMatched, onCancel, reduceMotion, preQ
                     </>
                 ) : (
                     <>
-                        <p className="db-searching-label text-sm text-text m-0" role="status" aria-live="polite">No players were found after 2 minutes of searching. Try again later or play single player.</p>
+                        <p className="db-searching-label text-sm text-text m-0" role="status" aria-live="polite">No commanders answered the call. Retry, or take the field solo.</p>
                         <div className={row()}>
                             <button className={button({variant: "primary"})} disabled={busy} onClick={doRetry}>
                                 {busy ? "Retrying…" : "Retry"}

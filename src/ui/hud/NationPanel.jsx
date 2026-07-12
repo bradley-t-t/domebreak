@@ -13,6 +13,7 @@ import {
 } from "../../game/engine.js";
 import {fmtGdp, fmtNet, fmtPop} from "../lib/format.js";
 import Flag from "../common/Flag.jsx";
+import Icon from "../common/Icon.jsx";
 import Meter from "../common/Meter.jsx";
 import PopTrend from "../common/PopTrend.jsx";
 import {cn} from "../lib/cn.js";
@@ -141,8 +142,9 @@ export default function NationPanel({world, mySlot, myNation, onFocus}) {
                                     className={cn("flex items-center justify-between gap-2 w-full px-2 py-[7px] border-none rounded-sm bg-transparent text-left cursor-pointer transition-[background] duration-150 ease-out-db hover:bg-hair", !c.alive && "opacity-55")}
                                     onClick={() => onFocus?.(c)} title={`Focus ${c.name}`}>
                                 <span className="flex flex-col leading-[1.2] min-w-0">
-                                    <span
-                                        className="text-[12.5px] text-text whitespace-nowrap overflow-hidden text-ellipsis max-w-[132px]">{c.cap ? "★ " : ""}{c.name}</span>
+                                    <span className="flex items-center gap-1 text-[12.5px] text-text max-w-[132px]">
+                                        {!!c.cap && <Icon name="star" size={9} className="text-gold flex-none" title="Capital"/>}
+                                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">{c.name}</span></span>
                                     {c.state && <span
                                         className="text-[10px] text-faint whitespace-nowrap overflow-hidden text-ellipsis max-w-[132px]">{c.state}</span>}
                                 </span>

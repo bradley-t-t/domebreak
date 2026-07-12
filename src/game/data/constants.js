@@ -214,10 +214,20 @@ export const DIPLOMACY = {
 // participating ("active") nations; every other country stays on the map as a
 // passive, capturable NEUTRAL that never builds and never wages war.
 export const NEUTRAL = {
-    maxActive: 8,        // hard cap on active (participating) nations in a match
+    maxActive: 12,       // hard cap on active (participating) nations in a match
     minActive: 2,        // floor — you plus at least one rival
     defaultActive: 8,    // singleplayer default active count
     scatterMinKm: 3000,  // seeding target: greedy farthest-point keeps active capitals apart
+    // Annexation of neutral land. A capture-flagged ground unit (infantry/tank)
+    // that holds a passive neutral city — with one of its own nation's cities
+    // within annexBorderKm (the adjacency gate: you may only absorb neutral
+    // territory that borders your own) — takes that city's whole state after
+    // annexSec game-seconds. No war is declared; neutrals never resist. Reuses
+    // the occupation hold/contest radii (CAPTURE.holdKm / contestKm) so the same
+    // capture ring and progress HUD drive it. Annexed states flip to the
+    // conqueror exactly like a war capture, growing where they can build.
+    annexBorderKm: 800,  // a neutral city is annexable only if you hold a city within this range of it
+    annexSec: 30,        // hold time (game-seconds) to annex a bordering neutral state
 };
 
 // Leadership continuity. Each nation's command is a pool of `startTokens` leader

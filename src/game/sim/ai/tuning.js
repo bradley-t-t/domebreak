@@ -78,6 +78,8 @@ export const WANTS = {
     armyReserve: 100,
     groundTarget: 8,
     artilleryShare: 0.25,
+    expansionForce: 3,           // capture troops a peaceful nation raises to annex bordering neutrals
+    expansionUrgency: 4.6,       // how hard the expansion force is wanted (below the defense/offense core)
     destroyerTarget: 2, destroyerReserve: 120,
     cruiserTarget: 1, cruiserReserve: 180,
     battleshipTarget: 1, battleshipReserve: 200,

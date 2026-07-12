@@ -48,6 +48,11 @@ export function headline(e, world, mySlot) {
             }
             const where = e.state || world.cities.find((x) => x.id === e.cityId)?.name || "territory";
             const mine = e.slot === mySlot, lost = e.fromSlot === mySlot;
+            if (e.annex) {
+                // Peaceful conquest of neutral land — nobody "loses a war" here.
+                if (mine) return {tone: "good", text: `Your forces annex ${where} — ${nn(e.fromSlot)} joins your territory`};
+                return {tone: "alert", text: `${nn(e.slot)} annexes ${where} from ${nn(e.fromSlot)}`};
+            }
             if (mine) return {tone: "good", text: `Your forces occupy ${where} — ${nn(e.fromSlot)} loses the province`};
             if (lost) return {tone: "danger", text: `${where} falls — ${nn(e.slot)} occupies your territory`};
             return {tone: "alert", text: `${nn(e.slot)} occupies ${where} from ${nn(e.fromSlot)}`};

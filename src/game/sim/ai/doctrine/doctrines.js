@@ -6,6 +6,7 @@
 // strength, Space once the GDP allows) whose wants merge in at reduced weight.
 // New doctrines drop in as one file plus a registry line.
 import {DOCTRINE} from "../tuning.js";
+import {expansionWants, wantList} from "./lib.js";
 import turtle from "./turtle.js";
 import balanced from "./balanced.js";
 import projection from "./projection.js";
@@ -34,23 +35,29 @@ export function selectDoctrines(frame, personality, posture) {
 
 // Merge the stack's wants into one list: same (kind, type) keeps the highest
 // count target and the strongest weighted urgency, so an overlay deepens the
-// primary's ask instead of double-buying.
+// primary's ask instead of double-buying. Doctrine-independent expansion wants
+// (raise a force to annex bordering neutrals) fold in the same way, so every
+// doctrine grows its territory.
 export function mergedWants(stack, frame, focus, personality) {
     const byKey = new Map();
-    for (const {doctrine, weight} of stack) {
-        for (const item of doctrine.wants(frame, focus, personality)) {
-            const key = `${item.kind}:${item.type}`;
-            const urgency = item.urgency * weight;
-            const cur = byKey.get(key);
-            if (!cur) byKey.set(key, {...item, urgency});
-            else {
-                cur.target = Math.max(cur.target, item.target);
-                cur.urgency = Math.max(cur.urgency, urgency);
-                cur.reserve = Math.max(cur.reserve, item.reserve);
-                if (item.minNet != null) cur.minNet = Math.max(cur.minNet ?? -Infinity, item.minNet);
-            }
+    const merge = (item, weight) => {
+        const key = `${item.kind}:${item.type}`;
+        const urgency = item.urgency * weight;
+        const cur = byKey.get(key);
+        if (!cur) byKey.set(key, {...item, urgency});
+        else {
+            cur.target = Math.max(cur.target, item.target);
+            cur.urgency = Math.max(cur.urgency, urgency);
+            cur.reserve = Math.max(cur.reserve, item.reserve);
+            if (item.minNet != null) cur.minNet = Math.max(cur.minNet ?? -Infinity, item.minNet);
         }
+    };
+    for (const {doctrine, weight} of stack) {
+        for (const item of doctrine.wants(frame, focus, personality)) merge(item, weight);
     }
+    const exp = wantList(frame);
+    expansionWants(exp);
+    for (const item of exp.items) merge(item, 1);
     return [...byKey.values()].sort((a, b) => b.urgency - a.urgency);
 }
 

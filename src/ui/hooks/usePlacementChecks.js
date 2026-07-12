@@ -1,6 +1,6 @@
 // Placement/terrain validity checks shared by placement, movement orders, and the on-map
 // cursor probe.
-import {COAST_KM, inTerritory, UNITS} from "../../game/engine.js";
+import {COAST_KM, inControlledTerritory, inTerritory, UNITS} from "../../game/engine.js";
 import {offsetKmPolar} from "../../lib/geo.js";
 
 export function usePlacementChecks({mapRef, w, mySlot, myGid}) {
@@ -9,9 +9,17 @@ export function usePlacementChecks({mapRef, w, mySlot, myGid}) {
         return m ? m.queryRenderedFeatures(e.point, {layers: ["country-fill"]}) : [];
     };
     const onLand = (e) => featsAt(e).length > 0;
+    // Buildable land = your home country (the map polygon, fast path) OR ground you
+    // have CONQUERED — land annexed from a neutral or captured in war, where you now
+    // hold the nearest city (inControlledTerritory). So taking bordering territory
+    // grows where you can build, exactly as it does for the AI.
     const inMyLand = (e) => {
         const fs = featsAt(e);
-        return myGid ? fs.some((f) => f.properties?.GID_0 === myGid) : (fs.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat));
+        if (myGid) {
+            if (fs.some((f) => f.properties?.GID_0 === myGid)) return true;
+            return fs.length > 0 && inControlledTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
+        }
+        return fs.length > 0 && inTerritory(w, mySlot, e.lngLat.lng, e.lngLat.lat);
     };
     const isSea = (type) => UNITS[type]?.domain === "sea";
     // Water within a small ring of the point? Samples two rings and checks for

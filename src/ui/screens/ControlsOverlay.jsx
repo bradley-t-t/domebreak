@@ -1,6 +1,7 @@
 import {keyLabel, resolveKeys} from "../../game/platform/keybindings.js";
 import {useModal} from "../hooks/useModal.js";
 import {button, card, iconButton, overlay, menuTitle} from "../lib/variants.js";
+import Icon from "../common/Icon.jsx";
 import {cn} from "../lib/cn.js";
 
 // In-game command reference. Reads the live key bindings so rebinds show through,
@@ -62,7 +63,7 @@ export default function ControlsOverlay({keys, onClose}) {
                 {label: "Pan (drag)", combo: [mouse("L-Drag")]},
                 {label: "Zoom in · out", combo: [cap(keyLabel(K.zoomIn)), cap(keyLabel(K.zoomOut))]},
                 {label: "Zoom (scroll)", combo: [mouse("Scroll")]},
-                {label: "Globe / flat view", combo: [mouse("Corner ◐ / ▦")]},
+                {label: "Globe / flat view", combo: [mouse("Top-bar toggle")]},
             ]
         },
         {
@@ -95,7 +96,7 @@ export default function ControlsOverlay({keys, onClose}) {
                         <div className={menuTitle({sm: true})} id="db-controls-title">Controls</div>
                         <div className="db-controls-sub font-mono text-[11px] tracking-[0.02em] text-dim mt-1">Command reference · rebind keys in Settings</div>
                     </div>
-                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close controls">✕
+                    <button className={iconButton()} onClick={onClose} title="Close (Esc)" aria-label="Close controls"><Icon name="close" size={15}/>
                     </button>
                 </div>
                 <div className="db-controls-grid grid grid-cols-1 sm:grid-cols-2 gap-x-[34px] gap-y-1 my-3 mb-5">
