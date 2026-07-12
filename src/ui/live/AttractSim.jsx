@@ -16,13 +16,18 @@ import WorldMap from "../../map/WorldMap.jsx";
 import SkyLayer from "./SkyLayer.jsx";
 import Explosion from "./Explosion.jsx";
 import KillMark from "./KillMark.jsx";
+import FalloutCloud from "./FalloutCloud.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
-import {atWar, createWorld, declareWar, UNIT_ICON, UNITS, vitalityOf} from "../../game/engine.js";
+import {atWar, createWorld, declareWar, falloutIntensity, UNIT_ICON, UNITS, vitalityOf} from "../../game/engine.js";
 import {buildSetup} from "../../game/sim/newGame.js";
+import {circle, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
 import {norm01} from "../../lib/math.js";
 import {MAX_SLOTS} from "../../game/data/constants.js";
+import {toGid3} from "../../game/data/iso3.js";
+import {loadJsonAsset} from "../../lib/fetchJson.js";
 import {useEngine} from "../hooks/useEngine.js";
 import {vitPaint} from "../lib/status.js";
+import {buildPoliticalTint, flagColor} from "../lib/politicalTint.js";
 
 const CAST_SIZE = MAX_SLOTS; // fill every belligerent slot the engine supports (16)
 const SIM_SPEED = 4;         // wall-clock drama without the 10× blur
@@ -46,14 +51,25 @@ const LAT_PERIOD_S = 74;
 // out as it pulls back, so the wide end of the breath stays clean.
 const UNIT_FADE = [2.05, 2.75];
 
-// Distinct faction palette so opposing sides read apart at a glance. Indexed by
-// engine slot; wraps if the cast somehow exceeds the palette.
+// Fallback faction palette, used only for a belligerent whose flag color is
+// missing from colors.json. The live map colors every nation by its real flag
+// hue (see politicalTint); the attract cast now does the same so a nation's land,
+// cities and units all read in one national color — this just backstops a gap.
 const FACTION_COLORS = [
     "#e0574f", "#4f9be0", "#57c98a", "#e0b24f", "#b06fe0", "#e0894f", "#4fd3e0", "#e04f97",
     "#88e04f", "#dfe04f", "#5560e0", "#e05f5f", "#4fe0b0", "#c3ccd8", "#a07a4f", "#6f8aa0",
 ];
-const factionColor = (slot) => FACTION_COLORS[(((slot | 0) % FACTION_COLORS.length) + FACTION_COLORS.length) % FACTION_COLORS.length];
+const fallbackColor = (slot) => FACTION_COLORS[(((slot | 0) % FACTION_COLORS.length) + FACTION_COLORS.length) % FACTION_COLORS.length];
 const ROT_STATIC = {airstrip: 42}; // static sprites read at a fixed cant
+const ORBIT_LIFT_PX = 34;           // screen lift per unit of orbitLift, matching the live map
+
+// Stable empty FeatureCollection for "no fallout this tick" — same identity every
+// idle tick so the <Source> deep-equal never runs.
+const EMPTY_FC = {type: "FeatureCollection", features: []};
+// Fallout footprint ring, matching the live map: a geodesic cap on the globe,
+// falling back to the Mercator disc past a hemisphere. Attract is always globe.
+const falloutRing = (lng, lat, km, steps) =>
+    (km <= GEODESIC_MAX_KM ? geoCircle : circle)(lng, lat, km, steps);
 
 // Belligerent pool grouped by region. The engine caps at 16 active nations
 // (MAX_SLOTS), so we can't literally arm all ~220 countries — instead we draft
@@ -117,6 +133,44 @@ function AttractWorld({data, onOver, framed, onReady}) {
     const [explosions, setExplosions] = useState([]);
     const seen = useRef(new Set());
 
+    // Flag colors (GID_0 -> [r,g,b]), the same table the live map paints from.
+    // Loaded once; until it lands the fallback palette stands in so the globe is
+    // never colorless.
+    const [cols, setCols] = useState(null);
+    useEffect(() => {
+        let live = true;
+        loadJsonAsset("/assets/colors.json", {cache: true}).then((c) => {
+            if (live) setCols(c);
+        });
+        return () => {
+            live = false;
+        };
+    }, []);
+    // One national color per slot — the nation's real flag hue — shared by its
+    // land tint, its city dots and its unit sprites, so each faction reads in a
+    // single color exactly like a live match. Falls back to the palette on a gap.
+    const slotColors = useMemo(() => {
+        const out = [];
+        for (const n of w.nations) out[n.slot] = flagColor(cols, toGid3(n.iso)) || fallbackColor(n.slot);
+        return out;
+    }, [cols, w.nations]);
+    const slotColor = (slot) => slotColors[slot] || fallbackColor(slot);
+
+    // Active vs wiped-out belligerents for the political tint. Recomputed whenever
+    // a nation's active/wiped state flips — a routed power is neutralized mid-war,
+    // so the sets aren't fixed for the match.
+    const nationSig = w.nations.reduce((s, n) => `${s}${n.active === false ? 0 : 1}${n.wipedOut ? 1 : 0}`, "");
+    const {activeGids, wipedGids} = useMemo(() => {
+        const active = new Set(), wiped = new Set();
+        for (const n of w.nations) {
+            const gid = toGid3(n.iso);
+            if (!gid) continue;
+            if (n.wipedOut) wiped.add(gid);
+            else if (n.active !== false) active.add(gid);
+        }
+        return {activeGids: active, wipedGids: wiped};
+    }, [nationSig]);
+
     // War director: open with several fronts, then keep escalating.
     useEffect(() => {
         for (let i = 0; i < OPENING_FRONTS; i++) igniteFront(w);
@@ -132,11 +186,15 @@ function AttractWorld({data, onOver, framed, onReady}) {
             if (seen.current.has(e.id)) continue;
             seen.current.add(e.id);
             if (e.type === "intercept") {
-                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "intercept"});
+                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: "intercept", alt: e.alt || 0});
             } else if (e.type === "hit" || e.type === "destroy" || e.type === "mirv" || e.type === "miss") {
-                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type});
+                // Air detonations (a MIRV split, an interceptor miss) carry an
+                // altitude so their fireball lifts off the deck like the live map;
+                // surface hits and kills sit on the ground.
+                const alt = (e.type === "mirv" || e.type === "miss") ? (e.alt || 0) : 0;
+                fresh.push({id: e.id, lng: e.lng, lat: e.lat, kind: e.type, alt});
                 // Confirmed unit kill: the "target eliminated" reticle over the fireball.
-                if (e.type === "destroy" && e.kind === "unit") fresh.push({id: `${e.id}-kill`, lng: e.lng, lat: e.lat, kind: "kill"});
+                if (e.type === "destroy" && e.kind === "unit") fresh.push({id: `${e.id}-kill`, lng: e.lng, lat: e.lat, kind: "kill", alt: 0});
             }
         }
         if (seen.current.size > 500) seen.current = new Set(w.events.map((e) => e.id));
@@ -148,34 +206,26 @@ function AttractWorld({data, onOver, framed, onReady}) {
         }
     }, [w.time]);
 
-    // Political tints: paint each nation's land and border in its flag color so
-    // the globe reads as a real theater of factions, exactly like the live map.
+    // Political tint, the exact model the live map uses (see politicalTint): only
+    // the belligerent cast wears its flag color, nations wiped out in war fade to
+    // the scorched wash, and every other country on the globe is neutral scenery
+    // grey — so the attract world reads as a real bounded match, not a rainbow of
+    // all 200-odd countries. Re-applied when the active/wiped sets shift or the
+    // style reloads.
     useEffect(() => {
-        let cancelled = false;
-        fetch("/assets/colors.json").then((r) => r.json()).then((cols) => {
-            if (cancelled) return;
-            const tintPairs = [];
-            const linePairs = [];
-            const mix = (v, g) => Math.round(v * 0.6 + g * 0.4); // borders muted toward neutral
-            for (const [gid, c] of Object.entries(cols)) {
-                tintPairs.push(gid, `rgb(${c[0]},${c[1]},${c[2]})`);
-                linePairs.push(gid, `rgb(${mix(c[0], 96)},${mix(c[1], 100)},${mix(c[2], 108)})`);
-            }
-            const m = mapRef.current;
-            if (!m || !tintPairs.length) return;
-            try {
-                m.setPaintProperty("country-tint", "fill-color", ["match", ["get", "GID_0"], ...tintPairs, "#767b84"]);
-                // Lift the tint above the gameplay default so factions read as scenery.
-                m.setPaintProperty("country-tint", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 1.6, 0.28, 3.2, 0.2, 5, 0.08]);
-                m.setPaintProperty("country-line", "line-color", ["match", ["get", "GID_0"], ...linePairs, "#454b53"]);
-            } catch { /* style not ready yet — retry keyed on mapReady below */
-            }
-        }).catch(() => { /* colors optional */
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [mapReady]);
+        if (!cols) return;
+        const m = mapRef.current;
+        if (!m) return;
+        const {tint, line} = buildPoliticalTint(cols, {activeGids, wipedGids});
+        try {
+            m.setPaintProperty("country-tint", "fill-color", tint);
+            // Lift the tint above the gameplay default so factions read as scenery
+            // across the whole-earth breath.
+            m.setPaintProperty("country-tint", "fill-opacity", ["interpolate", ["linear"], ["zoom"], 1.6, 0.28, 3.2, 0.2, 5, 0.08]);
+            m.setPaintProperty("country-line", "line-color", line);
+        } catch { /* style not ready yet — retry keyed on mapReady below */
+        }
+    }, [cols, activeGids, wipedGids, mapReady]);
 
     // Recenter the globe beside the menu rail: left projection padding shifts the
     // sphere clear of the console. The camera loop below never touches padding.
@@ -268,11 +318,28 @@ function AttractWorld({data, onOver, framed, onReady}) {
                 cap: c.cap ? 1 : 0,
                 dead: c.alive ? 0 : 1,
                 vit: c.alive ? vitalityOf(c) : 1,
-                color: c.alive ? factionColor(c.slot) : "#3a3a3a",
+                color: c.alive ? slotColor(c.slot) : "#3a3a3a",
             },
             geometry: {type: "Point", coordinates: [c.lng, c.lat]},
         })),
-    }), [w.cities, w.time]);
+    }), [w.cities, w.time, slotColors]);
+
+    // Radioactive fallout footprints — the glowing contamination haze the live map
+    // draws over a nuclear strike. One polygon per active cloud, its opacity
+    // tracking the cloud's live intensity; rebuilt each tick as clouds grow,
+    // drift and decay. A stable empty FC when there are none costs nothing.
+    const falloutFC = useMemo(() => {
+        const clouds = (w.effects || []).filter((fx) => fx.type === "fallout");
+        if (!clouds.length) return EMPTY_FC;
+        return {
+            type: "FeatureCollection",
+            features: clouds.map((fx) => {
+                const c = falloutRing(fx.lng, fx.lat, fx.radiusKm, 48);
+                c.properties = {intensity: falloutIntensity(fx.age)};
+                return c;
+            }),
+        };
+    }, [w.effects, w.time]);
 
     return (
         <>
@@ -308,6 +375,21 @@ function AttractWorld({data, onOver, framed, onReady}) {
                     setTimeout(check, 150);
                 }
             }}>
+                {/* Radioactive fallout haze, drawn under the cities so ruins and dots
+                    stay legible on top — same treatment as the live map. */}
+                <Source id="attract-fallout" type="geojson" data={falloutFC}>
+                    <Layer id="attract-fallout-haze" type="fill" paint={{
+                        "fill-color": "#8cff3a",
+                        "fill-opacity": ["*", ["get", "intensity"], 0.17],
+                    }}/>
+                    <Layer id="attract-fallout-edge" type="line" paint={{
+                        "line-color": "#b6ff5c",
+                        "line-width": 1,
+                        "line-dasharray": [2, 2],
+                        "line-opacity": ["*", ["get", "intensity"], 0.55],
+                    }}/>
+                </Source>
+
                 <Source id="attract-src" type="geojson" data={cityFC}>
                     {/* Destroyed city: a scorched crater with a burnt scar ring. */}
                     <Layer id="attract-city-ruin" type="circle" filter={["==", ["get", "dead"], 1]} paint={{
@@ -339,6 +421,7 @@ function AttractWorld({data, onOver, framed, onReady}) {
                     if (!def) return null;
                     const air = !!(def.airSpeed && u.baseId);
                     if (air && (!u.phase || u.phase === "ground")) return null; // housed in the base — not on the map
+                    const orbital = !!def.orbital;
                     const alt = air ? (u.alt || 0) : 0;
                     const heading = unitHeading(u);
                     const iconStyle = {};
@@ -347,21 +430,34 @@ function AttractWorld({data, onOver, framed, onReady}) {
                         iconStyle.opacity = u.vis ?? 1; // engine drives fade-in on takeoff / out on landing
                         iconStyle.transform = `${iconStyle.transform || ""} scale(${(0.7 + alt * 0.3).toFixed(3)})`.trim();
                     }
+                    // Orbital assets float above the surface (like the live map) so a
+                    // satellite reads as being in orbit rather than sitting on land.
+                    const offset = orbital ? [0, -Math.round((def.orbitLift || 1) * ORBIT_LIFT_PX)]
+                        : air ? [0, -alt * 30] : undefined;
                     return (
                         <Marker key={u.id} longitude={u.lng} latitude={u.lat} anchor="center"
-                                opacityWhenCovered="0" offset={air ? [0, -alt * 30] : undefined}>
+                                opacityWhenCovered="0" offset={offset}>
                             <div className="grid place-items-center cursor-pointer [filter:drop-shadow(0_0_4px_currentColor)_drop-shadow(0_1px_2px_#000)] opacity-(--db-unit-opacity,1)">
-                                <span className="inline-flex transition-transform duration-[170ms] ease-linear"
+                                <span className={`inline-flex transition-transform duration-[170ms] ease-linear${orbital ? " db-orbital" : ""}`}
                                       style={Object.keys(iconStyle).length ? iconStyle : undefined}>
-                                    <UnitIcon name={UNIT_ICON[u.type]} color={factionColor(u.slot)} size={air ? 16 : 22}/>
+                                    <UnitIcon name={UNIT_ICON[u.type]} color={slotColor(u.slot)} size={air ? 16 : orbital ? 18 : 22}/>
                                 </span>
                             </div>
                         </Marker>
                     );
                 })}
 
+                {/* Animated fallout epicenters: the living trefoil core that sits on
+                    top of the haze, matching the live map's centerpiece. */}
+                {(w.effects || []).filter((fx) => fx.type === "fallout").map((fx) => (
+                    <Marker key={fx.id} longitude={fx.lng} latitude={fx.lat} anchor="center" opacityWhenCovered="0">
+                        <FalloutCloud intensity={falloutIntensity(fx.age)}/>
+                    </Marker>
+                ))}
+
                 {explosions.map((e) => (
-                    <Marker key={e.id} longitude={e.lng} latitude={e.lat} anchor="center" opacityWhenCovered="0">
+                    <Marker key={e.id} longitude={e.lng} latitude={e.lat} anchor="center"
+                            opacityWhenCovered="0" offset={[0, -(e.alt || 0) * 70]}>
                         {e.kind === "kill" ? <KillMark/> : <Explosion kind={e.kind}/>}
                     </Marker>
                 ))}

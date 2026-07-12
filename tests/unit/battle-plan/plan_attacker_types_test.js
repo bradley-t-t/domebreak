@@ -1,8 +1,9 @@
 // Battle Planning attacker-type availability — the options the screen's picker offers.
 // A plan is intent, so availability is broader than ownership: owned live platforms,
 // platforms on the production line, and types whose build prerequisites are met all
-// count; aircraft only while airborne. Regression coverage for orbital strike
-// platforms, which are planned around long before the first one reaches orbit.
+// count; individual aircraft never do (they're commanded through their airbase).
+// Regression coverage for orbital strike platforms, which are planned around long
+// before the first one reaches orbit.
 import {describe, expect, it} from "vitest";
 import {planAttackerTypeOptions} from "../../../src/game/engine.js";
 import {TECHS} from "../../../src/game/data/techs.js";
@@ -53,13 +54,14 @@ describe("battle-plan attacker-type options", () => {
         expect(opts).toContain("launcher");
     });
 
-    it("test_options_list_aircraft_only_while_airborne", () => {
-        // Aircraft fight from hangars: buildable is not enough — only a live airborne
-        // jet makes its type commandable by a plan.
-        const grounded = world({units: [unit("base", "airstrip")]});
-        expect(planAttackerTypeOptions(grounded, 0)).not.toContain("multirole");
-        const flying = world({units: [unit("j1", "multirole", {baseId: "base", alt: 1})]});
-        expect(planAttackerTypeOptions(flying, 0)).toContain("multirole");
+    it("test_options_exclude_individual_aircraft_and_offer_the_airstrip", () => {
+        // Aircraft are commanded through their airbase, never as standalone plan
+        // units: even an airborne jet is left out, while the airstrip (which sorties
+        // the bombers) is the offensive air platform a plan actually controls.
+        const flying = world({units: [unit("base", "airstrip"), unit("j1", "multirole", {baseId: "base", alt: 1})]});
+        const opts = planAttackerTypeOptions(flying, 0);
+        expect(opts).not.toContain("multirole");
+        expect(opts).toContain("airstrip");
     });
 
     it("test_options_keep_a_type_an_existing_plan_selected", () => {

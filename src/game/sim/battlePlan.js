@@ -54,14 +54,16 @@ function canEngage(u, tgt) {
 // platforms the engine can be given a standing strike order. Sorted by id so the
 // solve is deterministic regardless of unit order. A plan selects attacker unit TYPES
 // (not individual units), so this is every live, owned offensive unit whose type the
-// plan includes. `plan.excludeIds` (optional, a Set) drops specific units from the
-// roster — the AI's staged multi-plan solve uses it to keep an attacker already
-// claimed by a higher-priority plan from phantom-saturating this one's targets.
-// Player-authored plans never set it.
+// plan includes. Individual aircraft are excluded: they're commanded through their
+// airbase (the airstrip sorties its bombers), never as standalone battle-plan units,
+// so only the airstrip surfaces here. `plan.excludeIds` (optional, a Set) drops
+// specific units from the roster — the AI's staged multi-plan solve uses it to keep
+// an attacker already claimed by a higher-priority plan from phantom-saturating this
+// one's targets. Player-authored plans never set it.
 export function planAttackers(w, plan, mySlot) {
     const types = new Set(plan.attackerTypes || []);
     return w.units
-        .filter((u) => u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type]) && types.has(u.type)
+        .filter((u) => u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type]) && !UNITS[u.type].airSpeed && types.has(u.type)
             && !(plan.excludeIds?.has(u.id)))
         .sort(cmpStr((u) => u.id));
 }
@@ -71,22 +73,23 @@ export function planAttackers(w, plan, mySlot) {
 // nation could field — live platforms, platforms on the production line, and types whose
 // build prerequisites are currently met — plus any type an existing plan already selected
 // (so a plan never hides a selection the player can no longer toggle off). Aircraft are
-// the exception: they fight from airbase hangars and only exist as commandable units
-// while airborne, so they surface only when actually in the air.
+// excluded entirely: they fight from airbase hangars and are commanded through their
+// base, so the offensive air platform a plan controls is the airstrip (its bomber
+// sortie), never an individual jet.
 export function planAttackerTypeOptions(w, mySlot, plans = []) {
     const types = new Set();
     for (const u of w.units) {
-        if (u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type])) types.add(u.type);
+        if (u.slot === mySlot && u.hp > 0 && isAttacker(UNITS[u.type]) && !UNITS[u.type].airSpeed) types.add(u.type);
     }
     const n = w.nations.find((x) => x.slot === mySlot);
     const line = [...(n?.prod?.current ? [n.prod.current.item] : []), ...(n?.prod?.queue || [])];
     for (const it of line) {
-        if (it.kind === "unit" && !it.forBase && isAttacker(UNITS[it.type])) types.add(it.type);
+        if (it.kind === "unit" && !it.forBase && isAttacker(UNITS[it.type]) && !UNITS[it.type].airSpeed) types.add(it.type);
     }
     for (const [type, def] of Object.entries(UNITS)) {
         if (isAttacker(def) && !def.airSpeed && !unitLockReason(w, mySlot, type)) types.add(type);
     }
-    for (const p of plans) for (const t of p.attackerTypes || []) if (isAttacker(UNITS[t])) types.add(t);
+    for (const p of plans) for (const t of p.attackerTypes || []) if (isAttacker(UNITS[t]) && !UNITS[t].airSpeed) types.add(t);
     return [...types].sort();
 }
 
