@@ -29,7 +29,7 @@ export function stationRoleOf(type) {
 // Course the guide is making good, in compass degrees. Derived from its look-ahead
 // facing marker (set while steaming and parked past the last mark on arrival, so it
 // persists at anchor); a hull that has never moved defaults to due north.
-export function headingOf(u) {
+function headingOf(u) {
     if (u?.face) return bearing(u.lng, u.lat, u.face.lng, u.face.lat);
     return 0;
 }

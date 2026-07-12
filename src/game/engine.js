@@ -192,7 +192,7 @@ export {
 
 export {hangarCapOf} from "./sim/aircraft.js";
 
-export {formationGuideOf, stationRoleOf} from "./sim/formation.js";
+export {formationGuideOf} from "./sim/formation.js";
 
 export {
     shelterLeadership,
