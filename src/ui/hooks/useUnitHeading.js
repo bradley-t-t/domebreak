@@ -4,15 +4,21 @@
 import {useCallback, useRef} from "react";
 import {screenHeadingDeg, unwrapLng} from "../../lib/geo.js";
 import {safeMap} from "../lib/mapSafe.js";
+import {UNITS} from "../../game/data/units.js";
 
 // Fixed sprite cant for static assets on the map (airstrip reads as a diagonal
 // runway — angled the opposite way from the naval hulls in the arsenal).
 const ROT_STATIC = {airstrip: 42};
-// Side-view silhouettes (the marching infantryman, the TEL launch vehicle) read
-// wrong if they rotate to heading — they'd tip over or drive head-down. These stay
-// fixed upright while every other ground unit (a top-down silhouette) still turns to
-// its bearing.
-const ROT_UPRIGHT = new Set(["infantry", "launcher"]);
+// Side-view silhouettes (the marching infantryman, the TEL launch vehicle, the
+// towed artillery gun) read wrong if they rotate to heading — they'd tip over or
+// drive head-down. These stay fixed upright while every other ground unit (a
+// top-down silhouette) still turns to its bearing. Submarines (every
+// submarine:true hull) join them: their sprites read as a fixed profile and
+// shouldn't yaw to their course like other naval units do.
+const ROT_UPRIGHT = new Set([
+    "infantry", "launcher", "artillery",
+    ...Object.keys(UNITS).filter((t) => UNITS[t].submarine),
+]);
 
 export function useUnitHeading(mapRef) {
     const rotMemo = useRef({});
