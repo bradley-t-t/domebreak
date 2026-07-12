@@ -42,15 +42,21 @@ function contestedAt(w, captorSlot, lng, lat, selfId) {
     return false;
 }
 
-// Flip every living city sharing the captured city's current owner AND state name
-// to the occupier — capturing a city takes the whole state/province it sits in.
+// The province a capture flips as one unit: the city's GID_1 (the SAME key the map
+// recolors by in useOwnershipLayer), so the sim and the map can never disagree over
+// who owns the land. Cities with no region id fall back to their state string, and
+// the "s:" prefix keeps a stray state name from ever colliding with a real GID_1.
+const provinceKey = (c) => c.region || ("s:" + (c.state || ""));
+
+// Flip every living city sharing the captured city's current owner AND province to
+// the occupier — capturing a city takes the whole province (GID_1) it sits in.
 // Cities keep their hp/pop/econ (occupied, not destroyed) and immediately produce
 // for the occupier; income/pop/territory queries read c.slot live, so no cache
 // needs touching.
 function flipState(w, city, toSlot) {
-    const fromSlot = city.slot, state = city.state || "";
+    const fromSlot = city.slot, key = provinceKey(city);
     for (const c of w.cities) {
-        if (c.alive && c.slot === fromSlot && (c.state || "") === state) {
+        if (c.alive && c.slot === fromSlot && provinceKey(c) === key) {
             // Exposed leaders don't change hands — capturing a leader city kills its
             // command just as destroying it would (credited to the losing owner
             // BEFORE the slot flips).

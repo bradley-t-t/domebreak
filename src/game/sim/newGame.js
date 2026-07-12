@@ -11,14 +11,19 @@ import {normalizeRules} from "./gameRules.js";
 
 let _data = null;
 
-// Fetches (once) and caches the bundled city/country datasets from /data.
+// Fetches (once) and caches the bundled city/country datasets from /data, plus the
+// city -> GID_1 province map. `cityRegion` is what stamps each city's `region` (its
+// GADM admin-1 id) below: the SAME partition the map recolors by (useOwnershipLayer),
+// so capture flips a whole renderable province and the map can't disagree with who
+// actually owns the land. A failed region fetch degrades to state-string grouping.
 export async function loadGameData() {
     if (_data) return _data;
-    const [cities, countries] = await Promise.all([
+    const [cities, countries, cityRegion] = await Promise.all([
         fetch("/data/cities.json").then((r) => r.json()),
         fetch("/data/countries.json").then((r) => r.json()),
+        fetch("/assets/city-region.json").then((r) => r.json()).catch(() => null),
     ]);
-    _data = {cities, countries};
+    _data = {cities, countries, cityRegion};
     return _data;
 }
 
@@ -153,6 +158,7 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
         activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || POWER_POOL, count, seed || 1));
     }
     const nations = [], cities = [];
+    const cityRegion = data.cityRegion || null;
     chosen.forEach((iso, slot) => {
         const cn = data.countries.find((c) => c.iso === iso);
         nations.push({slot, iso, name: cn?.name || iso, isAi: iso !== playerIso, gdp: GDP_T[iso] || GDP_FALLBACK_T, active: activeSet ? activeSet.has(iso) : true});
@@ -162,11 +168,17 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
         arr.forEach((c, i) => {
             const econ = (c.p || 0) / metroTotal; // this state's share of the national economy
             const pop = realPop ? Math.round(realPop * econ) : (c.p || 0);
+            const id = `${iso}-${i}`;
             cities.push({
-                id: `${iso}-${i}`,
+                id,
                 slot,
                 name: c.n,
                 state: c.s,
+                // GADM admin-1 province (GID_1) this city sits in — the unit capture
+                // flips as one and the map recolors as one, so ownership can't split
+                // between the sim and the map. Null when unmapped (grouping falls back
+                // to the state string for those cities).
+                region: cityRegion?.[id] ?? null,
                 cap: c.cap,
                 pop,
                 econ,
