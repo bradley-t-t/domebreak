@@ -306,26 +306,40 @@ export function useLiveLayers({
         })
     }), [w.units, w.time, mySlot]);
 
-    // Battle-plan preview: the active plan's attacker→target strike arcs and its
-    // target markers, derived from the SAME solve the reconciler fires (planPreview
-    // in sim/battlePlan.js) so the drawn lines and the real orders never disagree.
-    // Only present while the Battle Planning panel is open on a plan with content.
-    const planArcsFC = useMemo(() => ({
+    // Battle-plan preview: the active plan's attacker→target strike arcs, its target
+    // markers, and its attacker origins, derived from the SAME solve the reconciler fires
+    // (planPreview in sim/battlePlan.js) so the drawn lines and the real orders never
+    // disagree. Only present while the Battle Planning panel is open on a plan with
+    // content; otherwise battlePreview is undefined and each collection is the stable
+    // empty FC, so an idle overlay costs the map nothing.
+    const planArcsFC = useMemo(() => ((battlePreview?.arcs?.length) ? {
         type: "FeatureCollection",
-        features: (battlePreview?.arcs || []).map((a) => ({
+        features: battlePreview.arcs.map((a) => ({
             type: "Feature",
             properties: {},
             geometry: {type: "LineString", coordinates: gcTrail(a.from[0], a.from[1], a.to[0], a.to[1], 1, 18)}
         }))
-    }), [battlePreview]);
-    const planTargetsFC = useMemo(() => ({
+    } : EMPTY_FC), [battlePreview]);
+    // Target rings carry `hit` so the layer can draw a target a plan is actually firing
+    // on solid, and a live-but-unreached target (out of range / saturated) faint.
+    const planTargetsFC = useMemo(() => ((battlePreview?.targets?.length) ? {
         type: "FeatureCollection",
-        features: (battlePreview?.targets || []).map((t) => ({
+        features: battlePreview.targets.map((t) => ({
             type: "Feature",
-            properties: {},
+            properties: {hit: t.hit ? 1 : 0},
             geometry: {type: "Point", coordinates: [t.lng, t.lat]}
         }))
-    }), [battlePreview]);
+    } : EMPTY_FC), [battlePreview]);
+    // Attacker origins — a small dot on each platform the plan commands, marking who
+    // fires (`assigned`) versus who's drawn into the plan but holding.
+    const planAttackersFC = useMemo(() => ((battlePreview?.attackers?.length) ? {
+        type: "FeatureCollection",
+        features: battlePreview.attackers.map((u) => ({
+            type: "Feature",
+            properties: {on: u.assigned ? 1 : 0},
+            geometry: {type: "Point", coordinates: [u.lng, u.lat]}
+        }))
+    } : EMPTY_FC), [battlePreview]);
 
-    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, radarEmitters, defenseFC, popFC, ranges, cmdLines, sailLines, planArcsFC, planTargetsFC};
+    return {backdropFC, liveFC, falloutFC, captureFC, mySensors, visUnits, radarFC, radarEmitters, defenseFC, popFC, ranges, cmdLines, sailLines, planArcsFC, planTargetsFC, planAttackersFC};
 }
