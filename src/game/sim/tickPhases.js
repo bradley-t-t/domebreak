@@ -15,6 +15,7 @@ import {
     MIRV_SPLIT_AT,
     MISSILE_SPEED,
     POPULATION,
+    STRIKE,
     UNITS,
     WARHEADS,
     isAttacker,
@@ -40,7 +41,6 @@ import {
 import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
 import {flyAircraft, launchStrikeSortie, runAirbase, steamShip} from "./aircraft.js";
 import {stepFormations} from "./formation.js";
-import {STRIKE} from "../data/constants.js";
 import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
 import {spawnQueuedUnit} from "./tickSpawn.js";
