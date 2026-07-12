@@ -6,6 +6,7 @@
 // past the price. Doctrines compose these builders and scale their urgencies.
 import {UNITS, WARHEADS} from "../../../data/constants.js";
 import {prodCount, unitLockReason} from "../../production.js";
+import {hasAnnexTargets} from "../../queries.js";
 import {WANTS} from "../tuning.js";
 import {clamp} from "../../../../lib/math.js";
 
@@ -188,6 +189,23 @@ export function groundWants(list, groundAxis, {targetMult = 1, artilleryShare = 
     ];
     mix.sort((a, b) => (have(frame, a[0]) / Math.max(0.05, a[1])) - (have(frame, b[0]) / Math.max(0.05, b[1])));
     push(list, "unit", mix[0][0], have(frame, mix[0][0]) + 1, 4.5 * groundAxis, WANTS.armyReserve);
+}
+
+// Expansion: a peaceful, solvent nation that borders neutral land raises a small
+// capture force (an army base plus a few infantry) to march out and annex it —
+// so every doctrine, even a turtle that wants no field army, still grows its
+// territory (and its room to build) before running out of space at home. Silent
+// at war (ground goes to the front) and while in deficit (can't afford the
+// upkeep), and it never fires when there's nothing bordering to take.
+export function expansionWants(list) {
+    const frame = list.frame, w = frame._w;
+    if (frame.world.atWar || frame.me.net <= 0 || !frame.me.cities.length) return;
+    if (!hasAnnexTargets(w, frame.me.slot)) return;
+    push(list, "unit", "armybase", 1, WANTS.expansionUrgency + 0.5, WANTS.armyReserve);
+    if (have(frame, "armybase") < 1) return;
+    const force = have(frame, "infantry") + have(frame, "tank");
+    if (force >= WANTS.expansionForce) return;
+    push(list, "unit", "infantry", have(frame, "infantry") + 1, WANTS.expansionUrgency, WANTS.armyReserve);
 }
 
 export function navalWants(list, navyAxis, {carrierMult = 1} = {}) {

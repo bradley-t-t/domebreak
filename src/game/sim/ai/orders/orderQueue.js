@@ -5,7 +5,7 @@
 import {allowedAmmo, HANGAR_SPEC, UNITS, WARHEADS, initialWarhead} from "../../../data/constants.js";
 import {haversine} from "../../../geo/geo.js";
 import {rand} from "../../worldState.js";
-import {atWar, netIncomeOf} from "../../queries.js";
+import {atWar, nearestAnnexTarget, netIncomeOf} from "../../queries.js";
 import {findTarget} from "../../combat.js";
 import {
     breakAlliance,
@@ -196,6 +196,11 @@ export function applyFires(w, frame, solved) {
 // at-war city, capture-goal fronts first. Artillery rides with the capture
 // force — it can't plant a flag, but its long tube fires on the way in and
 // covers the assault (leaving it home would waste a third of the ground budget).
+//
+// With no war to fight, a capture-flagged unit instead expands the nation:
+// it marches on the nearest bordering NEUTRAL city to annex it (occupation.js
+// flips it after the hold), so the AI keeps taking territory — and the room to
+// build on it — before its home country fills up, instead of standing idle.
 export function executeGround(w, frame, warPlans) {
     const captureFoes = new Set();
     for (const foe in warPlans) if (warPlans[foe].goal === "capture") captureFoes.add(+foe);
@@ -212,7 +217,13 @@ export function executeGround(w, frame, warPlans) {
         if (best) {
             setMarch(w, frame.me.slot, u.id, best.lng, best.lat);
             commandAttack(w, u.id, best.id);
+            continue;
         }
+        // No war target: only flag-planting units (infantry/tank) go annexing —
+        // artillery holds home rather than marching alone into neutral ground.
+        if (!def.capture) continue;
+        const neutral = nearestAnnexTarget(w, frame.me.slot, u.lng, u.lat);
+        if (neutral) setMarch(w, frame.me.slot, u.id, neutral.lng, neutral.lat);
     }
 }
 

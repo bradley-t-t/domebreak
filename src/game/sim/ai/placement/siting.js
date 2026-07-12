@@ -1,12 +1,13 @@
 // Siting primitives: the sampling machinery placement is built on. Every
-// candidate must sit inside the nation's own POLITICAL border (inOwnCountry) —
-// the same rule the human player is bound to — pass the placement-separation
-// gate, and spread from live same-role units. All sampling uses the seeded
-// rand(w) so placement is reproducible.
+// candidate must sit inside territory the nation CONTROLS (inControlledTerritory
+// — its own political border plus any land it has annexed or captured) — the same
+// rule the human player is bound to — pass the placement-separation gate, and
+// spread from live same-role units. All sampling uses the seeded rand(w) so
+// placement is reproducible.
 import {COAST_KM, UNITS} from "../../../data/constants.js";
 import {haversine} from "../../../geo/geo.js";
 import {rand} from "../../worldState.js";
-import {defenseRange, inOwnCountry, inTerritory, placementBlocked, radarRangeOf} from "../../queries.js";
+import {defenseRange, inControlledTerritory, inTerritory, placementBlocked, radarRangeOf} from "../../queries.js";
 import {isSea} from "../../../geo/seaRoute.js";
 import {cosLatSafe, offsetKmPolar} from "../../../../lib/geo.js";
 import {jitter, randRange} from "../../../../lib/random.js";
@@ -62,7 +63,7 @@ export function spotAround(w, slot, anchor, toward, role, away, myUnits) {
             const ang = brng != null ? brng + jitter(rand(w), 1.6) : rand(w) * Math.PI * 2;
             const lat = anchor.lat + Math.cos(ang) * rDeg;
             const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
-            if (!inOwnCountry(w, slot, lng, lat)) continue;
+            if (!inControlledTerritory(w, slot, lng, lat)) continue;
             if (placementBlocked(w, lng, lat, null)) continue;
             if (crowdsSameRole(role, myUnits, lng, lat)) continue;
             return {lng, lat};
@@ -71,7 +72,7 @@ export function spotAround(w, slot, anchor, toward, role, away, myUnits) {
     // Spread constraint too tight for the room available — take any valid spot.
     for (let k = 0; k < 12; k++) {
         const lng = anchor.lng + jitter(rand(w), 2.2), lat = anchor.lat + jitter(rand(w), 2.2);
-        if (inOwnCountry(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
+        if (inControlledTerritory(w, slot, lng, lat) && !placementBlocked(w, lng, lat, null)) return {lng, lat};
     }
     return null;
 }
@@ -111,7 +112,7 @@ export function coastalLandSpot(w, slot, cities, myUnits) {
                 const lat = anchor.lat + Math.cos(ang) * rDeg;
                 const lng = anchor.lng + (Math.sin(ang) * rDeg) / cosLat;
                 if (isSea(lng, lat)) continue;
-                if (!inOwnCountry(w, slot, lng, lat)) continue;
+                if (!inControlledTerritory(w, slot, lng, lat)) continue;
                 if (placementBlocked(w, lng, lat, null)) continue;
                 if (crowdsSameRole("industry", myUnits, lng, lat)) continue;
                 if (!nearSea(lng, lat)) continue;

@@ -5,8 +5,8 @@ import UnitIcon from "../common/UnitIcon.jsx";
 import Icon from "../common/Icon.jsx";
 import StatGrid from "../common/StatGrid.jsx";
 import Meter from "../common/Meter.jsx";
-import {allowedAmmo, atWar, FALLOUT, formationGuideOf, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
-import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
+import {allowedAmmo, annexableBySlot, atWar, FALLOUT, formationGuideOf, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
+import {CAPTURE, NEUTRAL, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
 import {clamp01} from "../../lib/math.js";
@@ -249,23 +249,27 @@ export default function SelectionPanel({
                 );
             })()}
             {UNITS[selectedUnit.type].capture && selectedUnit.slot === mySlot && (() => {
-                // Ground capture: the nearest enemy city this unit is close enough
-                // to seize. Holding it flips the whole state; assaulting it (setting
-                // the attack order to the city) drives that flip CAPTURE.assaultMult
-                // times faster — the "attack the city to capture it quicker" play.
-                let city = null, best = Infinity;
+                // Ground capture: the nearest city this unit is close enough to seize.
+                // An at-war enemy city is CAPTURED (holding flips its state; assaulting
+                // it drives the flip CAPTURE.assaultMult times faster). A bordering
+                // passive NEUTRAL city is ANNEXED instead — no war, just hold it — so
+                // ground troops are also how you grow into unclaimed territory.
+                let city = null, best = Infinity, annex = false;
                 for (const c of w.cities) {
-                    if (!c.alive || c.slot === selectedUnit.slot || !atWar(w, selectedUnit.slot, c.slot)) continue;
+                    if (!c.alive || c.slot === selectedUnit.slot) continue;
+                    const isAnnex = !atWar(w, selectedUnit.slot, c.slot) && annexableBySlot(w, selectedUnit.slot, c, NEUTRAL.annexBorderKm);
+                    if (!atWar(w, selectedUnit.slot, c.slot) && !isAnnex) continue;
                     const d = haversine(selectedUnit.lng, selectedUnit.lat, c.lng, c.lat);
                     if (d <= CAPTURE.holdKm && d < best) {
                         best = d;
                         city = c;
+                        annex = isAnnex;
                     }
                 }
                 if (!city) return (
                     <div className="mt-2 pt-[9px] border-t border-line-soft">
                         <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1">Ground Capture</div>
-                        <p className="text-[11px] leading-[1.45] text-dim m-0">Move within {CAPTURE.holdKm} km of an enemy city to start taking its state. Clear any garrison first — a nearby defender freezes the capture.</p>
+                        <p className="text-[11px] leading-[1.45] text-dim m-0">Move within {CAPTURE.holdKm} km of an enemy city to take its state, or a bordering neutral city to annex it. Clear any garrison first — a nearby defender freezes it.</p>
                     </div>
                 );
                 const holding = city.capture && city.capture.slot === selectedUnit.slot;
@@ -274,17 +278,21 @@ export default function SelectionPanel({
                 return (
                     <div className="mt-2 pt-[9px] border-t border-line-soft">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">Capturing {city.state || city.name}</span>
+                            <span className="font-display text-[10px] tracking-[1.5px] uppercase text-faint">{annex ? "Annexing" : "Capturing"} {city.state || city.name}</span>
                             <b className="font-mono text-[11px]">{pct}%</b>
                         </div>
                         <Meter frac={holding ? city.capture.progress : 0} color={teamColor(mySlot)}
-                               ariaLabel="Capture progress" className="mb-2"/>
-                        <button className={cn(button({variant: assaulting ? "primary" : "default"}), "w-full")}
-                                aria-pressed={assaulting}
-                                title={assaulting ? "Ease off the assault — the capture continues at the normal hold pace." : `Storm ${city.name} — capture roughly ${CAPTURE.assaultMult}× faster while your troops press the assault.`}
-                                onClick={() => api.commandAttack(selectedUnit.id, assaulting ? null : city.id)}>
-                            {assaulting ? "Assaulting — Ease Off" : "Assault City"}
-                        </button>
+                               ariaLabel={annex ? "Annexation progress" : "Capture progress"} className="mb-2"/>
+                        {annex ? (
+                            <p className="text-[11px] leading-[1.45] text-dim m-0">Hold this neutral city to annex its state — its land becomes yours to build on. No assault needed; neutrals don't resist.</p>
+                        ) : (
+                            <button className={cn(button({variant: assaulting ? "primary" : "default"}), "w-full")}
+                                    aria-pressed={assaulting}
+                                    title={assaulting ? "Ease off the assault — the capture continues at the normal hold pace." : `Storm ${city.name} — capture roughly ${CAPTURE.assaultMult}× faster while your troops press the assault.`}
+                                    onClick={() => api.commandAttack(selectedUnit.id, assaulting ? null : city.id)}>
+                                {assaulting ? "Assaulting — Ease Off" : "Assault City"}
+                            </button>
+                        )}
                     </div>
                 );
             })()}
