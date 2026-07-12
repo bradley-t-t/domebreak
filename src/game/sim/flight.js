@@ -16,6 +16,7 @@ import {
     LEADERSHIP,
     ROLL_KM,
     ROLLOUT_KM,
+    STRIKE,
     TRAIL_DT,
     TRAIL_LEN,
     UNITS,
@@ -24,7 +25,8 @@ import {haversine} from "../geo/geo.js";
 import {cosLatSafe, offsetKmPolar, unwrapLng, wrapAnglePi} from "../../lib/geo.js";
 import {clamp, clamp01, clampSym} from "../../lib/math.js";
 import {nationOf} from "./worldState.js";
-import {idMapOf} from "./combat.js";
+import {findTarget, idMapOf, nearestEnemyTarget} from "./combat.js";
+import {atWar} from "./queries.js";
 
 // Point at radiusKm/ang from origin o, in the local flight frame: math angle
 // (east = 0, counterclockwise), equirectangular offset with cos(lat) clamped
@@ -113,6 +115,92 @@ export function flyEscort(w, u, def, dt) {
         const cap = hangarCapOf(home.type, u.type);
         if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
         u.hp = 0; // stow into fighter stock
+        return;
+    }
+    advance(u, bearingTo(u, home), sp, tr, dt);
+}
+
+// Offensive strike mission: a tasked aircraft (a bomber on an airstrip sortie, or
+// any aircraft handed a Command Attack / Hostile auto-engage order) climbs out,
+// runs to its target, and holds inside weapons range so the fire phase can release
+// — a tight overhead loiter for a ground/city target, a closing pass for an air
+// target. After STRIKE.maxPasses shots, or once the target dies or leaves the war,
+// it breaks off and recovers to base, stowing back into hangar stock. `u.targetId`
+// mirrors the mission target so the fire phase in stepMovement looses the ordnance.
+export function flyStrike(w, u, def, dt) {
+    const m = u.mission;
+    const sp = def.airSpeed, tr = def.turnRate;
+    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
+    u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
+    u.alt = slew(u.alt, 1, dt / 1.5);
+    if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    const units = idMapOf(w.units);
+    if (m.phase !== "rtb") {
+        const t = findTarget(w, m.targetId, {cities: idMapOf(w.cities), units});
+        if (!t || !t.alive || !atWar(w, u.slot, t.slot) || (m.passes || 0) >= STRIKE.maxPasses) {
+            m.phase = "rtb";
+        } else {
+            u.targetId = m.targetId;
+            const isAir = t.kind === "unit" && !!UNITS[t.ref.type]?.airSpeed;
+            const engageKm = isAir ? STRIKE.a2aRangeKm : Math.max(def.range, STRIKE.loiterKm);
+            const rng = dist(u, t);
+            if (isAir || rng > engageKm * 0.8) advance(u, bearingTo(u, t), sp, tr, dt);            // run in / close on the jet
+            else advance(u, bearingTo(u, t) + Math.PI / 2, sp * 0.7, tr, dt);                       // tight overhead loiter
+            return;
+        }
+    }
+    // Recover: fly home and stow into hangar stock; base lost → the aircraft goes down.
+    u.targetId = null;
+    const home = units.get(m.homeId);
+    if (!home || home.hp <= 0) { u.hp = 0; u.face = null; return; }
+    if (dist(u, home) <= 14) {
+        const cap = hangarCapOf(home.type, u.type);
+        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
+        u.hp = 0;
+        return;
+    }
+    advance(u, bearingTo(u, home), sp, tr, dt);
+}
+
+// Sortie escort: a fighter launched to shield an airstrip bomber package. It forms
+// on the nearest surviving bomber of its sortie and opportunistically locks any
+// enemy aircraft inside air-to-air range (the fire phase looses the missile), so the
+// bombers press the target while the escorts keep the sky clear. When every bomber
+// of the sortie is down or home, the escort breaks off, recovers, and stows.
+export function flySortieEscort(w, u, def, dt) {
+    const m = u.mission;
+    const sp = def.airSpeed, tr = def.turnRate;
+    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
+    u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
+    u.alt = slew(u.alt, 1, dt / 1.5);
+    if ((u.alt || 0) > 0.02) recordTrail(u, dt);
+    let lead = null, leadD = Infinity;
+    for (const b of w.units) {
+        if (b.hp > 0 && b.type === "bomber" && b.mission?.sortieId === m.sortieId) {
+            const d = dist(u, b);
+            if (d < leadD) { leadD = d; lead = b; }
+        }
+    }
+    // Opportunistic air-to-air: lock the closest enemy jet in range (fire phase fires).
+    const foe = nearestEnemyTarget(w, u, STRIKE.a2aRangeKm, {includeCities: false, includeGround: false});
+    u.targetId = foe ? foe.id : null;
+    if (lead) {
+        const escorts = Math.max(1, STRIKE.escortsPerSortie);
+        const ang = ((m.idx || 0) / escorts) * 2 * Math.PI + Math.PI / 2;
+        const fp = polarFrom(lead, 26, ang);
+        u.alt = Math.max(0.5, lead.alt || 0);
+        const rng = dist(u, fp);
+        advance(u, bearingTo(u, fp), clamp(rng * 1.4, sp * 0.4, sp), tr * 1.6, dt);
+        return;
+    }
+    // Package is home or lost — recover and stow into fighter stock.
+    u.targetId = null;
+    const home = idMapOf(w.units).get(m.homeId);
+    if (!home || home.hp <= 0) { u.hp = 0; u.face = null; return; }
+    if (dist(u, home) <= 14) {
+        const cap = hangarCapOf(home.type, u.type);
+        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
+        u.hp = 0;
         return;
     }
     advance(u, bearingTo(u, home), sp, tr, dt);

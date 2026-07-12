@@ -63,6 +63,74 @@ export function findTarget(w, id, idx) {
     return null;
 }
 
+// Nearest at-war enemy entity (city or unit) to `u` within radiusKm that it may
+// legally engage — the target a Hostile aircraft or airstrip auto-acquires when it
+// has no standing order. The Leadership Bunker is skipped (no conventional strike
+// can take it). `opts` narrows the class of target (an air-superiority sweep wants
+// only aircraft; a bomber sortie wants only ground/city). Pure — mutates nothing.
+export function nearestEnemyTarget(w, u, radiusKm, opts = {}) {
+    const {includeCities = true, includeGround = true, includeAircraft = true} = opts;
+    let best = null, bestD = radiusKm;
+    if (includeCities) for (const c of w.cities) {
+        if (!c.alive || !atWar(w, u.slot, c.slot)) continue;
+        const d = haversine(u.lng, u.lat, c.lng, c.lat);
+        if (d < bestD) { bestD = d; best = {id: c.id, kind: "city", slot: c.slot, lng: c.lng, lat: c.lat}; }
+    }
+    for (const e of w.units) {
+        if (e.hp <= 0 || e.slot === u.slot || e.type === "bunker" || !atWar(w, u.slot, e.slot)) continue;
+        const air = !!UNITS[e.type].airSpeed;
+        if (air ? !includeAircraft : !includeGround) continue;
+        const d = haversine(u.lng, u.lat, e.lng, e.lat);
+        if (d < bestD) { bestD = d; best = {id: e.id, kind: "unit", slot: e.slot, lng: e.lng, lat: e.lat}; }
+    }
+    return best;
+}
+
+// Advance a homing air-to-air round one tick: re-aim at the live target every
+// frame and step toward it along the great circle, detonating on the airframe when
+// it merges. Unlike the ballistic path this tracks a moving jet (which would slip a
+// fixed impact point), and it is deliberately not interceptable — a short-range IR
+// missile in a dogfight resolves before a SAM could react. Applies damage directly
+// (no blast/fallout) and records the shooter for retaliation bookkeeping.
+export function advanceHoming(w, p, dt, idx) {
+    const target = findTarget(w, p.targetId, idx);
+    if (!target || !target.alive) {
+        p._dead = true;
+        w.events.push({id: nextId(w, "e"), t: w.time, type: "fizzle", lng: p.lng, lat: p.lat, alt: p.altNorm ?? 0});
+        return;
+    }
+    p.pLng = p.lng;
+    p.pLat = p.lat;
+    p.toLng = target.lng;
+    p.toLat = target.lat;
+    p.altNorm = target.kind === "unit" ? (target.ref.alt ?? 0.7) : 0;
+    const d = haversine(p.lng, p.lat, target.lng, target.lat);
+    const step = (p.speed ?? MISSILE_SPEED) * dt;
+    if (d <= Math.max(step, 5)) {
+        p.lng = target.lng;
+        p.lat = target.lat;
+        if (target.kind === "unit") {
+            target.ref.hp -= p.damage;
+            target.ref._threatBy = p.by;
+            target.ref._threatT = w.time;
+            const dead = target.ref.hp <= 0;
+            if (dead) target.ref.hp = 0;
+            w.events.push({
+                id: nextId(w, "e"), t: w.time, type: dead ? "destroy" : "hit", kind: "unit",
+                cityId: target.ref.id, lng: target.lng, lat: target.lat, slot: p.slot, muni: p.muni || "a2a"
+            });
+        }
+        p._dead = true;
+        return;
+    }
+    const brg = bearing(p.lng, p.lat, target.lng, target.lat);
+    const nxt = geoDest(p.lng, p.lat, step, brg);
+    p.lng = nxt[0];
+    p.lat = nxt[1];
+    p.travelled = (p.travelled || 0) + step;
+    p.progress = Math.min(0.99, p.travelled / (p.dist || 1));
+}
+
 // Predicted-intercept aim point: where a pursuer at {lng,lat,speed} should steer
 // to *meet* moving projectile p, rather than chasing where p is right now. Solves
 // time-to-intercept by fixed-point iteration (tau = range / pursuerSpeed, re-sample
@@ -109,7 +177,10 @@ export function trackPoint(p, f) {
 // Fires one projectile from an offensive unit at a resolved target. Records who
 // saw the launch (the shooter always; anyone else only if a sensor covers the
 // launch point — this is what an OTH array buys, visibility into the boost phase).
-export function launch(w, unit, target, warhead) {
+// `opts` tags aircraft-launched ordnance: `muni` ("bomb" | "a2a") drives the sky
+// sprite, and `homing` makes stepCombat chase a moving air target instead of
+// flying the fixed ballistic arc (an air-to-air missile must track a fast jet).
+export function launch(w, unit, target, warhead, opts = {}) {
     const udef = UNITS[unit.type];
     const dist = haversine(unit.lng, unit.lat, target.lng, target.lat);
     const seenBy = [unit.slot];
@@ -135,6 +206,9 @@ export function launch(w, unit, target, warhead) {
         id: nextId(w, "p"),
         slot: unit.slot,
         type: unit.type,
+        by: unit.id,   // firing unit — lets a Defensive victim retaliate against its attacker
+        ...(opts.muni ? {muni: opts.muni} : {}),
+        ...(opts.homing ? {homing: true} : {}),
         warhead: warhead || "standard",
         damage: udef.damage * (WARHEADS[warhead] || WARHEADS.standard).dmgMult,
         // Intercept-evasion: inherent on the launcher's unit type plus the loaded
@@ -195,6 +269,11 @@ export function directFire(w, unit, target) {
     }
     const dmg = UNITS[unit.type].damage || 0;
     target.ref.hp -= dmg;
+    // Remember the attacker so a Defensive unit can return fire (see aircraftAutoAcquire).
+    if (target.kind === "unit") {
+        target.ref._threatBy = unit.id;
+        target.ref._threatT = w.time;
+    }
     const dead = target.ref.hp <= 0;
     if (dead) {
         target.ref.hp = 0;
@@ -265,6 +344,10 @@ export function resolveHit(w, p, idx) {
         return;
     }
     target.ref.hp -= p.damage;
+    if (target.kind === "unit") {
+        target.ref._threatBy = p.by;
+        target.ref._threatT = w.time;
+    }
     const dead = target.ref.hp <= 0;
     if (dead) {
         target.ref.hp = 0;
@@ -278,7 +361,8 @@ export function resolveHit(w, p, idx) {
         cityId: target.ref.id,
         lng: target.lng,
         lat: target.lat,
-        slot: p.slot
+        slot: p.slot,
+        ...(p.muni ? {muni: p.muni} : {})
     });
 }
 

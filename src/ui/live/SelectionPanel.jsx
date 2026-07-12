@@ -22,6 +22,32 @@ const domainPills = (def) => [
     {when: !!def.wing, label: "Airbase"},
 ];
 
+// Hostile/Defensive engagement stance toggle for aircraft and airbases. Hostile
+// auto-engages any enemy that comes within range; Defensive holds fire until
+// attacked, then returns fire on the attacker. Defaults to Defensive.
+function StanceButtons({unit, api}) {
+    const stance = unit.stance || "defensive";
+    const opts = [
+        ["defensive", "Defensive", "Hold fire unless attacked, then return fire on the attacker."],
+        ["hostile", "Hostile", "Engage any enemy unit, aircraft, or city that comes within range."],
+    ];
+    return (
+        <div className="my-1 mb-[10px]">
+            <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Engagement Stance</div>
+            <div className="flex gap-1">
+                {opts.map(([k, lbl, tip]) => (
+                    <button key={k} className={cn(
+                        "flex-1 py-1.5 px-2 border border-line bg-btn-bg text-dim rounded font-mono text-xs",
+                        stance === k && "bg-gold text-gold-contrast border-transparent"
+                    )}
+                            aria-pressed={stance === k} title={tip}
+                            onClick={() => api.setStance(unit.id, k)}>{lbl}</button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function SelectionPanel({
                                            selectedUnit,
                                            w,
@@ -284,6 +310,7 @@ export default function SelectionPanel({
                             </div>
                         );
                     })()}
+                    {!!def.airSpeed && selectedUnit.slot === mySlot && <StanceButtons unit={selectedUnit} api={api}/>}
                     {selectedUnit.targetId
                         ?
                         <button className={button()} onClick={() => api.commandAttack(selectedUnit.id, null)}>Hold
@@ -291,6 +318,17 @@ export default function SelectionPanel({
                         : <button className={button({variant: attackMode ? "primary" : "default"})}
                                   onClick={() => setAttackMode((v) => !v)}>{attackMode ? "Pick a Target…" : "Command Attack"}</button>}
                 </>
+            )}
+            {!!def.sortieKm && selectedUnit.slot === mySlot && (
+                <div className="mt-2 pt-[9px] border-t border-line-soft">
+                    <div className="font-display text-[10px] tracking-[1.5px] uppercase text-faint mb-1.5">Bomber Sorties</div>
+                    <p className="text-[11px] leading-[1.45] text-dim mt-0 mb-2">Sends escorted bombers to strike a target within the strip's range.</p>
+                    <StanceButtons unit={selectedUnit} api={api}/>
+                    {selectedUnit.targetId
+                        ? <button className={cn(button(), "w-full")} onClick={() => api.commandAttack(selectedUnit.id, null)}>Stand Down Sortie</button>
+                        : <button className={cn(button({variant: attackMode ? "primary" : "default"}), "w-full")}
+                                  onClick={() => setAttackMode((v) => !v)}>{attackMode ? "Pick a Target…" : "Command Sortie"}</button>}
+                </div>
             )}
         </div>
     );

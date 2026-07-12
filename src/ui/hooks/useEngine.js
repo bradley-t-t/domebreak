@@ -21,6 +21,7 @@ import {
     setMarch,
     releaseLeadership,
     setPatrolSize,
+    setStance,
     setSail,
     setWarhead,
     shelterLeadership,
@@ -110,6 +111,11 @@ export function useEngine(world, online = false) {
         },
         setAwacsPatrol: (uid, on) => {
             const r = setAwacsPatrol(ref.current, ref.current.mySlot, uid, on);
+            force();
+            return r;
+        },
+        setStance: (uid, stance) => {
+            const r = setStance(ref.current, ref.current.mySlot, uid, stance);
             force();
             return r;
         },

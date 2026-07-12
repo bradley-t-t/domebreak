@@ -186,7 +186,16 @@ export const UNITS = {
         hp: 45,
         upkeep: 1,
         glyph: "▭",
-        wing: ["interceptor", "attack", "transport", "awacs"]
+        wing: ["interceptor", "multirole", "attack", "bomber", "transport", "awacs"],
+        // A support structure that can still be tasked offensively: given an attack
+        // order (Command Attack, a Battle Plan, or a Hostile stance) it launches a
+        // bomber sortie rather than firing itself, so `canAttack` opts it into the
+        // attacker gate the plan solver and commandAttack share.
+        canAttack: true,
+        // Offensive reach: how far out a target may be for the strip to launch a
+        // bomber sortie against it. Distinct from `range` (the runway footprint).
+        // Drawn as the amber strike ring when the strip is selected.
+        sortieKm: 4200
     },
     // Ground forces. The Army Base is the land Airstrip: fields the helicopter wing,
     // prerequisite for all mobile ground units. Mobile ground units (landSpeed) march
@@ -742,6 +751,30 @@ export const UNITS = {
         upkeep: 2.5,
         glyph: "✈"
     },
+    // Strategic bomber — the airstrip's offensive punch. Launched only on a strike
+    // sortie (never on defensive CAP), it flies to a tasked target under fighter
+    // escort and saturates it with a heavy conventional payload before returning.
+    // `range` is its bomb-release standoff (kept short so it flies onto the target);
+    // the airstrip's `sortieKm` is how far out a target may be to task the sortie.
+    bomber: {
+        label: "Strategic Bomber",
+        desc: "Long-range heavy bomber. Flies escorted to a tasked target and saturates it with a heavy payload.",
+        kind: "offense",
+        hidden: true,
+        cost: 360,
+        buildTime: 16,
+        range: 90,
+        damage: 62,
+        reload: 20,
+        fireCost: 26,
+        speed: 82,
+        airSpeed: 62,
+        radarKm: 150,
+        turnRate: 0.65,
+        hp: 60,
+        upkeep: 3,
+        glyph: "✈"
+    },
 };
 // Map unit type -> public/icons SVG basename (rendered by ui/common/UnitIcon).
 export const UNIT_ICON = {
@@ -761,6 +794,7 @@ export const UNIT_ICON = {
     refinery: "refinery",
     techpark: "techpark",
     multirole: "jet", transport: "transport",
+    bomber: "bomber",
     strikefighter: "strike-fighter",
     interceptor: "interceptor",
     attack: "attack",
