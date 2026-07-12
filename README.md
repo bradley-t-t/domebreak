@@ -56,8 +56,9 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-Open the dev server, start a **New Game**, pick your nation and the number of AI opponents, and command your arsenal on
-the map. Progress autosaves to local storage; **Continue** picks up where you left off.
+Open the dev server, start a **New Game**, pick your nation and how many AI opponents you face — optionally hand-picking
+which nations they are — and command your arsenal on the map. Progress autosaves to local storage; **Continue** picks up
+where you left off.
 
 ## Build
 

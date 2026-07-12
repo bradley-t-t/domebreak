@@ -12,6 +12,7 @@ export const DEFAULT_RULES = Object.freeze({
     dominationPopFrac: DIPLOMACY.dominationPopFrac, // world-pop share that wins the war
     playerGraceSec: DIPLOMACY.playerGraceSec,     // opening ceasefire during which nobody may declare war
     balanced: false,                              // equalize GDP/pop across nations for a level opening
+    aiPicks: [],                                  // ISOs the player pinned as AI belligerents ([] = fully random)
 });
 
 // Per-rule UI metadata: label, help copy, bounds, step, formatter. The
@@ -86,8 +87,16 @@ function formatGrace(sec) {
 // (older shape, out-of-range value, garbage) can never propagate an invalid rule
 // into the sim. Unknown keys are dropped.
 export function normalizeRules(input) {
-    const out = {...DEFAULT_RULES};
+    const out = {...DEFAULT_RULES, aiPicks: []};
     if (!input || typeof input !== "object") return out;
+    // aiPicks isn't a RULES_META control (it's rendered by a dedicated nation
+    // picker, not a slider/toggle) so it's sanitized here: uppercase ISO strings,
+    // de-duped, capped to the active-nation ceiling.
+    if (Array.isArray(input.aiPicks)) {
+        out.aiPicks = [...new Set(input.aiPicks
+            .map((s) => String(s).toUpperCase())
+            .filter(Boolean))].slice(0, NEUTRAL.maxActive);
+    }
     for (const meta of RULES_META) {
         const raw = input[meta.key];
         if (raw == null) continue;

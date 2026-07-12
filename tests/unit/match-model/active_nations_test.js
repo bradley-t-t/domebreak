@@ -5,7 +5,7 @@
 import {describe, expect, it} from "vitest";
 import {stepVictory} from "../../../src/game/sim/tickPhases.js";
 import {isActive} from "../../../src/game/sim/queries.js";
-import {pickActiveIsos} from "../../../src/game/sim/newGame.js";
+import {buildSetup, pickActiveIsos} from "../../../src/game/sim/newGame.js";
 import {NEUTRAL} from "../../../src/game/data/constants.js";
 
 // Minimal world for stepVictory: nations[slot] ordered so nationOf hits directly.
@@ -151,6 +151,53 @@ describe("active-nation seeding is scattered", () => {
         expect(picked).toHaveLength(12);
         expect(new Set(picked).size).toBe(12);
         for (const iso of isos) expect(picked).toContain(iso);
+    });
+});
+
+describe("player-pinned AI nations join the active roster", () => {
+    // 20 well-scattered fake nations so the spacing gate never starves the random
+    // fill: capitals on a lat/lng grid far enough apart to clear scatterMinKm.
+    const ISOS = Array.from({length: 20}, (_, i) => `X${i}`);
+    const data = {
+        cities: Object.fromEntries(ISOS.map((iso, i) => [iso, [{lng: (i % 5) * 60 - 120, lat: (Math.floor(i / 5) % 4) * 40 - 60, cap: true, p: 100}]])),
+        countries: ISOS.map((iso) => ({iso, name: iso, count: 1})),
+    };
+    const pool = ISOS.slice();
+    const activeIsos = (setup) => setup.nations.filter((n) => n.active).map((n) => n.iso);
+
+    it("test_pinned_nations_are_always_active_belligerents", () => {
+        const pins = ["X7", "X13", "X18"];
+        const setup = buildSetup(data, "X0", null, 42, {activeCount: 8, aiPicks: pins, seedPool: pool});
+        const active = activeIsos(setup);
+        for (const iso of pins) expect(active).toContain(iso);
+        // Pinned opponents run as AI, not the player.
+        for (const iso of pins) expect(setup.nations.find((n) => n.iso === iso).isAi).toBe(true);
+    });
+
+    it("test_pins_plus_random_fill_reaches_active_count", () => {
+        const setup = buildSetup(data, "X0", null, 42, {activeCount: 8, aiPicks: ["X7", "X13"], seedPool: pool});
+        // player + 8 total belligerents; pins are a subset, the rest random-filled.
+        expect(activeIsos(setup)).toHaveLength(8);
+    });
+
+    it("test_empty_pins_is_fully_random_fill", () => {
+        const setup = buildSetup(data, "X0", null, 42, {activeCount: 6, aiPicks: [], seedPool: pool});
+        const active = activeIsos(setup);
+        expect(active).toHaveLength(6);
+        expect(active[0]).toBe("X0"); // the player is always slot-first active
+    });
+
+    it("test_pinning_more_than_active_count_widens_the_war_up_to_the_cap", () => {
+        // 13 pins + the player = 14 forced, past maxActive (12): trimmed to the cap.
+        const pins = ISOS.slice(1, 14);
+        const setup = buildSetup(data, "X0", null, 42, {activeCount: 4, aiPicks: pins, seedPool: pool});
+        expect(activeIsos(setup)).toHaveLength(NEUTRAL.maxActive);
+    });
+
+    it("test_the_player_cannot_be_pinned_as_its_own_opponent", () => {
+        const setup = buildSetup(data, "X0", null, 42, {activeCount: 4, aiPicks: ["X0", "X9"], seedPool: pool});
+        expect(setup.nations.find((n) => n.iso === "X0").isAi).toBe(false);
+        expect(activeIsos(setup)).toContain("X9");
     });
 });
 
