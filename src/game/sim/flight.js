@@ -120,17 +120,31 @@ export function flyEscort(w, u, def, dt) {
     advance(u, bearingTo(u, home), sp, tr, dt);
 }
 
+// Recovery tail shared by the strike and escort missions: clear the target, fly
+// back to the home base, and on arrival stow into hangar stock; a base lost mid-
+// flight takes the aircraft down with it (the wing can't recover to nothing).
+function recoverToBase(u, def, home, dt) {
+    u.targetId = null;
+    if (!home || home.hp <= 0) { u.hp = 0; u.face = null; return; }
+    if (haversine(u.lng, u.lat, home.lng, home.lat) <= STRIKE.recoverKm) {
+        const cap = hangarCapOf(home.type, u.type);
+        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
+        u.hp = 0;
+        return;
+    }
+    advance(u, bearingTo(u, home), def.airSpeed, def.turnRate, dt);
+}
+
 // Offensive strike mission: a tasked aircraft (a bomber on an airstrip sortie, or
 // any aircraft handed a Command Attack / Hostile auto-engage order) climbs out,
 // runs to its target, and holds inside weapons range so the fire phase can release
 // — a tight overhead loiter for a ground/city target, a closing pass for an air
 // target. After STRIKE.maxPasses shots, or once the target dies or leaves the war,
-// it breaks off and recovers to base, stowing back into hangar stock. `u.targetId`
-// mirrors the mission target so the fire phase in stepMovement looses the ordnance.
+// it breaks off and recovers to base. `u.targetId` mirrors the mission target so
+// the fire phase in stepMovement looses the ordnance.
 export function flyStrike(w, u, def, dt) {
     const m = u.mission;
     const sp = def.airSpeed, tr = def.turnRate;
-    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
     u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
     u.alt = slew(u.alt, 1, dt / 1.5);
     if ((u.alt || 0) > 0.02) recordTrail(u, dt);
@@ -143,23 +157,13 @@ export function flyStrike(w, u, def, dt) {
             u.targetId = m.targetId;
             const isAir = t.kind === "unit" && !!UNITS[t.ref.type]?.airSpeed;
             const engageKm = isAir ? STRIKE.a2aRangeKm : Math.max(def.range, STRIKE.loiterKm);
-            const rng = dist(u, t);
+            const rng = haversine(u.lng, u.lat, t.lng, t.lat);
             if (isAir || rng > engageKm * 0.8) advance(u, bearingTo(u, t), sp, tr, dt);            // run in / close on the jet
             else advance(u, bearingTo(u, t) + Math.PI / 2, sp * 0.7, tr, dt);                       // tight overhead loiter
             return;
         }
     }
-    // Recover: fly home and stow into hangar stock; base lost → the aircraft goes down.
-    u.targetId = null;
-    const home = units.get(m.homeId);
-    if (!home || home.hp <= 0) { u.hp = 0; u.face = null; return; }
-    if (dist(u, home) <= 14) {
-        const cap = hangarCapOf(home.type, u.type);
-        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
-        u.hp = 0;
-        return;
-    }
-    advance(u, bearingTo(u, home), sp, tr, dt);
+    recoverToBase(u, def, units.get(m.homeId), dt);
 }
 
 // Sortie escort: a fighter launched to shield an airstrip bomber package. It forms
@@ -170,14 +174,13 @@ export function flyStrike(w, u, def, dt) {
 export function flySortieEscort(w, u, def, dt) {
     const m = u.mission;
     const sp = def.airSpeed, tr = def.turnRate;
-    const dist = (a, b) => haversine(a.lng, a.lat, b.lng, b.lat);
     u.vis = Math.min(1, (u.vis || 0) + dt / 0.8);
     u.alt = slew(u.alt, 1, dt / 1.5);
     if ((u.alt || 0) > 0.02) recordTrail(u, dt);
     let lead = null, leadD = Infinity;
     for (const b of w.units) {
         if (b.hp > 0 && b.type === "bomber" && b.mission?.sortieId === m.sortieId) {
-            const d = dist(u, b);
+            const d = haversine(u.lng, u.lat, b.lng, b.lat);
             if (d < leadD) { leadD = d; lead = b; }
         }
     }
@@ -189,21 +192,10 @@ export function flySortieEscort(w, u, def, dt) {
         const ang = ((m.idx || 0) / escorts) * 2 * Math.PI + Math.PI / 2;
         const fp = polarFrom(lead, 26, ang);
         u.alt = Math.max(0.5, lead.alt || 0);
-        const rng = dist(u, fp);
-        advance(u, bearingTo(u, fp), clamp(rng * 1.4, sp * 0.4, sp), tr * 1.6, dt);
+        advance(u, bearingTo(u, fp), clamp(haversine(u.lng, u.lat, fp.lng, fp.lat) * 1.4, sp * 0.4, sp), tr * 1.6, dt);
         return;
     }
-    // Package is home or lost — recover and stow into fighter stock.
-    u.targetId = null;
-    const home = idMapOf(w.units).get(m.homeId);
-    if (!home || home.hp <= 0) { u.hp = 0; u.face = null; return; }
-    if (dist(u, home) <= 14) {
-        const cap = hangarCapOf(home.type, u.type);
-        if ((home.hangar?.[u.type] || 0) < cap) home.hangar[u.type] = (home.hangar[u.type] || 0) + 1;
-        u.hp = 0;
-        return;
-    }
-    advance(u, bearingTo(u, home), sp, tr, dt);
+    recoverToBase(u, def, idMapOf(w.units).get(m.homeId), dt);
 }
 
 // Point-to-point leadership ferry, direction set by mission.mode. Flies a straight

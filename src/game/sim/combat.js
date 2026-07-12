@@ -269,7 +269,7 @@ export function directFire(w, unit, target) {
     }
     const dmg = UNITS[unit.type].damage || 0;
     target.ref.hp -= dmg;
-    // Remember the attacker so a Defensive unit can return fire (see aircraftAutoAcquire).
+    // Remember the attacker so a Defensive unit can return fire (see autoAcquireTarget).
     if (target.kind === "unit") {
         target.ref._threatBy = unit.id;
         target.ref._threatT = w.time;

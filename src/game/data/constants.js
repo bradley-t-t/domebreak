@@ -317,6 +317,7 @@ export const HANGAR_SPEC = {
 export const STRIKE = {
     a2aRangeKm: 170,        // air-to-air missile launch range (target is an aircraft)
     loiterKm: 14,           // hold radius while making passes on a ground/city target
+    recoverKm: 14,          // arrival distance at which a recovering aircraft stows into stock
     maxPasses: 3,           // strike passes an aircraft makes before recovering
     escortsPerSortie: 2,    // fighters launched to escort each bomber sortie
     bombersPerSortie: 2,    // bombers launched per airstrip sortie
