@@ -4,7 +4,7 @@ import {haversine, withinKm} from "../geo/geo.js";
 import {countryGidAt, countryLandCells} from "../geo/countryOwner.js";
 import {toGid3} from "../data/iso3.js";
 import {nationOf} from "./worldState.js";
-import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, RADAR_RANGE_MULT, STABILITY, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
+import {AIRBORNE_ALT, ECONOMY, FALLOUT, INDUSTRY, MIN_SEP, NEUTRAL, RADAR_RANGE_MULT, STABILITY, TERRITORY_RADIUS, UNITS} from "../data/constants.js";
 import {clamp, clamp01} from "../../lib/math.js";
 
 // Fallout cloud intensity (0..1) for a given age in sim seconds: ramps up over
@@ -255,6 +255,101 @@ export function inTerritory(w, slot, lng, lat) {
 export function inOwnCountry(w, slot, lng, lat) {
     const gid = toGid3(nationOf(w, slot)?.iso);
     return gid != null && countryGidAt(lng, lat) === gid;
+}
+
+// Land a nation may build on: its own political border (inOwnCountry) OR ground
+// it has CONQUERED — a point whose nearest living city is one of slot's own,
+// within TERRITORY_RADIUS, AND sitting in the same political country as that
+// city. The last clause is what stops the Voronoi disk from spilling across an
+// intact frontier: a point inside a neighbour's country is buildable only once
+// slot actually holds a city inside that same country (annexed or war-captured),
+// never merely because slot's border city happens to be the nearest one. So
+// taking neutral or enemy provinces genuinely grows where you can build, without
+// reopening the cross-border placement leak inOwnCountry closed.
+export function inControlledTerritory(w, slot, lng, lat) {
+    if (inOwnCountry(w, slot, lng, lat)) return true;
+    const gid = countryGidAt(lng, lat);
+    if (gid == null) return false; // ocean / unclaimed — naval placement uses inTerritory
+    let nearest = null, best = Infinity;
+    for (const c of w.cities) {
+        if (!c.alive) continue;
+        if (Math.abs(c.lat - lat) * 111.19 >= best) continue; // meridian-arc reject (see inTerritory)
+        const d = haversine(c.lng, c.lat, lng, lat);
+        if (d < best) { best = d; nearest = c; }
+    }
+    if (!nearest || nearest.slot !== slot || best > TERRITORY_RADIUS) return false;
+    return countryGidAt(nearest.lng, nearest.lat) === gid;
+}
+
+// Slots held by passive NEUTRAL nations (active === false), as a Set — the cities
+// an active nation may ANNEX (peaceful conquest, no war; active nations' cities
+// are only taken through war). Built once so the per-city capture/annex sweeps
+// test membership in O(1) instead of an O(nations) nationOf lookup each.
+export function neutralSlotSet(w) {
+    const s = new Set();
+    for (const n of w.nations) if (n.active === false) s.add(n.slot);
+    return s;
+}
+
+// A city held by a passive neutral nation.
+export function isNeutralCity(w, c) {
+    if (!c || !c.alive) return false;
+    const n = nationOf(w, c.slot);
+    return !!n && n.active === false;
+}
+
+// slot's living cities.
+function ownAliveCities(w, slot) {
+    const out = [];
+    for (const c of w.cities) if (c.alive && c.slot === slot) out.push(c);
+    return out;
+}
+
+// True when slot fields a living city within maxKm of (lng, lat) — the adjacency
+// gate on annexation, so a nation can only absorb neutral land bordering its own.
+export function bordersTerritory(w, slot, lng, lat, maxKm) {
+    for (const c of w.cities) {
+        if (c.alive && c.slot === slot && withinKm(c.lng, c.lat, lng, lat, maxKm)) return true;
+    }
+    return false;
+}
+
+// Can slot annex city c right now? It must be a bordering neutral city.
+export function annexableBySlot(w, slot, c, maxKm = NEUTRAL.annexBorderKm) {
+    return isNeutralCity(w, c) && bordersTerritory(w, slot, c.lng, c.lat, maxKm);
+}
+
+// The nearest neutral city slot could annex (bordering its own territory) to the
+// point (lng, lat), or null. Used by the AI to pick an expansion objective and by
+// the capture HUD. Gathers slot's cities and the neutral slots once, then walks
+// neutral cities with the cheap adjacency test.
+export function nearestAnnexTarget(w, slot, lng, lat, maxKm = NEUTRAL.annexBorderKm) {
+    const neutral = neutralSlotSet(w);
+    if (!neutral.size) return null;
+    const own = ownAliveCities(w, slot);
+    if (!own.length) return null;
+    let best = null, bd = Infinity;
+    for (const c of w.cities) {
+        if (!c.alive || !neutral.has(c.slot)) continue;
+        const d = haversine(c.lng, c.lat, lng, lat);
+        if (d >= bd) continue;
+        if (own.some((o) => withinKm(o.lng, o.lat, c.lng, c.lat, maxKm))) { bd = d; best = c; }
+    }
+    return best;
+}
+
+// Does slot border ANY annexable neutral land? Cheap existence check the AI reads
+// to decide whether to raise an expansion force at all.
+export function hasAnnexTargets(w, slot, maxKm = NEUTRAL.annexBorderKm) {
+    const neutral = neutralSlotSet(w);
+    if (!neutral.size) return false;
+    const own = ownAliveCities(w, slot);
+    if (!own.length) return false;
+    for (const c of w.cities) {
+        if (!c.alive || !neutral.has(c.slot)) continue;
+        if (own.some((o) => withinKm(o.lng, o.lat, c.lng, c.lat, maxKm))) return true;
+    }
+    return false;
 }
 
 // Radar emission radius of a unit type (km): dedicated sensors use their range;
