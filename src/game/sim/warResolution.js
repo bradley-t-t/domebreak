@@ -17,6 +17,14 @@ import {recordAllianceFormed, recordPeaceDeclined, recordWarEnd} from "./ai/dipl
 // A city's original owner (fallback to current slot for legacy saves predating owner0).
 const origin = (c) => c.owner0 ?? c.slot;
 
+// Solo vs online. The `w.mySlot`-keyed modal popups below identify "the one local
+// player" — meaningful in single-player, but on the authoritative server every
+// human shares one world whose mySlot is a fixed placeholder (0). Online clients
+// therefore drive their own offer prompts off the broadcast pendingAlliance queue
+// (each filters by its real slot); the server skips the popup push entirely so the
+// shared world never carries a popup addressed to the wrong seat.
+const solo = (w) => w.meta?.mode !== "online";
+
 // Legacy saves may not carry the queues; make sure they exist before we touch them.
 function ensureWar(w) {
     if (!w.warPopups) w.warPopups = [];
@@ -183,18 +191,18 @@ export function proposeAlliance(w, from, to) {
         if (w.pendingAlliance.some((o) => o.from === from && o.to === to)) return {ok: true};
         if (a.isAi) a._allianceToPlayerAt = w.time;     // starts the cooldown checked in diploProposeAlliance
         w.pendingAlliance.push({from, to, t: w.time});
-        if (to === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-offer", foe: from});
+        if (solo(w) && to === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-offer", foe: from});
         return {ok: true};
     }
     if (aiAcceptsAlliance(w, to, from)) {
         const r = formAlliance(w, from, to);
         if (r.ok) {
             recordAllianceFormed(w, from, to);
-            if (from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-formed", foe: to});
+            if (solo(w) && from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-formed", foe: to});
         }
         return r;
     }
-    if (from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-refused", foe: to});
+    if (solo(w) && from === w.mySlot) w.warPopups.push({id: nextId(w, "e"), kind: "ally-refused", foe: to});
     return {ok: false, refused: true};
 }
 

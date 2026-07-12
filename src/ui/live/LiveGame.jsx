@@ -19,6 +19,7 @@ import ObjectivesPanel from "../hud/ObjectivesPanel.jsx";
 import HudLayoutMenu from "../hud/HudLayoutMenu.jsx";
 import BattlePlanScreen from "../screens/BattlePlanScreen.jsx";
 import {useHudLayout} from "../hooks/useHudLayout.js";
+import {HUD_PANELS} from "../../game/platform/hudLayout.js";
 import {useBattlePlans} from "../hooks/useBattlePlans.js";
 import {useBattlePlanReconciler} from "../hooks/useBattlePlanReconciler.js";
 import Flag from "../common/Flag.jsx";
@@ -234,7 +235,7 @@ export default function LiveGame({
     // helper they share — see useContextMenus (same items, same ordering,
     // same menu state, moved out verbatim).
     const {menu, setMenu, openCityMenu, openUnitMenu} = useContextMenus({
-        w, mySlot, myNation, api, selUnit, online: !!net,
+        w, mySlot, myNation, api, selUnit,
         relation, nationName, labelOf, teamColor, flash,
         setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
     });
@@ -248,6 +249,12 @@ export default function LiveGame({
     // preserved). Online matches are speed-locked and never pause: the modal is
     // non-blocking there. Keyed on whether the queue is non-empty.
     const hasWarPopup = (w.warPopups?.length ?? 0) > 0;
+    // Online alliance offers ride the broadcast pendingAlliance queue rather than
+    // the per-player warPopups modal queue (the server can't address one seat). Each
+    // client surfaces the front proposal aimed at its own slot as an Accept/Decline
+    // prompt; answering it clears the offer for everyone via respondAlliance.
+    const allyOffer = net ? w.pendingAlliance?.find((o) => o.to === mySlot) : null;
+    const allyOfferPop = allyOffer ? {id: `ally-offer-${allyOffer.from}`, kind: "ally-offer", foe: allyOffer.from} : null;
     const warAutoPaused = useRef(false);
     useEffect(() => {
         if (net) return;                       // online: never pause
@@ -604,7 +611,7 @@ export default function LiveGame({
                                  origin="top right" resizeDir={{x: -1, y: 1}}
                                  className="absolute top-[150px] right-4 z-5"
                                  tabAlign="right">
-                    <ObjectivesPanel world={w} mySlot={mySlot}/>
+                    <ObjectivesPanel world={w} api={api} mySlot={mySlot} flash={flash}/>
                 </AdjustablePanel>
             )}
             {!hudHidden && panel === "production" &&
@@ -638,7 +645,8 @@ export default function LiveGame({
                 </AdjustablePanel>
             )}
             <PinnedBar pins={pins} onGo={goPin} onRemove={(key) => setPins((p) => p.filter((x) => x.key !== key))}/>
-            <HudLayoutMenu layout={hud} onToggle={setHud} onResetAll={resetHudAll}/>
+            <HudLayoutMenu layout={hud} onToggle={setHud} onResetAll={resetHudAll}
+                           panels={net ? HUD_PANELS : HUD_PANELS.filter((p) => !p.online)}/>
 
             {moving && <div
                 className="absolute top-[100px] left-1/2 -translate-x-1/2 z-6 flex items-center gap-[10px] bg-panel border border-[rgba(244,192,42,0.4)] text-text py-2 px-[14px] rounded text-[13px] shadow" role="status" aria-live="polite">{UNITS[movingUnit?.type]?.navalSpeed ? "Set Sail — click an open-ocean destination." : UNITS[movingUnit?.type]?.landSpeed ? "March — click a land destination." : isSea(movingUnit?.type) ? "Relocating — click in your coastal waters." : "Relocating — click inside your territory (on land)."}
@@ -668,9 +676,19 @@ export default function LiveGame({
                          aria-live={err.kind === "err" ? "assertive" : "polite"}>{err.msg}</div>}
             {!hudHidden && <GraceIndicator world={w}/>}
             {/* Player chat — online matches only. Stays up after the war ends so the
-                outcome screen can still talk. */}
-            {net && <ChatBox net={net} mySlot={mySlot} overlayOpen={overlayOpen}/>}
+                outcome screen can still talk. Movable via the shared HUD layout
+                system, docked bottom-left above the layout hub by default. */}
+            {net && (
+                <AdjustablePanel panel={hud.comms} onChange={(p) => setHud("comms", p)}
+                                 onReset={() => resetHudPanel("comms")} label="Comms"
+                                 origin="bottom left" resizeDir={{x: 1, y: -1}}
+                                 className="absolute bottom-[68px] left-4 z-6"
+                                 tabAlign="left">
+                    <ChatBox net={net} mySlot={mySlot} overlayOpen={overlayOpen}/>
+                </AdjustablePanel>
+            )}
             {!w.over && !net && hasWarPopup && <WarOutcomeModal world={w} api={api}/>}
+            {!w.over && net && allyOfferPop && <WarOutcomeModal world={w} api={api} pop={allyOfferPop}/>}
             {/* You were knocked out but the war rages on: a blocking notice with the
                 choice to keep watching (spectate) or leave to the menu. Dismissing it
                 (Spectate) drops into the HUD-less spectator view below. */}
