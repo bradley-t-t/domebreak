@@ -426,6 +426,47 @@ export function sensedBy(w, slot, lng, lat) {
     return sensorsCover(sensorsOf(w, slot), lng, lat);
 }
 
+// Slots allied to `slot` — the symmetric "ally" relation, restricted to living,
+// active nations. A coalition pools its radar and air defense, so this is the
+// set a nation shares its sensor picture with (sharedSensorsOf) and helps shield
+// (stepCombat). Self, peace, and war relations are excluded.
+export function alliedSlots(w, slot) {
+    if (!w.nations) return [];
+    const n = nationOf(w, slot);
+    if (!n || !n.relations) return [];
+    const out = [];
+    for (const s in n.relations) {
+        if (n.relations[s] !== "ally") continue;
+        const a = nationOf(w, +s);
+        if (a && a.alive && a.active !== false) out.push(+s);
+    }
+    return out;
+}
+
+// A nation's shared radar picture: its own sensors plus every living ally's.
+// Allies share radar data, so fog of war and missile early-warning read the
+// coalition's combined coverage rather than one nation's emitters. sensorsOf
+// returns a fresh list, so the ally bubbles are appended in place.
+export function sharedSensorsOf(w, slot) {
+    const list = sensorsOf(w, slot);
+    for (const a of alliedSlots(w, slot)) list.push(...sensorsOf(w, a));
+    return list;
+}
+
+// The anti-submarine counterpart to sharedSensorsOf: own sonar bubbles plus
+// every ally's, so a coalition's ASW net reveals subs for all its members.
+export function sharedSubSensorsOf(w, slot) {
+    const list = subSensorsOf(w, slot);
+    for (const a of alliedSlots(w, slot)) list.push(...subSensorsOf(w, a));
+    return list;
+}
+
+// Shared-coverage form of sensedBy: is (lng, lat) covered by slot's own OR any
+// ally's sensors? Used at launch to cue a whole coalition off one member's array.
+export function sharedSensedBy(w, slot, lng, lat) {
+    return sensorsCover(sharedSensorsOf(w, slot), lng, lat);
+}
+
 // Fraction (0..1) of the nation's own land area sitting under its radar picture.
 // Uses exactly the emitters the radar overlay draws — every unit whose
 // radarRangeOf() is non-zero (dedicated radars, OTH arrays, ships, carriers, and
