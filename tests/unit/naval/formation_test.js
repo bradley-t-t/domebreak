@@ -4,6 +4,7 @@
 // replenishment oiler works its way down the line. Deterministic — no RNG.
 import {describe, expect, it} from "vitest";
 import {createWorld, haversine, setFollow, setSail, stopFollow, step, UNITS} from "../../../src/game/engine.js";
+import {bearing} from "../../../src/game/geo/geo.js";
 import {stationRoleOf} from "../../../src/game/sim/formation.js";
 import {FORMATION} from "../../../src/game/data/constants.js";
 
@@ -106,7 +107,7 @@ describe("station-keeping", () => {
         const dd = w.units.find((u) => u.id === "dd");
         const d = haversine(dd.lng, dd.lat, carrier.lng, carrier.lat);
         // It parks in the destroyer screen ring, not on top of the guide.
-        expect(d).toBeLessThan(FORMATION.screenKm + FORMATION.holdKm + 5);
+        expect(d).toBeLessThan(FORMATION.destroyerKm + FORMATION.holdKm + 5);
         expect(d).toBeGreaterThan(5);
     });
 
@@ -121,7 +122,7 @@ describe("station-keeping", () => {
         const carrier = w.units.find((u) => u.id === "carrier");
         const dd = w.units.find((u) => u.id === "dd");
         expect(carrier.lng).toBeGreaterThan(-25); // guide made good most of the leg
-        expect(haversine(dd.lng, dd.lat, carrier.lng, carrier.lat)).toBeLessThan(FORMATION.screenKm + 25);
+        expect(haversine(dd.lng, dd.lat, carrier.lng, carrier.lat)).toBeLessThan(FORMATION.destroyerKm + 30);
     });
 
     it("test_a_dead_guide_frees_its_followers", () => {
@@ -150,6 +151,31 @@ describe("station-keeping", () => {
         setFollow(w, 0, "dd", "carrier");
         expect(stopFollow(w, 0, "dd")).toEqual({ok: true});
         expect(w.units.find((u) => u.id === "dd").followId).toBeNull();
+    });
+
+    it("test_mixed_group_fans_into_a_wedge_not_a_line", () => {
+        // The regression this fixes: one hull of each type used to stack on the
+        // guide's centerline (all at bearing 0 or 180), making a straight line.
+        // A screen must spread across a wide span of bearings around the guide.
+        const w = seaWorld();
+        w.units.push(ship({id: "cv", type: "carrier", lng: -40, lat: 30, face: {lng: -40, lat: 31}})); // heading north
+        const escorts = [["dd1", "destroyer"], ["dd2", "destroyer"], ["cg", "cruiser"], ["bb", "battleship"], ["ssn", "sub-ssn"]];
+        const starts = [[-41, 28.9], [-39, 28.8], [-40.5, 28.7], [-41.5, 28.6], [-39.5, 28.5]];
+        escorts.forEach(([id, type], i) => w.units.push(ship({id, type, lng: starts[i][0], lat: starts[i][1]})));
+        for (const [id] of escorts) setFollow(w, 0, id, "cv");
+        steam(w, 90);
+        const cv = w.units.find((u) => u.id === "cv");
+        const bearings = escorts.map(([id]) => {
+            const u = w.units.find((x) => x.id === id);
+            return bearing(cv.lng, cv.lat, u.lng, u.lat);
+        });
+        // Both arms of the wedge are occupied — starboard (bearings ~0-170) and port
+        // (~190-350). A centerline line could never satisfy both; every ship would
+        // share bearing 0 or 180.
+        const hasStarboard = bearings.some((b) => b > 5 && b < 175);
+        const hasPort = bearings.some((b) => b > 185 && b < 355);
+        expect(hasStarboard).toBe(true);
+        expect(hasPort).toBe(true);
     });
 });
 
