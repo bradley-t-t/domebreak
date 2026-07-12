@@ -154,8 +154,19 @@ export function buildSetup(data, playerIso, aiIsos, seed, opts = {}) {
     if (aiIsos == null) {
         const participants = (opts.participantIsos?.length ? opts.participantIsos : [playerIso])
             .filter((iso) => data.cities[iso]?.length);
-        const count = clamp(opts.activeCount || NEUTRAL.defaultActive, NEUTRAL.minActive, NEUTRAL.maxActive);
-        activeSet = new Set(pickActiveIsos(data, participants, opts.seedPool || POWER_POOL, count, seed || 1));
+        // Player-pinned AI nations: forced into the active roster exactly like human
+        // participants (always seeded, never random-filled away). Drop anything
+        // invalid, the player's own nation, or a human participant, and de-dupe.
+        const pins = [...new Set((opts.aiPicks || [])
+            .map((s) => String(s).toUpperCase())
+            .filter((iso) => data.cities[iso]?.length && !participants.includes(iso)))];
+        // Pins bypass the random fill but must respect the hard sim cap: trim so the
+        // forced roster never exceeds maxActive.
+        const forced = [...participants, ...pins].slice(0, NEUTRAL.maxActive);
+        // Fill up to the requested activeCount, but never below the forced roster —
+        // pinning more nations than activeCount simply widens the war (to maxActive).
+        const count = clamp(Math.max(opts.activeCount || NEUTRAL.defaultActive, forced.length), NEUTRAL.minActive, NEUTRAL.maxActive);
+        activeSet = new Set(pickActiveIsos(data, forced, opts.seedPool || POWER_POOL, count, seed || 1));
     }
     const nations = [], cities = [];
     const cityRegion = data.cityRegion || null;
