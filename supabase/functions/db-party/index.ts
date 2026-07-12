@@ -20,7 +20,7 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // Mirrors the match server's HARD_MAX_PLAYERS (server/config.js): a party may
 // never seat more players than a single match can hold.
-const MAX_SEATS = 8;
+const MAX_SEATS = 12;
 
 const CORS = {
     "Access-Control-Allow-Origin": "*",

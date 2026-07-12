@@ -6,6 +6,7 @@ import {describe, expect, it} from "vitest";
 import {stepVictory} from "../../../src/game/sim/tickPhases.js";
 import {isActive} from "../../../src/game/sim/queries.js";
 import {pickActiveIsos} from "../../../src/game/sim/newGame.js";
+import {NEUTRAL} from "../../../src/game/data/constants.js";
 
 // Minimal world for stepVictory: nations[slot] ordered so nationOf hits directly.
 function world(nations, cities) {
@@ -138,6 +139,27 @@ describe("active-nation seeding is scattered", () => {
 
     it("test_seeding_of_count_one_is_just_the_participant", () => {
         expect(pickActiveIsos(data, ["A"], ["B", "C"], 1)).toEqual(["A"]);
+    });
+
+    it("test_a_full_twelve_human_lobby_keeps_every_participant_active", () => {
+        // Every human claims an active belligerent slot: a 12-participant roster
+        // must field all 12 as active even when the scatter count is left at the
+        // singleplayer default (participants are never dropped to hit the count).
+        const isos = ["US", "CN", "RU", "DE", "IN", "GB", "FR", "JP", "KR", "IT", "BR", "CA"];
+        const cities = Object.fromEntries(isos.map((iso, i) => [iso, [{lng: i * 30 - 165, lat: 0, cap: true}]]));
+        const picked = pickActiveIsos({cities}, isos, [], NEUTRAL.defaultActive);
+        expect(picked).toHaveLength(12);
+        expect(new Set(picked).size).toBe(12);
+        for (const iso of isos) expect(picked).toContain(iso);
+    });
+});
+
+describe("the bounded-match cap admits up to twelve players", () => {
+    it("test_max_active_is_twelve", () => {
+        // The sim's active-nation ceiling is the human-player cap (server
+        // HARD_MAX_PLAYERS mirrors it), so it must stay at 12.
+        expect(NEUTRAL.maxActive).toBe(12);
+        expect(NEUTRAL.minActive).toBeLessThanOrEqual(NEUTRAL.maxActive);
     });
 });
 
