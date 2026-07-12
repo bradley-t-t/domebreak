@@ -1,10 +1,11 @@
 // Naval formation station-keeping. A ship with a `followId` is stationed on the
 // ship it points at (its "guide"): every movement tick it steams to a doctrinal
-// station off the guide instead of taking a manual sail order. Ships sharing one
-// guide screen it together — escorts ring it, submarines picket ahead, heavies
-// fall into line astern, high-value hulls tuck in close, and the replenishment
-// oiler shuttles alongside each hull in turn. Pure motion, so it runs on both the
-// authoritative server and the client-prediction tick (see stepMovement).
+// station off the guide instead of taking a manual sail order. The guide runs at
+// the rear and ships sharing it screen ahead of it — submarine pickets at the
+// point, escorts fanning into a forward wedge, support hulls in a short column
+// dead ahead, and the replenishment oiler shuttling alongside each hull in turn.
+// Pure motion, so it runs on both the authoritative server and the client-
+// prediction tick (see stepMovement).
 //
 // State is plain ids/points on the unit: `followId` (the guide's id, resolved
 // each tick — never an object reference) plus the transient `_fRoute`/`_fAnchor`
@@ -34,11 +35,28 @@ function headingOf(u) {
     return 0;
 }
 
-// Relative bearing for ship i of n spread symmetrically across `span` about `center`.
-function arcBearing(i, n, center, span) {
-    if (n <= 1) return center;
-    return center - span / 2 + (span * i) / (n - 1);
+// Relative bearing of the k-th escort in the wedge: pairs alternate starboard/port
+// and widen from the bow, so escort 0 sits off the starboard bow, 1 off the port
+// bow, 2 wider to starboard, and so on — a fanning V, never a centerline stack.
+function fanBearing(k) {
+    const j = k % FORMATION.wedgeStations;
+    const side = j % 2 === 0 ? 1 : -1;
+    const deg = Math.min(FORMATION.fanStartDeg + Math.floor(j / 2) * FORMATION.fanStepDeg, FORMATION.fanMaxDeg);
+    return side * deg;
 }
+
+// Screen ring radius (km off the guide) for an escort hull, by its doctrinal role.
+function screenRangeKm(type) {
+    const role = stationRoleOf(type);
+    if (role === "van") return FORMATION.subKm;
+    if (role === "stern") return FORMATION.battleshipKm;
+    if (role === "inner") return FORMATION.cruiserKm;
+    return FORMATION.destroyerKm;
+}
+
+// Order escorts so the point of the wedge is doctrinally right: submarine pickets
+// take the tip, then the ASW screen, heavies, and the air-defense ring innermost.
+const SCREEN_ORDER = {van: 0, screen: 1, stern: 2, inner: 3};
 
 // A station point `km` off `u` on compass `brng`, pulled in toward the hull until it
 // lands on open water so a station near a coast never sits inland (worst case: the
@@ -54,31 +72,41 @@ function seaStation(u, km, brng) {
 
 const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-// Assign every follower of one guide its station point. Deterministic — ships of a
-// role are ordered by id and fanned across their arc, and the oiler's current client
-// is a function of world time — so server and client agree without shared RNG.
+// Assign every follower of one guide its station point. The guide runs at the rear;
+// escorts fan into a forward wedge, support hulls form a column dead ahead, and the
+// oiler shuttles between the hulls it tends. Deterministic — escorts are ordered by
+// role then id, and the oiler's client is a function of world time — so the server
+// and client agree without shared RNG.
 function computeStations(w, guide, followers) {
     const H = headingOf(guide);
     const stations = new Map();
-    const buckets = {van: [], screen: [], inner: [], stern: [], hvu: [], logi: []};
-    for (const f of followers) buckets[stationRoleOf(f.type)].push(f);
-    for (const k in buckets) buckets[k].sort(byId);
+    const screen = [], column = [], logi = [];
+    for (const f of followers) {
+        const role = stationRoleOf(f.type);
+        if (role === "logi") logi.push(f);
+        else if (role === "hvu") column.push(f);
+        else screen.push(f);
+    }
 
-    buckets.van.forEach((f, i, a) => stations.set(f.id, seaStation(guide, FORMATION.vanKm, H + arcBearing(i, a.length, 0, FORMATION.vanArc))));
-    buckets.screen.forEach((f, i, a) => stations.set(f.id, seaStation(guide, FORMATION.screenKm, H + arcBearing(i, a.length, 0, FORMATION.screenArc))));
-    buckets.inner.forEach((f, i, a) => stations.set(f.id, seaStation(guide, FORMATION.innerKm, H + arcBearing(i, a.length, 0, FORMATION.innerArc))));
-    buckets.stern.forEach((f, i) => stations.set(f.id, seaStation(guide, FORMATION.sternKm + i * FORMATION.sternStepKm, H + 180)));
-    buckets.hvu.forEach((f, i, a) => stations.set(f.id, seaStation(guide, FORMATION.hvuKm, H + 180 + arcBearing(i, a.length, 0, 40))));
+    // The screening wedge ahead of the guide.
+    screen.sort((a, b) => (SCREEN_ORDER[stationRoleOf(a.type)] - SCREEN_ORDER[stationRoleOf(b.type)]) || byId(a, b));
+    screen.forEach((f, k) => {
+        const range = screenRangeKm(f.type) + Math.floor(k / FORMATION.wedgeStations) * FORMATION.ringStepKm;
+        stations.set(f.id, seaStation(guide, range, H + fanBearing(k)));
+    });
 
-    if (buckets.logi.length) {
+    // Support hulls (carrier / amphib) hold a short column dead ahead of the guide.
+    column.sort(byId).forEach((f, i) => stations.set(f.id, seaStation(guide, FORMATION.columnKm + i * FORMATION.columnStepKm, H)));
+
+    if (logi.length) {
         // Underway replenishment: the oiler comes alongside one hull at a time,
-        // cycling through the formation's non-logistics ships on a fixed dwell so it
-        // visibly works its way down the line, keeping each within resupply range.
+        // cycling through the formation's other ships on a fixed dwell so it visibly
+        // works its way down the line, keeping each within resupply range.
         const clients = [guide, ...followers.filter((f) => stationRoleOf(f.type) !== "logi")]
             .filter((c) => c.hp > 0).sort(byId);
         const turn = Math.floor(w.time / FORMATION.resupplyDwellSec);
-        buckets.logi.forEach((f, i) => {
-            if (!clients.length) return stations.set(f.id, seaStation(guide, FORMATION.hvuKm, H + 180));
+        logi.sort(byId).forEach((f, i) => {
+            if (!clients.length) return stations.set(f.id, seaStation(guide, FORMATION.columnKm, H));
             const client = clients[((turn + i) % clients.length + clients.length) % clients.length];
             stations.set(f.id, seaStation(client, FORMATION.alongsideKm, headingOf(client) + 90));
         });

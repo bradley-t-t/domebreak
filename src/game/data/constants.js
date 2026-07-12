@@ -89,25 +89,28 @@ export const AMPHIB_LIFT_KM = 120;
 // Reload multiplier a hull gets while inside a friendly Replenishment Ship's resupplyKm.
 export const REPLENISH_RELOAD_MULT = 0.7;
 // Naval formation station-keeping (see sim/formation.js). A ship with a followId
-// holds a doctrinal station off its guide: escorts screen it, submarines picket
-// ahead, heavies fall into line astern, and the oiler shuttles alongside each
-// hull in turn. Ranges are km from the guide; arcs are degrees relative to the
-// guide's course (0 = dead ahead, +clockwise). holdKm is the on-station deadband
+// holds a doctrinal station off its guide, which rides at the rear of the group:
+// escorts fan into a forward wedge (a "V" of screening ships), support hulls form
+// a short column dead ahead, and the oiler shuttles alongside each hull in turn.
+// Ranges are km from the guide; bearings are degrees relative to its course
+// (0 = dead ahead, +clockwise to starboard). holdKm is the on-station deadband
 // (no thrust inside it); replotKm is how far the station may drift before a
 // following ship re-plots its route around land.
 export const FORMATION = {
     holdKm: 3,
     replotKm: 8,
-    // ASW/AAW escorts (destroyer, cruiser) — a screen thrown around the guide.
-    screenKm: 40, screenArc: 300,
-    // Cruisers ride a tighter air-defense ring than the destroyer ASW screen.
-    innerKm: 26, innerArc: 260,
-    // Submarines picket well ahead of the formation.
-    vanKm: 78, vanArc: 70,
-    // Battleships / heavies form line astern behind the guide.
-    sternKm: 22, sternStepKm: 16,
-    // High-value hulls (carrier, amphib) tuck in close astern when they follow.
-    hvuKm: 15,
+    // Wedge geometry: escorts alternate starboard/port, widening each pair from the
+    // bow (fanStartDeg) by fanStepDeg up to fanMaxDeg, so a mixed group forms a V
+    // instead of stacking on the centerline. ringStepKm pushes overflow ships onto
+    // an outer layer once the wedge fills.
+    fanStartDeg: 30, fanStepDeg: 24, fanMaxDeg: 140, wedgeStations: 8, ringStepKm: 24,
+    // Screen ring radius by role (km from the guide).
+    subKm: 84,        // submarine pickets — farthest out, at the point of the wedge
+    destroyerKm: 54,  // ASW screen on the arms
+    battleshipKm: 46, // heavies on the screen
+    cruiserKm: 34,    // air-defense ring, closest in
+    // Support hulls (carrier / amphib that follow) ride a short column dead ahead.
+    columnKm: 22, columnStepKm: 16,
     // The replenishment oiler pulls this far off a client's beam during UNREP,
     // dwelling resupplyDwellSec on each supported hull before moving to the next.
     alongsideKm: 9, resupplyDwellSec: 14,
