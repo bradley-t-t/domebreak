@@ -12,6 +12,7 @@ export function useKeyboardControls({
                                          menu, setMenu,
                                          disembarkId, setDisembarkId,
                                          moving, setMoving,
+                                         following, setFollowing,
                                          placing, setPlacing,
                                          attackMode, setAttackMode,
                                          panel, setPanel,
@@ -28,6 +29,7 @@ export function useKeyboardControls({
     useWindowEvent("keydown", (e) => {
         if (e.key !== "Escape") return;
         if (menu) setMenu(null); else if (disembarkId) setDisembarkId(null); else if (moving) setMoving(null);
+        else if (following) setFollowing?.(null);
         else if (placing) setPlacing(null); else if (attackMode) setAttackMode(false);
         // An open command screen (Production / Research / Diplomacy) closes on
         // Escape before Escape falls through to the pause menu; the Tab
