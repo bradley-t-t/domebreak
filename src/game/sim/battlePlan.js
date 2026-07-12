@@ -102,6 +102,24 @@ export function targetCategoryOf(kind, type) {
     return null;
 }
 
+// Live at-war target inventory by category — how many strikeable enemy entities of each
+// category exist RIGHT NOW under the given nation scope, independent of what the plan has
+// selected. Drives the ×N badges on the Battle Planning target picker so a player sees
+// what's actually out there before committing a category. Same at-war + nation gate as
+// planTargets, so a category with a live count is one the plan could hit today.
+export function liveTargetCounts(w, mySlot, targetNations) {
+    const nations = targetNations?.length ? new Set(targetNations) : null;
+    const nationOk = (slot) => (!nations || nations.has(slot)) && atWar(w, mySlot, slot);
+    const counts = {};
+    for (const c of w.cities) if (c.alive && nationOk(c.slot)) counts.city = (counts.city || 0) + 1;
+    for (const u of w.units) {
+        if (u.hp <= 0 || !nationOk(u.slot)) continue;
+        const cat = targetCategoryOf("unit", u.type);
+        if (cat) counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+}
+
 // Resolve a plan's target CATEGORIES to live at-war enemy entities — every enemy city
 // (when "city" is selected) and every enemy unit whose type falls in a selected
 // category — each annotated with remaining hp and an "allocated damage" tally the
@@ -182,6 +200,17 @@ export function solvePlan(w, plan, mySlot) {
         ammoWanted[wh] = (ammoWanted[wh] || 0) + 1;
     }
 
+    // Sustained firepower and a clear-the-board estimate. damagePerVolley is the total
+    // shot damage of every attacker that has ANY target in reach (firing + idle-because-
+    // saturated) — the plan's real throughput once saturated targets fall and idle guns
+    // pick up the next ones. volleysToClear divides the total live target hp by that
+    // throughput: a rough "how many salvoes to level everything" readout for the player.
+    const outSet = new Set(outOfRange);
+    const targetHpLive = targets.reduce((s, t) => s + Math.max(0, t.hp), 0);
+    let damagePerVolley = 0;
+    for (const u of attackers) if (!outSet.has(u.id)) damagePerVolley += shotDamage(w, u);
+    const volleysToClear = damagePerVolley > 0 && targetHpLive > 0 ? Math.ceil(targetHpLive / damagePerVolley) : null;
+
     return {
         assignments,
         ammoWanted,
@@ -191,6 +220,9 @@ export function solvePlan(w, plan, mySlot) {
         firing: assignments.size,
         targetsLive: targets.length,
         targetsCovered: targets.filter((t) => t.alloc > 0).length,
+        targetHpLive,
+        damagePerVolley,
+        volleysToClear,
     };
 }
 
@@ -205,9 +237,13 @@ export function planPreview(w, plan, mySlot) {
     const byId = new Map(attackers.map((u) => [u.id, u]));
     const tById = new Map(targets.map((t) => [t.id, t]));
     const arcs = [];
+    const hit = new Set();                  // target ids an attacker is committed against
     for (const [uid, tid] of assignments) {
         const u = byId.get(uid), t = tById.get(tid);
-        if (u && t) arcs.push({from: [u.lng, u.lat], to: [t.lng, t.lat]});
+        if (u && t) {
+            arcs.push({from: [u.lng, u.lat], to: [t.lng, t.lat]});
+            hit.add(tid);
+        }
     }
     return {
         arcs,
@@ -216,8 +252,35 @@ export function planPreview(w, plan, mySlot) {
             reachKm: reachKm(w, u, plan.engagementKm),
             assigned: assignments.has(u.id),
         })),
-        targets: targets.map((t) => ({id: t.id, lng: t.lng, lat: t.lat})),
+        // `hit` distinguishes a target a plan is actually firing on from one that's live
+        // but unreached (out of range, or saturated) — the overlay draws the two apart.
+        targets: targets.map((t) => ({id: t.id, lng: t.lng, lat: t.lat, hit: hit.has(t.id)})),
     };
+}
+
+// The tightest engagement dial that still reaches every hardware-reachable target — for
+// the "Fit" button. For each live target we take the distance from its NEAREST attacker
+// (the closest gun that could hit it), then the plan needs to reach the farthest of those.
+// Rounded up to the slider step and clamped to the dial's bounds. Returns null when there
+// are no attackers or no reachable targets to fit to (nothing to suggest).
+export function suggestEngagementKm(w, plan, mySlot) {
+    const attackers = planAttackers(w, plan, mySlot);
+    const targets = planTargets(w, plan, mySlot);
+    if (!attackers.length || !targets.length) return null;
+    let far = 0;
+    for (const t of targets) {
+        let near = Infinity;
+        for (const u of attackers) {
+            if (!canEngage(u, t)) continue;
+            const hw = reachKm(w, u, BATTLE_PLAN.maxEngagementKm);   // true hardware reach, dial ignored
+            const d = haversine(u.lng, u.lat, t.lng, t.lat);
+            if (d <= hw) near = Math.min(near, d);
+        }
+        if (near !== Infinity) far = Math.max(far, near);
+    }
+    if (far <= 0) return null;
+    const step = BATTLE_PLAN.engagementStepKm;
+    return Math.min(BATTLE_PLAN.maxEngagementKm, Math.max(BATTLE_PLAN.minEngagementKm, Math.ceil(far / step) * step));
 }
 
 // --- Persistence bridge (Battle Planning) -----------------------------------

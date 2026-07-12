@@ -1,5 +1,5 @@
-import {useMemo} from "react";
-import {armamentOf, atWar, isAttacker, planAttackerTypeOptions, solvePlan, UNIT_ICON, UNITS, unitLabel} from "../../game/engine.js";
+import {useEffect, useMemo, useState} from "react";
+import {armamentOf, atWar, isAttacker, liveTargetCounts, planAttackerTypeOptions, prodCount, solvePlan, suggestEngagementKm, UNIT_ICON, UNITS, unitLabel} from "../../game/engine.js";
 import {BATTLE_PLAN, colorForSlot} from "../../game/data/constants.js";
 import ScreenFrame from "./ScreenFrame.jsx";
 import Flag from "../common/Flag.jsx";
@@ -64,7 +64,35 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
     // Live solve for the active plan — drives the status readout + arm/execute gating.
     const solved = useMemo(() => (active ? solvePlan(w, active, mySlot) : null), [w, mySlot, active]);
+    // Live count of strikeable enemy assets per category under the plan's nation scope —
+    // the ×N badges on the target picker, so a category is never chosen blind.
+    const liveCounts = useMemo(() => liveTargetCounts(w, mySlot, active?.targetNations), [w, w.time, mySlot, active?.targetNations]);
+    // The tightest engagement dial that still reaches every hardware-reachable target,
+    // for the "Fit" shortcut. Null (button hidden) when there's nothing to fit to or the
+    // dial is already at/under the suggestion.
+    const fitKm = useMemo(() => (active ? suggestEngagementKm(w, active, mySlot) : null), [w, w.time, active, mySlot]);
+    // Munitions readiness: for a firing plan, do we hold (or have on the line) the
+    // warheads its assigned shots want? `short` is the deficit summed across payloads.
+    const myNation = w.nations.find((x) => x.slot === mySlot);
+    const munitions = useMemo(() => {
+        if (!solved || !myNation) return null;
+        let want = 0, have = 0;
+        for (const [wh, shots] of Object.entries(solved.ammoWanted)) {
+            want += shots;
+            have += Math.min(shots, (myNation.ammo?.[wh] || 0) + prodCount(myNation, "ammo", wh));
+        }
+        return {want, have, short: Math.max(0, want - have)};
+    }, [solved, myNation, w.time]);
     const armed = !!active?.armed;
+    // Two-step delete: the first click arms confirmation, the second removes the plan.
+    // Auto-resets after a moment, and whenever the active plan changes.
+    const [confirmDel, setConfirmDel] = useState(false);
+    useEffect(() => setConfirmDel(false), [activeId]);
+    useEffect(() => {
+        if (!confirmDel) return;
+        const t = setTimeout(() => setConfirmDel(false), 3000);
+        return () => clearTimeout(t);
+    }, [confirmDel]);
     // A plan can be ARMED as soon as it's fully drawn up (attackers + targets chosen) —
     // no war required. It sits standing by and engages the moment a valid target exists.
     const canArm = !!active && active.attackerTypes.length > 0 && active.targetTypes.length > 0;
@@ -124,7 +152,13 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                     ))}
                                 </div>
                                 <button className={cn(miniButton(), "px-2.5 py-1.5")} onClick={() => bp.duplicatePlan(active.id)} title="Duplicate plan">⧉</button>
-                                <button className={cn(miniButton({danger: true}), "px-2.5 py-1.5")} onClick={() => bp.removePlan(active.id)} title="Delete plan" aria-label="Delete plan"><Icon name="close" size={13}/></button>
+                                {confirmDel ? (
+                                    <button className={cn(miniButton({danger: true}), "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.4px]")}
+                                            onClick={() => bp.removePlan(active.id)} title="Click to confirm deletion" aria-label="Confirm delete plan">Delete?</button>
+                                ) : (
+                                    <button className={cn(miniButton({danger: true}), "px-2.5 py-1.5")}
+                                            onClick={() => setConfirmDel(true)} title="Delete plan" aria-label="Delete plan"><Icon name="close" size={13}/></button>
+                                )}
                             </div>
 
                             {/* Two columns: attacker types → target types */}
@@ -206,12 +240,15 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         <div className="flex flex-col gap-1.5">
                                             {BATTLE_PLAN.targetCategories.map((cat) => {
                                                 const on = active.targetTypes.includes(cat.id);
+                                                const live = liveCounts[cat.id] || 0;
                                                 return (
                                                     <button key={cat.id} onClick={() => bp.toggleTargetType(active.id, cat.id)}
+                                                            title={live > 0 ? `${live} live under this plan's target scope right now` : "None live under this plan's target scope yet"}
                                                             className={cn("flex items-center gap-2.5 w-full px-2.5 py-2 rounded-sm border text-left transition-[border-color,background] duration-150 ease-out-db",
                                                                 on ? "border-gold-line bg-gold-soft" : "border-line bg-sunk hover:border-line-soft")}>
                                                         <span className={cn("w-4 h-4 rounded-[3px] border flex-none grid place-items-center", on ? "bg-gold border-gold text-gold-contrast" : "border-line")}>{on && <Icon name="check" size={11} strokeWidth={2.4}/>}</span>
                                                         <span className="text-[13px] text-text flex-1">{cat.label}</span>
+                                                        <span className={cn("font-mono text-[12px] flex-none", live > 0 ? "text-dim" : "text-faint")}>×{live}</span>
                                                     </button>
                                                 );
                                             })}
@@ -225,7 +262,13 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                 <div className="rounded-md border border-line bg-sunk/40 p-3">
                                     <div className="flex items-center justify-between mb-1.5">
                                         <span className="text-[11px] tracking-[1px] uppercase text-faint">Engagement range</span>
-                                        <span className="font-mono text-[12px] text-dim">{fmtKm(active.engagementKm)}</span>
+                                        <div className="flex items-center gap-2">
+                                            {fitKm != null && fitKm !== active.engagementKm &&
+                                                <button onClick={() => bp.patchPlan(active.id, {engagementKm: fitKm})}
+                                                        title={`Set the dial to ${fmtKm(fitKm)} — the tightest range that still reaches every target this plan can hit`}
+                                                        className={cn(miniButton(), "px-2 py-0.5 text-[10px]")}>Fit</button>}
+                                            <span className="font-mono text-[12px] text-dim">{fmtKm(active.engagementKm)}</span>
+                                        </div>
                                     </div>
                                     <input type="range" min={BATTLE_PLAN.minEngagementKm} max={BATTLE_PLAN.maxEngagementKm}
                                            step={BATTLE_PLAN.engagementStepKm} value={active.engagementKm}
@@ -250,6 +293,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         {solved.idle.length > 0 && <span className="text-faint"> · {solved.idle.length} idle</span>}
                                         {solved.outOfRange.length > 0 && <span className="text-faint"> · {solved.outOfRange.length} out of range</span>}
                                         <span className="text-faint"> · {solved.targetsCovered}/{solved.targetsLive} targets covered</span>
+                                        {solved.volleysToClear != null && <span className="text-faint"> · ~{solved.volleysToClear} {solved.volleysToClear === 1 ? "volley" : "volleys"} to clear</span>}
                                     </div>
                                     {active.mode === "standing" ? (
                                         <button onClick={() => bp.patchPlan(active.id, {armed: !armed})} disabled={!canArm && !armed}
@@ -268,6 +312,11 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                         ? solved.firing === 0 &&
                                             <p className="text-[11px] text-dim leading-[1.4]">Armed · standing by — engages automatically once a valid target is in play.</p>
                                         : reason && <p className="text-[11px] text-[#d79a3f] leading-[1.4]">{reason}</p>}
+                                    {/* Munitions readiness — only meaningful once a warhead-hungry plan is
+                                        firing. A shortfall warns unless Auto-build is already topping it up. */}
+                                    {munitions && munitions.want > 0 && (munitions.short > 0
+                                        ? <p className="text-[11px] text-[#d79a3f] leading-[1.4]">Munitions: short {munitions.short} of {munitions.want} warheads{active.autoBuild ? " — auto-build is topping up." : " — enable Auto-build or produce them."}</p>
+                                        : <p className="text-[11px] text-good/80 leading-[1.4]">Munitions ready · {munitions.want} warheads on hand.</p>)}
                                 </div>
                             )}
                         </>

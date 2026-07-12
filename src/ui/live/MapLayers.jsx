@@ -20,7 +20,7 @@ const REGION_DIPLO_OPACITY = ["interpolate", ["linear"], ["zoom"], 2, 0.8, 4, 0.
 export default function MapLayers({
                                        layers, hoveredGid, ownership, diplomacy, popFC, backdropFC, radarFC, radarEmitters, defenseFC,
                                        ranges, cmdLines, sailLines, falloutFC, captureFC, liveFC, mySlot, teamColor,
-                                       planArcsFC, planTargetsFC, planColor, globe
+                                       planArcsFC, planTargetsFC, planAttackersFC, planColor, globe
                                    }) {
     return (
         <>
@@ -112,9 +112,11 @@ export default function MapLayers({
                 "line-opacity": 0.5,
                 "line-dasharray": [2, 3]
             }}/></Source>
-            {/* Battle-plan preview: the active plan's attacker→target strike arcs and
-                a ring on each planned target, both in the plan's color. Drawn over the
-                standing command lines so a plan you're authoring reads on top. */}
+            {/* Battle-plan preview: the active plan's attacker→target strike arcs, a
+                ring on each planned target, and a dot on each attacker origin — all in
+                the plan's color. Drawn over the standing command lines so a plan you're
+                authoring reads on top. A target being fired on (`hit`) reads solid; a
+                live-but-unreached one reads faint and dashed. */}
             {planArcsFC && <Source id="plan-arc" type="geojson" data={planArcsFC}><Layer id="plan-arc-line" type="line"
                 paint={{
                     "line-color": planColor || "#f0a63c",
@@ -122,14 +124,32 @@ export default function MapLayers({
                     "line-opacity": 0.9,
                     "line-dasharray": [2, 1.6]
                 }}/></Source>}
-            {planTargetsFC && <Source id="plan-tgt" type="geojson" data={planTargetsFC}><Layer id="plan-tgt-ring" type="circle"
+            {planAttackersFC && <Source id="plan-atk" type="geojson" data={planAttackersFC}><Layer id="plan-atk-dot" type="circle"
                 paint={{
+                    "circle-radius": ["case", ["==", ["get", "on"], 1], 3.4, 2.4],
+                    "circle-color": planColor || "#f0a63c",
+                    "circle-opacity": ["case", ["==", ["get", "on"], 1], 0.95, 0.4],
+                    "circle-stroke-color": "#05070c",
+                    "circle-stroke-width": 0.8
+                }}/></Source>}
+            {planTargetsFC && <Source id="plan-tgt" type="geojson" data={planTargetsFC}>
+                <Layer id="plan-tgt-ring" type="circle" filter={["==", ["get", "hit"], 1]} paint={{
                     "circle-radius": 7,
                     "circle-color": "rgba(0,0,0,0)",
                     "circle-stroke-color": planColor || "#f0a63c",
                     "circle-stroke-width": 1.8,
                     "circle-stroke-opacity": 0.9
-                }}/></Source>}
+                }}/>
+                {/* Live targets the plan can't reach yet — a faint, thinner ring so the
+                    player sees what's out there but not currently under fire. */}
+                <Layer id="plan-tgt-idle" type="circle" filter={["!=", ["get", "hit"], 1]} paint={{
+                    "circle-radius": 5.5,
+                    "circle-color": "rgba(0,0,0,0)",
+                    "circle-stroke-color": planColor || "#f0a63c",
+                    "circle-stroke-width": 1.1,
+                    "circle-stroke-opacity": 0.4
+                }}/>
+            </Source>}
             <Source id="sail" type="geojson" data={sailLines}>
                 <Layer id="sail-line" type="line" filter={["==", ["get", "k"], "line"]} paint={{
                     "line-color": teamColor(mySlot),
