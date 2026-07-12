@@ -122,7 +122,7 @@ export default function LoginScreen() {
                     </div>
 
                     <button className={cn(button({variant: "primary"}), "block w-full mt-[18px]")} type="submit" disabled={!canSubmit}>
-                        {busy ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
+                        {busy ? "Standing by…" : mode === "signin" ? "Sign In" : "Create Account"}
                     </button>
 
                     <p className="text-faint text-[11px] leading-[1.5] tracking-[0.3px] mt-4 mb-0">

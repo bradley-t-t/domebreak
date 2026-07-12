@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import Flag from "../common/Flag.jsx";
+import Icon from "../common/Icon.jsx";
 import WorldMap from "../../map/WorldMap.jsx";
 import {fetchLobby, leaveLobby, setLobbyIso, setLobbyRules, setReady, watchLobby} from "../../account/lobby.js";
 import {SLOT_COLOR} from "../../game/data/constants.js";
@@ -349,7 +350,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                                 <span className="w-[9px] h-[9px] rounded-full shrink-0" style={{background: own ? MINE_COLOR : SLOT_COLOR[m.slot]}}/>
                                 <Flag iso={m.iso}/>
                                 <span className="flex-1 text-[13px] text-text whitespace-nowrap overflow-hidden text-ellipsis">{m.username || "Commander"}{own ? " (You)" : ""}</span>
-                                <span className={cn("font-mono text-[10px] tracking-[1px] uppercase shrink-0", r ? "text-gold" : "text-faint")}>{r ? "✓ Ready" : "Waiting"}</span>
+                                <span className={cn("inline-flex items-center gap-1 font-mono text-[10px] tracking-[1px] uppercase shrink-0", r ? "text-gold" : "text-faint")}>{r && <Icon name="check" size={10} strokeWidth={2.4}/>}{r ? "Ready" : "Waiting"}</span>
                             </div>
                         );
                     })}
@@ -368,9 +369,9 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                                         className={cn("h-[5px] flex-1 rounded-full transition-colors duration-200", r ? "bg-gold shadow-[0_0_6px_var(--glow-gold,rgba(244,192,42,0.7))]" : "bg-[rgba(255,255,255,0.12)]")}/>;
                         })}
                     </div>
-                    <span className={cn("self-start font-mono text-[10px] tracking-[1.5px] uppercase px-2 py-1 rounded-sm border transition-colors",
+                    <span className={cn("self-start inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[1.5px] uppercase px-2 py-1 rounded-sm border transition-colors",
                         ready ? "text-gold border-gold-line bg-[rgba(244,192,42,0.1)]" : "text-faint border-line")}>
-                        {ready ? "✓ You are ready" : "You are not ready"}
+                        {ready && <Icon name="check" size={10} strokeWidth={2.4}/>}{ready ? "You are ready" : "You are not ready"}
                     </span>
                     <span className={cn("text-[12px] leading-snug", starting || allReady ? "text-gold" : "text-dim")} role="status" aria-live="polite">{statusLine}</span>
                     {feed.length > 0 && (
@@ -410,7 +411,7 @@ export default function LobbyScreen({lobbyId, me, connecting, onLaunch, onLeft, 
                             disabled={!myIso} onClick={toggleReady}
                             aria-pressed={ready}
                             title={!myIso ? "Choose a nation on the globe first" : ready ? "Cancel ready" : "Ready up"}>
-                        {ready ? "✓ Ready — Stand By" : "Ready Up"}
+                        {ready ? <span className="inline-flex items-center gap-2"><Icon name="check" size={13} strokeWidth={2.4}/>Ready — Stand By</span> : "Ready Up"}
                     </button>
                     <button className={cn(menuButton({variant: "back"}), "w-full text-center")} disabled={leaving} onClick={doLeave}>
                         {leaving ? "Leaving…" : "Leave"}

@@ -4,6 +4,7 @@
 // ref value ({x, y}) — read fresh on every render rather than carried in hover
 // state, so cursor motion alone never re-renders the tree.
 import Flag from "../common/Flag.jsx";
+import Icon from "../common/Icon.jsx";
 import Meter from "../common/Meter.jsx";
 import UnitIcon from "../common/UnitIcon.jsx";
 import HoverReadout from "./HoverReadout.jsx";
@@ -86,8 +87,8 @@ export default function HoverPopups({hover, hoverEnt, pos, countryByGid, w, mySl
                     // active fallout cloud. Reports the live loss rate and roughly how
                     // long the hazard lingers.
                     const fo = falloutDoseAt(w, hoverEnt.lng, hoverEnt.lat);
-                    if (fo.remain > 0) rows.push(["Fallout", `☢ −${(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~${Math.ceil(fo.remain)}s`, "text-[#a6ff5c]"]);
-                    header = <><span className="w-2.5 h-2.5 rounded-full flex-none" style={{background: teamColor(hoverEnt.slot)}}/><span>{hoverEnt.name}{hoverEnt.cap ? " ★" : ""}</span></>;
+                    if (fo.remain > 0) rows.push(["Fallout", `−${(fo.dose * FALLOUT.dmgPerSec).toFixed(1)} hp/s · ~${Math.ceil(fo.remain)}s`, "text-[#a6ff5c]"]);
+                    header = <><span className="w-2.5 h-2.5 rounded-full flex-none" style={{background: teamColor(hoverEnt.slot)}}/><span className="inline-flex items-center gap-1">{hoverEnt.name}{!!hoverEnt.cap && <Icon name="star" size={9} className="text-gold"/>}</span></>;
                     footer = <Meter frac={vitalityOf(hoverEnt)} fillClass={vitalityOf(hoverEnt) <= 0.35 ? "bg-danger" : "bg-good"} className="mt-2"/>;
                 }
                 return <HoverReadout x={pos.x} y={pos.y} clampBottom={200} header={header} rows={rows} footer={footer}/>;
@@ -113,7 +114,7 @@ function NeutralReadout({x, y, header, wiped}) {
             <p className="mt-[9px] text-[11.5px] leading-[1.45] text-dim">
                 {wiped
                     ? "Beaten below the surrender line and knocked out of the war — its remnant land now lies open."
-                    : "Not participating in this game — this country stays neutral throughout the match."}
+                    : "Sitting the war out — neutral from first shot to last."}
             </p>
         </div>
     );

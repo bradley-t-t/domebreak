@@ -2,6 +2,7 @@
 // controls for airbases, and the warhead/attack controls for offense units. A pure presentational component: it reads props only and calls
 // back through the api/setState functions the parent owns.
 import UnitIcon from "../common/UnitIcon.jsx";
+import Icon from "../common/Icon.jsx";
 import StatGrid from "../common/StatGrid.jsx";
 import Meter from "../common/Meter.jsx";
 import {allowedAmmo, atWar, FALLOUT, formationGuideOf, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
@@ -138,16 +139,16 @@ export default function SelectionPanel({
                                 const full = total >= cap;
                                 return (
                                     <div key={at} className="group flex items-center gap-2 py-1.5 px-2 bg-btn-bg border border-line rounded-sm"
-                                         title={`${labelOf(at, mySlot)} · ◆ ${UNITS[at].cost} · ${UNITS[at].buildTime}s${airborne ? ` · ${airborne} Airborne` : ""}`}>
+                                         title={`${labelOf(at, mySlot)} · ${UNITS[at].cost} pts · ${UNITS[at].buildTime}s${airborne ? ` · ${airborne} Airborne` : ""}`}>
                                         <UnitIcon name={UNIT_ICON[at]} color={teamColor(mySlot)} size={14}/>
                                         <span className="flex-1 text-[11px] whitespace-nowrap overflow-hidden text-ellipsis">{labelOf(at, mySlot)}</span>
-                                        {airborne > 0 && <span className="font-mono text-[10px] text-text bg-[rgba(255,255,255,0.08)] border border-line rounded-full px-1.5 leading-[15px]">{airborne}▲</span>}
+                                        {airborne > 0 && <span className="inline-flex items-center gap-0.5 font-mono text-[10px] text-text bg-[rgba(255,255,255,0.08)] border border-line rounded-full px-1.5 leading-[15px]" title={`${airborne} airborne`}>{airborne}<Icon name="trend-up" size={7}/></span>}
                                         <span className="font-mono text-[11px] text-dim">{stock}/{cap}</span>
                                         {!full &&
-                                            <span className="font-mono text-[9px] tracking-[0.5px] text-faint opacity-60 transition-[opacity,color] duration-[140ms] ease-out-db group-hover:opacity-100 group-hover:text-dim" aria-hidden="true">⇧×5</span>}
+                                            <span className="inline-flex items-center gap-0.5 font-mono text-[9px] tracking-[0.5px] text-faint opacity-60 transition-[opacity,color] duration-[140ms] ease-out-db group-hover:opacity-100 group-hover:text-dim" aria-hidden="true"><Icon name="shift" size={8}/>×5</span>}
                                         <button className="w-[22px] h-[22px] grid place-items-center text-sm leading-none text-text bg-transparent border border-line rounded-sm transition-[background,color,border-color] duration-[120ms] ease-out-db enabled:hover:bg-text enabled:hover:text-panel-solid enabled:hover:border-text disabled:opacity-35 disabled:cursor-default" disabled={full}
                                                 aria-label={full ? `${labelOf(at, mySlot)} hangar full` : `Order ${labelOf(at, mySlot)} — ${UNITS[at].cost} points, ${UNITS[at].buildTime}s. Shift-click orders five.`}
-                                                title={full ? "The hangar is at capacity for that type." : `Order one — ◆ ${UNITS[at].cost}, ${UNITS[at].buildTime}s on the line. Shift-click: ×5.`}
+                                                title={full ? "The hangar is at capacity for that type." : `Order one — ${UNITS[at].cost} pts, ${UNITS[at].buildTime}s on the line. Shift-click: ×5.`}
                                                 onClick={(e) => {
                                                     // Shift-click orders five; capacity/points stop the run early.
                                                     let queued = 0, err = null;
@@ -323,7 +324,7 @@ export default function SelectionPanel({
                                                     aria-label={`${wh.name} — ${stock} in stock${isSig ? " · this platform's signature round" : ""}`}
                                                     title={`${wh.name} — ${wh.desc}${isSig ? " · This platform's signature payload." : ""}${FALLOUT.warheads.includes(k) ? " · Leaves radioactive fallout" : ""}`}
                                                     onClick={() => api.setWarhead(selectedUnit.id, k)}>
-                                                {isSig && <span className="absolute top-[3px] right-[4px] text-[9px] leading-none text-[var(--flame,#ff8a1a)]" title="Signature payload">★</span>}
+                                                {isSig && <Icon name="star" size={9} className="absolute top-[3px] right-[4px] text-[var(--flame,#ff8a1a)]" title="Signature payload"/>}
                                                 <UnitIcon name={WARHEAD_ICON[k]} color={wh.flame} size={20}/>
                                                 <span className={cn("font-mono text-[10.5px] font-bold", cur ? "text-text" : "text-dim")}>{wh.short}</span>
                                                 <span className="font-display text-[8px] tracking-[0.5px] uppercase text-faint">{wh.role}</span>
