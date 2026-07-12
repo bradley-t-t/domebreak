@@ -275,9 +275,10 @@
     }
 
     /* Exhaust + glow are tinted per warhead via the --flame custom property that
-       SkyLayer sets on each sprite wrapper (orange STD, cyan CLU, violet HGV,
+       SkyLayer sets on each sprite wrapper (orange STD, gold CLU, violet HGV,
        red THR). The white-hot core stays white; the plume and halo take the
-       warhead hue so the four ammo types read apart in flight. */
+       warhead hue so the four ammo types read apart in flight. Cluster's gold
+       keeps the offensive MIRV bus clear of THAAD's cyan interceptor. */
     .db-missile-flame {
         position: absolute;
         left: 50%;
@@ -346,8 +347,8 @@
 
     .db-missile.cluster .db-missile-body {
         background:
-            repeating-linear-gradient(180deg, transparent 0 2.5px, rgba(16, 42, 54, 0.3) 2.5px 3.5px),
-            linear-gradient(180deg, #f2f5f6, #cbe4ee 42%, #a7c3cf 72%, #8db0bd);
+            repeating-linear-gradient(180deg, transparent 0 2.5px, rgba(58, 44, 12, 0.3) 2.5px 3.5px),
+            linear-gradient(180deg, #f6f4ec, #e7d9b0 42%, #cbb87e 72%, #b09a5a);
     }
 
     /* HGV: a maneuvering waverider glide body — a slender white-hot dart with a
