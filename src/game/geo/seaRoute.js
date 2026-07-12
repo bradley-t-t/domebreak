@@ -84,10 +84,8 @@ const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -
 // pinned against the shore still routes. This is the "try, don't force" padding.
 const COAST_PAD = 3;
 // Extra km for entering a sea cell this many rings off the coast (index by band;
-// band 0 = land/open water = free). Kept under a cell's ~28 km span so the nudge
-// bends a course seaward when an open lane runs alongside, without provoking a long
-// detour to shave a little clearance — a ship still hugs the shore when that is the
-// short way. The band1→band2 gap is what decides how readily a course stands off.
+// band 0 = land/open water = free). Kept under a cell's ~28 km span so it can't
+// justify a long detour; the band1->band2 gap sets how readily a course stands off.
 const COAST_COST = [0, 18, 7, 2];
 let coastBand = null;
 
