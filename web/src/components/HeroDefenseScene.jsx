@@ -51,7 +51,7 @@ const easeOut = (t) => 1 - (1 - t) * (1 - t);
 
 // Layered US missile defense — real game unit types across CONUS. `t` is the unit
 // type (drives the icon and, via the engine's own stats, the coverage ring); `at`
-// is [lng, lat]. Silos in the plains, THAAD/Patriot/Aegis/Golden Dome batteries at
+// is [lng, lat]. Silos in the plains, THAAD/Patriot/Aegis batteries at
 // the cities, Early-Warning Radars on the northern fence, and the two air bases the
 // interceptors fly from — an airstrip inland and a carrier on the Atlantic picket.
 const SITES = [
@@ -64,12 +64,12 @@ const SITES = [
     {t: "patriot", at: [-74.0, 40.7]},      // New York
     {t: "aegis", at: [-70.9, 42.35]},       // Boston (coastal)
     {t: "patriot", at: [-84.4, 33.75]},     // Atlanta
-    {t: "dome", at: [-80.2, 25.8]},         // Miami (Golden Dome)
+    {t: "aegis", at: [-80.2, 25.8]},        // Miami (coastal)
     {t: "patriot", at: [-87.6, 41.8]},      // Chicago
     {t: "thaad", at: [-95.4, 29.8]},        // Houston
     {t: "thaad", at: [-105.0, 39.7]},       // Denver
     {t: "aegis", at: [-118.2, 34.0]},       // Los Angeles (coastal)
-    {t: "dome", at: [-122.3, 47.6]},        // Seattle (Golden Dome)
+    {t: "aegis", at: [-122.3, 47.6]},       // Seattle (coastal)
     {t: "airstrip", at: [-97.5, 38.6]},     // interior air base
     {t: "carrier", at: [-72.5, 38.2]},      // carrier on the Atlantic picket
 ];
@@ -104,7 +104,7 @@ const ringOf = (t) => {
 // launcher = flatter/faster glide). Times are scene-seconds within the loop.
 const THREATS = [
     {t0: 0.3, from: [-155, 58], to: [-122.5, 37.7], dur: 7.6, w: "thermo", kill: {bat: [-122.5, 37.7], type: "aegis", at: 0.72, lead: 2.4}},
-    {t0: 1.5, from: [-150, 62], to: [-122.3, 47.6], dur: 6.9, w: "standard", kill: {bat: [-122.3, 47.6], type: "dome", at: 0.68, lead: 2.1}},
+    {t0: 1.5, from: [-150, 62], to: [-122.3, 47.6], dur: 6.9, w: "standard", kill: {bat: [-122.3, 47.6], type: "aegis", at: 0.68, lead: 2.1}},
     {t0: 2.6, from: [-40, 60], to: [-74.0, 40.7], dur: 8.1, w: "hgv", p: "launcher", kill: {bat: [-74.0, 40.7], type: "patriot", at: 0.74, lead: 2.0}},
     {t0: 3.8, from: [-46, 52], to: [-70.9, 42.35], dur: 7.4, w: "standard", kill: {bat: [-70.9, 42.35], type: "aegis", at: 0.66, lead: 2.2}},
     {t0: 5.0, from: [-141, 31], to: [-118.2, 34.0], dur: 6.3, w: "cluster", kill: {bat: [-118.2, 34.0], type: "patriot", at: 0.70, lead: 2.1}},
@@ -113,7 +113,7 @@ const THREATS = [
     {t0: 8.9, from: [-150, 60], to: [-87.6, 41.8], dur: 8.4, w: "standard", kill: {bat: [-87.6, 41.8], type: "patriot", at: 0.66, lead: 2.1}},
     {t0: 10.3, from: [-135, 29], to: [-95.4, 29.8], dur: 7.0, w: "standard"}, // leaks — survivable burst near Houston
     {t0: 11.4, from: [-43, 58], to: [-84.4, 33.75], dur: 8.1, w: "hgv", p: "launcher", kill: {bat: [-84.4, 33.75], type: "patriot", at: 0.72, lead: 2.0}},
-    {t0: 12.7, from: [-160, 56], to: [-80.2, 25.8], dur: 9.1, w: "standard", kill: {bat: [-80.2, 25.8], type: "dome", at: 0.74, lead: 2.2}},
+    {t0: 12.7, from: [-160, 56], to: [-80.2, 25.8], dur: 9.1, w: "standard", kill: {bat: [-80.2, 25.8], type: "aegis", at: 0.74, lead: 2.2}},
     {t0: 14.0, from: [-48, 50], to: [-74.0, 40.7], dur: 7.9, w: "cluster", kill: {bat: [-74.0, 40.7], type: "patriot", at: 0.64, lead: 2.1}},
     {t0: 15.4, from: [-152, 61], to: [-111.2, 40.8], dur: 8.2, w: "thermo", kill: {bat: [-105.0, 39.7], type: "thaad", at: 0.70, lead: 2.4}},
     {t0: 16.8, from: [-39, 57], to: [-71.1, 42.4], dur: 7.6, w: "standard", kill: {bat: [-70.9, 42.35], type: "aegis", at: 0.68, lead: 2.2}},

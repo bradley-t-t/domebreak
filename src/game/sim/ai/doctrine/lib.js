@@ -91,7 +91,7 @@ export function radarWants(list, radarAxis) {
 // Layered defense: cycle the least-built buildable tier so the wall ends up a
 // real mix instead of a battery farm. Emits the two next candidates; wartime
 // zero-defenders is an emergency that blocks all other spending.
-const DEFENSE_TYPES = ["battery", "patriot", "dome", "aegis", "thaad", "orbitallaser"];
+const DEFENSE_TYPES = ["battery", "patriot", "aegis", "thaad"];
 
 export function defenderCount(frame) {
     let k = 0;
@@ -114,11 +114,10 @@ export function defenseWants(list, defAxis, targetMult = 1) {
         .sort((a, b) => a.count - b.count || a.cost - b.cost);
     const emergency = frame.world.atWar && defenders === 0;
     options.slice(0, 2).forEach(({t}, i) => {
-        const reserve = t === "orbitallaser" ? WANTS.spaceHqReserve : 0;
         if (emergency && i === 0) {
-            push(list, "unit", t, have(frame, t) + 1, BLOCK_URGENCY + 2, reserve, {block: true});
+            push(list, "unit", t, have(frame, t) + 1, BLOCK_URGENCY + 2, 0, {block: true});
         } else {
-            push(list, "unit", t, have(frame, t) + 1, (5 + 3 * (1 - defenders / target) - i) * defAxis, reserve);
+            push(list, "unit", t, have(frame, t) + 1, (5 + 3 * (1 - defenders / target) - i) * defAxis, 0);
         }
     });
 }
@@ -200,7 +199,6 @@ export function navalWants(list, navyAxis, {carrierMult = 1} = {}) {
         ["battleship", WANTS.battleshipTarget, WANTS.battleshipReserve, 3.2],
         ["sub-ssn", 1, WANTS.subReserve, 3.4],
         ["sub-ssbn", 1, WANTS.subReserve, 3.3],
-        ["replenish", WANTS.replenishTarget, WANTS.replenishReserve, 2.6],
         ["amphib", WANTS.amphibTarget, WANTS.amphibReserve, 2.8],
         ["carrier", Math.round(WANTS.carrierTarget * carrierMult), WANTS.carrierReserve, 3 * carrierMult],
     ];
@@ -216,7 +214,7 @@ export function spaceWants(list, spaceAxis) {
     if (!unitLockReason(w, frame.me.slot, "spacehq")) {
         push(list, "unit", "spacehq", 1, 4.5 * spaceAxis, WANTS.spaceHqReserve);
     }
-    for (const [type, target, base] of [["reconsat", 1, 3.6], ["orbitallaser", 1, 3.2], ["orbitalstrike", 1, 3]]) {
+    for (const [type, target, base] of [["reconsat", 1, 3.6], ["orbitalstrike", 1, 3]]) {
         if (unitLockReason(w, frame.me.slot, type)) continue;
         push(list, "unit", type, target, base * spaceAxis, WANTS.spaceHqReserve * 0.5);
     }

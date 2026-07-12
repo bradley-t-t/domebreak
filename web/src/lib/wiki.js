@@ -14,7 +14,7 @@ export const CATEGORIES = [
         id: "defense",
         label: "Missile Defense",
         blurb: "Interceptors, area defense, and the layered shield.",
-        include: ["battery", "patriot", "aegis", "thaad", "dome", "orbitallaser"],
+        include: ["battery", "patriot", "aegis", "thaad"],
     },
     {
         id: "offense",
@@ -32,7 +32,7 @@ export const CATEGORIES = [
         id: "naval",
         label: "Naval",
         blurb: "Surface fleet, amphibs, and the submarine leg of the triad.",
-        include: ["cruiser", "destroyer", "battleship", "carrier", "amphib", "replenish", "sub-ssn", "sub-ssbn"],
+        include: ["cruiser", "destroyer", "battleship", "carrier", "amphib", "sub-ssn", "sub-ssbn"],
     },
     {
         id: "air",
@@ -133,7 +133,6 @@ function buildStats(u) {
 
     // Naval logistics.
     if (u.capacity) rows.push(["Embark capacity", `${u.capacity} ground units`]);
-    if (u.resupplyKm) rows.push(["Resupply range", fmt(u.resupplyKm, "km")]);
 
     // Stealth flag — submarine hulls only reveal to sonar.
     if (u.submarine) rows.push(["Stealth", "Submerged — invisible to radar"]);

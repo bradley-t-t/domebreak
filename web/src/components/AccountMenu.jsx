@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "motion/react";
-import {ChevronDown, LogOut} from "lucide-react";
+import {ChevronDown, LogOut, ShieldCheck} from "lucide-react";
 import {cn} from "../lib/cn.js";
 import {useAccount} from "../lib/accountStore.js";
 import GameIcon from "./GameIcon.jsx";
@@ -42,7 +42,7 @@ function Stat({value, label}) {
 }
 
 export default function AccountMenu() {
-    const {profile, stats, signOut} = useAccount();
+    const {profile, stats, signOut, isAdmin} = useAccount();
     const reduce = useReducedMotion();
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
@@ -109,6 +109,17 @@ export default function AccountMenu() {
                         </div>
 
                         <div className="p-2">
+                            {isAdmin && (
+                                <a
+                                    href="#/admin"
+                                    role="menuitem"
+                                    onClick={() => setOpen(false)}
+                                    className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[13px] text-dim transition-colors hover:bg-bg-2 hover:text-text"
+                                >
+                                    <ShieldCheck size={15}/>
+                                    <span>Admin Panel</span>
+                                </a>
+                            )}
                             <button
                                 role="menuitem"
                                 onClick={() => {
@@ -118,7 +129,7 @@ export default function AccountMenu() {
                                 className="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-[13px] text-dim transition-colors hover:bg-bg-2 hover:text-danger"
                             >
                                 <LogOut size={15}/>
-                                <span>Sign out</span>
+                                <span>Sign Out</span>
                             </button>
                         </div>
                     </motion.div>

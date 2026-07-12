@@ -4,8 +4,8 @@
 // grid. Server validation (db-account set_avatar) only bounds the shape, so this
 // list is the single source of what the UI offers.
 export const AVATAR_ICONS = [
-    "dome", "aegis", "thaad", "patriot", "battery", "silo", "hypersonic",
-    "interceptor", "orbitallaser", "orbitalstrike", "spacehq",
+    "aegis", "thaad", "patriot", "battery", "silo", "hypersonic",
+    "interceptor", "orbitalstrike", "spacehq",
     "jet", "strike-fighter", "awacs", "helo", "bunker", "radar", "oth",
     "reconsat", "tank", "artillery", "infantry", "armybase",
     "carrier", "battleship", "destroyer", "cruiser", "sub-ssbn", "sub-ssn",

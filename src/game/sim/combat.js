@@ -67,17 +67,20 @@ export function findTarget(w, id, idx) {
 // legally engage — the target a Hostile aircraft or airstrip auto-acquires when it
 // has no standing order. The Leadership Bunker is skipped (no conventional strike
 // can take it). `opts` narrows the class of target (an air-superiority sweep wants
-// only aircraft; a bomber sortie wants only ground/city). Pure — mutates nothing.
+// only aircraft; a bomber sortie wants only ground/city); `opts.onlySlot` restricts
+// the search to a single enemy nation (a committed bomber re-tasking within the
+// nation it was sent against). Pure — mutates nothing.
 export function nearestEnemyTarget(w, u, radiusKm, opts = {}) {
-    const {includeCities = true, includeGround = true, includeAircraft = true} = opts;
+    const {includeCities = true, includeGround = true, includeAircraft = true, onlySlot = null} = opts;
+    const slotOk = (slot) => (onlySlot == null || slot === onlySlot) && atWar(w, u.slot, slot);
     let best = null, bestD = radiusKm;
     if (includeCities) for (const c of w.cities) {
-        if (!c.alive || !atWar(w, u.slot, c.slot)) continue;
+        if (!c.alive || !slotOk(c.slot)) continue;
         const d = haversine(u.lng, u.lat, c.lng, c.lat);
         if (d < bestD) { bestD = d; best = {id: c.id, kind: "city", slot: c.slot, lng: c.lng, lat: c.lat}; }
     }
     for (const e of w.units) {
-        if (e.hp <= 0 || e.slot === u.slot || e.type === "bunker" || !atWar(w, u.slot, e.slot)) continue;
+        if (e.hp <= 0 || e.slot === u.slot || e.type === "bunker" || !slotOk(e.slot)) continue;
         const air = !!UNITS[e.type].airSpeed;
         if (air ? !includeAircraft : !includeGround) continue;
         const d = haversine(u.lng, u.lat, e.lng, e.lat);

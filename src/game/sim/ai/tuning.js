@@ -83,7 +83,6 @@ export const WANTS = {
     battleshipTarget: 1, battleshipReserve: 200,
     carrierTarget: 1, carrierReserve: 500,
     amphibTarget: 1, amphibReserve: 180,
-    replenishTarget: 1, replenishReserve: 180,
     spaceHqReserve: 500, subReserve: 200,
     ammoPerPlatformWar: 3,
     ammoPerPlatformPeace: 1,
