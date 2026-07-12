@@ -1083,8 +1083,8 @@
     }
 
     /* ---- orbital-satellite marker ----
-       Live orbital assets (SBI, Orbital Laser, ReconSat, Missile-Warning Sat,
-       Orbital Strike Platform) float above the ground in the map layer. The
+       Live orbital assets (ReconSat, Missile-Warning Sat, Orbital Strike
+       Platform) float above the ground in the map layer. The
        icon itself is offset up by orbitLift × ORBIT_LIFT_PX; this class adds a
        gentle vertical hover and a soft outer glow so a satellite reads as
        being in orbit rather than sitting on a country. */

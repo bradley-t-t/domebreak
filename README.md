@@ -38,7 +38,7 @@ you win.
     </td>
     <td width="33%" valign="top">
       <h3 align="center">A full arsenal</h3>
-      <p align="center">Land, sea, air, ground, and space — SAM batteries, the Golden Dome shield, missile silos, hypersonics, warships, submarines, and an orbital tier — firing everything from conventional rounds to thermonuclear MIRVs.</p>
+      <p align="center">Land, sea, air, ground, and space — SAM batteries, missile silos, hypersonics, warships, submarines, and an orbital tier — firing everything from conventional rounds to thermonuclear MIRVs.</p>
     </td>
     <td width="33%" valign="top">
       <h3 align="center">Out-build, out-economy</h3>
@@ -93,13 +93,13 @@ npm run electron:build:all   # package macOS + Windows
 
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| **Land — defense**  | SAM battery and the Golden Dome shield, plus Patriot, Aegis Ashore, and THAAD batteries                                                        |
+| **Land — defense**  | SAM battery, plus Patriot, Aegis Ashore, and THAAD batteries                                                                                   |
 | **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the hypersonic missile battery — each firing selectable warheads                                 |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
-| **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus SSN / SSBN submarines and amphibious / replenishment ships                |
+| **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus SSN / SSBN submarines and amphibious transports                           |
 | **Air**             | Multirole, strike, air-superiority, and carrier fighters, close air support, transport, and AEW&C — flown from airstrips and carriers as wings |
-| **Space**           | Behind a Space Command HQ: space-based interceptors, an orbital laser, and an orbital strike platform                                          |
+| **Space**           | Behind a Space Command HQ: a reconnaissance satellite and an orbital strike platform                                                           |
 | **Warheads**        | Conventional, cluster (MIRV splash), hypersonic glide, thermonuclear city-killer, road-mobile SICBM, and thermonuclear MIRV — each produced against its own cost and build time |
 
 ## Objectives

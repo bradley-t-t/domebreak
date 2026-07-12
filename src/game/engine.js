@@ -149,7 +149,6 @@ export {
     sensorsOf,
     subSensorsOf,
     unitVisibleTo,
-    replenishmentBuff,
     sensorsCover,
     sensedBy,
     radarLandCoverage,

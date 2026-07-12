@@ -1,6 +1,6 @@
 // Space: the high-GDP orbital path — Space Command HQ, recon constellation,
-// orbital laser shield, and the kinetic strike platform. Almost always runs as
-// an overlay on another doctrine; leads only for the truly space-obsessed rich.
+// and the kinetic strike platform. Almost always runs as an overlay on another
+// doctrine; leads only for the truly space-obsessed rich.
 import {DOCTRINE, WANTS} from "../tuning.js";
 import {ammoWants, commandWants, defenseWants, industryWants, offenseWants, radarWants, spaceWants, wantList} from "./lib.js";
 

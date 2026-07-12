@@ -376,19 +376,6 @@ export function unitVisibleTo(w, viewerSlot, u, sensors, subSensors) {
     return sensorsCover(sensors ?? sensorsOf(w, viewerSlot), u.lng, u.lat);
 }
 
-// True when a friendly Replenishment Ship (resupplyKm) is within range of `unit`
-// (a ship). An underway-replenishment buff cuts the buffed hull's reload and
-// firing cost (applied in the firing path in tick.js / combat via engine tick).
-export function replenishmentBuff(w, unit) {
-    if (!unit || unit.hp <= 0) return false;
-    return w.units.some((r) => {
-        if (r.slot !== unit.slot || r.hp <= 0 || r.id === unit.id) return false;
-        const km = UNITS[r.type].resupplyKm;
-        if (!km) return false;
-        return haversine(r.lng, r.lat, unit.lng, unit.lat) <= km;
-    });
-}
-
 export function defenseRange(w, d) {
     const base = UNITS[d.type].range;
     if (UNITS[d.type].kind !== "defense") return base;

@@ -86,12 +86,10 @@ export const SCRAP_REFUND_FRAC = 0.5;
 export const COAST_KM = 60;
 // Amphibious lift: transport embark/disembark range for ground units (km).
 export const AMPHIB_LIFT_KM = 120;
-// Reload multiplier a hull gets while inside a friendly Replenishment Ship's resupplyKm.
-export const REPLENISH_RELOAD_MULT = 0.7;
 // Naval formation station-keeping (see sim/formation.js). A ship with a followId
 // holds a doctrinal station off its guide, which rides at the rear of the group:
-// escorts fan into a forward wedge (a "V" of screening ships), support hulls form
-// a short column dead ahead, and the oiler shuttles alongside each hull in turn.
+// escorts fan into a forward wedge (a "V" of screening ships) and support hulls form
+// a short column dead ahead.
 // Ranges are km from the guide; bearings are degrees relative to its course
 // (0 = dead ahead, +clockwise to starboard). holdKm is the on-station deadband
 // (no thrust inside it); replotKm is how far the station may drift before a
@@ -111,9 +109,6 @@ export const FORMATION = {
     cruiserKm: 34,    // air-defense ring, closest in
     // Support hulls (carrier / amphib that follow) ride a short column dead ahead.
     columnKm: 22, columnStepKm: 16,
-    // The replenishment oiler pulls this far off a client's beam during UNREP,
-    // dwelling resupplyDwellSec on each supported hull before moving to the next.
-    alongsideKm: 9, resupplyDwellSec: 14,
 };
 // Stat fallbacks for unit types that omit a field (and legacy-save projectiles).
 export const DEFAULT_BUILD_TIME = 10, DEFAULT_RELOAD = 3, DEFAULT_HIT_PROB = 0.8;
@@ -290,7 +285,7 @@ export const BATTLE_PLAN = {
     targetCategories: [
         {id: "city", label: "Cities", types: null},
         {id: "strike", label: "Missile Platforms", types: ["silo", "launcher", "battleship", "hypersonicbty", "orbitalstrike", "sub-ssbn", "sub-ssn"]},
-        {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "orbitallaser"]},
+        {id: "airdef", label: "Air Defense", types: ["battery", "patriot", "thaad", "aegis", "cruiser", "destroyer"]},
         {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat"]},
         {id: "airbases", label: "Airbases", types: ["airstrip", "carrier", "armybase"]},
         {id: "aircraft", label: "Aircraft", types: ["multirole", "strikefighter", "interceptor", "attack", "awacs", "helo", "transporthelo", "carrierfighter", "transport", "bomber"]},

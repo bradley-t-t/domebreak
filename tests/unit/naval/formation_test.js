@@ -1,7 +1,7 @@
 // Naval formation station-keeping (sim/formation.js) and the follow orders that
 // drive it. A following ship steams to a doctrinal station off its guide, holds
-// there when the guide is idle, and is freed the instant its guide is gone. The
-// replenishment oiler works its way down the line. Deterministic — no RNG.
+// there when the guide is idle, and is freed the instant its guide is gone.
+// Deterministic — no RNG.
 import {describe, expect, it} from "vitest";
 import {createWorld, haversine, setFollow, setSail, stopFollow, step, UNITS} from "../../../src/game/engine.js";
 import {bearing} from "../../../src/game/geo/geo.js";
@@ -41,7 +41,6 @@ describe("stationRoleOf — doctrinal buckets by hull", () => {
         expect(stationRoleOf("battleship")).toBe("stern");
         expect(stationRoleOf("carrier")).toBe("hvu");
         expect(stationRoleOf("amphib")).toBe("hvu");
-        expect(stationRoleOf("replenish")).toBe("logi");
         expect(stationRoleOf("sub-ssn")).toBe("van");
     });
 });
@@ -176,30 +175,5 @@ describe("station-keeping", () => {
         const hasPort = bearings.some((b) => b > 185 && b < 355);
         expect(hasStarboard).toBe(true);
         expect(hasPort).toBe(true);
-    });
-});
-
-describe("replenishment oiler shuttles between the ships it supports", () => {
-    it("test_oiler_station_moves_over_time", () => {
-        const w = seaWorld();
-        // A guide plus two escorts, all held still, and an oiler assigned to follow.
-        w.units.push(ship({id: "cv", type: "carrier", lng: -40, lat: 30, face: {lng: -40, lat: 31}}));
-        w.units.push(ship({id: "d1", type: "destroyer", lng: -40.2, lat: 30, followId: "cv"}));
-        w.units.push(ship({id: "d2", type: "cruiser", lng: -39.8, lat: 30, followId: "cv"}));
-        w.units.push(ship({id: "oiler", type: "replenish", lng: -40, lat: 29.7, followId: "cv"}));
-        // Sample the oiler's position across several dwell windows; it should not
-        // sit motionless — it works down the line of clients as time advances.
-        const samples = [];
-        for (let k = 0; k < 4; k++) {
-            steam(w, Math.ceil(FORMATION.resupplyDwellSec / 0.5) + 2);
-            const o = w.units.find((u) => u.id === "oiler");
-            samples.push([o.lng, o.lat]);
-        }
-        const moved = samples.some(([lng, lat]) => haversine(lng, lat, samples[0][0], samples[0][1]) > 1);
-        expect(moved).toBe(true);
-        // And it stays within resupply reach of the group it's tending.
-        const oiler = w.units.find((u) => u.id === "oiler");
-        const cv = w.units.find((u) => u.id === "cv");
-        expect(haversine(oiler.lng, oiler.lat, cv.lng, cv.lat)).toBeLessThan(UNITS.replenish.resupplyKm);
     });
 });

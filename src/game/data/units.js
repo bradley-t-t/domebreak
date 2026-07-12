@@ -15,20 +15,6 @@ export const UNITS = {
         upkeep: 1,
         glyph: "◆"
     },
-    dome: {
-        label: "Golden Dome",
-        desc: "The national shield emplacement — a dense interceptor battery built to blunt a concentrated strike.",
-        kind: "defense",
-        cost: 400,
-        buildTime: 14,
-        range: 250,
-        intercept: 0.85,
-        reload: 4.5,
-        fireCost: 22,
-        hp: 90,
-        upkeep: 3,
-        glyph: "⬡"
-    },
     radar: {
         label: "Early Warning Radar",
         desc: "Phased-array early warning. Builds the air picture and cues nearby interceptors far beyond their organic reach.",
@@ -366,37 +352,6 @@ export const UNITS = {
     // of latitude around the globe. Instantaneous coverage is a single OTH-sized
     // footprint under the sat; global reach comes from the orbit passing over
     // everywhere on that parallel over time. All require Space Command HQ.
-    orbitallaser: {
-        label: "Orbital Laser",
-        desc: "Space-based directed-energy shield — speed-of-light boost-phase kills under the sat's ground track, near-perfect single-shot probability.",
-        kind: "defense",
-        orbital: true,
-        orbitLift: 2.6,
-        orbitSpeedDegPerSec: 0.9,
-        // boostPhaseOnly units engage ballistic ordnance only — they can't fire
-        // on aircraft or in-atmosphere threats.
-        boostPhaseOnly: true,
-        directedEnergy: true,   // speed-of-light — no interceptor projectile, instant kill roll on the target
-        // Dual-use: primarily a boost-phase interceptor (see intercept/boostPhaseOnly
-        // in the stepCombat defense path), but canAttack lets it also be tasked on a
-        // Battle Plan against surface targets. Its offensive shot is directed-energy —
-        // instant, non-interceptable damage (the directFire path), not a lofted round.
-        // Attacking and intercepting time-share the one reload timer, so a laser busy
-        // striking is briefly unavailable to defend, and vice versa.
-        canAttack: true,
-        damage: 20,
-        requiresTech: "def10",
-        requiresUnit: "spacehq",
-        cost: 1200,
-        buildTime: 34,
-        range: 3000,
-        intercept: 0.92,
-        reload: 4,
-        fireCost: 36,
-        hp: 90,
-        upkeep: 6,
-        glyph: "✦"
-    },
     spacehq: {
         label: "Space Command HQ",
         desc: "National space operations center. Only one may be built — the prerequisite for every orbital asset in the arsenal.",
@@ -512,22 +467,6 @@ export const UNITS = {
         range: 60,
         radarKm: 160,
         hp: 75,
-        upkeep: 2,
-        navalSpeed: 60,
-        glyph: "⛴"
-    },
-    replenish: {
-        label: "Replenishment Ship",
-        desc: "Underway replenishment oiler — rearms and refuels nearby friendly hulls, cutting their reload time and firing cost.",
-        kind: "support",
-        domain: "sea",
-        resupplyKm: 250,
-        requiresTech: "eco5",
-        cost: 300,
-        buildTime: 15,
-        range: 60,
-        radarKm: 200,
-        hp: 70,
         upkeep: 2,
         navalSpeed: 60,
         glyph: "⛴"
@@ -781,7 +720,6 @@ export const UNIT_ICON = {
     silo: "silo",
     launcher: "hypersonic",
     battery: "battery",
-    dome: "dome",
     radar: "radar",
     oth: "oth",
     cruiser: "cruiser",
@@ -813,14 +751,12 @@ export const UNIT_ICON = {
     patriot: "patriot",
     aegis: "aegis",
     thaad: "thaad",
-    orbitallaser: "orbitallaser",
     spacehq: "spacehq",
     reconsat: "reconsat",
     orbitalstrike: "orbitalstrike",
     "sub-ssn": "sub-ssn",
     "sub-ssbn": "sub-ssbn",
-    amphib: "amphib",
-    replenish: "replenish"
+    amphib: "amphib"
 };
 
 // Generic, nation-agnostic display name per unit type.
@@ -834,10 +770,10 @@ export function armamentOf(type) {
 
 // Whether a unit type may be tasked with an offensive strike order — the single
 // gate the Battle Planning solver, the commandAttack order, and the fire phase all
-// share. Every `kind:"offense"` platform qualifies; a `kind:"defense"` platform can
-// opt in with `canAttack` (the Orbital Laser — a directed-energy satellite that both
-// intercepts boost-phase ordnance AND can be aimed at surface targets). Takes a unit
-// def (UNITS[type]); tolerates an unknown type.
+// share. Every `kind:"offense"` platform qualifies; a non-offense platform can opt
+// in with `canAttack` (the Airstrip — a support structure that answers an attack
+// order by launching a bomber sortie rather than firing itself). Takes a unit def
+// (UNITS[type]); tolerates an unknown type.
 export function isAttacker(def) {
     return !!def && (def.kind === "offense" || def.canAttack === true);
 }

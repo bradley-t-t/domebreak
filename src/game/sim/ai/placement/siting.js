@@ -21,7 +21,7 @@ export function aiRole(def) {
 }
 
 // Would a spot crowd a live same-role unit inside spreadKm? Stops the AI
-// stacking two radars / two factories / two domes on the same ground.
+// stacking two radars / two factories / two batteries on the same ground.
 function crowdsSameRole(role, myUnits, lng, lat) {
     for (const u of myUnits) {
         if (aiRole(UNITS[u.type]) !== role) continue;

@@ -61,7 +61,7 @@ export function buildProfile(w, other, unitsBySlot) {
         defense: {
             count: defense,
             batteries: ct("battery"), patriots: ct("patriot"), thaad: ct("thaad"),
-            aegis: ct("aegis"), domes: ct("dome"), lasers: ct("orbitallaser"),
+            aegis: ct("aegis"),
         },
         ground: {
             count: ground,
