@@ -277,8 +277,7 @@ export const UNITS = {
         reload: 2.6,
         fireCost: 10,
         hp: 46,
-        upkeep: 1.5,
-        glyph: "⊡"
+        upkeep: 1.5
     },
     // --- Tech-gated modern & space-age units --------------------------------
     // Each carries requiresTech: "<techId>" — buildable only once that tech is done
