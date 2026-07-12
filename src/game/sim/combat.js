@@ -4,7 +4,7 @@
 import {bearing, geoDest, haversine, interpGC, withinKm} from "../geo/geo.js";
 import {BLAST, FALLOUT, LEADERSHIP, MISSILE_SPEED, UNITS, WARHEADS} from "../data/constants.js";
 import {nextId, rand} from "./worldState.js";
-import {atWar, sensedBy} from "./queries.js";
+import {atWar, sharedSensedBy} from "./queries.js";
 import {clamp01} from "../../lib/math.js";
 import {byId} from "../../lib/iter.js";
 import {jitter, randRange} from "../../lib/random.js";
@@ -213,7 +213,7 @@ export function launch(w, unit, target, warhead, opts = {}) {
     for (const u of w.units) if (u.hp > 0) slotsWithUnits.add(u.slot);
     for (const nn of w.nations) {
         if (!nn.alive || nn.slot === unit.slot || !slotsWithUnits.has(nn.slot)) continue;
-        if (sensedBy(w, nn.slot, unit.lng, unit.lat)) seenBy.push(nn.slot);
+        if (sharedSensedBy(w, nn.slot, unit.lng, unit.lat)) seenBy.push(nn.slot);
     }
     // An orbital strike is a rod-from-god drop from orbit: the projectile starts
     // at its parent sat's altitude and falls into the target. Feeding altStart to

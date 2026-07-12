@@ -26,6 +26,7 @@ import {clamp, clamp01} from "../../lib/math.js";
 import {offsetKmPolar, unwrapLng} from "../../lib/geo.js";
 import {
     airborne,
+    alliedSlots,
     atWar,
     defenseRange,
     defenseMinRange,
@@ -361,9 +362,9 @@ export function stepMovement(w, dt) {
 // engages it against the target nation's air defenses within their
 // engagement annulus, and resolves impact on reaching the target.
 export function stepCombat(w, dt) {
-    // Index live defenses by the nation they protect. A battery only ever engages
-    // ordnance inbound on its own nation (the inboundSlot gate below), so each
-    // projectile need only test that nation's defenders — this bounds the loop by
+    // Index live defenses by the nation they protect. A battery engages ordnance
+    // inbound on its own nation or an ally's (the defendersFor gate below), so each
+    // projectile need only test that coalition's defenders — this bounds the loop by
     // per-nation unit count instead of scanning the world's entire unit list every
     // projectile (was O(projectiles × all units), the hot loop at full-world scale).
     const defBySlot = new Map();
@@ -381,6 +382,28 @@ export function stepCombat(w, dt) {
     // to the single hottest path of a saturation attack.
     const idx = targetIndexOf(w);
     const reachOf = new Map();   // defender id -> outer engagement radius
+
+    // Allies share air defense: a battery also engages ordnance inbound on an
+    // ally, so a coalition's missile shield covers every member. The combined
+    // defender list for a target nation (its own batteries plus its allies') is
+    // memoized per slot — a saturation salvo aimed at one nation pays the union
+    // once, not per projectile. The d.slot === p.slot self-check below still keeps
+    // a battery from firing on its own coalition's outgoing missiles.
+    const defForTarget = new Map();
+    const defendersFor = (slot) => {
+        if (slot == null) return null;
+        if (defForTarget.has(slot)) return defForTarget.get(slot);
+        const own = defBySlot.get(slot);
+        const allies = alliedSlots(w, slot);
+        let arr = own || null;
+        if (allies.length) {
+            const merged = own ? own.slice() : [];
+            for (const a of allies) { const ad = defBySlot.get(a); if (ad) merged.push(...ad); }
+            arr = merged.length ? merged : null;
+        }
+        defForTarget.set(slot, arr);
+        return arr;
+    };
 
     for (const p of w.projectiles) {
         // Homing air-to-air rounds chase a moving jet and resolve on their own — no
@@ -403,10 +426,10 @@ export function stepCombat(w, dt) {
             continue;
         }
         // Defenses fire interceptors (gated by reload + points). Only ordnance
-        // actually inbound on the defender's own nation is engaged — missiles
-        // transiting past a third party are not their problem.
+        // inbound on the defender's own nation or an ally's is engaged — missiles
+        // transiting past an unaligned third party are not their problem.
         const inboundSlot = findTarget(w, p.targetId, idx)?.slot;
-        const defenders = inboundSlot == null ? null : defBySlot.get(inboundSlot);
+        const defenders = defendersFor(inboundSlot);
         if (defenders) for (const d of defenders) {
             const ddef = UNITS[d.type];
             // Fighters kill what flies in the air column — not ballistic reentry
@@ -530,14 +553,26 @@ export function stepSensors(w, dt) {
         for (const u of w.units) if (u.hp > 0) slotsWithUnits.add(u.slot);
         const sensors = {};
         for (const n of w.nations) if (n.alive && slotsWithUnits.has(n.slot)) sensors[n.slot] = sensorsOf(w, n.slot);
+        // Allies share their radar net: a nation's effective coverage is its own
+        // plus every ally's, so a track held by any ally is held (and warned on)
+        // by all. Combined lists are built once per pass off the own-sensor map;
+        // an ally with no fielded units simply contributes nothing.
+        const shared = {};
+        for (const slot in sensors) {
+            const allies = alliedSlots(w, +slot);
+            if (!allies.length) { shared[slot] = sensors[slot]; continue; }
+            const list = sensors[slot].slice();
+            for (const a of allies) if (sensors[a]?.length) list.push(...sensors[a]);
+            shared[slot] = list;
+        }
         const idx = targetIndexOf(w);
         for (const p of w.projectiles) {
             if (p._dead) continue;
             if (!p.seenBy) p.seenBy = []; // saves from before fog of war
             const tgtSlot = findTarget(w, p.targetId, idx)?.slot;
             for (const n of w.nations) {
-                if (!n.alive || p.seenBy.includes(n.slot) || !sensors[n.slot]?.length) continue;
-                if (!sensorsCover(sensors[n.slot], p.lng, p.lat)) continue;
+                if (!n.alive || p.seenBy.includes(n.slot) || !shared[n.slot]?.length) continue;
+                if (!sensorsCover(shared[n.slot], p.lng, p.lat)) continue;
                 p.seenBy.push(n.slot);
                 if (n.slot === tgtSlot) w.events.push({
                     id: nextId(w, "e"), t: w.time, type: "detected", slot: n.slot, lng: p.lng, lat: p.lat
