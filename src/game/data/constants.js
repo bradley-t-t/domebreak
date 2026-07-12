@@ -290,6 +290,7 @@ export const BATTLE_PLAN = {
         {id: "airdef", label: "Air Defense", types: ["dome", "battery", "patriot", "thaad", "aegis", "cruiser", "destroyer", "orbitallaser"]},
         {id: "sensors", label: "Sensors", types: ["radar", "oth", "reconsat"]},
         {id: "airbases", label: "Airbases", types: ["airstrip", "carrier", "armybase"]},
+        {id: "aircraft", label: "Aircraft", types: ["multirole", "strikefighter", "interceptor", "attack", "awacs", "helo", "transporthelo", "carrierfighter", "transport", "bomber"]},
         {id: "command", label: "Command", types: ["bunker", "spacehq"]},
         {id: "ground", label: "Ground Forces", types: ["infantry", "artillery", "tank"]},
     ],
@@ -329,9 +330,26 @@ export * from "./techs.js";
 // Hangar complement per base type — aircraft live as STOCK (counts), not units,
 // until they launch. Caps double as the max you can restock to via production.
 export const HANGAR_SPEC = {
-    airstrip: {interceptor: 10, attack: 15, transport: 20, awacs: 1},
+    airstrip: {interceptor: 10, multirole: 10, attack: 15, transport: 20, awacs: 1, bomber: 6},
     carrier: {carrierfighter: 20, strikefighter: 10, awacs: 1},
     armybase: {helo: 6, transporthelo: 2},
+};
+
+// Offensive air-strike tuning. Aircraft tasked to attack (via stance auto-engage,
+// a direct Command Attack, a Battle Plan, or an airstrip bomber sortie) fly a
+// strike mission: out to the target, release, then recover to base.
+export const STRIKE = {
+    a2aRangeKm: 170,        // air-to-air missile launch range (target is an aircraft)
+    loiterKm: 14,           // hold radius while making passes on a ground/city target
+    recoverKm: 14,          // arrival distance at which a recovering aircraft stows into stock
+    maxPasses: 3,           // strike passes an aircraft makes before recovering
+    escortsPerSortie: 2,    // fighters launched to escort each bomber sortie
+    bombersPerSortie: 2,    // bombers launched per airstrip sortie
+    sortieCooldownSec: 18,  // min game-seconds between an airstrip's sorties
+    // Auto-engage: how a Hostile aircraft/airbase picks a target when it has none,
+    // and how long a Defensive unit remembers who last hit it before retaliating.
+    reacquireSec: 1.5,      // min gap between auto-acquire scans (cheap throttle)
+    threatMemorySec: 8,     // a Defensive unit retaliates against an attacker seen this recently
 };
 // Which type flies defensive patrols from each base, in real flight sizes.
 export const PATROL_FIGHTER = {airstrip: "interceptor", carrier: "carrierfighter", armybase: "helo"};

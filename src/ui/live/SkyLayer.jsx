@@ -328,8 +328,16 @@ function update(map, data, canvas, els, tracks) {
         // revalidates the geometry for the online prediction/snapshot case.
         const track = trackFor(tracks, p);
         const {pts, head, deg} = projGeom(p, track, project, occluded, refLng);
-        trails.push({pts, color: wh.trail || "#e3e7ec", width: p.sub ? 1.3 : (wh.trailW || 2.4)});
-        place(els.get("p" + p.id), head, deg, p.sub ? " scale(0.6)" : "");
+        // Aircraft-launched ordnance reads apart from strategic missiles: a lean
+        // pale-blue streak for an air-to-air missile, a short amber arc for a bomb.
+        const muniTrail = p.muni === "a2a" ? {color: "#bfe6ff", width: 1.5}
+            : p.muni === "bomb" ? {color: "#ffb454", width: 2} : null;
+        trails.push({
+            pts,
+            color: muniTrail?.color ?? wh.trail ?? "#e3e7ec",
+            width: muniTrail?.width ?? (p.sub ? 1.3 : (wh.trailW || 2.4))
+        });
+        place(els.get("p" + p.id), head, deg, p.sub ? " scale(0.6)" : (p.muni ? " scale(0.8)" : ""));
     }
     // Evict tracks for projectiles that no longer exist. Sized checks keep this
     // O(1) until the cache actually outgrows the live set.
@@ -410,7 +418,7 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
     // changes — not when positions change — so ticks that only move existing
     // missiles don't reconcile the whole layer. Positions are written imperatively
     // by update(); nothing position-dependent lives in this JSX.
-    const sig = projectiles.map((p) => `p${p.id}:${WARHEADS[p.warhead] ? p.warhead : "standard"}:${p.sub ? 1 : 0}`).join("|")
+    const sig = projectiles.map((p) => `p${p.id}:${WARHEADS[p.warhead] ? p.warhead : "standard"}:${p.sub ? 1 : 0}:${p.muni || ""}`).join("|")
         + "#" + interceptors.map((it) => `i${it.id}:${it.srcType === "thaad" ? "t" : ""}`).join("|");
     const heads = useMemo(() => {
         const nodes = [];
@@ -420,7 +428,7 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
                 <div key={"p" + p.id} ref={setRef("p" + p.id)}
                      className={`absolute left-0 top-0 pointer-events-none z-3 will-change-transform ${p.sub ? "sub" : ""}`}
                      style={{["--flame"]: (WARHEADS[warhead] || WARHEADS.standard).flame}}>
-                    <div className={`db-missile ${warhead}`}><span className="db-missile-glow"/><span
+                    <div className={`db-missile ${warhead}${p.muni ? " db-muni-" + p.muni : ""}`}><span className="db-missile-glow"/><span
                         className="db-missile-body"/><span className="db-missile-flame"/></div>
                 </div>
             );

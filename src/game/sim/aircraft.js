@@ -11,11 +11,12 @@ import {
     LAUNCH_GAP,
     PATROL_FIGHTER,
     PATROL_FUEL,
+    STRIKE,
     UNITS,
 } from "../data/constants.js";
 import {haversine} from "../geo/geo.js";
 import {nextId} from "./worldState.js";
-import {bearingTo, flyClimb, flyCruise, flyEscort, flyFerry, flyHold, flyLandingPhase, flyRotary, hangarCapOf, recordTrail} from "./flight.js";
+import {bearingTo, flyClimb, flyCruise, flyEscort, flyFerry, flyHold, flyLandingPhase, flyRotary, flySortieEscort, flyStrike, hangarCapOf, recordTrail} from "./flight.js";
 
 // polarFrom is defined in flight.js (it's the shared flight-frame primitive the
 // phase controllers build on) but stays part of aircraft.js's public surface —
@@ -142,6 +143,44 @@ export function launchEscort(w, base, ferryId, idx) {
     return jet;
 }
 
+// Launch an offensive bomber package from an airstrip at a tasked target: up to
+// STRIKE.bombersPerSortie bombers, each on a strike mission at the target, plus up
+// to STRIKE.escortsPerSortie fighters flying formation to keep the sky clear. Like
+// the ferry launch, the package starts airborne (bombers don't queue for the runway
+// behind the CAP). Returns the launched bombers, or null if no bombers are in stock.
+export function launchStrikeSortie(w, base, targetId) {
+    ensureHangar(w, base);
+    if ((base.hangar.bomber || 0) <= 0) return null;
+    const sortieId = nextId(w, "so");
+    const ra = runwayAxis(base);
+    const bombers = [];
+    for (let i = 0; i < STRIKE.bombersPerSortie && (base.hangar.bomber || 0) > 0; i++) {
+        base.hangar.bomber--;
+        const ad = UNITS.bomber;
+        const jet = {
+            id: nextId(w, "u"), slot: base.slot, type: "bomber", lng: base.lng, lat: base.lat,
+            hp: ad.hp, cooldown: 0, targetId: null, warhead: "standard", baseId: base.id,
+            phase: "sortie", hdg: ra, alt: 0.06, vis: 0, fuel: Infinity, stance: "hostile",
+            mission: {role: "strike", targetId, homeId: base.id, sortieId, phase: "outbound", passes: 0},
+        };
+        w.units.push(jet);
+        bombers.push(jet);
+    }
+    const escortType = "multirole";
+    for (let i = 0; i < STRIKE.escortsPerSortie && (base.hangar[escortType] || 0) > 0; i++) {
+        base.hangar[escortType]--;
+        const ad = UNITS[escortType];
+        w.units.push({
+            id: nextId(w, "u"), slot: base.slot, type: escortType, lng: base.lng, lat: base.lat,
+            hp: ad.hp, cooldown: 0, targetId: null, warhead: "standard", baseId: base.id,
+            phase: "sortie", hdg: ra, alt: 0.06, vis: 0, fuel: Infinity, stance: "hostile",
+            mission: {role: "sortieEscort", sortieId, homeId: base.id, idx: i},
+        });
+    }
+    base.sortieCd = STRIKE.sortieCooldownSec;
+    return bombers;
+}
+
 // Per-tick base controller: keep the requested patrol pattern airborne — launch
 // from stock when short (stock rotation covers refueling), recall extras.
 // `basedHere` is the tick's prebuilt list of aircraft with baseId === base.id
@@ -186,6 +225,8 @@ export function flyAircraft(w, u, def, dt, homeBase) {
     // pattern — handled entirely before the airbase/runway machinery below.
     if (u.mission?.role === "leadershipFerry") return flyFerry(w, u, def, dt);
     if (u.mission?.role === "leadershipEscort") return flyEscort(w, u, def, dt);
+    if (u.mission?.role === "strike") return flyStrike(w, u, def, dt);
+    if (u.mission?.role === "sortieEscort") return flySortieEscort(w, u, def, dt);
     const base = homeBase !== undefined ? homeBase : (w.units.find((b) => b.id === u.baseId && b.hp > 0) ?? null);
     if (!base) {
         u.hp = 0;

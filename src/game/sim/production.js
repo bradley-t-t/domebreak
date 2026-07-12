@@ -370,6 +370,20 @@ export function setPatrolSize(w, slot, unitId, size) {
     return {ok: true, patrolSize: size};
 }
 
+// Set an aircraft's or airbase's engagement stance: "hostile" (auto-engage any
+// enemy in range) or "defensive" (hold fire unless attacked, then return fire).
+// Only aircraft and airbases carry a stance — every other platform fires solely on
+// an explicit Command Attack / Battle Plan order.
+export function setStance(w, slot, unitId, stance) {
+    const u = w.units.find((x) => x.id === unitId && x.slot === slot);
+    if (!u) return {error: "Unit not found."};
+    const def = UNITS[u.type];
+    if (!def.airSpeed && !def.wing) return {error: "This unit has no engagement stance."};
+    if (stance !== "hostile" && stance !== "defensive") return {error: "Invalid stance."};
+    u.stance = stance;
+    return {ok: true, stance};
+}
+
 // Toggle the base's AWACS orbit on or off.
 export function setAwacsPatrol(w, slot, unitId, on) {
     const u = w.units.find((x) => x.id === unitId && x.slot === slot);

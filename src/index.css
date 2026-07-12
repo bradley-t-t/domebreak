@@ -315,6 +315,35 @@
 
     /* Cluster: a banded MIRV bus, hinting at the payload stack it carries before it
        splits into sub-munitions on reentry. Banding rides the same mask. */
+    /* Aircraft-launched ordnance reads apart from the strategic arsenal. Air-to-air:
+       a lean, pale-blue dart tipped in cyan. Bomb: a stubby dark round lobbed onto
+       the target under an amber flame. The --flame override retints the shared
+       plume/glow; the body mask and box are resized per munition. */
+    .db-missile.db-muni-a2a {
+        --flame: #7fd0ff;
+        width: 8px;
+        height: 22px;
+    }
+
+    .db-missile.db-muni-a2a .db-missile-body {
+        background: linear-gradient(180deg, #eaf6ff, #a9d8f5 55%, #6aa9d8);
+    }
+
+    .db-missile.db-muni-bomb {
+        --flame: #ff9a3c;
+        width: 10px;
+        height: 18px;
+    }
+
+    .db-missile.db-muni-bomb .db-missile-body {
+        background: linear-gradient(180deg, #4a4a4a, #2f2f2f 60%, #1c1c1c);
+        filter: drop-shadow(0 0 2px rgba(255, 154, 60, 0.6));
+    }
+
+    .db-missile.db-muni-bomb .db-missile-flame {
+        height: 8px;
+    }
+
     .db-missile.cluster .db-missile-body {
         background:
             repeating-linear-gradient(180deg, transparent 0 2.5px, rgba(16, 42, 54, 0.3) 2.5px 3.5px),

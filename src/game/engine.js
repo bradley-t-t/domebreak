@@ -181,6 +181,7 @@ export {
     stopSail,
     setPatrolSize,
     setAwacsPatrol,
+    setStance,
     scrapUnit,
     commandAttack,
     hangarCount,
