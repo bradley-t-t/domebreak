@@ -140,6 +140,79 @@ describe("flyStrike mission", () => {
         // Either it has already stowed (hp 0) or it is now much closer to home.
         expect(bomber.hp <= 0 || haversine(bomber.lng, bomber.lat, strip.lng, strip.lat) < apex).toBe(true);
     });
+
+    it("test_committed_bomber_re_targets_when_a_wingmate_kills_its_target", () => {
+        // Two enemy targets side by side. A bomber inbound on the first has its
+        // target destroyed by a wing-mate while it's still en route — it must press
+        // on to the neighbouring target rather than wheeling straight home.
+        const strip = {id: "strip", slot: 0, type: "airstrip", hp: 45, lng: 0, lat: 0, hangar: {bomber: 0}};
+        const city = {id: "c", slot: 1, alive: true, hp: 100, maxHp: 100, lng: 0, lat: 5};
+        const other = {id: "c2", slot: 1, alive: true, hp: 100, maxHp: 100, lng: 1, lat: 5};
+        const w = war([strip], [city, other]);
+        const bomber = {
+            id: "b", slot: 0, type: "bomber", hp: 60, lng: 0, lat: 4, alt: 1,
+            baseId: "strip", targetId: null,
+            mission: {role: "strike", targetId: "c", homeId: "strip", phase: "outbound", passes: 0},
+        };
+        w.units.push(bomber);
+        flyStrike(w, bomber, UNITS.bomber, 0.4);          // records the run-in point
+        city.alive = false;                                // a wing-mate kills the target
+        flyStrike(w, bomber, UNITS.bomber, 0.4);
+        expect(bomber.mission.phase).not.toBe("rtb");      // did not bug out
+        expect(bomber.mission.targetId).toBe("c2");        // pressed on to the neighbour
+        expect(bomber.targetId).toBe("c2");
+    });
+
+    it("test_committed_bomber_turns_around_when_we_make_peace", () => {
+        // We're at war with slot 1 (the target) and slot 2. A bomber inbound on a
+        // slot-1 city — with a slot-2 city sitting right beside it — must fly home
+        // the moment we make peace with slot 1, NOT divert to the other nation.
+        const strip = {id: "strip", slot: 0, type: "airstrip", hp: 45, lng: 0, lat: 0, hangar: {bomber: 0}};
+        const city = {id: "c", slot: 1, alive: true, hp: 100, maxHp: 100, lng: 0, lat: 5};
+        const neighbour = {id: "c2", slot: 2, alive: true, hp: 100, maxHp: 100, lng: 1, lat: 5};
+        const w = {
+            time: 0, _id: 0, events: [], projectiles: [], effects: [],
+            nations: [
+                {slot: 0, alive: true, relations: {1: "war", 2: "war"}},
+                {slot: 1, alive: true, relations: {0: "war"}},
+                {slot: 2, alive: true, relations: {0: "war"}},
+            ],
+            units: [strip], cities: [city, neighbour],
+        };
+        const bomber = {
+            id: "b", slot: 0, type: "bomber", hp: 60, lng: 0, lat: 4, alt: 1,
+            baseId: "strip", targetId: null,
+            mission: {role: "strike", targetId: "c", homeId: "strip", phase: "outbound", passes: 0},
+        };
+        w.units.push(bomber);
+        flyStrike(w, bomber, UNITS.bomber, 0.4);           // records the run-in + its nation
+        // White peace with slot 1 (the target's nation); still at war with slot 2.
+        w.nations[0].relations[1] = "peace";
+        w.nations[1].relations[0] = "peace";
+        flyStrike(w, bomber, UNITS.bomber, 0.4);
+        expect(bomber.mission.phase).toBe("rtb");           // heading home
+        expect(bomber.targetId).toBe(null);
+        expect(bomber.mission.targetId).toBe("c");          // never re-tasked onto slot 2
+    });
+
+    it("test_committed_bomber_recovers_when_nothing_is_left_to_hit", () => {
+        // Sole target dies with no other enemy near the run-in: the bomber has
+        // nowhere to press, so it correctly recovers to base.
+        const strip = {id: "strip", slot: 0, type: "airstrip", hp: 45, lng: 0, lat: 0, hangar: {bomber: 0}};
+        const city = {id: "c", slot: 1, alive: true, hp: 100, maxHp: 100, lng: 0, lat: 5};
+        const w = war([strip], [city]);
+        const bomber = {
+            id: "b", slot: 0, type: "bomber", hp: 60, lng: 0, lat: 4, alt: 1,
+            baseId: "strip", targetId: null,
+            mission: {role: "strike", targetId: "c", homeId: "strip", phase: "outbound", passes: 0},
+        };
+        w.units.push(bomber);
+        flyStrike(w, bomber, UNITS.bomber, 0.4);
+        city.alive = false;
+        flyStrike(w, bomber, UNITS.bomber, 0.4);
+        expect(bomber.mission.phase).toBe("rtb");
+        expect(bomber.targetId).toBe(null);
+    });
 });
 
 describe("setStance", () => {

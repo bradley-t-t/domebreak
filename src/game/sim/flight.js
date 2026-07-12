@@ -150,7 +150,23 @@ export function flyStrike(w, u, def, dt) {
     if ((u.alt || 0) > 0.02) recordTrail(u, dt);
     const units = idMapOf(w.units);
     if (m.phase !== "rtb") {
-        const t = findTarget(w, m.targetId, {cities: idMapOf(w.cities), units});
+        const cities = idMapOf(w.cities);
+        let t = findTarget(w, m.targetId, {cities, units});
+        if (t && t.alive) { m.tx = t.lng; m.ty = t.lat; m.tslot = t.slot; } // remember the run-in for re-tasking
+        // Committed bomber whose target died mid-run (typically a wing-mate killed
+        // it first) doesn't wheel around on the spot: while it still has ordnance,
+        // and only as long as its nation is still at war, it re-acquires the nearest
+        // surviving target of that SAME enemy near the run-in and presses the attack.
+        // Making peace or surrendering clears the war relation, so the plane finds no
+        // target and recovers home — exactly the turn-around the player expects.
+        if ((!t || !t.alive || !atWar(w, u.slot, t.slot)) && (m.passes || 0) < STRIKE.maxPasses
+            && m.tx != null && m.tslot != null && atWar(w, u.slot, m.tslot)) {
+            const foe = nearestEnemyTarget(w, {slot: u.slot, lng: m.tx, lat: m.ty}, STRIKE.reacquireKm, {includeAircraft: false, onlySlot: m.tslot});
+            if (foe) {
+                m.targetId = foe.id;
+                t = findTarget(w, m.targetId, {cities, units});
+            }
+        }
         if (!t || !t.alive || !atWar(w, u.slot, t.slot) || (m.passes || 0) >= STRIKE.maxPasses) {
             m.phase = "rtb";
         } else {
