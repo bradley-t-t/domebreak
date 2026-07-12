@@ -2,9 +2,8 @@
 // ship it points at (its "guide"): every movement tick it steams to a doctrinal
 // station off the guide instead of taking a manual sail order. The guide runs at
 // the rear and ships sharing it screen ahead of it — submarine pickets at the
-// point, escorts fanning into a forward wedge, support hulls in a short column
-// dead ahead, and the replenishment oiler shuttling alongside each hull in turn.
-// Pure motion, so it runs on both the authoritative server and the client-
+// point, escorts fanning into a forward wedge, and support hulls in a short column
+// dead ahead. Pure motion, so it runs on both the authoritative server and the client-
 // prediction tick (see stepMovement).
 //
 // State is plain ids/points on the unit: `followId` (the guide's id, resolved
@@ -19,7 +18,6 @@ export function stationRoleOf(type) {
     const def = UNITS[type];
     if (!def) return "screen";
     if (def.submarine) return "van";        // subs picket well ahead
-    if (def.resupplyKm) return "logi";      // the oiler shuttles between clients
     if (def.wing || def.capacity) return "hvu"; // carrier / amphib — the protected core
     if (def.range >= 3000 && def.kind === "offense") return "stern"; // battleship line astern
     if (def.asw) return "screen";           // destroyer — the ASW picket screen
@@ -73,18 +71,16 @@ function seaStation(u, km, brng) {
 const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 // Assign every follower of one guide its station point. The guide runs at the rear;
-// escorts fan into a forward wedge, support hulls form a column dead ahead, and the
-// oiler shuttles between the hulls it tends. Deterministic — escorts are ordered by
-// role then id, and the oiler's client is a function of world time — so the server
-// and client agree without shared RNG.
-function computeStations(w, guide, followers) {
+// escorts fan into a forward wedge and support hulls form a column dead ahead.
+// Deterministic — escorts are ordered by role then id — so the server and client
+// agree without shared RNG.
+function computeStations(guide, followers) {
     const H = headingOf(guide);
     const stations = new Map();
-    const screen = [], column = [], logi = [];
+    const screen = [], column = [];
     for (const f of followers) {
         const role = stationRoleOf(f.type);
-        if (role === "logi") logi.push(f);
-        else if (role === "hvu") column.push(f);
+        if (role === "hvu") column.push(f);
         else screen.push(f);
     }
 
@@ -98,19 +94,6 @@ function computeStations(w, guide, followers) {
     // Support hulls (carrier / amphib) hold a short column dead ahead of the guide.
     column.sort(byId).forEach((f, i) => stations.set(f.id, seaStation(guide, FORMATION.columnKm + i * FORMATION.columnStepKm, H)));
 
-    if (logi.length) {
-        // Underway replenishment: the oiler comes alongside one hull at a time,
-        // cycling through the formation's other ships on a fixed dwell so it visibly
-        // works its way down the line, keeping each within resupply range.
-        const clients = [guide, ...followers.filter((f) => stationRoleOf(f.type) !== "logi")]
-            .filter((c) => c.hp > 0).sort(byId);
-        const turn = Math.floor(w.time / FORMATION.resupplyDwellSec);
-        logi.sort(byId).forEach((f, i) => {
-            if (!clients.length) return stations.set(f.id, seaStation(guide, FORMATION.columnKm, H));
-            const client = clients[((turn + i) % clients.length + clients.length) % clients.length];
-            stations.set(f.id, seaStation(client, FORMATION.alongsideKm, headingOf(client) + 90));
-        });
-    }
     return stations;
 }
 
@@ -218,7 +201,7 @@ export function stepFormations(w, dt, idx) {
     for (const [guideId, followers] of groups) {
         const guide = guideOf(guideId);
         if (!guide) continue;
-        const stations = computeStations(w, guide, followers);
+        const stations = computeStations(guide, followers);
         const gh = headingOf(guide);
         for (const f of followers) {
             const s = stations.get(f.id);

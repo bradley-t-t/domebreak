@@ -99,7 +99,7 @@ export function buildThreatMap(w, n, {cities, myUnits, enemies, rivals, unitsByS
     }
 
     // Friendly coverage: each defense envelope over the cell adds its intercept
-    // probability — two Patriots over a city count roughly like one dome.
+    // probability — two Patriots over a city count roughly like one Aegis.
     for (const u of myUnits) {
         const def = UNITS[u.type];
         if (def.kind !== "defense") continue;

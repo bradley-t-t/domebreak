@@ -53,9 +53,9 @@ export const TECHS = {
         {name: "THAAD", unlocks: "thaad"},
         {name: "Ground-Based Midcourse Defense"},
         {name: "Brilliant Pebbles"},
-        {name: "Directed-Energy Defense", unlocks: "orbitallaser"},
+        {name: "Directed-Energy Defense"},
         {name: "Boost-Phase Intercept"},
-        {name: "Golden Dome Doctrine"},
+        {name: "Integrated Missile Shield"},
     ]),
     ...chain("eco", [
         {name: "War Bonds"},

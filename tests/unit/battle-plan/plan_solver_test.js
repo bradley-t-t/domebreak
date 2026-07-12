@@ -119,7 +119,7 @@ describe("battle-plan solver — attacker/target type selection", () => {
     it("test_targetCategoryOf_maps_types_and_cities", () => {
         expect(targetCategoryOf("city")).toBe("city");
         expect(targetCategoryOf("unit", "silo")).toBe("strike");
-        expect(targetCategoryOf("unit", "dome")).toBe("airdef");
+        expect(targetCategoryOf("unit", "battery")).toBe("airdef");
         expect(targetCategoryOf("unit", "radar")).toBe("sensors");
     });
 });

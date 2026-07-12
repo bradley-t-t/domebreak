@@ -16,10 +16,10 @@ const cors = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const COST: Record<string, number> = {silo: 300, interceptor: 200, radar: 150, dome: 400};
+const COST: Record<string, number> = {silo: 300, interceptor: 200, radar: 150};
 const WARHEAD_DAMAGE = 60;
-const R = {interceptor: 700, radar: 1400, dome: 300};
-const P = {interceptor: 0.45, dome: 0.6, radarBoost: 0.12, capInterceptor: 0.7};
+const R = {interceptor: 700, radar: 1400};
+const P = {interceptor: 0.45, radarBoost: 0.12, capInterceptor: 0.7};
 const MAX_SLOTS = 16;
 
 // 16 nations spread across the globe. cities[0] is the capital / launch site.
@@ -128,8 +128,8 @@ async function nextEmptySlot(matchId: string, maxSlots: number, preferred?: numb
     return -1;
 }
 
-// Deterministic AI: spend the remaining budget on a capital dome, interceptors
-// over other cities, then silos at random enemy cities.
+// Deterministic AI: spend the remaining budget on interceptors over its cities,
+// then silos at random enemy cities.
 async function playAi(participant: any, cities: any[], seedBase: number) {
     let remaining = participant.budget - participant.spent;
     const mine = cities.filter((c) => c.player_id === participant.player_id);
@@ -147,8 +147,7 @@ async function playAi(participant: any, cities: any[], seedBase: number) {
         remaining -= COST[kind];
         return true;
     };
-    buy("dome", capital.lng, capital.lat);
-    for (const c of mine.slice(1)) buy("interceptor", c.lng, c.lat);
+    for (const c of mine) buy("interceptor", c.lng, c.lat);
     let guard = 0;
     while (remaining >= COST.silo && enemies.length && guard++ < 40) {
         const t = enemies[Math.floor(rand() * enemies.length)];
@@ -205,8 +204,6 @@ async function resolve(matchId: string) {
             const dist = haversine(d.lng, d.lat, target.lng, target.lat);
             if (d.kind === "interceptor" && dist <= R.interceptor) {
                 survival *= 1 - Math.min(P.capInterceptor, P.interceptor + (radar ? P.radarBoost : 0));
-            } else if (d.kind === "dome" && dist <= R.dome) {
-                survival *= 1 - P.dome;
             }
         }
         t += 1;

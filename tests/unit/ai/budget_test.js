@@ -27,8 +27,8 @@ const frameOf = (points, net) => ({me: {points, net, units: []}, n: {}});
 const want = (kind, type, urgency, extra = {}) => ({kind, type, target: 1, urgency, reserve: 0, ...extra});
 
 // Hand-built frame for the wants builders. The stub world carries no research
-// record, so every requiresTech unit reads as locked — battery and dome are the
-// only buildable defense tiers, a stable deterministic option set.
+// record, so every requiresTech unit reads as locked — battery is the only
+// buildable defense tier, a stable deterministic option set.
 function wantsFrame({units = [], indCap = 8, coastal = false, atWar = false, ammo = {}} = {}) {
     const slot = 1;
     return {

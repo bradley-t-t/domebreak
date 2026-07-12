@@ -36,7 +36,6 @@ import {
     sensorsOf,
     slotEconomyAggregates,
     vitalityOf,
-    replenishmentBuff,
 } from "./queries.js";
 import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
 import {flyAircraft, launchStrikeSortie, runAirbase, steamShip} from "./aircraft.js";
@@ -44,7 +43,6 @@ import {stepFormations} from "./formation.js";
 import {STRIKE} from "../data/constants.js";
 import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
-import {REPLENISH_RELOAD_MULT} from "../data/constants.js";
 import {spawnQueuedUnit} from "./tickSpawn.js";
 
 // Per-slot prosperity multiplier for population growth: the nation's effective
@@ -299,13 +297,11 @@ export function stepMovement(w, dt) {
             const reach = def.airSpeed ? (tgtAir ? STRIKE.a2aRangeKm : Math.max(def.range, STRIKE.loiterKm)) : def.range;
             if (haversine(u.lng, u.lat, t.lng, t.lat) <= reach) {
                 ensureProd(n);
-                if (def.targets === "land" || def.directedEnergy) {
+                if (def.targets === "land") {
                     // Damage lands straight on the target — no interceptable projectile,
-                    // no SAM/THAAD engagement. Two kinds of shooter take this path:
-                    // ground forces (infantry/tank/artillery, targets:"land"), and
-                    // directed-energy weapons (the orbital laser's speed-of-light beam,
-                    // which can't be shot down). Distinct from the missile and warhead
-                    // platforms that loft the interceptable arsenal.
+                    // no SAM/THAAD engagement. Ground forces (infantry/tank/artillery,
+                    // targets:"land") take this path, distinct from the missile and
+                    // warhead platforms that loft the interceptable arsenal.
                     //
                     // One exception: a capture-flagged unit (infantry/tank) firing
                     // on an enemy CITY it could take doesn't raze it — the assault
@@ -323,9 +319,7 @@ export function stepMovement(w, dt) {
                         if (def.warheads) n.ammo[_wh] -= 1;
                         const muni = def.airSpeed ? (tgtAir ? "a2a" : "bomb") : null;
                         launch(w, u, t, _wh, muni ? {muni, homing: muni === "a2a"} : undefined);
-                        // Ships rearming under a Replenishment Ship recycle faster.
-                        const replen = def.domain === "sea" && replenishmentBuff(w, u) ? REPLENISH_RELOAD_MULT : 1;
-                        u.cooldown = def.reload * replen;
+                        u.cooldown = def.reload;
                         // A strike aircraft counts its passes so it breaks off and
                         // recovers after STRIKE.maxPasses (see flyStrike).
                         if (u.mission?.role === "strike") u.mission.passes = (u.mission.passes || 0) + 1;
@@ -358,13 +352,12 @@ export function stepCombat(w, dt) {
         if (!arr) defBySlot.set(d.slot, arr = []);
         arr.push(d);
     }
-    // Per-tick memo of each defender's engagement reach and replenishment buff.
-    // Both are invariant for a defender within a tick but were recomputed per
-    // projectile — and each defenseRange() call hides an O(units) radar-link scan,
-    // which multiplied out to the single hottest path of a saturation attack.
+    // Per-tick memo of each defender's engagement reach. It is invariant for a
+    // defender within a tick but was recomputed per projectile — and each
+    // defenseRange() call hides an O(units) radar-link scan, which multiplied out
+    // to the single hottest path of a saturation attack.
     const idx = targetIndexOf(w);
     const reachOf = new Map();   // defender id -> outer engagement radius
-    const replenOf = new Map();  // defender id -> replenishment reload multiplier
 
     for (const p of w.projectiles) {
         // Homing air-to-air rounds chase a moving jet and resolve on their own — no
@@ -396,14 +389,8 @@ export function stepCombat(w, dt) {
             // Fighters kill what flies in the air column — not ballistic reentry
             // vehicles screaming down from space. BMD stays with ground/sea defenses.
             if (ddef.airSpeed && UNITS[p.type]?.ballistic) continue;
-            // Orbital BMD (SBI, Orbital Laser) is a boost-phase / midcourse layer:
-            // it engages ballistic ordnance only, never atmospheric threats like
-            // cruise missiles or aircraft-launched munitions. Without this gate a
-            // laser in orbit would try to burn every inbound cruise missile in
-            // atmosphere, which the flavour text explicitly rules out.
-            if (ddef.boostPhaseOnly && !UNITS[p.type]?.ballistic) continue;
             // One interceptor per battery type per target: layered defenses fire in
-            // concert (a Golden Dome and an Aegis both engage the same warhead) but
+            // concert (a THAAD and an Aegis both engage the same warhead) but
             // identical batteries don't waste a second interceptor on a track a
             // sister site already committed to. p.tried (by id) still guards a single
             // battery from double-firing; triedTypes widens that to the whole type.
@@ -418,13 +405,7 @@ export function stepCombat(w, dt) {
             if (dToTarget <= reach && dToTarget >= defenseMinRange(w, d)) {
                 p.tried.push(d.id);
                 triedTypes.push(d.type);
-                // Sea-based defenses (cruiser/destroyer/Aegis afloat) reload faster
-                // while replenished by a nearby oiler.
-                let dReplen = replenOf.get(d.id);
-                if (dReplen === undefined) {
-                    replenOf.set(d.id, dReplen = ddef.domain === "sea" && replenishmentBuff(w, d) ? REPLENISH_RELOAD_MULT : 1);
-                }
-                d.cooldown = (ddef.reload || DEFAULT_RELOAD) * dReplen;
+                d.cooldown = ddef.reload || DEFAULT_RELOAD;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
                 // munition's evasion. Floored to a small residual chance (derived
@@ -433,38 +414,6 @@ export function stepCombat(w, dt) {
                 const baseProb = Math.min(INTERCEPT_CAP, ddef.intercept);
                 const evadeFloor = baseProb * (1 - INTERCEPT_CAP);
                 const hitProb = Math.max(evadeFloor, baseProb - (p.evasion ?? 0));
-                // Directed-energy weapons (Orbital Laser) fire at light-speed: the
-                // kill roll resolves the instant the shot is taken, no interceptor
-                // sprite chases the target across the sky. Everything else launches
-                // a kinetic interceptor and steers it through the sky loop.
-                if (ddef.directedEnergy) {
-                    if (rand(w) < hitProb) {
-                        p._dead = true;
-                        w.events.push({
-                            id: nextId(w, "e"),
-                            t: w.time,
-                            type: "intercept",
-                            lng: p.lng,
-                            lat: p.lat,
-                            alt: p.altNorm ?? 0,
-                            byLng: d.lng,
-                            byLat: d.lat
-                        });
-                    } else {
-                        w.events.push({
-                            id: nextId(w, "e"),
-                            t: w.time,
-                            type: "miss",
-                            lng: p.lng,
-                            lat: p.lat,
-                            alt: p.altNorm ?? 0
-                        });
-                    }
-                    // A directed-energy hit destroys the projectile in place; no
-                    // further defender fires on this frame's dead track.
-                    if (p._dead) break;
-                    continue;
-                }
                 w.interceptors.push({
                     id: nextId(w, "i"),
                     slot: d.slot,

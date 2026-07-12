@@ -1,5 +1,5 @@
 // A single inbound track must draw at most one interceptor per battery TYPE:
-// layered defenses of different types (Golden Dome + Aegis) both engage, but two
+// layered defenses of different types (SAM battery + Aegis) both engage, but two
 // identical batteries (two Aegis) never double-commit to the same warhead.
 // Deterministic — fixed equatorial geometry, seeded PRNG, no I/O.
 import {describe, expect, it} from "vitest";
@@ -34,20 +34,20 @@ describe("one interceptor per battery type per target", () => {
         expect(shots[0].srcType).toBe("aegis");
     });
 
-    it("test_dome_and_aegis_both_engage", () => {
-        const shots = engage([defender("d1", "dome"), defender("a1", "aegis")]);
+    it("test_battery_and_aegis_both_engage", () => {
+        const shots = engage([defender("b1", "battery"), defender("a1", "aegis")]);
         expect(shots.length).toBe(2);
-        expect(new Set(shots.map((s) => s.srcType))).toEqual(new Set(["dome", "aegis"]));
+        expect(new Set(shots.map((s) => s.srcType))).toEqual(new Set(["battery", "aegis"]));
     });
 
     it("test_mixed_fleet_dedupes_per_type", () => {
-        // Two Aegis, two Domes, one Patriot -> one shot of each distinct type.
+        // Two Aegis, two SAM batteries, one Patriot -> one shot of each distinct type.
         const shots = engage([
             defender("a1", "aegis"), defender("a2", "aegis"),
-            defender("d1", "dome"), defender("d2", "dome"),
+            defender("b1", "battery"), defender("b2", "battery"),
             defender("p1", "patriot"),
         ]);
         expect(shots.length).toBe(3);
-        expect(new Set(shots.map((s) => s.srcType))).toEqual(new Set(["aegis", "dome", "patriot"]));
+        expect(new Set(shots.map((s) => s.srcType))).toEqual(new Set(["aegis", "battery", "patriot"]));
     });
 });
