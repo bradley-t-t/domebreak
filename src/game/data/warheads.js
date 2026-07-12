@@ -151,7 +151,7 @@ export function launchersForAmmo(key) {
 // and unit inside it — friend or foe alike — for damage over time until it decays.
 export const FALLOUT = {
     warheads: ["thermo", "thermomirv"],   // warhead keys that leave a fallout cloud on impact
-    radiusKm: 480,          // contamination radius at ground zero
+    radiusKm: 240,          // contamination radius at ground zero
     lifeSec: 80,            // sim seconds the cloud lingers before full decay
     riseSec: 6,             // seconds to reach peak intensity after detonation
     fadeFrac: 0.55,         // fraction of life spent at peak before decay begins
