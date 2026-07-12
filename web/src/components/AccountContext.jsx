@@ -30,19 +30,27 @@ export function AccountProvider({children}) {
         };
         let off = null;
         const start = async () => {
-            const a = await getMod();
-            if (!alive) return;
-            const s = await a.getSession();
-            if (!alive) return;
-            setSession(s);
-            await hydrate(a, s);
-            setLoading(false);
-            if (s) a.touch();
-            off = a.onAuth(async (ns) => {
+            try {
+                const a = await getMod();
                 if (!alive) return;
-                setSession(ns);
-                await hydrate(a, ns);
-            });
+                const s = await a.getSession();
+                if (!alive) return;
+                setSession(s);
+                await hydrate(a, s);
+                if (s) a.touch();
+                off = a.onAuth(async (ns) => {
+                    if (!alive) return;
+                    setSession(ns);
+                    await hydrate(a, ns);
+                });
+            } catch {
+                // A misconfigured or unreachable account backend must not leave the
+                // app stuck "loading" forever — fail closed to a signed-out state so
+                // gated views (e.g. Download) render their signed-out path.
+                if (alive) setSession(null);
+            } finally {
+                if (alive) setLoading(false);
+            }
         };
         const id = "requestIdleCallback" in window
             ? window.requestIdleCallback(start, {timeout: 2500})
@@ -61,6 +69,8 @@ export function AccountProvider({children}) {
         stats,
         loading,
         signedIn: !!session,
+        isAdmin: !!profile?.is_admin,
+        listBeta: async () => (await getMod()).listBeta(),
         signIn: async (...a) => (await getMod()).signIn(...a),
         signUp: async (...a) => (await getMod()).signUp(...a),
         signOut: async () => {

@@ -7,6 +7,11 @@ import {AUTH_RULES} from "../lib/authRules.js";
 import {useAccount} from "../lib/accountStore.js";
 import GameIcon from "./GameIcon.jsx";
 
+// Account creation is temporarily paused while DomeBreak heads to Steam. Flip
+// this back to true to re-open sign-up everywhere in this modal (the username
+// field, the signup submit path, and the mode toggle all read from it).
+const SIGNUP_ENABLED = false;
+
 // Sign in / sign up with a DomeBreak game account. Email + password (username on
 // sign-up), same as the in-game login. Uses the shared account context.
 export default function AuthModal({open, onClose, initialMode = "signin"}) {
@@ -49,14 +54,14 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
         const em = email.trim();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return fail("Enter a valid email address.");
         if (password.length < AUTH_RULES.password.min) return fail(`Password must be at least ${AUTH_RULES.password.min} characters.`);
-        if (mode === "signup") {
+        if (signup) {
             const u = username.trim();
             if (u.length < AUTH_RULES.username.min || u.length > AUTH_RULES.username.max)
                 return fail(`Username must be ${AUTH_RULES.username.min}–${AUTH_RULES.username.max} characters.`);
         }
         setStatus("loading");
         setError("");
-        const res = mode === "signin" ? await signIn(em, password) : await signUp(em, password, username.trim());
+        const res = signup ? await signUp(em, password, username.trim()) : await signIn(em, password);
         if (res.error) return fail(res.error);
         onClose();
     }
@@ -66,7 +71,9 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
         setError(msg);
     }
 
-    const signup = mode === "signup";
+    // With sign-up paused, `signup` stays false regardless of the requested mode,
+    // so every branch below renders the sign-in variant.
+    const signup = SIGNUP_ENABLED && mode === "signup";
 
     return (
         <AnimatePresence>
@@ -165,18 +172,25 @@ export default function AuthModal({open, onClose, initialMode = "signin"}) {
                         </form>
 
                         <div className="mt-5 border-t border-hair pt-4 text-center">
-                            <button
-                                onClick={() => {
-                                    setMode(signup ? "signin" : "signup");
-                                    setStatus("idle");
-                                    setError("");
-                                }}
-                                className="font-mono text-[12px] text-dim transition-colors hover:text-text"
-                            >
-                                {signup
-                                    ? "Already have an account? Sign in"
-                                    : "New here? Create an account"}
-                            </button>
+                            {SIGNUP_ENABLED ? (
+                                <button
+                                    onClick={() => {
+                                        setMode(signup ? "signin" : "signup");
+                                        setStatus("idle");
+                                        setError("");
+                                    }}
+                                    className="font-mono text-[12px] text-dim transition-colors hover:text-text"
+                                >
+                                    {signup
+                                        ? "Already have an account? Sign in"
+                                        : "New here? Create an account"}
+                                </button>
+                            ) : (
+                                <p className="font-mono text-[12px] leading-relaxed text-faint">
+                                    New accounts are paused while we head to Steam. Wishlist DomeBreak
+                                    to get notified at launch.
+                                </p>
+                            )}
                         </div>
                     </motion.div>
                 </motion.div>

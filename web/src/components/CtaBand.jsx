@@ -2,6 +2,7 @@ import {useRef} from "react";
 import {motion, useReducedMotion, useScroll, useTransform} from "motion/react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import Reveal from "./Reveal.jsx";
+import SteamCta from "./SteamCta.jsx";
 import {Eyebrow} from "./Primitives.jsx";
 
 const ctaBg = "/shots/population-heat.jpg";
@@ -31,19 +32,28 @@ export default function CtaBand() {
             <div className="relative z-10 mx-auto max-w-[1400px] px-5 py-24 sm:px-8 sm:py-36">
                 <div className="mx-auto max-w-2xl text-center">
                     <Reveal>
-                        <Eyebrow className="justify-center">Early access</Eyebrow>
+                        <Eyebrow className="justify-center">Coming soon on Steam</Eyebrow>
                         <h2 className="mt-6 font-display text-[clamp(2.2rem,6vw,4.5rem)] font-bold uppercase leading-[1.02] text-text">
-                            Get in early
+                            Add it to your library
                         </h2>
                         <p className="mx-auto mt-5 max-w-lg text-[clamp(1rem,1.4vw,1.15rem)] leading-relaxed text-dim">
-                            Join the waitlist for early access. We'll send one email the day it's
-                            playable — nothing else.
+                            DomeBreak is heading to Steam. Wishlist it now and Steam tells you the
+                            day it goes live — or leave your email and we'll send one note at launch.
                         </p>
                     </Reveal>
 
                     <Reveal delay={0.15}>
                         <div className="mt-10 flex justify-center">
-                            <WaitlistForm source="cta" layout="stacked" cta="Request Access"/>
+                            <SteamCta/>
+                        </div>
+                    </Reveal>
+
+                    <Reveal delay={0.22}>
+                        <div className="mx-auto mt-8 flex max-w-xl flex-col items-center gap-3 border-t border-hair pt-8">
+                            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
+                                Prefer email?
+                            </p>
+                            <WaitlistForm source="cta" layout="stacked" cta="Notify me"/>
                         </div>
                     </Reveal>
                 </div>
