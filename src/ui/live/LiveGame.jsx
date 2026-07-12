@@ -48,6 +48,7 @@ import {
     isActive,
     inTerritory,
     placementBlocked,
+    planPreview,
     radarRangeOf,
     sensorsCover,
     unitLabel,
@@ -317,6 +318,17 @@ export default function LiveGame({
     }, [nationSig]);
     const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids, wipedGids});
 
+    // Live strike preview for the Battle Planning console: the active plan's
+    // attacker→target arcs, target markers, and attacker origins, derived from the SAME
+    // solve the reconciler fires so the drawn lines match the real orders. Only computed
+    // while the Battle Planning panel is open on a plan — otherwise undefined, so the
+    // overlay hands the map its stable empty collections and costs nothing per tick.
+    // Keyed on w.time (the mutated-in-place tick counter) so it refreshes as units move.
+    const battlePreview = useMemo(
+        () => (panel === "battle" && bp.active ? planPreview(w, bp.active, mySlot) : undefined),
+        [panel, bp.active, w, w.time, mySlot] // eslint-disable-line react-hooks/exhaustive-deps
+    );
+
     // Memoized map-layer FeatureCollections (backdrop/live cities, fog-of-war
     // visibility, radar/defense/pop overlays, selection+placement rings, and
     // the command/sail line traces) — extracted to keep the same useMemo
@@ -336,9 +348,10 @@ export default function LiveGame({
         cmdLines,
         sailLines,
         planArcsFC,
-        planTargetsFC
+        planTargetsFC,
+        planAttackersFC
     } = useLiveLayers({
-        w, mySlot, backdrop, layers, selUnit, teamColor, globe
+        w, mySlot, backdrop, layers, selUnit, teamColor, globe, battlePreview
     });
     // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
     const ownership = useOwnershipLayer(w);
@@ -576,7 +589,8 @@ export default function LiveGame({
                            backdropFC={backdropFC} radarFC={radarFC} radarEmitters={radarEmitters} defenseFC={defenseFC} ranges={ranges}
                            cmdLines={cmdLines} sailLines={sailLines} falloutFC={falloutFC} captureFC={captureFC}
                            liveFC={liveFC} mySlot={mySlot} teamColor={teamColor}
-                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planColor={bp.active?.color}
+                           planArcsFC={planArcsFC} planTargetsFC={planTargetsFC} planAttackersFC={planAttackersFC}
+                           planColor={bp.active?.color}
                            globe={globe}/>
                 <PlacementGhost ref={ghostRef} placing={placing} moving={moving} w={w} globe={globe}/>
                 <MapMarkers selectedCity={selectedCity} w={w} mySlot={mySlot} teamColor={teamColor}
