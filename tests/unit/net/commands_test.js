@@ -14,7 +14,7 @@ import {createWorld} from "../../../src/game/engine.js";
 // a client api that isn't listed (or a whitelist entry that's missing) is the bug
 // this guards.
 const CLIENT_COMMANDS = [
-    "buyPlace", "commandAttack", "move", "setSail", "stopSail",
+    "buyPlace", "commandAttack", "move", "setSail", "stopSail", "setFollow", "stopFollow",
     "queueAircraft", "setPatrolSize", "setAwacsPatrol", "declareWar", "scrap",
     "produceAmmo", "cancelProd", "setWarhead", "embark", "disembark", "march",
     "shelterLeadership", "releaseLeadership",

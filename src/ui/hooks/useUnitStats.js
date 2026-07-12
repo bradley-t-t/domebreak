@@ -40,7 +40,7 @@ export function useUnitStats({w, mySlot, armOf}) {
         }
         if (def.navalSpeed) {
             rows.push(["Speed", `${def.navalSpeed} kn`]);
-            rows.push(["Status", u.dest ? "Under Way" : "On Station"]);
+            rows.push(["Status", u.followId ? "In Formation" : u.dest ? "Under Way" : "On Station"]);
         }
         if (def.landSpeed) {
             rows.push(["Speed", `${def.landSpeed} km/h`]);
