@@ -4,7 +4,9 @@ import {ChevronDown} from "lucide-react";
 import WaitlistForm from "./WaitlistForm.jsx";
 import HeroMap from "./HeroMap.jsx";
 import GameIcon from "./GameIcon.jsx";
+import SteamCta from "./SteamCta.jsx";
 import {Eyebrow, Wordmark} from "./Primitives.jsx";
+import {scrollToId} from "../lib/nav.js";
 
 const SPECS = [
     {icon: "reconsat", label: "222 nations"},
@@ -56,7 +58,7 @@ export default function Hero({onSignIn}) {
             >
                 <div className="relative max-w-xl db-tick pl-1">
                     <motion.div {...fadeUp(reduce, 0)}>
-                        <Eyebrow>System Online — Pre-Registration Open</Eyebrow>
+                        <Eyebrow>Coming Soon on Steam</Eyebrow>
                         <h1 className="mt-6">
                             <Wordmark stacked glow className="text-[clamp(3.25rem,8vw,6rem)]"/>
                         </h1>
@@ -75,8 +77,22 @@ export default function Hero({onSignIn}) {
                     </motion.p>
 
                     <motion.div {...fadeUp(reduce, 0.24)} className="mt-8">
-                        <WaitlistForm source="hero" cta="Request Access"/>
-                        <div className="mt-4 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
+                        <SteamCta/>
+
+                        {/* Email waitlist kept as a secondary capture beneath the Steam CTA. */}
+                        <div className="mt-6 max-w-lg border-t border-hair pt-6">
+                            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
+                                Not on Steam? Get one email at launch
+                            </p>
+                            <WaitlistForm source="hero" cta="Notify me"/>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-display text-[12px] font-semibold uppercase tracking-[0.14em]">
+                            <button onClick={() => scrollToId("beta")} className="group inline-flex items-center gap-1.5 text-text transition-colors hover:text-gold-hi">
+                                <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
+                                Apply for the closed beta
+                                <ChevronDown size={13} className="-rotate-90 transition-transform group-hover:translate-x-0.5"/>
+                            </button>
                             <button onClick={onSignIn} className="text-dim transition-colors hover:text-text">
                                 Have an account? Sign in
                             </button>

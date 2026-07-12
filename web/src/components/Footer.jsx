@@ -1,8 +1,10 @@
 import {Keyboard} from "lucide-react";
-import {cn} from "../lib/cn.js";
 import {scrollToId} from "../lib/nav.js";
+import {NAV_MENUS} from "../lib/navMenus.js";
 import {Wordmark} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
+import SteamCta from "./SteamCta.jsx";
+import ScrollVelocity from "./reactbits/ScrollVelocity.jsx";
 
 const ICON_STRIP = ["dome", "radar", "interceptor", "thaad", "silo", "reconsat", "carrier", "factory"];
 
@@ -20,14 +22,26 @@ function Col({title, children}) {
     );
 }
 
-function FootLink({onClick, children}) {
+// A footer link that either scrolls/routes internally or opens an external URL.
+function FootLink({children, onClick, href}) {
+    const cls = "flex items-center gap-2 text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer";
+    if (href) {
+        return <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{children}</a>;
+    }
+    return <button onClick={onClick} className={cls}>{children}</button>;
+}
+
+// Render one of the shared nav groups as a footer column so the footer and the
+// nav never disagree on what exists or how it's labelled.
+function MenuCol({group}) {
     return (
-        <button
-            onClick={onClick}
-            className="flex items-center gap-2 text-left text-[13px] text-dim transition-colors duration-150 hover:text-text cursor-pointer"
-        >
-            {children}
-        </button>
+        <Col title={group.label}>
+            {group.items.map((it) =>
+                it.external
+                    ? <FootLink key={it.label} href={it.external}>{it.label}</FootLink>
+                    : <FootLink key={it.label} onClick={() => scrollToId(it.target)}>{it.label}</FootLink>
+            )}
+        </Col>
     );
 }
 
@@ -37,9 +51,21 @@ export default function Footer({onShowShortcuts}) {
         <footer className="relative overflow-hidden border-t border-line bg-bg">
             <div aria-hidden className="pointer-events-none absolute inset-0 db-grid"/>
 
+            {/* react-bits ScrollVelocity — a slow, scroll-reactive ghost marquee of
+                the wordmark that replaces the old static giant lettering. */}
+            <div aria-hidden className="relative select-none border-b border-hair py-7">
+                <ScrollVelocity
+                    texts={["DomeBreak · Global Missile Command ·"]}
+                    velocity={26}
+                    numCopies={4}
+                    damping={40}
+                    className="font-display font-bold uppercase tracking-[0.04em] text-[color-mix(in_srgb,var(--text)_8%,transparent)]"
+                />
+            </div>
+
             <div className="relative mx-auto max-w-[1400px] px-5 py-16 sm:px-8 sm:py-20">
-                {/* Top: brand + nav columns */}
-                <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+                {/* Brand + link columns */}
+                <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-[1.7fr_1fr_1fr_1fr]">
                     <div className="col-span-2 sm:col-span-4 lg:col-span-1">
                         <div className="flex items-center gap-2.5">
                             <GameIcon name="dome" size={22} className="text-gold"/>
@@ -51,27 +77,26 @@ export default function Footer({onShowShortcuts}) {
                         <p className="mt-4 max-w-xs text-[13px] leading-relaxed text-dim">
                             A real-time strategy game of missile defense and offense, fought on the real world map.
                         </p>
+                        <div className="mt-6">
+                            <SteamCta size="md"/>
+                        </div>
                         <div className="mt-5 inline-flex items-center gap-2 rounded border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
                             <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
-                            Pre-launch
+                            Pre-Launch
                         </div>
                     </div>
 
-                    <Col title="Explore">
+                    {NAV_MENUS.map((group) => <MenuCol key={group.label} group={group}/>)}
+
+                    <Col title="More">
+                        <FootLink onClick={() => scrollToId("beta")}>
+                            <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
+                            Closed Beta
+                        </FootLink>
                         <FootLink onClick={() => scrollToId("top")}>Top</FootLink>
-                        <FootLink onClick={() => scrollToId("features")}>Briefing</FootLink>
-                        <FootLink onClick={() => scrollToId("wiki")}>Unit wiki</FootLink>
-                    </Col>
-
-                    <Col title="Get it">
-                        <FootLink onClick={() => scrollToId("download")}>Download</FootLink>
-                        <FootLink onClick={() => scrollToId("waitlist")}>Request access</FootLink>
-                    </Col>
-
-                    <Col title="Help">
                         <FootLink onClick={onShowShortcuts}>
                             <Keyboard size={14}/>
-                            Keyboard shortcuts
+                            Keyboard Shortcuts
                         </FootLink>
                     </Col>
                 </div>
@@ -81,16 +106,6 @@ export default function Footer({onShowShortcuts}) {
                     {ICON_STRIP.map((n) => (
                         <GameIcon key={n} name={n} size={18} className="opacity-70 transition-opacity hover:opacity-100"/>
                     ))}
-                </div>
-
-                {/* Giant ghost wordmark */}
-                <div aria-hidden className="pointer-events-none mt-6 select-none">
-                    <span className={cn(
-                        "block font-display font-bold uppercase leading-[0.82] tracking-[0.02em]",
-                        "text-[clamp(3rem,15vw,12rem)] text-[color-mix(in_srgb,var(--text)_6%,transparent)]"
-                    )}>
-                        DomeBreak
-                    </span>
                 </div>
 
                 {/* Legal bar */}
