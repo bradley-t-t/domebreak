@@ -38,7 +38,7 @@ import {
     slotEconomyAggregates,
     vitalityOf,
 } from "./queries.js";
-import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
+import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, nearestGroundContact, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
 import {flyAircraft, launchStrikeSortie, runAirbase, steamShip} from "./aircraft.js";
 import {stepFormations} from "./formation.js";
 import {ensureProd} from "./production.js";
@@ -262,7 +262,30 @@ export function stepMovement(w, dt) {
             autoAcquireTarget(w, u, idx, now, Math.max(def.radarKm || 0, STRIKE.a2aRangeKm));
             if (u.targetId != null) u.mission = {role: "strike", targetId: u.targetId, homeId: u.baseId, phase: "outbound", passes: 0};
         }
-        if ((def.navalSpeed || def.landSpeed) && u.dest) steamShip(u, def, dt);
+        // Troops in contact: a ground combatant (infantry/tank/artillery) with an
+        // enemy mobile ground unit inside its weapons range halts its march and
+        // engages, resuming movement only once that contact is destroyed or has
+        // left range — so two opposing columns fight where they meet instead of
+        // marching through one another. The reactive lock overrides but PRESERVES
+        // any standing Command Attack order (stashed in _orderTarget), restoring it
+        // the moment contact breaks. Runs before the movement dispatch so a halted
+        // unit skips steamShip this tick, and before the fire block so it engages
+        // the contact this same tick.
+        let contactHold = false;
+        if (def.targets === "land" && isAttacker(def)) {
+            const contact = nearestGroundContact(w, u, def.range);
+            if (contact) {
+                if (u._contactId == null) u._orderTarget = u.targetId ?? null;
+                u._contactId = contact.id;
+                u.targetId = contact.id;
+                contactHold = true;
+            } else if (u._contactId != null) {
+                u.targetId = u._orderTarget ?? null;
+                u._contactId = null;
+                u._orderTarget = null;
+            }
+        }
+        if ((def.navalSpeed || def.landSpeed) && u.dest && !contactHold) steamShip(u, def, dt);
         else if (def.airSpeed && u.baseId) {
             // Sub-step the flight physics: at 4×–10× game speed a whole tick can
             // be a full second — one turn-rate-limited update per tick makes the
