@@ -219,8 +219,10 @@ export default function MapLayers({
                 <Layer id="live-cities" type="circle" paint={{
                     "circle-radius": ["case", ["==", ["get", "cap"], 1], 5, 3],
                     "circle-color": ["get", "color"],
-                    "circle-stroke-color": ["case", ["==", ["get", "mine"], 1], "#ffffff", "#05070c"],
-                    "circle-stroke-width": ["case", ["==", ["get", "mine"], 1], 1.4, 0.6]
+                    // Own cities ring white; a bordering neutral I can annex rings in the
+                    // amber capture accent so it reads as a target; everything else dark.
+                    "circle-stroke-color": ["case", ["==", ["get", "mine"], 1], "#ffffff", ["==", ["get", "neutral"], 1], "#e0a53a", "#05070c"],
+                    "circle-stroke-width": ["case", ["==", ["get", "mine"], 1], 1.4, ["==", ["get", "neutral"], 1], 1.1, 0.6]
                 }}/>
             </Source>
         </>

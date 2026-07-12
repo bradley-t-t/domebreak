@@ -146,6 +146,7 @@ export {
     inOwnCountry,
     inControlledTerritory,
     isNeutralCity,
+    neutralSlotSet,
     annexableBySlot,
     nearestAnnexTarget,
     hasAnnexTargets,
