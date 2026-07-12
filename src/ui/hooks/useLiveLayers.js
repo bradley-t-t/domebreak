@@ -19,6 +19,11 @@ import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js
 const coverageRing = (globe, lng, lat, km, steps, innerKm = 0) =>
     (globe && km <= GEODESIC_MAX_KM ? geoCircle : circle)(lng, lat, km, steps, innerKm);
 
+// Strike-envelope color for a selected offensive unit's reach ring — the same warm
+// amber as the battle-plan strike arcs, so an offensive reach ring never reads as a
+// (team-colored) defensive coverage bubble.
+const STRIKE_COLOR = "#f0a63c";
+
 // Rolling 32-bit checksum helpers for the change-detectors below — the same
 // Math.imul(31) mix useOwnershipLayer / useDiplomacyLayer gate their heavy
 // rebuilds on. Folding the inputs that actually reach the GeoJSON lets a memo
@@ -230,24 +235,34 @@ export function useLiveLayers({
         const sel = w.units.find((u) => u.id === selUnit && u.slot === mySlot);
         if (sel) {
             const def = UNITS[sel.type];
-            let radius = null, isRadar = 0;
+            let radius = null, isRadar = 0, isStrike = 0;
             if (def.kind === "defense") radius = defenseRange(w, sel); else if (def.kind === "support") {
                 // Sensors show their true coverage — same circle the radar layer
                 // draws, so selection and coverage never disagree.
                 radius = def.detect ? radarRangeOf(sel.type) : def.range;
                 isRadar = 1;
-            } else if (def.kind === "offense" && def.orbital) {
-                // Orbital offensive platforms (orbital strike) are global: show their
-                // ground footprint so the player can see the reach the sat covers.
+            } else if (def.kind === "offense") {
+                // Strike platforms — silo, TEL, hypersonic battery, subs, the orbital
+                // strike bus, ground guns — show how far their munition reaches. The
+                // strategic ranges are huge (an ICBM is near-global), which is the
+                // point: the reach IS the overlay. Painted in the strike color below.
                 radius = def.range;
+                isStrike = 1;
             }
-            // Orbital assets are the whole point of "see where the sat covers", so
-            // always draw their footprint on selection — the 4000km cap only exists
-            // to hide dedicated-sensor rings from cluttering the surface map, and
-            // that no longer applies to satellites.
-            if (radius && (def.detect || def.orbital || radius <= 4000)) {
+            // An airstrip (or other sortie platform) shows how far its bomber sorties
+            // reach — the amber strike ring — rather than its short runway footprint.
+            if (def.sortieKm) {
+                radius = def.sortieKm;
+                isStrike = 1;
+                isRadar = 0;
+            }
+            // Draw the ring for any sensor, orbital, or strike platform regardless of
+            // size (their reach IS the point), plus any ring small enough not to
+            // clutter the surface map. The 4000km cap only ever existed to keep big
+            // dedicated-sensor rings off the map, so it doesn't gate these.
+            if (radius && (def.detect || def.orbital || isStrike || radius <= 4000)) {
                 const c = coverageRing(globe, sel.lng, sel.lat, radius, 56, def.kind === "defense" ? defenseMinRange(w, sel) : 0);
-                c.properties = {color: teamColor(mySlot), sel: 1, radar: isRadar};
+                c.properties = {color: isStrike ? STRIKE_COLOR : teamColor(mySlot), sel: 1, radar: isRadar};
                 f.push(c);
             }
         }

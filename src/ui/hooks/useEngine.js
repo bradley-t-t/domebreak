@@ -21,7 +21,10 @@ import {
     setMarch,
     releaseLeadership,
     setPatrolSize,
+    setStance,
     setSail,
+    setFollow,
+    stopFollow,
     setWarhead,
     shelterLeadership,
     step,
@@ -98,6 +101,16 @@ export function useEngine(world, online = false) {
             force();
             return r;
         },
+        setFollow: (uid, tid) => {
+            const r = setFollow(ref.current, ref.current.mySlot, uid, tid);
+            force();
+            return r;
+        },
+        stopFollow: (uid) => {
+            const r = stopFollow(ref.current, ref.current.mySlot, uid);
+            force();
+            return r;
+        },
         queueAircraft: (baseId, type) => {
             const r = queueAircraft(ref.current, ref.current.mySlot, baseId, type);
             force();
@@ -110,6 +123,11 @@ export function useEngine(world, online = false) {
         },
         setAwacsPatrol: (uid, on) => {
             const r = setAwacsPatrol(ref.current, ref.current.mySlot, uid, on);
+            force();
+            return r;
+        },
+        setStance: (uid, stance) => {
+            const r = setStance(ref.current, ref.current.mySlot, uid, stance);
             force();
             return r;
         },

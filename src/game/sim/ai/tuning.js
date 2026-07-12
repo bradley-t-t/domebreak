@@ -109,6 +109,13 @@ export const FIRES = {
     thermoChance: 0.35,          // odds a strategic shot upgrades to its signature payload
     hgvChance: 0.4,
     sicbmChance: 0.4,
+    // Cluster (area MIRV) is loaded only when its submunitions will actually fan
+    // onto a pocket of hostiles — worth it against clustered forces, wasteful on a
+    // lone target. The pick is a density-scaled roll, never a forced choice.
+    clusterMinTargets: 2,        // extra at-war hostiles within a cluster's splash before the bus earns its keep
+    clusterChance: 0.6,          // odds a pocket at the threshold draws cluster
+    clusterDensityStep: 0.15,    // added odds per extra hostile past the threshold
+    clusterChanceMax: 0.95,      // ceiling — a dense pocket still isn't a guaranteed cluster
 };
 
 // War-lifecycle state thresholds (diplomacy/warLifecycle.js).

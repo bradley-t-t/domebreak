@@ -20,6 +20,10 @@ const hhmm = (ts) => {
 // the global pause-menu cascade. While the input is focused, every game hotkey
 // is already suppressed by the shared isTyping() guard. Collapsing to a pill
 // keeps the corner clear; messages arriving collapsed show an unread badge.
+//
+// Placement/size/opacity/hide come from the shared AdjustablePanel wrapper in
+// LiveGame (the `comms` HUD panel), so this renders relative content only — it
+// no longer pins itself to a corner.
 export default function ChatBox({net, mySlot, overlayOpen}) {
     const [open, setOpen] = useState(true);
     const [messages, setMessages] = useState(() => [...net.chat]);
@@ -76,7 +80,7 @@ export default function ChatBox({net, mySlot, overlayOpen}) {
     };
 
     return (
-        <div className="absolute bottom-[68px] left-4 z-6 pointer-events-auto">
+        <div className="pointer-events-auto">
             {open ? (
                 <div className="w-[300px] flex flex-col bg-panel-2 border border-line rounded shadow backdrop-blur-[8px] overflow-hidden motion-safe:animate-[dbPop_120ms_var(--ease-out)]">
                     <button type="button"
