@@ -87,7 +87,7 @@ describe("warhead trigger on impact", () => {
 describe("damage over time through the tick", () => {
     // Two nations, each with a ground-zero-region city and a safe far-away city so
     // neither is eliminated mid-run (which would end the match and stop the tick).
-    // radius ≈ 480 km ≈ 4.32° at the equator.
+    // radius ≈ 240 km ≈ 2.16° at the equator.
     function falloutWorld() {
         const w = createWorld({
             mySlot: 0,
@@ -96,7 +96,7 @@ describe("damage over time through the tick", () => {
             cities: [
                 {id: "core", slot: 0, name: "Core", cap: 0, pop: 1e6, econ: 0.5, lng: 0, lat: 0},
                 {id: "home", slot: 0, name: "Home", cap: 0, pop: 1e6, econ: 0.5, lng: 40, lat: 0},
-                {id: "edge", slot: 1, name: "Edge", cap: 0, pop: 1e6, econ: 0.5, lng: 4.2, lat: 0},
+                {id: "edge", slot: 1, name: "Edge", cap: 0, pop: 1e6, econ: 0.5, lng: 2.1, lat: 0},
                 {id: "far", slot: 1, name: "Far", cap: 0, pop: 1e6, econ: 0.5, lng: -40, lat: 0},
             ],
         });
@@ -181,14 +181,14 @@ describe("falloutDoseAt (UI readout query)", () => {
         expect(fo.remain).toBeCloseTo(FALLOUT.lifeSec - age, 6);
     });
     it("test_zero_outside_the_radius", () => {
-        // ~10° east ≈ 1100 km, well beyond the ~480 km radius.
+        // ~10° east ≈ 1100 km, well beyond the ~240 km radius.
         expect(falloutDoseAt(withCloud(), 10, 0)).toEqual({dose: 0, remain: 0});
     });
     it("test_takes_worst_dose_and_longest_life_across_clouds", () => {
         const w = {
             effects: [
                 {type: "fallout", lng: 0, lat: 0, radiusKm: FALLOUT.radiusKm, age: FALLOUT.lifeSec - 5},   // near center, almost spent
-                {type: "fallout", lng: 3, lat: 0, radiusKm: FALLOUT.radiusKm, age: FALLOUT.riseSec + 1},   // offset, peaked, fresh
+                {type: "fallout", lng: 1.5, lat: 0, radiusKm: FALLOUT.radiusKm, age: FALLOUT.riseSec + 1},   // offset, peaked, fresh
             ],
         };
         const fo = falloutDoseAt(w, 0, 0);
