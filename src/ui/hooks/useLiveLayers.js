@@ -7,9 +7,9 @@
 // pattern is invisible to exhaustive-deps, so it's disabled for this file.
 /* eslint-disable react-hooks/exhaustive-deps */
 import {useMemo, useRef} from "react";
-import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
-import {CAPTURE, RADAR_RING_COLORS} from "../../game/data/constants.js";
-import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM} from "../../game/geo/geo.js";
+import {airborne, defenseMinRange, defenseRange, falloutIntensity, isActive, neutralSlotSet, radarRangeOf, sensorsOf, subSensorsOf, UNITS, unitVisibleTo, vitalityOf} from "../../game/engine.js";
+import {CAPTURE, NEUTRAL, RADAR_RING_COLORS} from "../../game/data/constants.js";
+import {circle, gcTrail, geoCircle, GEODESIC_MAX_KM, withinKm} from "../../game/geo/geo.js";
 
 // Coverage rings render round in whichever projection is showing: a true geodesic
 // cap on the globe, the Mercator disc on the flat map. Satellites (rings wider than
@@ -58,10 +58,35 @@ export function useLiveLayers({
             geometry: {type: "Point", coordinates: [c.lng, c.lat]}
         }))
     }), [backdrop]);
-    // Cities in neutral (inactive) countries are pure scenery — no dot on the map,
-    // no ruin, no health halo. LiveGame's onCityClick / openCityMenu also treat them
-    // as non-interactable, so dropping them here keeps the map, the hit tests, and
-    // the game rules aligned.
+    // Passive NEUTRAL cities bordering MY territory — a neutral city within
+    // annexBorderKm of one of my own cities, i.e. one my ground troops could march
+    // on and annex (the same adjacency gate occupation.annexCity enforces). Every
+    // other neutral city stays pure scenery; surfacing just the bordering ones lets
+    // the player SEE what they can go take without lighting up the whole neutral
+    // world. Keyed on city ownership only (positions are static), so a fallout-driven
+    // vitality tick that rebuilds the dot layer doesn't re-run this O(cities) scan.
+    const borderNeutralSigRef = useRef(null);
+    const borderNeutralRef = useRef(null);
+    const borderNeutralIds = useMemo(() => {
+        let sig = foldNum(0, mySlot);
+        for (const c of w.cities) sig = foldNum(sig, c.slot * 2 + (c.alive ? 1 : 0));
+        if (borderNeutralRef.current && sig === borderNeutralSigRef.current) return borderNeutralRef.current;
+        borderNeutralSigRef.current = sig;
+        const mine = w.cities.filter((c) => c.alive && c.slot === mySlot);
+        const ids = new Set();
+        const neutral = mine.length ? neutralSlotSet(w) : null;
+        if (neutral?.size) for (const c of w.cities) {
+            if (!c.alive || !neutral.has(c.slot)) continue;
+            if (mine.some((o) => withinKm(o.lng, o.lat, c.lng, c.lat, NEUTRAL.annexBorderKm))) ids.add(c.id);
+        }
+        borderNeutralRef.current = ids;
+        return ids;
+    }, [w.cities, w.time, mySlot]);
+
+    // Cities in neutral (inactive) countries are otherwise pure scenery — no ruin,
+    // no health halo, and non-interactable in LiveGame's onCityClick / openCityMenu;
+    // only the bordering-neutral capture targets above earn a dot here (tagged with
+    // the `neutral` flag), so the map, the hit tests, and the game rules stay aligned.
     //
     // Rebuilding a feature for every living city (~2565) each tick is the single
     // biggest per-frame allocation on the map, so the rebuild is gated on a
@@ -87,21 +112,29 @@ export function useLiveLayers({
         liveSigRef.current = sig;
         liveFCRef.current = {
             type: "FeatureCollection",
-            features: w.cities.filter((c) => isActive(w, c.slot)).map((c) => ({
-                type: "Feature",
-                properties: {
-                    id: c.id,
-                    cap: c.cap ? 1 : 0,
-                    mine: c.slot === mySlot ? 1 : 0,
-                    dead: c.alive ? 0 : 1,
-                    vit: c.alive ? vitalityOf(c) : 1,
-                    color: c.alive ? teamColor(c.slot) : "#3a3a3a"
-                },
-                geometry: {type: "Point", coordinates: [c.lng, c.lat]}
-            }))
+            features: w.cities.reduce((acc, c) => {
+                // Own + other active nations' cities always draw; a passive neutral
+                // city draws only while it borders my land (a capture target).
+                const active = isActive(w, c.slot);
+                if (!active && !borderNeutralIds.has(c.id)) return acc;
+                acc.push({
+                    type: "Feature",
+                    properties: {
+                        id: c.id,
+                        cap: c.cap ? 1 : 0,
+                        mine: c.slot === mySlot ? 1 : 0,
+                        neutral: active ? 0 : 1, // a bordering neutral I can march on and annex
+                        dead: c.alive ? 0 : 1,
+                        vit: c.alive ? vitalityOf(c) : 1,
+                        color: c.alive ? teamColor(c.slot) : "#3a3a3a"
+                    },
+                    geometry: {type: "Point", coordinates: [c.lng, c.lat]}
+                });
+                return acc;
+            }, [])
         };
         return liveFCRef.current;
-    }, [w.cities, w.nations, w.time, mySlot]);
+    }, [w.cities, w.nations, w.time, mySlot, borderNeutralIds]);
 
     // Radioactive fallout footprints: one polygon per active cloud, its opacity
     // driven by the same intensity curve the tick uses for damage, so the visible
