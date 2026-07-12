@@ -1,7 +1,6 @@
 import {useEffect, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import {Menu, X, LogIn, LogOut, ShieldCheck} from "lucide-react";
-import {cn} from "../lib/cn.js";
 import {scrollToId} from "../lib/nav.js";
 import {NAV_MENUS} from "../lib/navMenus.js";
 import {useAccount} from "../lib/accountStore.js";
