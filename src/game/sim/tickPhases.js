@@ -40,6 +40,7 @@ import {
 } from "./queries.js";
 import {advanceHoming, directFire, findTarget, launch, leadInterceptPoint, mirvSplit, nearestEnemyTarget, resolveHit, targetIndexOf, trackPoint} from "./combat.js";
 import {flyAircraft, launchStrikeSortie, runAirbase, steamShip} from "./aircraft.js";
+import {stepFormations} from "./formation.js";
 import {STRIKE} from "../data/constants.js";
 import {ensureProd} from "./production.js";
 import {reconcileLeadership, updateCommand} from "./leadership.js";
@@ -333,6 +334,9 @@ export function stepMovement(w, dt) {
             }
         }
     }
+    // Station-keeping runs last: the guides above have already advanced this tick,
+    // so following hulls steam to a station off the guide's fresh position.
+    stepFormations(w, dt, idx);
 }
 
 // Phase 3: projectile flight and interception — advances every in-flight

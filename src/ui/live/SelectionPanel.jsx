@@ -4,7 +4,7 @@
 import UnitIcon from "../common/UnitIcon.jsx";
 import StatGrid from "../common/StatGrid.jsx";
 import Meter from "../common/Meter.jsx";
-import {allowedAmmo, atWar, FALLOUT, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
+import {allowedAmmo, atWar, FALLOUT, formationGuideOf, hangarCapOf, hangarCount, haversine, initialWarhead, leadershipStatus, PATROL_FIGHTER, PATROL_SIZES, UNIT_ICON, UNITS, WARHEADS} from "../../game/engine.js";
 import {CAPTURE, WARHEAD_ICON} from "../../game/data/constants.js";
 import {button} from "../lib/variants.js";
 import {cn} from "../lib/cn.js";
@@ -59,6 +59,8 @@ export default function SelectionPanel({
                                            unitStats,
                                            moving,
                                            setMoving,
+                                           following,
+                                           setFollowing,
                                            setPlacing,
                                            attackMode,
                                            setAttackMode,
@@ -83,12 +85,38 @@ export default function SelectionPanel({
                 <Meter frac={hpFrac} fillClass={hpFrac <= 0.35 ? "bg-danger" : "bg-good"} ariaLabel="Integrity"/>
             </div>
             <StatGrid rows={unitStats(selectedUnit)} className="mt-3 mb-3 gap-y-[9px]"/>
-            {!!UNITS[selectedUnit.type].navalSpeed && (selectedUnit.dest
-                ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
-                : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
-                    setMoving(moving === selectedUnit.id ? null : selectedUnit.id);
-                    setPlacing(null);
-                }}>{moving === selectedUnit.id ? "Pick a Destination…" : "Set Sail"}</button>)}
+            {!!UNITS[selectedUnit.type].navalSpeed && (() => {
+                // A ship keeping station shows only "Break Formation"; a free ship
+                // shows Set Sail / All Stop plus a "Follow Ship" toggle that arms the
+                // pick-a-guide mode (the target click is handled in LiveGame).
+                if (selectedUnit.followId) {
+                    const guide = formationGuideOf(w, selectedUnit);
+                    return (
+                        <div>
+                            <button className={cn(button(), "w-full")} onClick={() => api.stopFollow(selectedUnit.id)}>Break Formation</button>
+                            <p className="mt-1.5 mb-0 text-[10.5px] leading-[1.4] text-faint">
+                                {guide ? <>Keeping station on <span className="text-text">{labelOf(guide.type, guide.slot)}</span>.</> : "Formation guide lost — holding position."}
+                            </p>
+                        </div>
+                    );
+                }
+                return (
+                    <div className="flex flex-col gap-1.5">
+                        {selectedUnit.dest
+                            ? <button className={cn(button(), "w-full")} onClick={() => api.stopSail(selectedUnit.id)}>All Stop</button>
+                            : <button className={cn(button({variant: moving === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
+                                setMoving(moving === selectedUnit.id ? null : selectedUnit.id);
+                                setFollowing(null);
+                                setPlacing(null);
+                            }}>{moving === selectedUnit.id ? "Pick a Destination…" : "Set Sail"}</button>}
+                        <button className={cn(button({variant: following === selectedUnit.id ? "primary" : "default"}), "w-full")} onClick={() => {
+                            setFollowing(following === selectedUnit.id ? null : selectedUnit.id);
+                            setMoving(null);
+                            setPlacing(null);
+                        }}>{following === selectedUnit.id ? "Pick a Ship to Follow…" : "Follow Ship"}</button>
+                    </div>
+                );
+            })()}
             {UNITS[selectedUnit.type].wing && (() => {
                 // Patrol wording follows the base's craft: fixed-wing bases fly a
                 // fighter CAP, the Army Base flies a helicopter patrol. Never "ship"

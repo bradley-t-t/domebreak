@@ -23,6 +23,8 @@ import {
     setPatrolSize,
     setStance,
     setSail,
+    setFollow,
+    stopFollow,
     setWarhead,
     shelterLeadership,
     step,
@@ -96,6 +98,16 @@ export function useEngine(world, online = false) {
         },
         stopSail: (uid) => {
             const r = stopSail(ref.current, ref.current.mySlot, uid);
+            force();
+            return r;
+        },
+        setFollow: (uid, tid) => {
+            const r = setFollow(ref.current, ref.current.mySlot, uid, tid);
+            force();
+            return r;
+        },
+        stopFollow: (uid) => {
+            const r = stopFollow(ref.current, ref.current.mySlot, uid);
             force();
             return r;
         },

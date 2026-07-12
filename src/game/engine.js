@@ -175,6 +175,8 @@ export {
     disembark,
     moveUnit,
     setSail,
+    setFollow,
+    stopFollow,
     setMarch,
     stopSail,
     setPatrolSize,
@@ -190,6 +192,8 @@ export {
 } from "./sim/production.js";
 
 export {hangarCapOf} from "./sim/aircraft.js";
+
+export {formationGuideOf} from "./sim/formation.js";
 
 export {
     shelterLeadership,

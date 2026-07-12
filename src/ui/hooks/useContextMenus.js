@@ -12,7 +12,7 @@ const AMPHIB_LIFT_KM = 120;
 export function useContextMenus({
                                      w, mySlot, myNation, api, selUnit,
                                      relation, nationName, labelOf, teamColor, flash,
-                                     setSelUnit, setAttackMode, setMoving, setPlacing, setDisembarkId, setPins
+                                     setSelUnit, setAttackMode, setMoving, setFollowing, setPlacing, setDisembarkId, setPins
                                  }) {
     const [menu, setMenu] = useState(null);
 
@@ -107,6 +107,19 @@ export function useContextMenus({
         if (mine && (UNITS[u.type].navalSpeed || UNITS[u.type].landSpeed) && u.dest) items.push({
             label: UNITS[u.type].navalSpeed ? "All Stop" : "Halt",
             onClick: () => api.stopSail(u.id)
+        });
+        // Naval formation: keep station on another of your ships, or break off.
+        if (mine && UNITS[u.type].navalSpeed) items.push(u.followId ? {
+            label: "Break Formation",
+            onClick: () => api.stopFollow(u.id)
+        } : {
+            label: "Follow Ship…",
+            onClick: () => {
+                setFollowing(u.id);
+                setMoving(null);
+                setPlacing(null);
+                setSelUnit(u.id);
+            }
         });
         // Airbases: order replacement aircraft into the hangar (per-type capacity).
         if (mine && UNITS[u.type].wing) {

@@ -88,6 +88,30 @@ export const COAST_KM = 60;
 export const AMPHIB_LIFT_KM = 120;
 // Reload multiplier a hull gets while inside a friendly Replenishment Ship's resupplyKm.
 export const REPLENISH_RELOAD_MULT = 0.7;
+// Naval formation station-keeping (see sim/formation.js). A ship with a followId
+// holds a doctrinal station off its guide: escorts screen it, submarines picket
+// ahead, heavies fall into line astern, and the oiler shuttles alongside each
+// hull in turn. Ranges are km from the guide; arcs are degrees relative to the
+// guide's course (0 = dead ahead, +clockwise). holdKm is the on-station deadband
+// (no thrust inside it); replotKm is how far the station may drift before a
+// following ship re-plots its route around land.
+export const FORMATION = {
+    holdKm: 3,
+    replotKm: 8,
+    // ASW/AAW escorts (destroyer, cruiser) — a screen thrown around the guide.
+    screenKm: 40, screenArc: 300,
+    // Cruisers ride a tighter air-defense ring than the destroyer ASW screen.
+    innerKm: 26, innerArc: 260,
+    // Submarines picket well ahead of the formation.
+    vanKm: 78, vanArc: 70,
+    // Battleships / heavies form line astern behind the guide.
+    sternKm: 22, sternStepKm: 16,
+    // High-value hulls (carrier, amphib) tuck in close astern when they follow.
+    hvuKm: 15,
+    // The replenishment oiler pulls this far off a client's beam during UNREP,
+    // dwelling resupplyDwellSec on each supported hull before moving to the next.
+    alongsideKm: 9, resupplyDwellSec: 14,
+};
 // Stat fallbacks for unit types that omit a field (and legacy-save projectiles).
 export const DEFAULT_BUILD_TIME = 10, DEFAULT_RELOAD = 3, DEFAULT_HIT_PROB = 0.8;
 // Effective GDP ($T) assumed for nations missing from the GDP_T table.
