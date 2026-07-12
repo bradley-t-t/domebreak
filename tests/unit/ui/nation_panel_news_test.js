@@ -59,7 +59,7 @@ describe("NationPanel", () => {
         expect(html).toContain("Lost");      // dead city
         expect(html).toContain("Capital City");
         expect(html).toContain("Lost Haven");
-        expect(html).toContain("★");         // capital marker
+        expect(html).toContain('aria-label="Capital"'); // capital marker (custom star icon)
     });
 
     it("test_industry_count_reflects_built_factories", () => {

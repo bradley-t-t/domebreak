@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Check, Contrast, EyeOff, GripVertical, Maximize2, RotateCcw, SlidersHorizontal} from "lucide-react";
+import Icon from "../common/Icon.jsx";
 import {HUD_OPACITY_MAX, HUD_OPACITY_MIN, HUD_SCALE_MAX, HUD_SCALE_MIN} from "../../game/platform/hudLayout.js";
 import {cn} from "../lib/cn.js";
 import {clamp} from "../../lib/math.js";
@@ -239,15 +239,15 @@ export default function AdjustablePanel({
                         aria-label={`${label} layout controls`}>
                         <button type="button" className={cn(gripBtn, "cursor-grab active:cursor-grabbing touch-none")}
                                 onPointerDown={startMove} title="Drag to move" aria-label={`Move ${label}`}>
-                            <GripVertical size={14} aria-hidden="true"/>
+                            <Icon name="grip" size={14}/>
                         </button>
                         <button type="button" className={cn(gripBtn, "cursor-nwse-resize touch-none")}
                                 onPointerDown={startResize} title="Drag to resize" aria-label={`Resize ${label}`}>
-                            <Maximize2 size={13} aria-hidden="true"/>
+                            <Icon name="maximize" size={13}/>
                         </button>
                         <label className="flex items-center gap-1 px-1" title="Opacity"
                                onPointerDown={(e) => e.stopPropagation()}>
-                            <Contrast size={13} className="text-dim" aria-hidden="true"/>
+                            <Icon name="contrast" size={13} className="text-dim"/>
                             <input type="range" min={HUD_OPACITY_MIN} max={HUD_OPACITY_MAX} step={0.05}
                                    value={eff.opacity} className="w-14 accent-gold cursor-pointer"
                                    aria-label={`${label} opacity`}
@@ -256,16 +256,16 @@ export default function AdjustablePanel({
                         </label>
                         <button type="button" className={gripBtn} onClick={() => onReset?.()}
                                 title="Reset this panel" aria-label={`Reset ${label}`}>
-                            <RotateCcw size={13} aria-hidden="true"/>
+                            <Icon name="reset" size={13}/>
                         </button>
                         <button type="button" className={gripBtn} onClick={() => onChange({hidden: true})}
                                 title="Hide this panel" aria-label={`Hide ${label}`}>
-                            <EyeOff size={13} aria-hidden="true"/>
+                            <Icon name="eye-off" size={13}/>
                         </button>
                         <div className="w-px self-stretch bg-line mx-0.5" aria-hidden="true"/>
                         <button type="button" className={cn(gripBtn, "text-gold hover:text-gold")}
                                 onClick={() => setOpen(false)} title="Done" aria-label={`Done adjusting ${label}`}>
-                            <Check size={14} aria-hidden="true"/>
+                            <Icon name="check" size={14} strokeWidth={2.2}/>
                         </button>
                     </div>
                 ) : (
@@ -278,7 +278,7 @@ export default function AdjustablePanel({
                         onClick={openToolbar}
                         aria-label={`Adjust ${label} — move, resize, fade, or hide`}
                         title={`Adjust ${label} — move, resize, fade, or hide`}>
-                        <SlidersHorizontal size={12} aria-hidden="true"/>
+                        <Icon name="sliders" size={12}/>
                         <span className="font-display text-[8.5px] tracking-[1.2px] uppercase leading-none">Adjust</span>
                     </button>
                 )}
