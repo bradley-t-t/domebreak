@@ -34,8 +34,8 @@ export const WARHEADS = {
         subDmgFrac: 0.25,   // each sub-warhead carries this fraction of the bus damage
         primaryShare: 0.5,  // share of subs that stay on the primary target; the rest fan out
         blastKm: 0,         // area comes from the MIRV pattern (splash), not a single blast
-        flame: "#61e0ff",
-        trail: "#bfe9f7",
+        flame: "#ffd23f",   // warm gold — a scattering-bomblet hue, kept clear of THAAD's cyan interceptor
+        trail: "#f2e4b0",
         trailW: 2.2,
         desc: "MIRV bus — splits into 8 warheads on reentry; half strike the target, half fan out to nearby targets."
     },
