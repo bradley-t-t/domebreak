@@ -51,6 +51,16 @@ function content(kind, foe) {
                 title: "Proposal Declined", tone: "text-dim",
                 body: `${foe} declines your offer of alliance.`,
             };
+        case "war-declared":
+            return {
+                title: "War Declared", tone: "text-danger [text-shadow:0_0_24px_rgba(255,91,110,0.5)]",
+                body: `${foe} has declared war on you.`,
+            };
+        case "called-to-arms":
+            return {
+                title: "Called to Arms", tone: "text-danger [text-shadow:0_0_24px_rgba(255,91,110,0.5)]",
+                body: `Your ally has been attacked — you are now at war with ${foe}.`,
+            };
         case "refused":
         default:
             return {
@@ -63,15 +73,19 @@ function content(kind, foe) {
 // `pop` overrides the queue: online matches have no per-player warPopups (the
 // server can't address one seat), so LiveGame synthesizes the front alliance
 // offer from the broadcast pendingAlliance queue and passes it in directly.
-export default function WarOutcomeModal({world, api, pop: popOverride}) {
+// `onDismiss` overrides the Continue/Escape action for informational popups —
+// war-declaration alerts (see LiveGame's useWarAlerts) live in UI state, not the
+// engine warPopups queue, so they clear themselves rather than via dismissWarPopup.
+export default function WarOutcomeModal({world, api, pop: popOverride, onDismiss}) {
     const pop = popOverride ?? world.warPopups?.[0];
     const isOffer = pop?.kind === "offer";
     const isAllyOffer = pop?.kind === "ally-offer";
+    const dismiss = () => (onDismiss ? onDismiss() : api.dismissWarPopup(pop.id));
     const onClose = () => {
         if (!pop) return;
         if (isOffer) api.respondPeace(pop.foe, false);        // Escape / backdrop = decline
         else if (isAllyOffer) api.respondAlliance(pop.foe, false);
-        else api.dismissWarPopup(pop.id);
+        else dismiss();
     };
     const ref = useModal(onClose);
     // Pause/resume side-effect lives in the parent (LiveGame) so hooks here stay
@@ -100,7 +114,7 @@ export default function WarOutcomeModal({world, api, pop: popOverride}) {
                     </div>
                 ) : (
                     <button className={cn(button({variant: "primary"}), "w-full")}
-                            onClick={() => api.dismissWarPopup(pop.id)}>Continue</button>
+                            onClick={dismiss}>Continue</button>
                 )}
             </div>
         </div>
