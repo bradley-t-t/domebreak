@@ -91,6 +91,12 @@ export function useBattlePlans(world) {
 
     const renamePlan = useCallback((id, name) => patchPlan(id, {name}), [patchPlan]);
 
+    // Switch a plan's fire mode. Leaving "standing" disarms it: `armed` is a
+    // standing-only state, and one-shot mode has no Disarm control — so a plan
+    // carried into one-shot while armed would show a stuck "armed" indicator with
+    // no way to clear it (and would re-engage if switched back to standing).
+    const setPlanMode = useCallback((id, mode) => patchPlan(id, mode === "standing" ? {mode} : {mode, armed: false}), [patchPlan]);
+
     // Toggle an attacker unit TYPE into/out of plan `id`. Exclusive: adding a type to
     // one plan removes it from every other, so a platform type serves a single plan.
     const toggleAttackerType = useCallback((id, type) => {
@@ -131,7 +137,7 @@ export function useBattlePlans(world) {
 
     return {
         plans, active, activeId, setActiveId,
-        addPlan, removePlan, duplicatePlan, renamePlan, patchPlan,
+        addPlan, removePlan, duplicatePlan, renamePlan, patchPlan, setPlanMode,
         toggleAttackerType, toggleTargetType, toggleTargetNation,
         clearAttackerTypes, clearTargetTypes, clearTargetNations,
         executePlan,

@@ -295,7 +295,9 @@ export function suggestEngagementKm(w, plan, mySlot) {
 // in peacetime stays armed and engages the moment war begins.
 export function readBattlePlans(w) {
     const bp = w?.battlePlans;
-    const plans = Array.isArray(bp?.plans) ? bp.plans.map((p) => ({...p, fireNonce: 0})) : [];
+    // `armed` is standing-only; force it off for any non-standing plan so a plan
+    // saved mid-bug (armed, then switched to one-shot) doesn't restore stuck "on".
+    const plans = Array.isArray(bp?.plans) ? bp.plans.map((p) => ({...p, fireNonce: 0, armed: p.mode === "standing" && !!p.armed})) : [];
     const activeId = bp?.activeId ?? null;
     return {plans, activeId};
 }

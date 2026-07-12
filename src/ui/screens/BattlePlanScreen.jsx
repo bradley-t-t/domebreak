@@ -144,7 +144,7 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                        aria-label="Plan name"/>
                                 <div className="flex gap-1 flex-none">
                                     {[["standing", "Standing"], ["oneshot", "One-shot"]].map(([m, lbl]) => (
-                                        <button key={m} onClick={() => bp.patchPlan(active.id, {mode: m})}
+                                        <button key={m} onClick={() => bp.setPlanMode(active.id, m)}
                                                 className={cn("px-3 py-2 rounded-sm border text-[11px] font-semibold uppercase tracking-[0.4px] transition-[border-color,background,color] duration-150 ease-out-db",
                                                     active.mode === m ? "border-gold-line bg-gold-soft text-gold" : "border-line bg-sunk text-dim hover:text-text")}>
                                             {lbl}
