@@ -538,6 +538,37 @@
         }
     }
 
+    /* C-RAM gun round: a small amber tracer bullet with a hot glowing tail — the
+       rapid-fire kinetic look, not a guided SAM dart. */
+    .db-interceptor.cram {
+        width: 5px;
+        height: 11px;
+    }
+
+    .db-interceptor.cram .db-int-body {
+        left: 1px;
+        top: 2px;
+        width: 3px;
+        height: 5px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #fff6cf, #ffd24a 60%, #ff9e1e);
+        box-shadow: 0 0 6px rgba(255, 200, 74, 0.95);
+    }
+
+    .db-interceptor.cram .db-int-body::before {
+        display: none;
+    }
+
+    .db-interceptor.cram .db-int-flame {
+        left: 1px;
+        top: 6px;
+        width: 3px;
+        height: 6px;
+        background: radial-gradient(ellipse 60% 100% at 50% 0%, #fff, #ffe08a 45%, #ff8c1e 78%, transparent);
+        box-shadow: 0 0 7px 2px rgba(255, 170, 40, 0.85);
+        animation: dbFlame 0.05s infinite alternate;
+    }
+
     /* ===================== fireball detonation (Explosion.jsx) =====================
        A layered fire burst: white flash + shock ring + three billowing flame
        blobs + a white-hot core + a short smoke wisp + flung embers. Every

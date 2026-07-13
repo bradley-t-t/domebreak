@@ -53,8 +53,17 @@ const VAPOR_LOD_TRAILS = 140;
 // Interceptor contrail tint per firing battery. Same plume treatment as the
 // missiles (see drawTrail), just thinner and in the battery's own colour so a
 // defender's shots read apart from the ICBMs they chase.
-const INT_TRAIL = {thaad: "#a9ecff", "": "#8dffbf"};
+const INT_TRAIL = {thaad: "#a9ecff", cram: "#ffd24a", "": "#8dffbf"};
 const INT_TRAIL_W = 1.6;
+// Sprite/trail variant per firing battery type. Most defenses share the default
+// green dart; these read apart — THAAD's cyan exo-dart, the C-RAM's amber gun
+// tracer, and the laser (drawn as a beam below, so it gets no dart sprite).
+const INT_VARIANT = {thaad: "thaad", cram: "cram", laser: "laser"};
+const intVariant = (t) => INT_VARIANT[t] || "";
+// Directed-energy beam palette: a white-hot core inside a searing red-orange
+// bolt, unmistakable against the green/cyan interceptors.
+const BEAM_CORE = "#fff2ec";
+const BEAM_GLOW = "#ff4d2e";
 
 // #rgb / #rrggbb -> "rgba(r,g,b,a)". Trail colors in the warhead registry are
 // all 6-digit hex; the 3-digit branch is just belt-and-suspenders.
@@ -259,6 +268,78 @@ function intGeom(it, project, occluded, refLng) {
     return {pts, head: head || null, deg};
 }
 
+// The two screen endpoints of a laser beam: the emitter on the ground and the
+// point it's burning, lifted to the target's altitude. Mirrors intGeom's
+// unwrap/shift so a dateline- or pole-crossing shot pins to the right world copy.
+function beamGeom(it, project, occluded, refLng) {
+    const tlng0 = unwrapLng(it.toLng, it.fromLng);
+    const shift = 360 * Math.round((refLng - tlng0) / 360);
+    const flng = it.fromLng + shift;
+    const tlng = tlng0 + shift;
+    if (occluded(flng, it.fromLat) || occluded(tlng, it.toLat)) return null; // over the horizon
+    const [ax, ay] = project(flng, it.fromLat);
+    const [bx, by] = project(tlng, it.toLat);
+    return {a: [ax, ay], b: [bx, by - (it.tgtAlt || 0) * 72]};
+}
+
+// A laser bolt: three stacked strokes (wide glow, mid bolt, white-hot core) plus
+// an emitter flare at the battery, with a gentle energy flicker. Cosmetic layer,
+// so wall-clock time for the flicker is fine.
+function drawBeam(ctx, a, b, now) {
+    const flick = 0.82 + 0.18 * Math.sin(now * 0.05);
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.strokeStyle = rgba(BEAM_GLOW, 0.26 * flick);
+    ctx.lineWidth = 7;
+    ctx.stroke();
+    ctx.strokeStyle = rgba(BEAM_GLOW, 0.85 * flick);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = rgba(BEAM_CORE, 0.95);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(a[0], a[1], 4.5 * flick, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(BEAM_GLOW, 0.5);
+    ctx.fill();
+    ctx.restore();
+}
+
+// A C-RAM gun tracer: bright amber dashes streaming along the flight path, the
+// dash offset scrolling toward the target so the stream reads as a burst of
+// rounds. `pts` may carry null gaps where the track dips behind the globe.
+function drawTracer(ctx, pts, now) {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.setLineDash([3.5, 5]);
+    ctx.lineDashOffset = -(now * 0.35) % 12;
+    let run = [];
+    const flush = () => {
+        if (run.length >= 2) {
+            ctx.beginPath();
+            ctx.moveTo(run[0][0], run[0][1]);
+            for (let i = 1; i < run.length; i++) ctx.lineTo(run[i][0], run[i][1]);
+            ctx.strokeStyle = rgba(INT_TRAIL.cram, 0.32);
+            ctx.lineWidth = 3.4;
+            ctx.stroke();
+            ctx.strokeStyle = rgba("#fff3c4", 0.95);
+            ctx.lineWidth = 1.3;
+            ctx.stroke();
+        }
+        run = [];
+    };
+    for (const p of pts) {
+        if (!p) flush();
+        else run.push(p);
+    }
+    flush();
+    ctx.restore();
+}
+
 // Sprite placement is transform-only: writing left/top would invalidate layout
 // for every sprite every frame (hundreds of reflows at 60fps in a salvo);
 // translate() rides the compositor with the will-change hint instead. Writes
@@ -364,9 +445,17 @@ function update(map, data, canvas, els, tracks) {
         }
         if (pts.length > 1) trails.push({pts, color: "#dfe4ea", width: 1});
     }
+    const beams = [], tracers = [];
     for (const it of interceptors) {
+        const variant = intVariant(it.srcType);
+        if (variant === "laser") {
+            const seg = beamGeom(it, project, occluded, refLng);
+            if (seg) beams.push(seg);
+            continue; // the beam is the whole visual — no dart, no contrail
+        }
         const {pts, head, deg} = intGeom(it, project, occluded, refLng);
-        trails.push({pts, color: INT_TRAIL[it.srcType === "thaad" ? "thaad" : ""], width: INT_TRAIL_W});
+        if (variant === "cram") tracers.push(pts);
+        else trails.push({pts, color: INT_TRAIL[variant] || INT_TRAIL[""], width: INT_TRAIL_W});
         place(els.get("i" + it.id), head, deg, "");
     }
 
@@ -383,6 +472,9 @@ function update(map, data, canvas, els, tracks) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px; widths in CSS px
     const vapor = trails.length <= VAPOR_LOD_TRAILS;
     for (const tr of trails) drawTrail(ctx, tr.pts, tr.color, tr.width, w, hgt, vapor);
+    const now = performance.now();
+    for (const pts of tracers) drawTracer(ctx, pts, now);
+    for (const b of beams) drawBeam(ctx, b.a, b.b, now); // beams sit on top of the plumes
 }
 
 export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
@@ -419,7 +511,7 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
     // missiles don't reconcile the whole layer. Positions are written imperatively
     // by update(); nothing position-dependent lives in this JSX.
     const sig = projectiles.map((p) => `p${p.id}:${WARHEADS[p.warhead] ? p.warhead : "standard"}:${p.sub ? 1 : 0}:${p.muni || ""}`).join("|")
-        + "#" + interceptors.map((it) => `i${it.id}:${it.srcType === "thaad" ? "t" : ""}`).join("|");
+        + "#" + interceptors.map((it) => `i${it.id}:${intVariant(it.srcType)}`).join("|");
     const heads = useMemo(() => {
         const nodes = [];
         for (const p of projectiles) {
@@ -434,7 +526,8 @@ export default function SkyLayer({map, projectiles, interceptors, aircraft}) {
             );
         }
         for (const it of interceptors) {
-            const variant = it.srcType === "thaad" ? "thaad" : "";
+            const variant = intVariant(it.srcType);
+            if (variant === "laser") continue; // the beam is canvas-drawn — no dart sprite
             nodes.push(
                 <div key={"i" + it.id} ref={setRef("i" + it.id)}
                      className="absolute left-0 top-0 pointer-events-none z-3 will-change-transform">
