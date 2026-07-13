@@ -141,6 +141,30 @@ describe("flyStrike mission", () => {
         expect(bomber.hp <= 0 || haversine(bomber.lng, bomber.lat, strip.lng, strip.lat) < apex).toBe(true);
     });
 
+    it("test_recovers_over_the_pole_instead_of_around_the_globe", () => {
+        // A high-latitude strip whose returning bomber is most of a hemisphere
+        // away in longitude. The great-circle route home cuts straight over the
+        // pole; a flat "shortest change in longitude" heading would instead sweep
+        // the bomber the long way around its parallel — the around-the-whole-globe
+        // glitch. So the recovery must CLIMB toward the pole, not hold its latitude.
+        const strip = {id: "strip", slot: 0, type: "airstrip", hp: 45, lng: 150, lat: 72, hangar: {bomber: 0}};
+        const w = war([strip], []);
+        const bomber = {
+            id: "b", slot: 0, type: "bomber", hp: 60, lng: -30, lat: 72, alt: 1,
+            baseId: "strip", targetId: null,
+            mission: {role: "strike", targetId: "c", homeId: "strip", phase: "rtb", passes: STRIKE.maxPasses},
+        };
+        w.units.push(bomber);
+        let peakLat = Math.abs(bomber.lat);
+        for (let i = 0; i < 400 && bomber.hp > 0; i++) {
+            flyStrike(w, bomber, UNITS.bomber, 0.6);
+            peakLat = Math.max(peakLat, Math.abs(bomber.lat));
+            expect(Math.abs(bomber.lat)).toBeLessThanOrEqual(90); // never an invalid coordinate
+        }
+        expect(peakLat).toBeGreaterThan(85);   // it went over the top of the world
+        expect(bomber.hp).toBeLessThanOrEqual(0); // and made it home to stow
+    });
+
     it("test_committed_bomber_re_targets_when_a_wingmate_kills_its_target", () => {
         // Two enemy targets side by side. A bomber inbound on the first has its
         // target destroyed by a wing-mate while it's still en route — it must press
