@@ -12,7 +12,6 @@ import {useEffect} from "react";
 import {isTyping, keyToken} from "../../game/platform/keybindings.js";
 import {PAN_LAT_LIMIT, PAN_PX_PER_SEC} from "../../game/data/constants.js";
 import {clampSym} from "../../lib/math.js";
-import {unwrapLng} from "../../lib/geo.js";
 
 export function usePanControls({globe, overlayOpen, K, mapRef}) {
     useEffect(() => {
@@ -37,19 +36,23 @@ export function usePanControls({globe, overlayOpen, K, mapRef}) {
             const nx = dx / len, ny = dy / len;
             const distPx = (PAN_PX_PER_SEC * SEG_MS) / 1000;
             if (globe) {
-                // On the globe, pan by shifting the CENTER in lng/lat instead of a
-                // pixel panBy. A screen-pixel panBy drifts toward the poles on A/D
-                // (a horizontal screen line is not a line of latitude on a sphere)
-                // and lands off the disc for large offsets. Deriving the local
-                // deg-per-pixel from a tiny (10px, always on-sphere) reference lets
-                // A/D change longitude only (same latitude) and W/S change latitude
-                // only — correct in every orientation, at the same feel as flat.
+                // On the globe, pan by shifting the CENTER in lng/lat rather than a
+                // pixel panBy (a horizontal screen line is not a line of latitude on a
+                // sphere, so panBy drifts toward the poles on A/D). The W/S scale is a
+                // tiny vertical reference sampled toward the equator — down-screen
+                // never crosses the pole, so it stays well-defined at high latitude.
+                // The A/D scale is analytic: at the view center the projection is
+                // locally isotropic, so degPerPxLng = degPerPxLat / cos(lat), and
+                // meridians converging poleward make a screen step span more longitude.
+                // Sampling a pixel to the RIGHT instead would flip sign and explode
+                // near the on-screen pole (it lands across the pole on the opposite
+                // meridian) — the source of the polar A/D inversion and stutter.
                 const c = m.getCenter();
                 const pc = m.project(c);
                 const ref = 10;
-                const dLngRef = unwrapLng(m.unproject([pc.x + ref, pc.y]).lng - c.lng, 0);
-                const degPerPxLng = dLngRef / ref;
-                const degPerPxLat = (m.unproject([pc.x, pc.y - ref]).lat - c.lat) / ref;
+                const degPerPxLat = (c.lat - m.unproject([pc.x, pc.y + ref]).lat) / ref;
+                const cosLat = Math.max(Math.cos((c.lat * Math.PI) / 180), 0.01);
+                const degPerPxLng = degPerPxLat / cosLat;
                 const lat = clampSym(c.lat - ny * distPx * degPerPxLat, PAN_LAT_LIMIT);
                 m.easeTo({center: [c.lng + nx * distPx * degPerPxLng, lat], duration: SEG_MS, easing: (t) => t});
             } else {
