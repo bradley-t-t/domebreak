@@ -55,6 +55,14 @@ describe("battle-plan persistence", () => {
         expect(back.plans[0].targetNations).toEqual([2, 5]);
     });
 
+    it("test_read_disarms_a_non_standing_plan_so_it_never_restores_stuck_on", () => {
+        // `armed` is standing-only; a plan saved armed-then-switched-to-one-shot must
+        // not come back armed (one-shot mode has no Disarm control to clear it).
+        const w = createWorld(setup());
+        writeBattlePlans(w, [plan({mode: "oneshot", armed: true})], "plan-1");
+        expect(readBattlePlans(w).plans[0].armed).toBe(false);
+    });
+
     it("test_read_resets_fireNonce_so_a_loaded_oneshot_does_not_refire", () => {
         const w = createWorld(setup());
         writeBattlePlans(w, [plan({mode: "oneshot", fireNonce: 5})], "plan-1");

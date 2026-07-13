@@ -296,7 +296,7 @@ export default function App() {
         // rules.activeCount nations participate (the player plus scattered great
         // powers), and every other country stays on the map as a passive, capturable
         // neutral.
-        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: rules.activeCount, rules});
+        const setup = buildSetup(data, iso, null, Math.floor(Math.random() * 1e9), {activeCount: rules.activeCount, aiPicks: rules.aiPicks, rules});
         const w = createWorld(setup);
         // Fresh solo matches always open at 1x and paused — the commander presses
         // play to begin. In-game speed hotkeys still work once running.
