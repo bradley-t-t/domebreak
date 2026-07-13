@@ -370,6 +370,9 @@ export const UNITS = {
         desc: "Directed-energy interceptor grid — speed-of-light kills with a bottomless magazine. Enormous to stand up, but almost free to keep firing.",
         kind: "defense",
         antiBallistic: true,
+        // Fires a directed-energy beam instead of a flying round: it holds on the
+        // target and burns it down in place (see stepInterceptors / SkyLayer).
+        beam: true,
         requiresTech: "def10",
         // Expensive upfront, cheap forever after: the highest build cost of any
         // defense, but the lowest running cost — the magazine is just electricity,

@@ -12,6 +12,7 @@ import {
     INTERCEPT_CAP,
     INTERCEPT_KILL_RADIUS_KM,
     INTERCEPTOR_SPEED,
+    LASER_DWELL_SEC,
     MIRV_SPLIT_AT,
     MISSILE_SPEED,
     POPULATION,
@@ -464,6 +465,7 @@ export function stepCombat(w, dt) {
                     id: nextId(w, "i"),
                     slot: d.slot,
                     srcType: d.type,   // firing battery type — drives the sky sprite variant
+                    beam: ddef.beam || undefined,   // directed-energy: burns in place, no round flies
                     targetId: p.id,
                     hitProb,
                     speed: INTERCEPTOR_SPEED,
@@ -591,11 +593,33 @@ export function stepInterceptors(w, dt) {
     // exactly the saturation engagements interceptors exist for.
     const projById = new Map();
     for (const p of w.projectiles) projById.set(p.id, p);
+    const emitIntercept = (tgt, it) => w.events.push({
+        id: nextId(w, "e"), t: w.time, type: "intercept",
+        lng: tgt.lng, lat: tgt.lat, alt: tgt.altNorm ?? 0, byLng: it.fromLng, byLat: it.fromLat
+    });
+    const emitMiss = (lng, lat, alt) => w.events.push({id: nextId(w, "e"), t: w.time, type: "miss", lng, lat, alt});
     for (const it of w.interceptors) {
         const live = projById.get(it.targetId);
         const tgt = live && !live._dead ? live : null;
         if (!tgt) {
             it._dead = true;
+            continue;
+        }
+        // Directed-energy beam: no round flies. The emitter tracks the target and
+        // holds the beam on it for LASER_DWELL_SEC, then rolls the kill. The
+        // renderer draws a straight beam from the battery to toLng/toLat each frame.
+        if (it.beam) {
+            it.toLng = tgt.lng;
+            it.toLat = tgt.lat;
+            it.tgtAlt = tgt.altNorm ?? 0;
+            it.dwell = (it.dwell ?? LASER_DWELL_SEC) - dt;
+            if (it.dwell <= 0) {
+                it._dead = true;
+                if (rand(w) < (it.hitProb ?? DEFAULT_HIT_PROB)) {
+                    tgt._dead = true;
+                    emitIntercept(tgt, it);
+                } else emitMiss(tgt.lng, tgt.lat, tgt.altNorm ?? 0);
+            }
             continue;
         }
         // Lead pursuit: steer toward where the target *will* be, not where it is.
@@ -616,39 +640,14 @@ export function stepInterceptors(w, dt) {
             it._dead = true;
             if (rand(w) < (it.hitProb ?? DEFAULT_HIT_PROB)) {
                 tgt._dead = true;
-                w.events.push({
-                    id: nextId(w, "e"),
-                    t: w.time,
-                    type: "intercept",
-                    lng: tgt.lng,
-                    lat: tgt.lat,
-                    alt: tgt.altNorm ?? 0,
-                    byLng: it.fromLng,
-                    byLat: it.fromLat
-                });
-            } else {
-                w.events.push({
-                    id: nextId(w, "e"),
-                    t: w.time,
-                    type: "miss",
-                    lng: it.lng,
-                    lat: it.lat,
-                    alt: it.altNorm ?? 0
-                });
-            }
+                emitIntercept(tgt, it);
+            } else emitMiss(it.lng, it.lat, it.altNorm ?? 0);
         } else if (receding) {
             // Closest approach has passed without ever reaching the kill radius, so
             // the pass is a miss. Fuze out here rather than turning the round back
             // around toward a target that is now behind it.
             it._dead = true;
-            w.events.push({
-                id: nextId(w, "e"),
-                t: w.time,
-                type: "miss",
-                lng: it.lng,
-                lat: it.lat,
-                alt: it.altNorm ?? 0
-            });
+            emitMiss(it.lng, it.lat, it.altNorm ?? 0);
         } else {
             // Remember the pre-move fix so the sky renderer can face the nose along
             // the round's real direction of travel instead of a stale aim point.

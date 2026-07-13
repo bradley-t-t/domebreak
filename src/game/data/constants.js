@@ -78,6 +78,10 @@ export const CAPITAL_HP = 140;
 export const INTERCEPT_CAP = 0.97;
 // Terminal engagement envelope (km): an interceptor inside this resolves its kill roll.
 export const INTERCEPT_KILL_RADIUS_KM = 50;
+// Directed-energy dwell (game-seconds): a laser beam holds on its target for this
+// long before the kill roll resolves — no round flies, it burns in place. Short
+// enough to read as a speed-of-light zap, long enough to see the beam.
+export const LASER_DWELL_SEC = 0.18;
 // Normalized climb-out altitude above which a based aircraft can fight and radiate.
 export const AIRBORNE_ALT = 0.55;
 // Fraction of build cost refunded when a unit is dismantled.
