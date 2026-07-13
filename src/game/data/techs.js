@@ -53,7 +53,7 @@ export const TECHS = {
         {name: "THAAD", unlocks: "thaad"},
         {name: "Ground-Based Midcourse Defense"},
         {name: "Brilliant Pebbles"},
-        {name: "Directed-Energy Defense"},
+        {name: "Directed-Energy Defense", unlocks: "laser"},
         {name: "Boost-Phase Intercept"},
         {name: "Integrated Missile Shield"},
     ]),
