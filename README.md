@@ -94,7 +94,7 @@ npm run electron:build:all   # package macOS + Windows
 
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
-| **Land — defense**  | SAM battery, plus Patriot, Aegis Ashore, and THAAD batteries                                                                                   |
+| **Land — defense**  | SAM battery, Mobile SHORAD, and close-in C-RAM, plus Patriot, Aegis Ashore, THAAD, and a directed-energy Laser Defense Grid                     |
 | **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the hypersonic missile battery — each firing selectable warheads                                 |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
