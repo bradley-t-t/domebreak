@@ -20,18 +20,37 @@ export const NEUTRAL_LINE = "#454b53";
 // the scorched wash, and everything else falls to the neutral default. When
 // `activeGids` is null/empty every country keeps its flag color (an all-active
 // world with no bounded roster).
-export function buildPoliticalTint(cols, {activeGids, wipedGids} = {}) {
+//
+// `conquered` is a GID_0 -> conqueror-GID_0 map for neutral countries a single
+// power has fully taken (every city held). Those wear the conqueror's OWN flag
+// color and border here, in the exact same base layer as its home land — so an
+// annexed country merges seamlessly into the conqueror's territory and fills even
+// provinces that hold no city (the GID_1 ownership overlay only reaches provinces
+// that do). It wins over the active/neutral branch so a taken country never falls
+// back to its native or neutral color.
+export function buildPoliticalTint(cols, {activeGids, wipedGids, conquered} = {}) {
     const only = activeGids && activeGids.size ? activeGids : null;
     const wiped = wipedGids && wipedGids.size ? wipedGids : null;
+    const conq = conquered && conquered.size ? conquered : null;
     const mix = (v, g) => Math.round(v * 0.6 + g * 0.4); // borders blend toward neutral grey
     const line = [], tint = [];
+    const done = new Set(); // gids already assigned (conquered wins, drawn once)
+    if (conq) for (const [gid, ownerGid] of conq) {
+        const c = cols[ownerGid];
+        if (!c || done.has(gid)) continue;
+        line.push(gid, rgbTuple([mix(c[0], 96), mix(c[1], 100), mix(c[2], 108)]));
+        tint.push(gid, rgbTuple(c));
+        done.add(gid);
+    }
     for (const [gid, c] of Object.entries(cols)) {
+        if (done.has(gid)) continue;
         if (wiped && wiped.has(gid)) continue; // handled by the wipeout branch below
         if (only && !only.has(gid)) continue;  // neutrals fall to the shared default
         line.push(gid, rgbTuple([mix(c[0], 96), mix(c[1], 100), mix(c[2], 108)]));
         tint.push(gid, rgbTuple(c));
     }
     if (wiped) for (const gid of wiped) {
+        if (done.has(gid)) continue;
         line.push(gid, WIPEOUT_LINE);
         tint.push(gid, WIPEOUT_TINT);
     }
