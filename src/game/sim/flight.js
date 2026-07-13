@@ -30,13 +30,24 @@ import {atWar} from "./queries.js";
 
 // Point at radiusKm/ang from origin o, in the local flight frame: math angle
 // (east = 0, counterclockwise), equirectangular offset with cos(lat) clamped
-// near the poles. bearingTo() reads angles in this same basis.
+// near the poles. bearingTo() returns headings in this same basis.
 export const polarFrom = offsetKmPolar;
 
-// Direction (math angle, east=0) from one point to another, in polarFrom's basis.
+// Initial great-circle heading from `from` to `to`, in polarFrom's local
+// math-angle basis (east = 0, counterclockwise) so advance() can steer straight
+// down it. This has to be the great-circle bearing, NOT a flat equirectangular
+// one: a flat bearing points along the shortest change in *longitude*, which at
+// high latitude is the long way — a bomber recovering to a base most of a
+// hemisphere away in longitude would fly clean around its parallel (visibly
+// "around the whole globe" on the sphere) instead of cutting over the pole. The
+// spherical formula routes over the top of the world when that's shorter, and
+// Δλ passes straight through sin/cos so the antimeridian needs no unwrap.
 export function bearingTo(from, to) {
-    const dLng = unwrapLng(to.lng - from.lng, 0);
-    return Math.atan2(to.lat - from.lat, dLng * cosLatSafe(from.lat));
+    const rad = Math.PI / 180;
+    const la1 = from.lat * rad, la2 = to.lat * rad, dLng = (to.lng - from.lng) * rad;
+    const y = Math.sin(dLng) * Math.cos(la2);
+    const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+    return Math.PI / 2 - Math.atan2(y, x); // compass (0 = N, clockwise) -> math angle (0 = E, ccw)
 }
 
 // Rotate `cur` toward `target` by at most `maxDelta`, shortest way around.
@@ -51,8 +62,17 @@ function turnToward(cur, target, maxDelta) {
 export function advance(u, desired, speedKm, turnRate, dt) {
     u.hdg = turnToward(u.hdg == null ? desired : u.hdg, desired, turnRate * dt);
     const p = polarFrom(u, speedKm * dt, u.hdg);
-    u.lng = unwrapLng(p.lng, 0); // keep coordinates sane across the antimeridian
-    u.lat = p.lat;
+    let lat = p.lat, lng = p.lng;
+    // A great-circle leg can run over a pole; in the local tangent frame that
+    // shows up as |lat| overshooting 90. Fold it back across the pole — reflect
+    // the latitude, step 180° round in longitude, and mirror the heading's
+    // north/south component — so the jet flies over the top of the world instead
+    // of jamming against the coordinate singularity (an invalid lat also throws
+    // map.project() downstream).
+    if (lat > 90) { lat = 180 - lat; lng += 180; u.hdg = -u.hdg; }
+    else if (lat < -90) { lat = -180 - lat; lng += 180; u.hdg = -u.hdg; }
+    u.lng = unwrapLng(lng, 0); // keep coordinates sane across the antimeridian
+    u.lat = lat;
     u.face = polarFrom(u, Math.max(18, speedKm), u.hdg);
 }
 
