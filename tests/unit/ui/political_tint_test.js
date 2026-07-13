@@ -71,6 +71,32 @@ describe("politicalTint", () => {
         expect(dflt).toBe(NEUTRAL_LINE);
     });
 
+    it("test_fully_conquered_country_wears_the_conquerors_flag_seamlessly", () => {
+        // FRA fully taken by USA: FRA renders in USA's OWN flag color and border,
+        // exactly as USA's home land — so the annexed country merges seamlessly.
+        const {tint, line} = buildPoliticalTint(COLS, {
+            activeGids: new Set(["USA", "RUS"]),
+            conquered: new Map([["FRA", "USA"]]),
+        });
+        const t = matchToMap(tint).map;
+        const l = matchToMap(line).map;
+        expect(t.FRA).toBe("rgb(40,90,200)");   // USA's flag, not FRA's own or neutral
+        expect(t.USA).toBe("rgb(40,90,200)");    // identical to the conqueror's home
+        expect(l.FRA).toBe(l.USA);               // same blended border as home
+    });
+
+    it("test_conquered_wins_over_the_active_and_wiped_branches", () => {
+        // A taken country is drawn once, as the conqueror — never doubled back to
+        // its native flag, the neutral default, or the wipeout wash.
+        const {tint} = buildPoliticalTint(COLS, {
+            activeGids: new Set(["USA"]),
+            wipedGids: new Set(["RUS"]),
+            conquered: new Map([["RUS", "USA"]]),
+        });
+        const t = matchToMap(tint).map;
+        expect(t.RUS).toBe("rgb(40,90,200)");   // conqueror's flag beats the wipeout wash
+    });
+
     it("test_flagColor_resolves_a_table_entry_and_reports_gaps", () => {
         expect(flagColor(COLS, "USA")).toBe("rgb(40,90,200)");
         expect(flagColor(COLS, "ZZZ")).toBeNull(); // missing -> caller uses its fallback

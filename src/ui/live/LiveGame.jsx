@@ -323,7 +323,11 @@ export default function LiveGame({
         return {activeGids: active, wipedGids: wiped};
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nationSig]);
-    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids, wipedGids});
+    // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
+    // `ownership.conquered` (whole countries a power has fully taken) feeds the base
+    // political tint below so annexed land renders seamlessly with its conqueror's home.
+    const ownership = useOwnershipLayer(w);
+    const {countryByGid} = useMapVisualEffects({mapRef, layers, mapReady, labels, activeGids, wipedGids, conquered: ownership.conquered});
 
     // Live strike preview for the Battle Planning console: the active plan's
     // attacker→target arcs, target markers, and attacker origins, derived from the SAME
@@ -360,8 +364,6 @@ export default function LiveGame({
     } = useLiveLayers({
         w, mySlot, backdrop, layers, selUnit, teamColor, globe, battlePreview
     });
-    // Territory recolor for conquered / broken-away provinces (see useOwnershipLayer).
-    const ownership = useOwnershipLayer(w);
     // Diplomacy map filter: recolor every nation by your standing (see useDiplomacyLayer).
     const diplomacy = useDiplomacyLayer(w, mySlot);
 
