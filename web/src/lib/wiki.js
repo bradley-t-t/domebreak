@@ -13,8 +13,8 @@ export const CATEGORIES = [
     {
         id: "defense",
         label: "Missile Defense",
-        blurb: "Interceptors, area defense, and the layered shield.",
-        include: ["battery", "patriot", "aegis", "thaad"],
+        blurb: "Interceptors, mobile and close-in guns, area defense, and directed energy — the layered shield.",
+        include: ["battery", "mshorad", "cram", "patriot", "aegis", "thaad", "laser"],
     },
     {
         id: "offense",

@@ -279,6 +279,22 @@ export const UNITS = {
         hp: 46,
         upkeep: 1.5
     },
+    cram: {
+        label: "C-RAM",
+        desc: "Radar-cued 20mm Gatling gun — the last-ditch terminal layer. Almost no reach, but it hoses down whatever rockets, artillery, or mortars slip past everything else.",
+        kind: "defense",
+        requiresTech: "def4",
+        cost: 130,
+        buildTime: 7,
+        // Close-in gun: the shortest reach of any defense, but the fastest to
+        // re-engage and the cheapest per burst — cheap shells, thrown fast.
+        range: 150,
+        intercept: 0.55,
+        reload: 1.2,
+        fireCost: 6,
+        hp: 42,
+        upkeep: 1,
+    },
     // --- Tech-gated modern & space-age units --------------------------------
     // Each carries requiresTech: "<techId>" — buildable only once that tech is done
     // (enforced in sim/production.js queueUnit). The techId must match the `unlocks`
@@ -348,6 +364,28 @@ export const UNITS = {
         fireCost: 24,
         hp: 65,
         upkeep: 3.5,
+    },
+    laser: {
+        label: "Laser Defense Grid",
+        desc: "Directed-energy interceptor grid — speed-of-light kills with a bottomless magazine. Enormous to stand up, but almost free to keep firing.",
+        kind: "defense",
+        antiBallistic: true,
+        // Fires a directed-energy beam instead of a flying round: it holds on the
+        // target and burns it down in place (see stepInterceptors / SkyLayer).
+        beam: true,
+        requiresTech: "def10",
+        // Expensive upfront, cheap forever after: the highest build cost of any
+        // defense, but the lowest running cost — the magazine is just electricity,
+        // so upkeep and per-shot cost are near nothing.
+        cost: 900,
+        buildTime: 26,
+        range: 450,
+        intercept: 0.82,
+        reload: 1,
+        fireCost: 1,
+        hp: 60,
+        upkeep: 1,
+        hint: "Huge upfront cost, minimal running cost — nearly free to keep firing once it is standing.",
     },
     // Space assets — orbital platforms with global reach on a fixed inclination.
     // Each tick stepOrbits advances their longitude by orbitSpeedDegPerSec while
@@ -732,9 +770,11 @@ export const UNIT_ICON = {
     // Tech-gated modern / space / naval units. Basenames are the exact filenames the
     // art pipeline emits under public/icons/.
     hypersonicbty: "hypersonicbty",
+    cram: "cram",
     patriot: "patriot",
     aegis: "aegis",
     thaad: "thaad",
+    laser: "laser",
     spacehq: "spacehq",
     reconsat: "reconsat",
     orbitalstrike: "orbitalstrike",
