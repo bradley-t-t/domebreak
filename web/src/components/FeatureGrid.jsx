@@ -6,7 +6,7 @@ import GameIcon from "./GameIcon.jsx";
 const FEATURES = [
     {icon: "reconsat", title: "The world map", body: "Real borders, real cities, real population, on a 3D globe built from actual geography."},
     {icon: "spacehq", title: "Rival powers", body: "Up to eleven rival powers each run their own economy, defenses, and doctrine, and react to what you do. No two matches play out the same."},
-    {icon: "dome", title: "Missile defense", body: "Blanket your territory in radar and early warning. Layer interceptors, THAAD, and area defense to hold the dome."},
+    {icon: "dome", title: "Missile defense", body: "Blanket your territory in radar and early warning. Layer close-in guns, interceptors, THAAD, and a directed-energy grid to hold the dome."},
     {icon: "silo", title: "Missile offense", body: "Plan an attack — pick launchers, choose targets, route the trajectory, and let it fly."},
     {icon: "factory", title: "A nation to run", body: "Balance GDP, industry, and stability. Every silo and interceptor is paid for out of a real budget."},
     {icon: "spacehq", title: "Desktop-first", body: "A native app for macOS and Windows. Your saves stay on your machine."},
