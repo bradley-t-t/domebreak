@@ -54,10 +54,10 @@ function Landing({onSignIn, onShowShortcuts}) {
                         index="02" side="right" icon="dome"
                         kicker="Build the dome"
                         title="Early warning to intercept"
-                        body="Blanket your territory in radar and early warning, then layer interceptors, THAAD, and area defense. Every sensor and launch site is placed by you and paid for."
+                        body="Blanket your territory in radar and early warning, then layer it in depth — close-in guns, interceptors, THAAD, and a directed-energy grid. Every sensor and launch site is placed by you and paid for."
                         points={[
                             "Radar and early-warning coverage across your territory",
-                            "Interceptors, THAAD, and area defense in depth",
+                            "Close-in guns, interceptors, THAAD, and directed energy in depth",
                             "Objectives guide you from first bunker to full dome",
                         ]}
                         image="/shots/radar-coverage.jpg"
@@ -76,7 +76,7 @@ function Landing({onSignIn, onShowShortcuts}) {
                         points={[
                             "Author multi-launcher attack plans on the globe",
                             "Choose targets and preview trajectories before you commit",
-                            "Warheads from standard to hypersonic and cluster",
+                            "Warheads from standard to cluster, hypersonic, and thermonuclear MIRV",
                         ]}
                         image="/shots/battle-plan.jpg"
                         imageAlt="DomeBreak battle planning panel"
