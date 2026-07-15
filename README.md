@@ -95,7 +95,7 @@ npm run electron:build:all   # package macOS + Windows
 | Domain              | Systems                                                                                                                                       |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
 | **Land — defense**  | SAM battery, Mobile SHORAD, and close-in C-RAM, plus Patriot, Aegis Ashore, THAAD, and a directed-energy Laser Defense Grid                     |
-| **Land — strike**   | Hypersonic launcher, missile silo (ICBM), and the hypersonic missile battery — each firing selectable warheads                                 |
+| **Land — strike**   | Road-mobile TEL (SICBM), missile silo (ICBM), and the hypersonic missile battery — the silo loading any warhead from conventional to thermonuclear MIRV |
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
 | **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus SSN / SSBN submarines and amphibious transports                           |
@@ -124,8 +124,8 @@ it calls for, so the early game has a clear shape while you learn the map.
   Flags via `flag-icons`.
 - **Desktop** — an Electron 33 shell (`electron/main.cjs`), packaged for macOS, Windows, and Linux with
   `electron-builder`.
-- **Multiplayer backend** — Supabase (Auth, Postgres, and the Deno edge functions `db-account`, `db-lobby`, `db-match`,
-  `db-party`, `db-social`, and `db-waitlist`) plus an authoritative Node game server (`server/`) that imports the same
+- **Multiplayer backend** — Supabase (Auth, Postgres, and the Deno edge functions `db-account`, `db-beta`, `db-lobby`,
+  `db-match`, `db-party`, `db-social`, and `db-waitlist`) plus an authoritative Node game server (`server/`) that imports the same
   engine and runs live matches over WebSockets. Configure the client with `VITE_SUPABASE_URL` and
   `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
 
