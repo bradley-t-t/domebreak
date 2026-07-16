@@ -99,7 +99,7 @@ npm run electron:build:all   # package macOS + Windows
 | **Sensors**         | Early-warning radar, over-the-horizon radar, airborne AEW&C, and orbital reconnaissance / missile-warning satellites                           |
 | **Ground forces**   | Army base, infantry, artillery, tank battalions, and attack / transport helicopters                                                           |
 | **Sea**             | Missile cruiser, destroyer (ASW), battleship, aircraft carrier, plus SSN / SSBN submarines and amphibious transports                           |
-| **Air**             | Multirole, strike, air-superiority, and carrier fighters, close air support, transport, and AEW&C — flown from airstrips and carriers as wings |
+| **Air**             | Multirole, strike, air-superiority, and carrier fighters, close air support, the strategic bomber, transport, and AEW&C — flown from airstrips and carriers as wings |
 | **Space**           | Behind a Space Command HQ: a reconnaissance satellite and an orbital strike platform                                                           |
 | **Warheads**        | Conventional, cluster (MIRV splash), hypersonic glide, thermonuclear city-killer, road-mobile SICBM, and thermonuclear MIRV — each produced against its own cost and build time |
 
