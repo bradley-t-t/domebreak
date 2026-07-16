@@ -2,7 +2,7 @@
   "name": "domebreak",
   "productName": "DomeBreak",
   "private": true,
-  "version": "1.13.4",
+  "version": "2.0.0",
   "type": "module",
   "description": "DomeBreak - online multiplayer missile defense/offense game.",
   "main": "electron/main.cjs",
