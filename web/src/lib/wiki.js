@@ -3,6 +3,7 @@
 // built from these records; the numbers themselves come from the source of
 // truth in src/game/data/units.js.
 import {UNITS, UNIT_ICON} from "@game/game/data/units.js";
+import {WARHEADS} from "@game/game/data/warheads.js";
 
 // Category buckets used by the wiki UI. `include` lists every unit id we
 // surface, in the order they should render inside the section. Any unit id not
@@ -60,18 +61,13 @@ export const CATEGORIES = [
     },
 ];
 
-// Every warhead-firing platform picks from these display names. The keys are
-// the ammo ids in units.js (`ammo: ["standard", "cluster", "thermo",
-// "thermomirv"]`) — kept here so a wiki reader sees the same names the sim
-// uses in-game, without having to import the warhead registry.
-const WARHEAD_LABEL = {
-    standard: "Standard",
-    cluster: "Cluster",
-    thermo: "Thermonuclear",
-    thermomirv: "Thermo MIRV",
-    hgv: "Hypersonic Glide Vehicle",
-    sicbm: "SICBM",
-};
+// Every warhead-firing platform picks from these display names. Derived
+// straight from the warhead registry (keyed by the ammo ids in units.js —
+// `ammo: ["standard", "cluster", "thermo", "thermomirv"]`) so a wiki reader
+// sees the exact names the sim uses in-game, with no hand-kept copy to drift.
+const WARHEAD_LABEL = Object.fromEntries(
+    Object.entries(WARHEADS).map(([id, w]) => [id, w.name]),
+);
 
 // Display label for the platform an air unit is fielded from. Derived by
 // scanning every unit's `wing` list — a fighter's home is the first hull whose
