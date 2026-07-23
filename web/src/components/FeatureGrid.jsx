@@ -9,7 +9,7 @@ const FEATURES = [
     {icon: "dome", title: "Missile defense", body: "Blanket your territory in radar and early warning. Layer close-in guns, interceptors, THAAD, and a directed-energy grid to hold the dome."},
     {icon: "silo", title: "Missile offense", body: "Plan an attack — pick launchers, choose targets, route the trajectory, and let it fly."},
     {icon: "factory", title: "A nation to run", body: "Balance GDP, industry, and stability. Every silo and interceptor is paid for out of a real budget."},
-    {icon: "spacehq", title: "Desktop-first", body: "A native app for macOS and Windows. Your saves stay on your machine."},
+    {icon: "awacs", title: "Play online", body: "Take on other commanders in real time. Server-authoritative online matches with a live lobby, parties, and friends — the same world and arsenal, human opponents."},
 ];
 
 export default function FeatureGrid() {
