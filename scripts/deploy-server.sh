@@ -14,8 +14,11 @@ V="${1:?usage: deploy-server.sh <VERSION>}"
 V="${V#v}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-VPS="${GD_VPS:-root@144.202.78.170}"
-VPS_KEY="${GD_VPS_KEY:-$HOME/.ssh/domebreak_vps}"
+# Deploy targets are machine-specific and kept out of the repo. Set them in the
+# environment or in scripts/deploy.local.env (gitignored).
+[ -f "$REPO/scripts/deploy.local.env" ] && . "$REPO/scripts/deploy.local.env"
+VPS="${GD_VPS:?set GD_VPS (e.g. root@your-vps) in the environment or scripts/deploy.local.env}"
+VPS_KEY="${GD_VPS_KEY:-$HOME/.ssh/id_ed25519}"
 K=(-i "$VPS_KEY" -o ConnectTimeout=15)
 SCP=(scp -i "$VPS_KEY" -o ConnectTimeout=15)
 HEALTH="https://game.domebreak.com/health"
