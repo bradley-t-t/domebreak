@@ -1,5 +1,5 @@
 // National Stability: the live-target penalty model, easing/recovery, and the HUD
-// status readout. Deterministic — no RNG, no history. Spec: design/gdd/stability.md.
+// status readout. Deterministic — no RNG, no history.
 import {describe, expect, it} from "vitest";
 import {stabilityStatus, stabilityTarget, updateStability} from "../../../src/game/engine.js";
 import {evacTick} from "../../../src/game/sim/leadership.js";
