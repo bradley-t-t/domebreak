@@ -1,15 +1,12 @@
 import {scrollToId} from "../lib/nav.js";
 import {cn} from "../lib/cn.js";
 import GameIcon from "./GameIcon.jsx";
-import {SteamGlyph} from "./SteamCta.jsx";
 
 // A single menu row: framed icon + label + micro-description. Shared by the
 // desktop dropdown and the mobile drawer so both read identically. Internal
 // items route through scrollToId; external items are real anchors.
 export default function NavMenuItem({item, onDone}) {
-    const icon = item.steam
-        ? <SteamGlyph size={18} className="text-[#66c0f4]"/>
-        : <GameIcon name={item.icon} size={18}/>;
+    const icon = <GameIcon name={item.icon} size={18}/>;
 
     const body = (
         <>
