@@ -11,7 +11,8 @@ release
 *.iml
 *.sql
 # Claude config and skills never live in the repo.
-/.claude/
+.claude/
+.fleet/
 
 # Machine-specific deploy targets (VPS/build-box hosts and keys) stay local.
 scripts/deploy.local.env
