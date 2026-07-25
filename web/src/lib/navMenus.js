@@ -1,9 +1,7 @@
-import {STEAM_URL} from "./steam.js";
-
 // Grouped navigation used by both the desktop dropdowns and the mobile drawer,
 // so the two never drift. Each item is either an internal target (handled by
 // scrollToId — a scroll anchor, or the "wiki"/"download" hash routes) or an
-// external link. `steam: true` swaps the game icon for the Steam glyph.
+// external link.
 export const NAV_MENUS = [
     {
         label: "Game",
@@ -16,9 +14,8 @@ export const NAV_MENUS = [
     {
         label: "Get It",
         items: [
+            {label: "Play Free", desc: "Create an account and play", icon: "dome", target: "play"},
             {label: "Download", desc: "macOS + Windows installers", icon: "factory", target: "download"},
-            {label: "Wishlist on Steam", desc: "Get notified at launch", steam: true, external: STEAM_URL},
-            {label: "Notify Me by Email", desc: "One email when it launches", icon: "radar", target: "waitlist"},
         ],
     },
 ];

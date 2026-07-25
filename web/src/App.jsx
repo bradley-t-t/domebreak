@@ -2,7 +2,7 @@ import {useMemo, useState} from "react";
 import Nav from "./components/Nav.jsx";
 import Hero from "./components/Hero.jsx";
 import Manifesto from "./components/Manifesto.jsx";
-import ClosedBeta from "./components/ClosedBeta.jsx";
+import PlayBand from "./components/PlayBand.jsx";
 import ShowcaseSection from "./components/ShowcaseSection.jsx";
 import StatBand from "./components/StatBand.jsx";
 import FeatureGrid from "./components/FeatureGrid.jsx";
@@ -32,8 +32,8 @@ function Landing({onSignIn, onShowShortcuts}) {
                     <Manifesto/>
                 </div>
 
-                {/* Featured closed-beta application band. */}
-                <ClosedBeta/>
+                {/* Featured "play free" band — create account + download. */}
+                <PlayBand onSignIn={onSignIn}/>
 
                 <ShowcaseSection
                     index="01" side="left" icon="reconsat"
@@ -101,7 +101,7 @@ function Landing({onSignIn, onShowShortcuts}) {
                     <FeatureGrid/>
                 </div>
 
-                <CtaBand/>
+                <CtaBand onSignIn={onSignIn}/>
             </main>
             <Footer onShowShortcuts={onShowShortcuts}/>
         </div>
@@ -111,6 +111,7 @@ function Landing({onSignIn, onShowShortcuts}) {
 function Shell() {
     const {signedIn, loading} = useAccount();
     const [authOpen, setAuthOpen] = useState(false);
+    const [authMode, setAuthMode] = useState("signin");
     const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const [hash] = useHashRoute();
     const onWiki = isWikiRoute(hash);
@@ -126,7 +127,13 @@ function Shell() {
     }, [signedIn]);
     useHotkeys(handlers);
 
-    const openSignIn = () => setAuthOpen(true);
+    // Accepts an optional mode ("signin" | "signup"); anything else (e.g. a click
+    // event passed as the handler) coerces to "signin", so no-arg call sites stay
+    // valid. Sign-up CTAs pass "signup" to open the modal on the create tab.
+    const openSignIn = (mode) => {
+        setAuthMode(mode === "signup" ? "signup" : "signin");
+        setAuthOpen(true);
+    };
     const openShortcuts = () => setShortcutsOpen(true);
 
     return (
@@ -141,7 +148,7 @@ function Shell() {
                             : <DownloadLocked onSignIn={openSignIn} onShowShortcuts={openShortcuts} checking={loading}/>)
                         : <Landing onSignIn={openSignIn} onShowShortcuts={openShortcuts}/>}
 
-            <AuthModal open={authOpen} onClose={() => setAuthOpen(false)}/>
+            <AuthModal open={authOpen} initialMode={authMode} onClose={() => setAuthOpen(false)}/>
             <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
         </>
     );

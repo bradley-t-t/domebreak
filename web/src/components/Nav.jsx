@@ -8,18 +8,18 @@ import GameIcon from "./GameIcon.jsx";
 import AccountMenu from "./AccountMenu.jsx";
 import NavDropdown from "./NavDropdown.jsx";
 import MobileNav from "./MobileNav.jsx";
-import {SteamNavLink} from "./SteamCta.jsx";
+import {PlayNavLink} from "./PlayCta.jsx";
 
-// Featured, always-visible link to the closed-beta band — the site's headline
+// Featured, always-visible link to the "play free" band — the site's headline
 // call to action, so it gets a live status dot instead of sitting in a menu.
-function BetaLink() {
+function PlayLink() {
     return (
         <button
-            onClick={() => scrollToId("beta")}
+            onClick={() => scrollToId("play")}
             className="hidden items-center gap-2 rounded-sm px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-text transition-colors duration-150 hover:text-gold-hi md:inline-flex cursor-pointer"
         >
             <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
-            Closed Beta
+            Play Free
         </button>
     );
 }
@@ -62,11 +62,11 @@ export default function Nav({onSignIn}) {
                     {NAV_MENUS.map((group) => (
                         <NavDropdown key={group.label} label={group.label} items={group.items}/>
                     ))}
-                    <BetaLink/>
+                    <PlayLink/>
                 </div>
 
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                    <SteamNavLink className="hidden sm:inline-flex"/>
+                    <PlayNavLink className="hidden sm:inline-flex"/>
 
                     {loading ? (
                         <div className="hidden h-9 w-9 rounded-sm border border-line bg-panel md:block"/>

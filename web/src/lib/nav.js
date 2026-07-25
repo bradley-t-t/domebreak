@@ -51,8 +51,7 @@ function openDownload() {
 export const SHORTCUTS = [
     {key: "g", label: "Top", target: "top", hint: "G"},
     {key: "b", label: "Briefing", target: "features", hint: "B"},
-    {key: "c", label: "Closed beta", target: "beta", hint: "C"},
+    {key: "p", label: "Play free", target: "play", hint: "P"},
     {key: "u", label: "Unit wiki", target: "wiki", hint: "U"},
     {key: "d", label: "Download", target: "download", hint: "D"},
-    {key: "w", label: "Request access", target: "waitlist", hint: "W"},
 ];
