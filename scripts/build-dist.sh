@@ -14,16 +14,20 @@
 # Usage:  scripts/build-dist.sh [OUTPUT_DIR]
 #   OUTPUT_DIR defaults to ~/DomeBreak-dist
 #
-# Requirements: SSH access to the Windows box (key ~/.ssh/sunday_win), Node on
-# both machines. The Windows repo keeps its own .env/.env.local (Supabase creds);
+# Requirements: SSH access to the Windows box (host/key via GD_WIN_HOST /
+# GD_WIN_KEY), Node on both machines. The Windows repo keeps its own
+# .env/.env.local (Supabase creds);
 # this script never touches them.
 set -euo pipefail
 
 OUT="${1:-$HOME/DomeBreak-dist}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WIN_HOST="${GD_WIN_HOST:-trent@192.168.1.85}"
-WIN_KEY="${GD_WIN_KEY:-$HOME/.ssh/sunday_win}"
-WIN_REPO='C:\Users\trent\domebreak'
+# Deploy targets are machine-specific and kept out of the repo. Set them in the
+# environment or in scripts/deploy.local.env (gitignored).
+[ -f "$REPO/scripts/deploy.local.env" ] && . "$REPO/scripts/deploy.local.env"
+WIN_HOST="${GD_WIN_HOST:?set GD_WIN_HOST (e.g. user@build-box) in the environment or scripts/deploy.local.env}"
+WIN_KEY="${GD_WIN_KEY:-$HOME/.ssh/id_ed25519}"
+WIN_REPO="${GD_WIN_REPO:?set GD_WIN_REPO (the repo path on the Windows build box)}"
 WIN_ARCHES=(x64 arm64 ia32)
 SSH=(ssh -i "$WIN_KEY" -o ConnectTimeout=12)
 SCP=(scp -i "$WIN_KEY" -o ConnectTimeout=12)
