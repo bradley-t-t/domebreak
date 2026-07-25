@@ -10,6 +10,8 @@ release
 .vscode/
 *.iml
 *.sql
-# Local Claude state (worktrees, settings) stays out; the project's skills ship.
-/.claude/*
-!/.claude/skills/
+# Claude config and skills never live in the repo.
+/.claude/
+
+# Machine-specific deploy targets (VPS/build-box hosts and keys) stay local.
+scripts/deploy.local.env
