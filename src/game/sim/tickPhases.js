@@ -441,8 +441,14 @@ export function stepCombat(w, dt) {
             // identical batteries don't waste a second interceptor on a track a
             // sister site already committed to. p.tried (by id) still guards a single
             // battery from double-firing; triedTypes widens that to the whole type.
+            // A gun (C-RAM) is the exception: a continuous-fire mount, not a one-shot
+            // battery. It keeps hosing the same track every reload until the round
+            // dies or leaves its envelope, so it's gated by cooldown alone — never by
+            // the one-shot tried/triedTypes flags.
+            const isGun = !!ddef.gun;
             const triedTypes = p.triedTypes || (p.triedTypes = []);
-            if (d.slot === p.slot || d.cooldown > 0 || p.tried.includes(d.id) || triedTypes.includes(d.type) || !airborne(d)) continue;
+            if (d.slot === p.slot || d.cooldown > 0 || !airborne(d)) continue;
+            if (!isGun && (p.tried.includes(d.id) || triedTypes.includes(d.type))) continue;
             // Engage only within the battery's annulus: inside defenseRange (outer
             // reach) but outside defenseMinRange (the keep-out gap for area ABMs
             // like THAAD, which can't kill a target that's already dived in close).
@@ -450,8 +456,10 @@ export function stepCombat(w, dt) {
             if (reach === undefined) reachOf.set(d.id, reach = defenseRange(w, d));
             const dToTarget = haversine(d.lng, d.lat, p.lng, p.lat);
             if (dToTarget <= reach && dToTarget >= defenseMinRange(w, d)) {
-                p.tried.push(d.id);
-                triedTypes.push(d.type);
+                if (!isGun) {
+                    p.tried.push(d.id);
+                    triedTypes.push(d.type);
+                }
                 d.cooldown = ddef.reload || DEFAULT_RELOAD;
                 // Hypersonic-evasion: fast boost-glide weapons (off8 / Hypersonic
                 // Missile Battery) shave the interceptor's hit probability by the
