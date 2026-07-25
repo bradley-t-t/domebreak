@@ -195,7 +195,7 @@ function duck(depth = 0.45, hold = 0.12, recover = 0.9) {
 // rule throughout: filtered noise and low tones, soft transients, no bright
 // pitched melodies — muffled and physical, not chiptune.
 const SFX = {
-    // --- UI: muted, tactile clicks; felt more than heard --------------------
+    // UI: muted, tactile clicks; felt more than heard
     click: () => burst(sfxBus, {dur: 0.035, vol: 0.13, filter: "lowpass", from: 1100, to: 380, q: 0.6}),
     hover: () => burst(sfxBus, {dur: 0.022, vol: 0.045, filter: "lowpass", from: 1600, to: 700, q: 0.5}),
     tab: () => {
@@ -219,7 +219,7 @@ const SFX = {
         tone(sfxBus, {type: "sine", freq: 330, dur: 0.14, vol: 0.12, attack: 0.008});
         burst(sfxBus, {dur: 0.05, vol: 0.06, filter: "lowpass", from: 900, to: 400});
     },
-    // --- Ordnance: filtered air and low concussion, not lasers --------------
+    // Ordnance: filtered air and low concussion, not lasers
     launch: () => { // ignition thump → breathy sustained rocket → low departing rumble
         burst(sfxBus, {dur: 0.14, vol: 0.32, attack: 0.002, filter: "lowpass", from: 1400, to: 260});
         burst(sfxBus, {dur: 1.5, vol: 0.26, attack: 0.18, filter: "bandpass", from: 180, to: 720, q: 1.1});

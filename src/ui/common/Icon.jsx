@@ -13,7 +13,7 @@ const S = {fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap
 const F = {fill: "currentColor", stroke: "none"};
 
 const ICONS = {
-    // --- Production categories -------------------------------------------------
+    // Production categories
     // All systems: a 2x2 module grid.
     systems: (
         <>
@@ -98,7 +98,7 @@ const ICONS = {
         </>
     ),
 
-    // --- Map layers ------------------------------------------------------------
+    // Map layers
     // Countries: a wireframe globe.
     countries: (
         <>
@@ -159,7 +159,7 @@ const ICONS = {
         </>
     ),
 
-    // --- Command tabs ----------------------------------------------------------
+    // Command tabs
     // Production: crated arsenal stock.
     production: (
         <>
@@ -185,7 +185,7 @@ const ICONS = {
         </>
     ),
 
-    // --- Controls / chrome -----------------------------------------------------
+    // Controls / chrome
     close: (
         <>
             <path d="M6 6l12 12M18 6L6 18"/>
