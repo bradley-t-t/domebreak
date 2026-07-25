@@ -295,7 +295,7 @@ export const UNITS = {
         hp: 42,
         upkeep: 1,
     },
-    // --- Tech-gated modern & space-age units --------------------------------
+    // Tech-gated modern & space-age units
     // Each carries requiresTech: "<techId>" — buildable only once that tech is done
     // (enforced in sim/production.js queueUnit). The techId must match the `unlocks`
     // on the corresponding tech in TECHS. Space assets also need the Space Command
@@ -444,7 +444,7 @@ export const UNITS = {
         hp: 60,
         upkeep: 6,
     },
-    // --- Tech-gated naval units — subs + logistics --------------------------
+    // Tech-gated naval units — subs + logistics
     // Submarines are stealthy: submarine:true hulls are not revealed by ordinary
     // radar or satellites, only by asw sensors within sonarKm (see queries.js).
     "sub-ssn": {

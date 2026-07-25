@@ -59,7 +59,7 @@ export const SNAPSHOT_MS = parseInt(process.env.GD_SNAPSHOT_MS || "50", 10);
 // permanently-locked 1x play (online has no pause/speed control at all).
 export const MATCH_START_PAUSE_S = parseInt(process.env.GD_MATCH_START_PAUSE_S || "30", 10);
 
-// ---- matchmaker -------------------------------------------------------------
+// matchmaker
 // Human-only matchmaking: no bots. A match forms once at least MIN_PLAYERS real
 // players are queued, admitting up to MAX_PLAYERS, and each player claims their
 // own nation inside a bounded neutral-world war (activeCount belligerents, the

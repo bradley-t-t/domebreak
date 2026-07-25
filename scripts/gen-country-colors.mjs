@@ -16,11 +16,11 @@ import {fileURLToPath} from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const flagDir = join(root, "node_modules/flag-icons/flags/4x3");
 
-// --- gid0 universe: exactly the countries the map renders -------------------
+// gid0 universe: exactly the countries the map renders
 const geo = JSON.parse(readFileSync(join(root, "public/assets/regions-seed.geojson"), "utf8"));
 const gids = [...new Set(geo.features.map((f) => f.properties.gid0).filter(Boolean))].sort();
 
-// --- GID_0 (alpha-3) -> flag-icons code (alpha-2) --------------------------
+// GID_0 (alpha-3) -> flag-icons code (alpha-2)
 // Base map inverted from the project's ISO 3166 bridge, plus territory and
 // disputed-region codes GADM carries that the ISO bridge doesn't.
 const iso3src = readFileSync(join(root, "src/game/data/iso3.js"), "utf8");
@@ -35,7 +35,7 @@ Object.assign(a3to2, {
     XKO: "xk", TWN: "tw", PSE: "ps", ESH: "eh",
 });
 
-// --- SVG -> area-weighted average color ------------------------------------
+// SVG -> area-weighted average color
 const NAMED = {
     red: [255, 0, 0], white: [255, 255, 255], blue: [0, 0, 255], green: [0, 128, 0],
     black: [0, 0, 0], yellow: [255, 255, 0], gold: [255, 215, 0], gray: [128, 128, 128],
@@ -243,7 +243,7 @@ function fallbackColor(gid) {
     return hslToRgb(hash % 360, 0.62, 0.5); // as vivid as the flag-derived colors
 }
 
-// --- build the table -------------------------------------------------------
+// build the table
 // Every color is regenerated from scratch; prior is read only to report keys
 // dropped since the last run.
 const colorsPath = join(root, "public/assets/colors.json");

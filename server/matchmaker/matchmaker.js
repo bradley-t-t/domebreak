@@ -157,7 +157,7 @@ export function startMatchmaker(db, log) {
     log("matchmaker started (real players only): min", MIN_PLAYERS, "max", MAX_PLAYERS, "window", MATCH_WINDOW_MS + "ms", "timeout", LOBBY_READY_TIMEOUT_MS + "ms");
 }
 
-// ---- group -> lobby formation ----------------------------------------------
+// group -> lobby formation
 
 async function formLobby(db, log, players) {
     // 1. Create the lobby row. host is NOT NULL; the anchor fills it, but
@@ -245,7 +245,7 @@ async function formLobby(db, log, players) {
     void checkAutoLaunch(db, log, lobby.id); // in case everyone is already ready
 }
 
-// ---- auto-launch ------------------------------------------------------------
+// auto-launch
 
 async function checkAutoLaunch(db, log, lobbyId) {
     const st = lobbyState.get(lobbyId);
