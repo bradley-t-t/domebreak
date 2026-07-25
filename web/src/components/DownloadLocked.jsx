@@ -1,18 +1,17 @@
 import {useEffect} from "react";
-import {Lock, Loader2, LogIn} from "lucide-react";
+import {UserPlus, Loader2, LogIn} from "lucide-react";
 import Nav from "./Nav.jsx";
 import Footer from "./Footer.jsx";
 import Reveal from "./Reveal.jsx";
-import SteamCta from "./SteamCta.jsx";
-import BetaCallout from "./BetaCallout.jsx";
 import {Eyebrow} from "./Primitives.jsx";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
 
-// Shown in place of the download page when the visitor isn't signed in. Direct
-// installers are gated to signed-in accounts now that the public build is headed
-// to Steam; `checking` renders a quiet standby while the lazy account session
-// resolves so we never flash "locked" at a visitor who is actually signed in.
+// Shown in place of the download page when the visitor isn't signed in. The game
+// is free, so the installers are gated only by a free account — this card sells
+// creating one. `checking` renders a quiet standby while the lazy account
+// session resolves so we never flash "locked" at a visitor who is actually
+// signed in.
 export default function DownloadLocked({onSignIn, onShowShortcuts, checking = false}) {
     useEffect(() => {
         window.scrollTo({top: 0, behavior: "auto"});
@@ -31,45 +30,42 @@ export default function DownloadLocked({onSignIn, onShowShortcuts, checking = fa
                         <Reveal>
                             <div className="relative db-tick db-seam mx-auto max-w-[560px] overflow-hidden rounded-lg border border-line bg-panel-solid p-8 text-center shadow sm:p-10">
                                 <span className="mx-auto flex h-14 w-14 items-center justify-center rounded border border-gold-line bg-gold-soft text-gold">
-                                    {checking ? <Loader2 size={26} className="animate-spin"/> : <Lock size={26}/>}
+                                    {checking ? <Loader2 size={26} className="animate-spin"/> : <UserPlus size={26}/>}
                                 </span>
 
                                 <div className="mt-6 flex justify-center">
-                                    <Eyebrow>{checking ? "Checking Access" : "Restricted"}</Eyebrow>
+                                    <Eyebrow>{checking ? "Checking Access" : "Free · Account required"}</Eyebrow>
                                 </div>
 
                                 <h1 className="mt-4 font-display text-[clamp(1.6rem,4vw,2.3rem)] font-bold uppercase leading-[1.05] text-text">
-                                    {checking ? "One Moment" : "Sign In to Download"}
+                                    {checking ? "One Moment" : "Create a Free Account"}
                                 </h1>
                                 <p className="mx-auto mt-4 max-w-md text-[14px] leading-relaxed text-dim">
                                     {checking
                                         ? "Confirming your session before the download links load."
-                                        : "Direct installers are available to signed-in DomeBreak accounts. The public release is coming to Steam — wishlist it to get notified at launch."}
+                                        : "DomeBreak is free to play — create an account to download the installers for macOS and Windows. It's the same login you'll use in the game."}
                                 </p>
 
                                 {!checking && (
                                     <div className="mt-8 flex flex-col items-center gap-3">
                                         <button
-                                            onClick={onSignIn}
+                                            onClick={() => onSignIn("signup")}
                                             className={cn(button({variant: "primary", size: "lg"}), "w-full max-w-xs")}
+                                        >
+                                            <UserPlus size={15}/>
+                                            <span>Create Free Account</span>
+                                        </button>
+                                        <button
+                                            onClick={() => onSignIn("signin")}
+                                            className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-sm border border-line bg-transparent px-[18px] py-[11px] font-display text-[12.5px] font-semibold uppercase tracking-[1.4px] text-dim transition-colors duration-150 ease-out-db hover:border-blue hover:text-text"
                                         >
                                             <LogIn size={15}/>
                                             <span>Sign In</span>
                                         </button>
-                                        <SteamCta className="w-full max-w-xs" size="md"/>
                                     </div>
                                 )}
                             </div>
                         </Reveal>
-
-                        {/* No account? Applying for the closed beta is the way in. */}
-                        {!checking && (
-                            <Reveal delay={0.12}>
-                                <div className="mt-14 border-t border-line pt-14 text-left">
-                                    <BetaCallout source="download-locked"/>
-                                </div>
-                            </Reveal>
-                        )}
                     </div>
                 </section>
             </main>

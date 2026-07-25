@@ -3,7 +3,6 @@ import Nav from "./Nav.jsx";
 import Footer from "./Footer.jsx";
 import Reveal from "./Reveal.jsx";
 import GameIcon from "./GameIcon.jsx";
-import BetaCallout from "./BetaCallout.jsx";
 import {Eyebrow} from "./Primitives.jsx";
 import {cn} from "../lib/cn.js";
 import {button} from "../lib/variants.js";
@@ -97,8 +96,8 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                                 Get <span className="text-dim">DomeBreak</span> v{VERSION}
                             </h1>
                             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-dim">
-                                Pick your platform. Installers are served straight from the DomeBreak server.
-                                See First launch below the first time you open the game.
+                                Free to play. Pick your platform — installers are served straight from the
+                                DomeBreak server. See First launch below the first time you open the game.
                             </p>
                         </Reveal>
                     </div>
@@ -146,13 +145,6 @@ export default function DownloadPage({onSignIn, onShowShortcuts}) {
                     <p className="mt-10 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-faint">
                         All versions · <a href="https://download.domebreak.com/" className="text-dim underline decoration-hair underline-offset-4 transition-colors hover:text-text">download.domebreak.com</a>
                     </p>
-
-                    {/* Closed-beta application, featured here as well. */}
-                    <Reveal>
-                        <div className="mt-16 border-t border-line pt-16">
-                            <BetaCallout source="download"/>
-                        </div>
-                    </Reveal>
                 </div>
             </main>
 

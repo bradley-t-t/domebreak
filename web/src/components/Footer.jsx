@@ -3,7 +3,7 @@ import {scrollToId} from "../lib/nav.js";
 import {NAV_MENUS} from "../lib/navMenus.js";
 import {Wordmark} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
-import SteamCta from "./SteamCta.jsx";
+import PlayCta from "./PlayCta.jsx";
 import ScrollVelocity from "./reactbits/ScrollVelocity.jsx";
 
 const ICON_STRIP = ["dome", "radar", "interceptor", "thaad", "silo", "reconsat", "carrier", "factory"];
@@ -78,20 +78,20 @@ export default function Footer({onShowShortcuts}) {
                             A real-time strategy game of missile defense and offense, fought on the real world map.
                         </p>
                         <div className="mt-6">
-                            <SteamCta size="md"/>
+                            <PlayCta size="md"/>
                         </div>
                         <div className="mt-5 inline-flex items-center gap-2 rounded border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
                             <span className="h-[6px] w-[6px] rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
-                            Pre-Launch
+                            Now Live · Free to Play
                         </div>
                     </div>
 
                     {NAV_MENUS.map((group) => <MenuCol key={group.label} group={group}/>)}
 
                     <Col title="More">
-                        <FootLink onClick={() => scrollToId("beta")}>
+                        <FootLink onClick={() => scrollToId("play")}>
                             <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
-                            Closed Beta
+                            Play Free
                         </FootLink>
                         <FootLink onClick={() => scrollToId("top")}>Top</FootLink>
                         <FootLink onClick={onShowShortcuts}>

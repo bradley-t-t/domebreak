@@ -7,11 +7,11 @@ import {useAccount} from "../lib/accountStore.js";
 import {Wordmark} from "./Primitives.jsx";
 import GameIcon from "./GameIcon.jsx";
 import NavMenuItem from "./NavMenuItem.jsx";
-import SteamCta from "./SteamCta.jsx";
+import PlayCta from "./PlayCta.jsx";
 
 // Mobile navigation: a hamburger that opens a full-height drawer with the same
-// grouped menus as the desktop dropdowns, the featured Closed Beta link, the
-// Steam CTA, and account actions. Shown only below the md breakpoint.
+// grouped menus as the desktop dropdowns, the featured Play Free link, the
+// play CTA, and account actions. Shown only below the md breakpoint.
 export default function MobileNav({onSignIn}) {
     const reduce = useReducedMotion();
     const {signedIn, isAdmin, signOut} = useAccount();
@@ -79,18 +79,18 @@ export default function MobileNav({onSignIn}) {
                             </div>
 
                             <div className="flex-1 px-3 py-4">
-                                {/* Featured Closed Beta jump. */}
+                                {/* Featured Play Free jump. */}
                                 <button
                                     onClick={() => {
                                         close();
-                                        scrollToId("beta");
+                                        scrollToId("play");
                                     }}
                                     className="group/item mb-3 flex w-full items-center gap-3 rounded-sm border border-gold-line bg-gold-soft px-3 py-3 text-left transition-colors duration-150 hover:border-text"
                                 >
                                     <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-danger db-blink shadow-[0_0_7px_var(--danger)]"/>
                                     <span className="min-w-0">
-                                        <span className="block font-display text-[12.5px] font-semibold uppercase tracking-[0.1em] text-text">Closed Beta</span>
-                                        <span className="mt-0.5 block font-mono text-[10.5px] text-faint">Apply to test before Steam</span>
+                                        <span className="block font-display text-[12.5px] font-semibold uppercase tracking-[0.1em] text-text">Play Free</span>
+                                        <span className="mt-0.5 block font-mono text-[10.5px] text-faint">Free · online multiplayer</span>
                                     </span>
                                 </button>
 
@@ -107,7 +107,14 @@ export default function MobileNav({onSignIn}) {
                             </div>
 
                             <div className="border-t border-hair p-4">
-                                <SteamCta className="w-full" size="md"/>
+                                <PlayCta
+                                    className="w-full"
+                                    size="md"
+                                    onClick={() => {
+                                        close();
+                                        scrollToId("download");
+                                    }}
+                                />
 
                                 <div className="mt-3">
                                     {signedIn ? (
