@@ -72,7 +72,7 @@ export function damageRatio(n, foe) {
     return r.taken / Math.max(1, r.dealt);
 }
 
-// --- Event records, called from warResolution + the diplomacy layer ----------
+// Event records, called from warResolution + the diplomacy layer
 
 // A war between a and b just ended. winner === null is a white peace (good
 // faith honored both ways); a decisive end still stamps the timeline so

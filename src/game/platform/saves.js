@@ -1,8 +1,8 @@
 // Local save-game system (localStorage, mirrored to the machine-local data
 // folder on desktop). The world is plain JSON-serializable data.
 //
-// NO backwards compatibility (project policy — see CLAUDE.md): DomeBreak never
-// migrates or shims old saves. When the world shape changes we bump VERSION; a save
+// NO backwards compatibility, by policy: DomeBreak never migrates or shims old
+// saves. When the world shape changes we bump VERSION; a save
 // from any other version is simply unreadable, and the player is told it's outdated
 // (listSaves flags it, the load UI says so). We do not carry per-format migration code.
 import {persistKey, removeKey} from "./localData.js";
