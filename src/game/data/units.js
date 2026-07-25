@@ -287,7 +287,11 @@ export const UNITS = {
         cost: 130,
         buildTime: 7,
         // Close-in gun: the shortest reach of any defense, but the fastest to
-        // re-engage and the cheapest per burst — cheap shells, thrown fast.
+        // re-engage and the cheapest per burst — cheap shells, thrown fast. gun:true
+        // makes it a continuous-fire mount — it stays on one track, firing every
+        // reload until the round dies or leaves its short envelope, rather than
+        // taking a single one-and-done shot like a missile battery.
+        gun: true,
         range: 150,
         intercept: 0.55,
         reload: 1.2,
