@@ -1,7 +1,6 @@
 // Population growth: each living city's people grow per tick, scaled by vitality
 // (hp/maxHp) and national prosperity (effective GDP over baseline GDP), capped at
 // pop0 * growthCapMult. Deterministic, no RNG, no I/O.
-// Spec: design/quick-specs/population-growth-2026-07-06.md.
 import {describe, expect, it} from "vitest";
 import {growCities} from "../../../src/game/engine.js";
 import {POPULATION, UNITS} from "../../../src/game/data/constants.js";

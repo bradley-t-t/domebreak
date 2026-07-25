@@ -1,7 +1,7 @@
 // War resolution: the three war outcomes — Victory, Defeat, White Peace — plus the
 // auto-surrender trigger, the decaying Defeat stability penalty, and the white-peace
 // offer/response flow. Deterministic — territory moves are a pure function of ownership;
-// diplomacy RNG lives in tick.js. Spec: design/gdd/war-resolution.md.
+// diplomacy RNG lives in tick.js.
 import {describe, expect, it} from "vitest";
 import {atWar, createWorld, declareWar, endWar, offerPeace, proposeAlliance, respondAlliance, respondPeace, stabilityBreakdown} from "../../../src/game/engine.js";
 import {step} from "../../../src/game/sim/tick.js";

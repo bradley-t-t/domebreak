@@ -1,4 +1,4 @@
-// Bounded-match / neutral-world model (adr-008): victory resolves against the
+// Bounded-match / neutral-world model: victory resolves against the
 // ACTIVE set (passive neutrals never block a win), and active nations are seeded
 // scattered across the globe. Neutrals are non-interactable scenery — never targeted
 // or captured. Deterministic, no RNG, no I/O.
