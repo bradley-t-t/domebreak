@@ -53,7 +53,7 @@ export function circle(lng, lat, km, steps = 56, innerKm = 0, maxSteps = 360) {
 
 const RAD = Math.PI / 180, DEG = 180 / Math.PI;
 
-// ---- Globe-view coverage geometry (true geodesic) ----------------------------
+// Globe-view coverage geometry (true geodesic)
 // On the globe the Mercator disc above stretches into an off-centre egg, so this
 // draws the ring as a great-circle cap: vertices at a constant SURFACE
 // distance `km` from the centre, which the globe projection renders as a proper

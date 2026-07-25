@@ -283,7 +283,7 @@ export function suggestEngagementKm(w, plan, mySlot) {
     return Math.min(BATTLE_PLAN.maxEngagementKm, Math.max(BATTLE_PLAN.minEngagementKm, Math.ceil(far / step) * step));
 }
 
-// --- Persistence bridge (Battle Planning) -----------------------------------
+// Persistence bridge (Battle Planning)
 // Attack plans are authored in the UI (useBattlePlans) but stored on the world so
 // they serialize with the save and survive load. These two accessors are the ONLY
 // sanctioned way the UI reads/writes that slot — keeping the mutation "through the

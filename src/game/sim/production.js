@@ -212,7 +212,7 @@ export function unitLockReason(w, slot, type) {
     return null;
 }
 
-// --- Amphibious lift: embark / disembark ground units -----------
+// Amphibious lift: embark / disembark ground units
 // Range (AMPHIB_LIFT_KM) is a tuning knob in data/constants.js.
 
 // Load a friendly ground unit into an Amphibious Transport. The transport must

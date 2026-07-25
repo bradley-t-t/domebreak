@@ -6,9 +6,8 @@ import {cn} from "../lib/cn.js";
 
 // In-game command reference. Reads the live key bindings so rebinds show through,
 // and lays out every control the map surface responds to — including the ones
-// that were previously only discoverable by digging through Settings (camera
-// pan) or by accident (shift-click to bulk-order / place several). Toggle with
-// the ? key or the corner button; Esc or ? closes it.
+// nothing else advertises, like camera pan and shift-click to bulk-order or
+// place several. Toggle with the ? key or the corner button; Esc or ? closes it.
 
 // A single keycap. `mouse` renders a wider, sentence-case pill for pointer
 // actions (L-Click, Scroll) so they read apart from keyboard keys.
