@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.5-e0574f?style=for-the-badge" alt="Version 2.0.5" />
+  <img src="https://img.shields.io/badge/version-2.0.7-e0574f?style=for-the-badge" alt="Version 2.0.7" />
   <img src="https://img.shields.io/badge/React-19-e0574f?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
   <img src="https://img.shields.io/badge/Vite-7-e0574f?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7" />
   <img src="https://img.shields.io/badge/MapLibre_GL-08090b?style=for-the-badge&logo=maplibre&logoColor=white" alt="MapLibre GL" />
@@ -151,13 +151,15 @@ domebreak/
 ├── electron/                  Desktop shell (main.cjs) and in-place updater
 ├── public/
 │   ├── assets/, brand/, data/, icons/
-├── scripts/                   Dev branding helper for the Electron build
+├── scripts/                   Dev branding, dist/ship + deploy shells, map-data
+│                              generators, AI soak harness
 ├── server/                    Authoritative Node match server + matchmaker
 ├── supabase/
 │   ├── functions/             db-account, db-beta, db-lobby, db-match, db-party,
 │   │                          db-social, db-waitlist
 │   └── migrations/            Schema DDL
-├── tests/unit/                Vitest suites — ai, combat, economy, naval, net, objectives, …
+├── tests/unit/                Vitest suites — ai, combat, economy, naval, net, objectives,
+│                              matchmaking, leadership, stability, electron, ui, …
 ├── web/                       Separate marketing landing page with waitlist capture
 └── src/
     ├── game/                  engine.js + data, geo, platform, sim
