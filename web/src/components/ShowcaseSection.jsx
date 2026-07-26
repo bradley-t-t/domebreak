@@ -21,7 +21,6 @@ export default function ShowcaseSection({index, kicker, title, body, points = []
     return (
         <section ref={ref} className="mx-auto max-w-[1400px] px-5 py-16 sm:px-8 sm:py-24">
             <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                {/* Screenshot panel */}
                 <div className={cn("order-1", imageFirst ? "lg:order-1" : "lg:order-2")}>
                     <div
                         ref={panelRef}
@@ -52,7 +51,6 @@ export default function ShowcaseSection({index, kicker, title, body, points = []
                     </div>
                 </div>
 
-                {/* Copy */}
                 <div className={cn("order-2", imageFirst ? "lg:order-2" : "lg:order-1")}>
                     <Reveal>
                         <div className="flex items-center gap-4">

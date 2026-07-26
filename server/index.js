@@ -23,8 +23,6 @@ const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {auth: {persistSession: 
 const matches = new Map(); // matchId -> Match
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
-// lobby claiming
-
 // Live matches = those still running (finished ones linger in the map for late
 // reconnects but no longer count against capacity).
 function liveMatches() {
@@ -127,8 +125,6 @@ const server = http.createServer((req, res) => {
         res.end();
     }
 });
-
-// websockets
 
 const wss = new WebSocketServer({server, perMessageDeflate: true});
 

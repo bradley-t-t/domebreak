@@ -336,7 +336,6 @@ export const AUDIO_SPATIAL = {
     minGain: 0.3,           // floor under the radial rolloff so visible-but-edge cues stay present
 };
 
-// Tech tree registry.
 export * from "./techs.js";
 
 // Hangar complement per base type — aircraft live as STOCK (counts), not units,

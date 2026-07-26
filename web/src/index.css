@@ -1,12 +1,10 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 
-/*
-  DomeBreak landing page — shares the in-game design language: stark neutral
+/* DomeBreak landing page — shares the in-game design language: stark neutral
   blacks, hairline borders, squared corners, zero glow, grotesk uppercase
   micro-labels, mono data. Tokens match the game's src/index.css so the
-  marketing surface reads as the same product.
-*/
+  marketing surface reads as the same product. */
 
 :root {
     --bg: #08090b;
@@ -632,7 +630,7 @@ body {
         }
     }
 
-    /* ===================== fireball detonation (Explosion.jsx) =====================
+    /* fireball detonation (Explosion.jsx)
        A layered fire burst: white flash + shock ring + three billowing flame
        blobs + a white-hot core + a short smoke wisp + flung embers. Every
        kind is FIRE; kinds only change scale and a small ring accent. Pure
@@ -881,14 +879,12 @@ body {
         transition: transform 620ms var(--ease-out);
     }
 
-    /* ============================================================
-       Tech tree — blueprint / schematic language. The atlas reads as
+    /* Tech tree — blueprint / schematic language. The atlas reads as
        an engineering drawing: neutral hairlines, graph-paper ghosting,
        drafting corner ticks, designation codes, dotted spec leaders and
        stamped status. Chroma is held to a single muted "plotting" cyan
        (--bp-live) for the tech under active research; everything else is
-       monochrome to match the stark HUD.
-       ============================================================ */
+       monochrome to match the stark HUD. */
 
     /* Era band — neutral chronological zone (Cold War -> Modern -> Space).
        The wash is monochrome; only the epoch's name + top rule carry a

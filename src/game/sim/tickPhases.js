@@ -142,8 +142,6 @@ export function populationTrendOf(w, slot) {
     return rate;
 }
 
-// step() phases
-
 // Phase 1: economy — leadership command factor, income accrual, then each
 // nation's production line advances and (on completion) spawns its unit.
 // (No tech tree — everything is unlocked at world creation.)

@@ -1,10 +1,9 @@
 // Tech registry — unit-unlock gates only.
 //
-// Techs no longer apply stat buffs to nations. Each entry is metadata plus, on a
+// A tech carries no stat effect of its own. Each entry is metadata plus, on a
 // handful of entries, `unlocks: "<unitType>"` mirrored by UNITS[type].requiresTech
 // so the production gate can name what's needed. Nations start with every tech
 // id in `research.done`, so every gated unit is buildable from the first tick.
-// A future upgrade system will attach to units directly, not to techs.
 
 const ERAS = [
     {id: "coldwar", name: "Cold War", tierRange: [1, 4], years: "1947–1991", color: "#4fc3e8"},
