@@ -64,7 +64,6 @@ export default function Footer({onShowShortcuts}) {
             </div>
 
             <div className="relative mx-auto max-w-[1400px] px-5 py-16 sm:px-8 sm:py-20">
-                {/* Brand + link columns */}
                 <div className="grid grid-cols-2 gap-10 sm:grid-cols-4 lg:grid-cols-[1.7fr_1fr_1fr_1fr]">
                     <div className="col-span-2 sm:col-span-4 lg:col-span-1">
                         <div className="flex items-center gap-2.5">
@@ -101,14 +100,12 @@ export default function Footer({onShowShortcuts}) {
                     </Col>
                 </div>
 
-                {/* Game-asset strip */}
                 <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hair pt-6 text-faint">
                     {ICON_STRIP.map((n) => (
                         <GameIcon key={n} name={n} size={18} className="opacity-70 transition-opacity hover:opacity-100"/>
                     ))}
                 </div>
 
-                {/* Legal bar */}
                 <div className="mt-6 flex flex-col gap-3 border-t border-hair pt-6 sm:flex-row sm:items-center sm:justify-between">
                     <p className="font-mono text-[11px] text-faint">
                         © {year} TaylorURL · Made solo by Trenton Taylor

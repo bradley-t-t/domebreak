@@ -18,9 +18,6 @@ import {cva} from "class-variance-authority";
  * merge caller overrides): `<button className={button({variant: "primary"})}>`.
  */
 
-/* ---------------------------------------------------------------------- */
-/* button — .db-btn / .db-btn.primary                                       */
-/* ---------------------------------------------------------------------- */
 /**
  * VFX hook: carries literal `db-btn` (+ `primary`). `.db-btn.primary::after`
  * in @layer vfx is the hover sheen sweep; `.db-card .db-btn.primary` flips it
@@ -47,9 +44,6 @@ export const button = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* miniButton — .db-mini (+ hover/danger/disabled)                          */
-/* ---------------------------------------------------------------------- */
 /**
  * VFX hook: carries literal `db-mini` (+ `danger`). `.db-card .db-mini` and
  * `.db-card .db-mini.danger` re-theme it to the light paper surface when
@@ -68,9 +62,6 @@ export const miniButton = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* iconButton — .db-iconbtn                                                 */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-iconbtn. Utilities only.
  */
@@ -87,9 +78,6 @@ export const popoverCard = cva(
     "bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]"
 );
 
-/* ---------------------------------------------------------------------- */
-/* menuButton — .db-menu-btn (+ .back/.primary/.danger), .db-menu-section   */
-/* ---------------------------------------------------------------------- */
 /**
  * VFX hook: carries literal `db-menu-btn` (+ `primary`/`back`/`danger`).
  * `.db-menu-btn::before/::after` in @layer vfx are the targeting-bracket
@@ -115,9 +103,6 @@ export const menuButton = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* chip — .db-chip (+ .subtle)                                              */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-chip.
  */
@@ -134,9 +119,6 @@ export const chip = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* card — .db-card (+ .wide/.build/.result)                                 */
-/* ---------------------------------------------------------------------- */
 /**
  * VFX hook: carries literal `db-card`. `.db-card::before` in @layer vfx is the
  * gold top-seam, and the light-"paper" custom-property overrides (unlayered in
@@ -158,9 +140,6 @@ export const card = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* overlay — .db-overlay (+ .center/.bottom)                                */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-overlay.
  */
@@ -187,9 +166,6 @@ export const overlay = cva("fixed inset-0 z-40 flex pointer-events-none", {
     defaultVariants: {placement: "none"},
 });
 
-/* ---------------------------------------------------------------------- */
-/* input — .db-input (+ .mono)                                              */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-input.
  */
@@ -206,9 +182,6 @@ export const input = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* label — .db-label                                                        */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-label.
  */
@@ -216,17 +189,11 @@ export const label = cva(
     "block font-display uppercase tracking-[1.5px] text-[11px] font-semibold text-faint mb-[7px]"
 );
 
-/* ---------------------------------------------------------------------- */
-/* sub — .db-sub                                                            */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-sub.
  */
 export const sub = cva("text-dim m-0 mb-5 text-sm leading-[1.5]");
 
-/* ---------------------------------------------------------------------- */
-/* row — .db-row (+ direct .db-input child sizing)                          */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-row. The `.db-row .db-input {
  * flex: 1 }` descendant rule (the "input + button" row) can't be expressed by
@@ -234,9 +201,6 @@ export const sub = cva("text-dim m-0 mb-5 text-sm leading-[1.5]");
  */
 export const row = cva("flex gap-[10px] mt-4");
 
-/* ---------------------------------------------------------------------- */
-/* badge — .db-badge (+ .you)                                               */
-/* ---------------------------------------------------------------------- */
 /**
  * No VFX hook — no @layer vfx rule targets .db-badge.
  */

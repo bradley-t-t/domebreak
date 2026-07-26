@@ -6,8 +6,8 @@
 //
 // Every stage is a pure function of the frame; only orders/ mutates the world,
 // and every random draw flows through the seeded rand(w) so matches replay.
-// Nations far from the player and at peace think on the slow idle cadence —
-// the same level-of-detail bound the previous AI used.
+// Nations far from the player and at peace think on the slow idle cadence, so a
+// 222-nation world does not spend its tick budget on places nobody is watching.
 import {DIPLOMACY} from "../../data/constants.js";
 import {haversine} from "../../geo/geo.js";
 import {rand} from "../worldState.js";

@@ -20,7 +20,6 @@ export default function PlayBand({onSignIn}) {
             <div aria-hidden className="pointer-events-none absolute inset-0 db-vignette"/>
 
             <div className="relative mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-5 py-24 sm:px-8 sm:py-28 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-                {/* Pitch */}
                 <div className="max-w-xl">
                     <Reveal>
                         <Eyebrow>Out now · Free to play</Eyebrow>
@@ -61,7 +60,6 @@ export default function PlayBand({onSignIn}) {
                     </Reveal>
                 </div>
 
-                {/* Call to action card */}
                 <Reveal delay={0.1}>
                     <div className="relative db-tick db-seam overflow-hidden rounded-lg border border-line bg-panel-solid p-7 shadow sm:p-8">
                         <div className="flex items-center gap-2 text-gold">
