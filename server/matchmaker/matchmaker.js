@@ -245,8 +245,6 @@ async function formLobby(db, log, players) {
     void checkAutoLaunch(db, log, lobby.id); // in case everyone is already ready
 }
 
-// auto-launch
-
 async function checkAutoLaunch(db, log, lobbyId) {
     const st = lobbyState.get(lobbyId);
     if (!st || st.closed) return;

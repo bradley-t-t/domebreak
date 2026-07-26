@@ -16,7 +16,6 @@ const STATS = [
 export default function StatBand() {
     return (
         <section className="relative border-y border-line bg-bg-2/60">
-            {/* Marquee ribbon */}
             <div className="relative overflow-hidden border-b border-hair py-3">
                 <div className="db-marquee flex w-max whitespace-nowrap will-change-transform">
                     {[0, 1].map((k) => (
@@ -32,7 +31,6 @@ export default function StatBand() {
                 </div>
             </div>
 
-            {/* Counters */}
             <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-px bg-line lg:grid-cols-4">
                 {STATS.map((s, i) => (
                     <Reveal key={s.label} delay={0.08 * i} className="bg-bg px-6 py-10 sm:px-8">

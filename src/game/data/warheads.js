@@ -1,4 +1,3 @@
-// Warhead registry.
 import { UNITS } from "./units.js";
 
 // Map warhead type -> public/icons SVG basename (production queue + arsenal UI).

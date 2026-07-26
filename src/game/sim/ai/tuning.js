@@ -97,7 +97,6 @@ export const WANTS = {
     patrolSize: 2,
 };
 
-// Placement (placement/).
 export const PLACE = {
     spreadKm: 150,               // same-role minimum spacing
     scrapSafeRadiusKm: 550,      // preserve defenders within this of a protect-point

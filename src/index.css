@@ -569,7 +569,7 @@
         animation: dbFlame 0.05s infinite alternate;
     }
 
-    /* ===================== fireball detonation (Explosion.jsx) =====================
+    /* fireball detonation (Explosion.jsx)
        A layered fire burst: white flash + shock ring + three billowing flame
        blobs + a white-hot core + a short smoke wisp + flung embers. Every
        kind is FIRE; kinds only change scale and a small ring accent. Pure
@@ -695,7 +695,7 @@
         }
     }
 
-    /* ===================== kill signifier (KillMark.jsx) =====================
+    /* kill signifier (KillMark.jsx)
        "Target eliminated" reticle layered over the destroy fireball: a crosshair
        ring pulse, four crimson corner brackets that snap inward onto the point,
        and a red-white X that draws across the wreck. Crimson (not fire-orange) so
@@ -921,14 +921,12 @@
         transition: transform 620ms var(--ease-out);
     }
 
-    /* ============================================================
-       Tech tree — blueprint / schematic language. The atlas reads as
+    /* Tech tree — blueprint / schematic language. The atlas reads as
        an engineering drawing: neutral hairlines, graph-paper ghosting,
        drafting corner ticks, designation codes, dotted spec leaders and
        stamped status. Chroma is held to a single muted "plotting" cyan
        (--bp-live) for the tech under active research; everything else is
-       monochrome to match the stark HUD.
-       ============================================================ */
+       monochrome to match the stark HUD. */
 
     /* Era band — neutral chronological zone (Cold War -> Modern -> Space).
        The wash is monochrome; only the epoch's name + top rule carry a
@@ -1488,14 +1486,12 @@
     }
 }
 
-/* ============================================================================
-   Scoped "light paper" re-theme for .db-card (modal surfaces).
+/* Scoped "light paper" re-theme for .db-card (modal surfaces).
    INTENTIONALLY UNLAYERED: unlayered rules win over Tailwind's layered
    utilities in the cascade, so these descendant re-skins override the button
    utilities. The custom-property block flips the dark palette to light for the
    card + every descendant that reads var(--text)/var(--line)/etc. The
-   persistent dark HUD is untouched — this is scoped under .db-card, never :root.
-   ============================================================================ */
+   persistent dark HUD is untouched — this is scoped under .db-card, never :root. */
 .db-card {
     --text: #14171b;
     --dim: #4d565f;

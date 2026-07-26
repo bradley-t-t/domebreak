@@ -119,7 +119,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                 </div>
             ) : (
                 <div className="flex flex-col gap-4">
-                    {/* Plan tabs */}
                     <div className="flex items-center gap-2 flex-wrap">
                         {plans.map((p) => (
                             <button key={p.id} onClick={() => setActiveId(p.id)}
@@ -137,7 +136,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
                     {active && (
                         <>
-                            {/* Name + plan actions */}
                             <div className="flex items-center gap-2">
                                 <input value={active.name} onChange={(e) => bp.renamePlan(active.id, e.target.value)}
                                        className="flex-1 min-w-0 bg-sunk border border-line rounded-sm px-3 py-2 text-[14px] text-text outline-none focus:border-text"
@@ -163,7 +161,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
                             {/* Two columns: attacker types → target types */}
                             <div className="grid grid-cols-2 gap-4">
-                                {/* Attackers */}
                                 <div className="flex flex-col gap-2 rounded-md border border-line bg-sunk/40 p-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[11px] tracking-[1px] uppercase text-faint">Attackers · unit types</span>
@@ -197,7 +194,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
 
                                 {/* Targets: which nations, then which asset types */}
                                 <div className="flex flex-col gap-2.5 rounded-md border border-line bg-sunk/40 p-3">
-                                    {/* Nation scope */}
                                     <div className="flex flex-col gap-1.5">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[11px] tracking-[1px] uppercase text-faint">Target nations</span>
@@ -230,7 +226,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                             : "Only the selected powers are struck — and only once you're at war with them."}</p>
                                     </div>
 
-                                    {/* Asset-type categories */}
                                     <div className="flex flex-col gap-1.5 border-t border-hair pt-2.5">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[11px] tracking-[1px] uppercase text-faint">Target types</span>
@@ -257,7 +252,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                 </div>
                             </div>
 
-                            {/* Engagement + toggles */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="rounded-md border border-line bg-sunk/40 p-3">
                                     <div className="flex items-center justify-between mb-1.5">
