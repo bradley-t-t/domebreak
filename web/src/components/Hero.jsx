@@ -50,7 +50,6 @@ export default function Hero({onSignIn}) {
                 <div className="mt-1">Real-time · intercept grid</div>
             </motion.div>
 
-            {/* Command rail. */}
             <motion.div
                 style={reduce ? undefined : {y: contentY, opacity: contentOpacity}}
                 className="relative z-10 mx-auto flex min-h-[100svh] max-w-[1400px] flex-col justify-center px-5 pt-24 pb-16 sm:px-8"
@@ -98,7 +97,6 @@ export default function Hero({onSignIn}) {
                         </div>
                     </motion.div>
 
-                    {/* Spec strip — game-icon telemetry. */}
                     <motion.div
                         {...fadeUp(reduce, 0.34)}
                         className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hair pt-6"
@@ -116,7 +114,6 @@ export default function Hero({onSignIn}) {
                 </div>
             </motion.div>
 
-            {/* Scroll cue. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
                 <motion.div
                     aria-hidden
