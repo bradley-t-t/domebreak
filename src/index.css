@@ -187,7 +187,7 @@
    the targeting brackets, the tech-tree era banding + unlock medallion, and the
    boot-scan bar. */
 @layer vfx {
-    /* ---- Custom tactical scrollbars ---- */
+    /* Custom tactical scrollbars */
     /* .db-scroll is the reusable dark-panel scrollbar; .db-savelist is an alias
        kept for the existing save list. Apply db-scroll to any dark overflow region
        (e.g. the in-game NationPanel roster) so it never falls back to the raw
@@ -252,7 +252,7 @@
         background-clip: padding-box;
     }
 
-    /* ---- missile sprite ----
+    /* missile sprite
        The body is a single SVG silhouette (public/icons/missile.svg — ogive nose,
        slender body, swept tail fins) painted by CSS-masking a metallic gradient,
        so one crisp shape scales to every warhead size and the per-warhead tint
@@ -310,7 +310,7 @@
         }
     }
 
-    /* ---- per-warhead treatments ----
+    /* per-warhead treatments
        standard = the baseline silhouette above. The others only re-tint or resize
        the same masked body (and HGV swaps in its own waverider shape). */
 
@@ -431,7 +431,7 @@
         margin-top: -16px;
     }
 
-    /* ---- homing interceptor sprite ---- */
+    /* homing interceptor sprite */
     .db-interceptor {
         position: relative;
         width: 7px;
@@ -798,7 +798,7 @@
         }
     }
 
-    /* ---- radioactive fallout: animated cloud epicenter ---- */
+    /* radioactive fallout: animated cloud epicenter */
     /* --i (0..1) is the live cloud intensity from the sim: it fades the
        whole epicenter in as the cloud ramps and out as it decays. */
     .db-fallout {
@@ -1090,7 +1090,7 @@
         animation: dbTtFlow 1.1s linear infinite;
     }
 
-    /* --- Payload block (unit unlock) --- */
+    /* Payload block (unit unlock) */
     /* The unit this tech puts in the field. A schematic-framed icon carrying a
        muted brass tint — the one warm note, so "you get a weapon" still reads
        as a reward without breaking the monochrome drawing. */
@@ -1105,13 +1105,13 @@
         color: #d9c9a8; /* tints the CSS-mask unit icon */
     }
 
-    /* ---- boot-scan bar ---- */
+    /* boot-scan bar */
     .db-boot-bar i {
         background: linear-gradient(90deg, transparent, var(--text), transparent);
         animation: dbBootScan 1.15s ease-in-out infinite;
     }
 
-    /* ---- orbital-satellite marker ----
+    /* orbital-satellite marker
        Live orbital assets (ReconSat, Missile-Warning Sat, Orbital Strike
        Platform) float above the ground in the map layer. The
        icon itself is offset up by orbitLift × ORBIT_LIFT_PX; this class adds a
@@ -1122,7 +1122,7 @@
         filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 1px 2px #000) drop-shadow(0 0 8px rgba(180, 200, 255, 0.35));
     }
 
-    /* ---- all @keyframes ---- */
+    /* all @keyframes */
     @keyframes dbOrbitalHover {
         0%, 100% {
             transform: translateY(0);
@@ -1462,7 +1462,7 @@
         }
     }
 
-    /* --- Tech-tree: breathing active node + flowing prereq wire --- */
+    /* Tech-tree: breathing active node + flowing prereq wire */
     @keyframes dbTtLive {
         50% {
             box-shadow: 0 0 0 1px color-mix(in srgb, var(--bp-live) 50%, transparent),

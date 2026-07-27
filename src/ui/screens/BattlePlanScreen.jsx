@@ -278,7 +278,6 @@ export default function BattlePlanScreen({world: w, mySlot, bp, onClose}) {
                                 </div>
                             </div>
 
-                            {/* Status + action */}
                             {solved && (
                                 <div className="flex flex-col gap-2 border-t border-hair pt-3">
                                     <div className="flex items-center gap-4">
