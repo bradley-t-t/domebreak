@@ -91,6 +91,9 @@ Copy `.env.example` to `.env` for the multiplayer backend. Single-player needs n
 | `npm run electron:build:mac` | Package a macOS `.dmg` (arm64 + x64). |
 | `npm run electron:build:win` | Package a Windows NSIS installer. |
 | `npm run electron:build:all` | Package macOS and Windows together. |
+| `npm run brand:dev-electron` | Re-apply the dev branding to the local Electron binary. Also runs on `postinstall`. |
+
+`electron-builder` writes to `release/`, and a Linux `AppImage` target is configured for anyone who wants to build one by hand.
 
 ## Architecture
 
