@@ -79,7 +79,6 @@ export default function MobileNav({onSignIn}) {
                             </div>
 
                             <div className="flex-1 px-3 py-4">
-                                {/* Featured Play Free jump. */}
                                 <button
                                     onClick={() => {
                                         close();

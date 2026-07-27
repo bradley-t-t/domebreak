@@ -69,11 +69,11 @@ export const iconButton = cva(
     "w-[38px] h-[38px] rounded border border-line bg-panel text-text text-[17px] backdrop-blur-[8px] transition-transform duration-150 ease-out-db hover:border-blue active:scale-95"
 );
 
-/* ---------------------------------------------------------------------- */
-/* popoverCard — shared glass shell for hover-readout popups: the map's    */
-/* city/country/unit readouts and the top-bar stat breakdowns. Callers add */
-/* their own positioning (fixed vs absolute) and sizing via cn().          */
-/* ---------------------------------------------------------------------- */
+/*
+ * Shared glass shell for hover-readout popups: the map's city/country/unit
+ * readouts and the top-bar stat breakdowns. Callers add their own positioning
+ * (fixed vs absolute) and sizing via cn().
+ */
 export const popoverCard = cva(
     "bg-panel-2 border border-line rounded shadow backdrop-blur-[14px] pointer-events-none motion-safe:animate-[dbPop_110ms_var(--ease-out)]"
 );
@@ -217,10 +217,7 @@ export const badge = cva(
     }
 );
 
-/* ---------------------------------------------------------------------- */
-/* Menu chrome — shared across the centered menu screens (Lobby, Searching, */
-/* etc.).                                                                   */
-/* ---------------------------------------------------------------------- */
+/* Menu chrome, shared across the centered menu screens (Lobby, Searching, ...). */
 
 /** Full-viewport centered overlay that hosts a menu card. No VFX hook. */
 export const menuScreen = cva("absolute inset-0 z-10 grid place-items-center overflow-auto p-6");

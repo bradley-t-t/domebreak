@@ -37,7 +37,6 @@ function StatRow({k, v}) {
 function UnitCard({unit, categoryLabel}) {
     return (
         <article className="group relative flex h-full flex-col rounded border border-line bg-bg-2 p-6 db-tick transition-colors duration-200 hover:border-gold-line">
-            {/* Header: icon + title */}
             <header className="flex items-start gap-4">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded border border-line bg-gold-soft text-gold transition-colors duration-200 group-hover:border-gold-line">
                     <GameIcon name={unit.icon} size={34}/>
@@ -130,7 +129,6 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
             <Nav onSignIn={onSignIn}/>
 
             <main>
-                {/* Header band ------------------------------------------------ */}
                 <section className="relative overflow-hidden pt-28 pb-14 sm:pt-32 sm:pb-16">
                     <div aria-hidden className="pointer-events-none absolute inset-0 db-grid"/>
                     <div aria-hidden className="pointer-events-none absolute inset-0 db-vignette"/>
@@ -147,7 +145,6 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
                     </div>
                 </section>
 
-                {/* Sticky category filter rail -------------------------------- */}
                 <div className="sticky top-16 z-40 border-y border-line bg-[rgba(8,9,11,0.86)] backdrop-blur-[10px]">
                     <div className="mx-auto flex max-w-[1400px] items-center gap-2 overflow-x-auto px-5 py-3 sm:px-8 db-scroll">
                         <button
@@ -174,7 +171,6 @@ export default function WikiPage({onSignIn, onShowShortcuts}) {
                     </div>
                 </div>
 
-                {/* Category sections ----------------------------------------- */}
                 <div className="mx-auto max-w-[1400px] px-5 py-14 sm:px-8 sm:py-20">
                     {shown.map((c, ci) => (
                         <section key={c.id} id={`wiki-${c.id}`} className={cn(ci > 0 && "mt-20")}>
