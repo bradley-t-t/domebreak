@@ -1,7 +1,7 @@
 name: Release — deploy site
 
 # Redeploys the marketing site to Vercel production when a release lands on
-# main. Also dispatchable: the /ship skill re-runs it after publishing
+# main. Also dispatchable: the release process re-runs it after publishing
 # installers and deploying the game server, so the site (and the version.json
 # the game's update check polls) goes live only once the release is real.
 

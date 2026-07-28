@@ -8,8 +8,8 @@ const need = (k) => {
 };
 
 // Build version from the repo-root package.json (the deploy ships it alongside
-// server/ — see the /ship skill). It gates client hellos: a client whose
-// version differs is rejected as outdated (src/net/version.js has the policy).
+// server/). It gates client hellos: a client whose version differs is rejected
+// as outdated (src/net/version.js has the policy).
 // Null (package.json missing or versionless) disables the gate rather than
 // bricking multiplayer — index.js logs which mode it booted in.
 export const APP_VERSION = (() => {
