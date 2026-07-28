@@ -1,7 +1,7 @@
 // In-app auto-updater for the packaged desktop builds. The release pipeline
 // publishes every installer under a stable per-platform name on
-// download.domebreak.com under a stable per-platform name, so updating is:
-// download this build's own artifact, reinstall it in place, relaunch.
+// download.domebreak.com, so updating is: download this build's own artifact,
+// reinstall it in place, relaunch.
 //
 //   • Windows — the NSIS installer electron-builder produces already knows how
 //     to update a live install: run it with /S (silent) plus the builder's
