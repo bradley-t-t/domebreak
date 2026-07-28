@@ -45,6 +45,16 @@ function registerLocalStore() {
     ipcMain.handle("db:dir", () => DATA_DIR);
 }
 
+// True only for http/https. Anything unparseable counts as unsafe.
+function isWebUrl(url) {
+    try {
+        const {protocol} = new URL(url);
+        return protocol === "http:" || protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 const MIME = {
     ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
     ".json": "application/json", ".pmtiles": "application/octet-stream",
@@ -58,7 +68,9 @@ function startServer() {
             let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
             if (urlPath === "/") urlPath = "/index.html";
             let filePath = path.normalize(path.join(DIST, urlPath));
-            if (!filePath.startsWith(DIST)) {
+            // Compare against DIST + separator: a bare startsWith would also
+            // accept a sibling directory whose name merely begins with "dist".
+            if (filePath !== DIST && !filePath.startsWith(DIST + path.sep)) {
                 res.writeHead(403);
                 return res.end();
             }
@@ -127,11 +139,21 @@ async function createWindow() {
             (input.meta && input.alt && k === "i");
         if (blocked) e.preventDefault();
     });
+    // Only real web URLs reach the OS handler. Handing an arbitrary scheme to
+    // openExternal lets whatever rendered the link invoke local protocol
+    // handlers (file:, smb:, custom app schemes) outside the sandbox.
     win.webContents.setWindowOpenHandler(({url}) => {
-        shell.openExternal(url);
+        if (isWebUrl(url)) shell.openExternal(url);
         return {action: "deny"};
     });
-    win.loadURL(`http://127.0.0.1:${port}/`);
+    // The window must never leave the bundled app. Without this, anything that
+    // can set location navigates the main frame to a remote page, which then
+    // inherits the preload bridge and its local-store IPC handles.
+    const appOrigin = `http://127.0.0.1:${port}`;
+    win.webContents.on("will-navigate", (e, url) => {
+        if (url !== appOrigin && !url.startsWith(`${appOrigin}/`)) e.preventDefault();
+    });
+    win.loadURL(`${appOrigin}/`);
 }
 
 app.whenReady().then(() => {
