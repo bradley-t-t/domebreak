@@ -13,6 +13,7 @@ Thumbs.db
 *.sql
 # Claude config and skills never live in the repo.
 .claude/
+CLAUDE.md
 .fleet/
 
 # Machine-specific deploy targets (VPS/build-box hosts and keys) stay local.
@@ -26,3 +27,4 @@ scripts/deploy.local.env
 *.pfx
 id_rsa
 id_ed25519
+supabase/.temp/
