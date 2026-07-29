@@ -10,14 +10,14 @@ import {button} from "../lib/variants.js";
 // Version comes from the game's package.json at build time (web/vite.config.js)
 // — the same number the installers and match server ship with. Installers are
 // self-hosted on the DomeBreak VPS: the stable root names are symlinks the
-// /ship skill repoints at the newest release, so these links always serve the
-// latest installers and never dead-end mid-release. Past versions live under
+// release process repoints at the newest release, so these links always serve
+// the latest installers and never dead-end mid-release. Past versions live under
 // /vX.Y.Z/ on the same host.
 const VERSION = __APP_VERSION__;
 const RELEASE_BASE = "https://download.domebreak.com";
 
 // One card per OS, one download per architecture. The file names are the stable
-// symlinks the /ship skill repoints at the newest release (build-dist.sh emits
+// symlinks the release process repoints at the newest release (build-dist.sh emits
 // exactly these names), so every link always serves the latest build.
 const PLATFORMS = [
     {
