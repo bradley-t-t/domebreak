@@ -7,14 +7,18 @@ release
 *.log
 .DS_Store
 Thumbs.db
+desktop.ini
+# Editor and local tooling config stays out of the repo.
 .idea/
 .vscode/
 *.iml
 *.sql
-# Claude config and skills never live in the repo.
 .claude/
 CLAUDE.md
 .fleet/
+
+# Vercel CLI link state (project/org ids) is per-machine.
+.vercel
 
 # Machine-specific deploy targets (VPS/build-box hosts and keys) stay local.
 scripts/deploy.local.env
