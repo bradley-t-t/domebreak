@@ -88,7 +88,7 @@ describe("online victory has no single 'me' — one player's death never ends th
 
     it("test_last_active_standing_crowns_the_real_survivor_not_slot_zero", () => {
         // Slot 0 is dead; slot 2 is the lone survivor and must be the winner, even
-        // though mySlot is 0. The old code crowned mySlot (or a null Annihilation).
+        // though mySlot is 0 — the winner comes from the world, never from mySlot.
         const nations = [nat(0, true), nat(1, true), nat(2, true)];
         const w = online(nations, [city(2, 100)]);
         stepVictory(w);
