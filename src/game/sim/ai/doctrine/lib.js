@@ -58,7 +58,7 @@ function industryTotal(frame) {
 // The industry ladder: one factory unlocks the tree, then top-heavy fill
 // (techpark > refinery > port > factory) to the population cap. Below the
 // bootstrap floor the urgency crosses BLOCK_URGENCY so the treasury holds for
-// economy first — the old doctrine's industry gate, expressed as data.
+// economy first, rather than a hard-coded gate in the build logic.
 export function industryWants(list, eco) {
     const frame = list.frame;
     const total = industryTotal(frame);

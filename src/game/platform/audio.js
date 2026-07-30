@@ -133,7 +133,7 @@ function tone(bus, {type = "sine", freq, freq2, dur = 0.15, vol = 0.4, at = 0, a
 }
 
 // Enveloped noise through a (possibly sweeping) filter — the body of every boom,
-// whoosh, click, and radar sweep. The workhorse now that voices lean on noise.
+// whoosh, click, and radar sweep — every voice below is built out of this.
 function burst(bus, {dur = 0.4, vol = 0.5, at = 0, attack = 0.005, filter = "lowpass", from = 800, to = 120, q = 1, pan}) {
     const t0 = ctx.currentTime + at;
     const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();

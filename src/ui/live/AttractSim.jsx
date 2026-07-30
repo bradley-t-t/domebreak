@@ -53,7 +53,7 @@ const UNIT_FADE = [2.05, 2.75];
 
 // Fallback faction palette, used only for a belligerent whose flag color is
 // missing from colors.json. The live map colors every nation by its real flag
-// hue (see politicalTint); the attract cast now does the same so a nation's land,
+// hue (see politicalTint) and so does the attract cast, so a nation's land,
 // cities and units all read in one national color — this just backstops a gap.
 const FACTION_COLORS = [
     "#e0574f", "#4f9be0", "#57c98a", "#e0b24f", "#b06fe0", "#e0894f", "#4fd3e0", "#e04f97",
