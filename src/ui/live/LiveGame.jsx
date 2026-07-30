@@ -615,10 +615,10 @@ export default function LiveGame({
                       aircraft={visUnits.filter((u) => u.baseId && u.hp > 0 && (u.alt || 0) > 0.02)} tick={w.time}/>
             <CountryLabels map={mapRef.current} labels={labels}/>
 
-            {/* Top command bar (two-tier): LiveHud now owns the whole strip — row 1 is
+            {/* Top command bar (two-tier): LiveHud owns the whole strip — row 1 is
                 telemetry (date/points/economy), row 2 is speed + console nav + arsenal +
-                view controls. Stacking the arsenal onto its own row is what removes the
-                old overlap entirely; there is no separate corner cluster to collide with.
+                view controls. The arsenal gets its own row rather than a corner cluster,
+                so nothing floating can overlap it.
                 The lane clears the left nation panel (left-[272px]) and runs to right-4.
                 The wrapper is click-through (pointer-events-none) so the empty space around
                 the ticker/alert doesn't block the map; each child re-enables its own. */}
