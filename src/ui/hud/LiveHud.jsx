@@ -38,7 +38,7 @@ function stabSub(stab) {
     return "Unrest";
 }
 
-// Top-bar command screens, relocated here from the old left-side console.
+// The command screens the top bar switches between, in display order.
 const NAV = [
     {id: "production", label: "Production", icon: "production"},
     {id: "battle", label: "Battle Plan", icon: "battle-plan"},

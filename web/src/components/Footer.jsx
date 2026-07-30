@@ -52,7 +52,7 @@ export default function Footer({onShowShortcuts}) {
             <div aria-hidden className="pointer-events-none absolute inset-0 db-grid"/>
 
             {/* react-bits ScrollVelocity — a slow, scroll-reactive ghost marquee of
-                the wordmark that replaces the old static giant lettering. */}
+                the wordmark. Decorative only, hence aria-hidden on the wrapper. */}
             <div aria-hidden className="relative select-none border-b border-hair py-7">
                 <ScrollVelocity
                     texts={["DomeBreak · Global Missile Command ·"]}

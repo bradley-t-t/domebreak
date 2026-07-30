@@ -6,7 +6,8 @@ export function byId(arr, id) {
 }
 
 // Tally an iterable into a Map keyed by keyFn, summing weightFn (default 1).
-// Replaces the `bucket[k] = (bucket[k] || 0) + n` increment-with-fallback idiom.
+// A Map rather than a plain object so keys of any type work and a key named
+// like an Object.prototype member can't collide with it.
 export function countBy(iterable, keyFn, weightFn) {
     const m = new Map();
     for (const item of iterable) {

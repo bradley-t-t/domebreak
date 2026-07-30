@@ -2,11 +2,10 @@
 // the human player is bound to — instead of the Voronoi `inTerritory` disk that
 // spills across frontiers into a neighbour's (or the player's) land.
 //
-// Regression for "AI still places units in my territory": near a border, a point
-// inside country A can be nearest to country B's city. The old rule
-// (`inTerritory`) let B build there (and even barred A from its own soil); the
-// new gate (`inOwnCountry`, backed by the rasterized country grid) ties placement
-// to the political outline, so only the true owner may build.
+// Near a border, a point inside country A can be nearest to country B's city.
+// `inTerritory` reads that as B's ground (and denies it to A), which is why AI
+// placement goes through `inOwnCountry` instead: backed by the rasterized country
+// grid, it ties placement to the political outline, so only the true owner builds.
 //
 // Deterministic, no RNG, no I/O — the country grid is a bundled constant.
 import {describe, expect, it} from "vitest";
@@ -69,11 +68,12 @@ describe("inOwnCountry — the AI placement gate", () => {
     });
 });
 
-describe("regression: the Voronoi rule leaked across the border", () => {
+describe("regression: the Voronoi rule leaks across the border", () => {
     it("test_old_inTerritory_would_have_let_the_neighbour_in", () => {
         const w = borderWorld();
-        // Under the OLD gate, the nearest city to US_POINT is Mexico's, within
-        // 550 km — so inTerritory permitted Mexico to build on US soil...
+        // Pins down what inTerritory actually does, so nobody reaches for it as a
+        // placement gate: the nearest city to US_POINT is Mexico's, within 550 km,
+        // so it permits Mexico to build on US soil...
         expect(inTerritory(w, 1, US_POINT.lng, US_POINT.lat)).toBe(true);
         // ...and simultaneously barred the United States from its own ground.
         expect(inTerritory(w, 0, US_POINT.lng, US_POINT.lat)).toBe(false);

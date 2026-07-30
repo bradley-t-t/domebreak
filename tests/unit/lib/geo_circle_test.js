@@ -28,9 +28,9 @@ describe("geoCircle", () => {
     });
 
     it("test_polar_cap_is_bounded_and_reaches_the_pole", () => {
-        // Centre at 70N with a 4200 km reach swallows the North Pole. The old naive
-        // loop spiralled past ±180; the capped polygon stays in range and plants
-        // vertices at the pole so the fill covers the cap.
+        // Centre at 70N with a 4200 km reach swallows the North Pole, where naive
+        // bearing-walk vertices run past ±180. The capped polygon must stay in
+        // range and plant vertices at the pole so the fill covers the cap.
         const ring = geoCircle(0, 70, 4200).geometry.coordinates[0];
         expect(ring.every(([lng]) => lng >= -180 && lng <= 180)).toBe(true);
         expect(ring.some(([, lat]) => lat === 90)).toBe(true);

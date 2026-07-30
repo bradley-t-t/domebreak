@@ -82,7 +82,8 @@ export default function LoginScreen() {
                       onSubmit={submit} aria-labelledby="db-login-title">
                     <h2 className="sr-only" id="db-login-title">{mode === "signin" ? "Sign in" : "Create account"}</h2>
 
-                    {/* Segmented mode switch — replaces the old bottom text link. */}
+                    {/* Segmented mode switch: both options are visible up front, so
+                        signing up is never hidden behind a link under the form. */}
                     <div className="flex gap-1 mb-[22px] p-1 rounded-sm border border-line-soft bg-[rgba(9,11,15,0.55)]" role="tablist" aria-label="Authentication mode">
                         <button type="button" role="tab" aria-selected={mode === "signin"} disabled={busy}
                                 onClick={() => selectMode("signin")}

@@ -1,8 +1,8 @@
 import {useEffect} from "react";
 
 // Attach one or more window/document event listeners inside an effect and
-// auto-remove them on cleanup. Replaces the addEventListener /
-// removeEventListener pair that every hotkey and splash-skip site repeats.
+// auto-remove them on cleanup, so the hotkey and splash-skip sites don't each
+// hand-roll a matching addEventListener / removeEventListener pair.
 //
 // The handler is deliberately taken as-is (no ref latching) so callers that
 // want a stable handler pass a stable one; the effect re-subscribes when the

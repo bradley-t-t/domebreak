@@ -1,5 +1,5 @@
-// Role-aware placement, threat-map informed. Same contract as the old aiPlace —
-// (type) -> {lng, lat} or null to skip the build — but sited against the frame:
+// Role-aware placement, threat-map informed. Takes a unit type and answers with
+// {lng, lat}, or null to skip the build. Siting reads the frame:
 // defense goes to the worst uncovered threat gap its intercept class answers,
 // offense points at the priority war axis, industry hides in the quietest
 // ground, command maximizes distance from enemy reach, sensors fan out the
@@ -53,7 +53,7 @@ export function makePlacer(w, frame, warPlans) {
         // Mid/high-tier ABM answers ballistic pressure; terminal layers answer
         // total pressure over value. Anchor on the worst matching gap cell that
         // has a protectable point near it, falling back to the most valuable
-        // uncovered protect-point (the old rule) when the map is quiet.
+        // uncovered protect-point when the map is too quiet to rank gaps.
         const wantBallistic = !!def.antiBallistic || type === "aegis";
         const gaps = topGaps(frame.threats, PLACE.gapTopK, wantBallistic ? ((c) => c.ballistic > 0) : null);
         for (const cell of gaps) {

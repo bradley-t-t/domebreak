@@ -2,8 +2,8 @@
 // have CONQUERED (annexed from a neutral or captured in war), and NOTHING you
 // haven't. The last part is the regression guard: a point inside a neighbour's
 // intact country must NOT become buildable just because your border city is the
-// nearest one (the old Voronoi leak). It flips to buildable only once you hold a
-// city inside that same country — i.e. after you take the province.
+// nearest one — the leak a Voronoi-disk gate allows. It flips to buildable only
+// once you hold a city inside that same country — i.e. after you take the province.
 //
 // Real geographies, because the gate rasterizes real countries. Deterministic.
 import {describe, expect, it} from "vitest";
