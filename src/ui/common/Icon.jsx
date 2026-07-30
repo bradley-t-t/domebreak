@@ -396,7 +396,8 @@ const ICONS = {
             <rect x="5.5" y="5.5" width="13" height="13" rx="1.6" {...F}/>
         </>
     ),
-    // Command points — a faceted command chit (replaces the ◆ currency glyph).
+    // Command points — a faceted chit, so the currency reads as a token rather
+    // than a generic diamond.
     points: (
         <>
             <path d="M12 3 20.5 12 12 21 3.5 12Z"/>

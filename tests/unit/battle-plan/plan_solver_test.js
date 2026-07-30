@@ -1,5 +1,5 @@
 // Battle Planning solver — the pure fire-allocation logic behind player-authored
-// attack plans, now driven by attacker unit TYPES → target CATEGORIES (no map picking).
+// attack plans, driven by attacker unit TYPES → target CATEGORIES (no map picking).
 // Covers the engagement-range clamp, the no-overkill stacking rule, fair spread across
 // enemy nations, the target-category filter, and at-war/alive eligibility.
 // Deterministic, no RNG, no I/O — fixtures carry only the fields the solver touches.

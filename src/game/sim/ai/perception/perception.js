@@ -62,10 +62,11 @@ export function warRangeFor(n) {
     return DIPLOMACY.warRangeKm + (DECLARE.warRangeMaxKm - DIPLOMACY.warRangeKm) * t;
 }
 
-// Raw national strength: GDP plus a cost x hp-fraction force score — the same
-// bloc-power math the old AI used, kept so tuning carries over. Reads the
-// per-step aggregates (callers may still pass their unitsBySlot; the aggregate
-// already folded the force term in).
+// Raw national strength: GDP plus a cost x hp-fraction force score. Every bloc-
+// power comparison in diplomacy is a ratio of these, so the absolute scale is
+// arbitrary but must stay stable — the DECLARE/ALLY ratios are tuned against it.
+// Reads the per-step aggregates (callers may still pass their unitsBySlot; the
+// aggregate already folded the force term in).
 export function nationPower(w, n) {
     return statOf(w, n.slot).power;
 }

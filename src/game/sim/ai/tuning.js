@@ -1,12 +1,11 @@
-// AI tuning v2 — every knob the opponent AI reads, organized by pipeline stage.
-// Replaces the flat AI_TUNING block that lived in data/constants.js. Numbers that
-// survived the redesign keep their old values; new knobs are grouped with the
-// module that consumes them. Reserves are the points cushion the AI keeps on hand
-// before committing to that purchase.
+// Every knob the opponent AI reads, grouped by the pipeline stage that consumes
+// it — so a change to one stage's behaviour is a change to one block here rather
+// than a hunt through a flat table. `*Reserve` values are the points cushion the
+// AI keeps on hand before it will commit to that purchase.
 
 // Think cadence + production line. Active nations (at war, or near the player)
 // think on the fast cadence; distant peacetime nations idle on the slow one —
-// the same level-of-detail bound the old AI used (DIPLOMACY.activeRangeKm).
+// the same level-of-detail bound DIPLOMACY.activeRangeKm draws.
 export const THINK = {
     activeMin: 3, activeSpan: 3,
     queueMax: 4,                 // human-style: keep the production line steadily fed
@@ -61,7 +60,7 @@ export const BUDGET = {
     brokePoints: 300,            // any deficit with fewer points than this also scraps (see budget.js)
 };
 
-// Desired-force targets + reserves (doctrine wants). Carried over from AI_TUNING.
+// Desired-force targets + reserves, read by the doctrine wants.
 export const WANTS = {
     factoryReserve: 80,
     portTarget: 2, portReserve: 100,
