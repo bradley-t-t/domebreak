@@ -153,9 +153,10 @@ describe("station-keeping", () => {
     });
 
     it("test_mixed_group_fans_into_a_wedge_not_a_line", () => {
-        // The regression this fixes: one hull of each type used to stack on the
-        // guide's centerline (all at bearing 0 or 180), making a straight line.
         // A screen must spread across a wide span of bearings around the guide.
+        // The failure mode this guards is one hull of each type landing on the
+        // guide's centerline (every bearing 0 or 180), which forms a straight
+        // line instead of a wedge.
         const w = seaWorld();
         w.units.push(ship({id: "cv", type: "carrier", lng: -40, lat: 30, face: {lng: -40, lat: 31}})); // heading north
         const escorts = [["dd1", "destroyer"], ["dd2", "destroyer"], ["cg", "cruiser"], ["bb", "battleship"], ["ssn", "sub-ssn"]];
