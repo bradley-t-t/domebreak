@@ -67,16 +67,17 @@ describe("reconcile — client-side prediction replay", () => {
 
     it("test_keeps_everything_when_ack_predates_all_pending", () => {
         // A snapshot generated before the server processed any command (ack behind the
-        // pending seqs) must not drop them — this is exactly the stale-snapshot case
-        // that made a sold unit blink back before the fix.
+        // pending seqs) must not drop them. Dropping on a stale snapshot is what makes
+        // a sold unit blink back: the prediction is discarded while the server state
+        // that would replace it has not arrived yet.
         const client = {_pending: [pending(5, "scrap", ["a"])], _reapply: () => {}};
         reconcile(client, 4, NOW);
         expect(client._pending.map((c) => c.seq)).toEqual([5]);
     });
 
     it("test_ages_out_predictions_the_server_never_confirms", () => {
-        // The regression that stalled the whole economy: against a server that never
-        // acks (or a dropped command), pending must not grow forever. Once a
+        // Against a server that never acks (or a dropped command), pending must not
+        // grow forever — an unbounded buffer stalls the whole economy. Once a
         // prediction has gone PREDICT_TTL_MS of wall clock unconfirmed it is
         // discarded so the authoritative snapshot wins instead of replayed economy
         // commands bleeding points to zero. Wall clock, not a snapshot count — the
