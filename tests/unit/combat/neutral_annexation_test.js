@@ -71,10 +71,10 @@ describe("neutral annexation", () => {
 
     it("test_capture_flips_the_whole_gid1_province_the_map_recolors", () => {
         // Two neutral cities in the SAME GID_1 province but with DIFFERENT state
-        // strings — exactly the split (Greece/Nepal etc.) that used to leave land
-        // owned in the sim still painted neutral on the map. Flipping by province
-        // (region) must take both, so the sim's ownership and the map's GID_1
-        // recolor can't diverge.
+        // strings — the split (Greece/Nepal etc.) that makes state a wrong key here.
+        // Flipping by province (region) must take both: the map recolors by GID_1,
+        // so grouping ownership any other way leaves land owned in the sim still
+        // painted neutral.
         const w = theatre();
         w.cities.push({id: "neu2", slot: 1, lng: 0.31, lat: 0.01, alive: true, state: "OtherState", region: "XX.1_1", hp: 100, capture: null});
         w.cities[1].region = "XX.1_1"; // the annex target shares the province

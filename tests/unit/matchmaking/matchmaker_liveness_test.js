@@ -33,9 +33,9 @@ describe("matchmaker liveWaiters — offline ghosts are never grouped", () => {
     });
 
     it("test_lone_real_player_plus_ghost_cannot_reach_a_pair", () => {
-        // The bug itself: one live player + an abandoned ghost row used to form a
-        // 2-player match. After the fix only the live player survives the filter,
-        // so the matchmaker (MIN_PLAYERS = 2) can't form — the player keeps waiting.
+        // An abandoned queue row must not count towards a match. Only the live player
+        // survives the filter, so the matchmaker (MIN_PLAYERS = 2) can't form and the
+        // player keeps waiting — rather than being dropped into a match alone.
         const rows = [{user_id: "me", last_seen: ago(2_000)}, {user_id: "ghost", last_seen: ago(120_000)}];
         expect(liveWaiters(rows, now, STALE)).toHaveLength(1);
     });
